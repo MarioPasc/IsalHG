@@ -1,0 +1,116 @@
+[build-system]
+requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "isalhg"
+version = "0.0.1"
+description = "Instruction Set and Language for Hypergraphs"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+    {name = "Ezequiel Lopez-Rubio", email = "ezeqlr@lcc.uma.es"},
+    {name = "Mario Pascual Gonzalez", email = "mpascual@uma.es"},
+]
+keywords = [
+    "hypergraph",
+    "hypergraph-representation",
+    "instruction-strings",
+    "hypergraph-isomorphism",
+    "canonical-string",
+    "combinatorics",
+]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Science/Research",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering",
+    "Topic :: Scientific/Engineering :: Mathematics",
+    "Typing :: Typed",
+]
+# Core has zero dependencies.
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/MarioPasc/IsalHG"
+Repository = "https://github.com/MarioPasc/IsalHG"
+Issues = "https://github.com/MarioPasc/IsalHG/issues"
+
+[project.optional-dependencies]
+hypernetx = ["hypernetx>=2.0"]
+xgi = ["xgi>=0.9"]
+hypergraphx = ["hypergraphx>=1.7"]
+dhg = ["dhg>=0.9", "torch>=2.0"]
+viz = ["matplotlib>=3.7"]
+bench = [
+    "isalhg[hypernetx,xgi,viz]",
+    "scipy>=1.10",
+    "pandas>=2.0",
+    "pyyaml>=6.0",
+    "numpy>=1.26",
+    "scikit-learn>=1.3",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "hypothesis>=6.0",
+    "ruff>=0.4",
+    "mypy>=1.0",
+]
+eval = [
+    "isalhg[hypernetx,xgi,viz,bench]",
+    "python-Levenshtein>=0.21",
+]
+all = ["isalhg[hypernetx,xgi,hypergraphx,dhg,viz,bench,dev]"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+isalhg = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --tb=short"
+markers = [
+    "unit: Unit tests (no external deps)",
+    "integration: Integration tests (external hypergraph libs)",
+    "property: Property-based tests (hypothesis)",
+    "slow: Long-running tests",
+    "eval_validation: Validation tests on Picasso-generated eval data",
+]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+
+[[tool.mypy.overrides]]
+module = [
+    "hypernetx", "hypernetx.*",
+    "xgi", "xgi.*",
+    "hypergraphx", "hypergraphx.*",
+    "dhg", "dhg.*",
+    "torch", "torch.*",
+    "Levenshtein", "Levenshtein.*",
+]
+ignore_missing_imports = true
+
+[tool.ruff]
+target-version = "py310"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/integration/*.py" = ["E402"]
+"tests/**/*.py" = ["N802"]
+"benchmarks/**/*.py" = ["E402", "ANN"]
+"tests/eval_validation/*.py" = ["E402", "ANN", "N806"]

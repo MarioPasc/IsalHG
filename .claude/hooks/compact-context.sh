@@ -49,7 +49,7 @@ CANONICAL ALGORITHM:
 
 DEPENDENCY RULE:
   isalhg.core     = ZERO non-stdlib deps (stdlib only)
-  isalhg.adapters = optional (hypernetx, xgi, hypergraphx, dhg)
+  isalhg.adapters = optional (hypernetx, xgi, hypergraphx)
                     guard imports under try/except ImportError
 
 ENVIRONMENT:

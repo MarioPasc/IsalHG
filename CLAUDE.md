@@ -60,7 +60,7 @@ Family abstraction summary: see project memory `family_isal_precedents.md`.
 ```
 isalhg.core          ZERO non-stdlib deps        (algorithm)
 isalhg.adapters      optional: hypernetx / xgi   (bridges)
-                              hypergraphx / dhg
+                              hypergraphx
 ```
 
 `core` must never import from `adapters`. Adapters guard their external imports behind try/except and raise `ImportError` with a clear install hint on first use.
@@ -76,7 +76,7 @@ isalhg.adapters      optional: hypernetx / xgi   (bridges)
 - `src/isalhg/core/structural_tuples.py` — `ξ` (per-node) and `η` (per-edge) computation, depth 3 by default.
 - `src/isalhg/core/canonical.py` — canonical entry point; seeds from max-`ξ` nodes.
 - `src/isalhg/core/canonical_pruned.py` — backtracking variant (algorithm currently **unspecified** by the PI; see open questions).
-- `src/isalhg/adapters/{hypernetx,xgi,hypergraphx,dhg}_adapter.py` — library bridges.
+- `src/isalhg/adapters/{hypernetx,xgi,hypergraphx}_adapter.py` — library bridges. DHG/DeepHypergraph was dropped pre-scaffold (deprecated `sklearn` shim + torch 1.13 pin); see `feedback_adapter_vetting.md` in project memory.
 
 ## Critical Invariants
 

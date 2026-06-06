@@ -13,8 +13,8 @@ root and the seed proposal (`docs/isalhg_idea.pdf`).
 - Implement H2S greedy with the tie-breaking cascade.
 - Implement structural tuples xi and eta.
 - Implement canonical entry point (greedy seeded from max-xi).
-- Add HyperNetX and XGI adapters first; HyperGraphX and DHG after the core
-  stabilizes.
+- Add HyperNetX and XGI adapters first; HyperGraphX after the core
+  stabilizes. DHG dropped (see `feedback_adapter_vetting.md` in project memory).
 - Hypothesis property tests for round-trip and canonical invariance.
 
 ## Open research questions (from the seed proposal)

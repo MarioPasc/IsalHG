@@ -136,10 +136,10 @@ Repository = "https://github.com/MarioPasc/IsalHG"
 Issues = "https://github.com/MarioPasc/IsalHG/issues"
 
 [project.optional-dependencies]
-hypernetx = ["hypernetx>=2.0"]
-xgi = ["xgi>=0.9"]
+# HyperNetX 2.4.0 has a missing transitive dep (fastjsonschema); pin it explicitly.
+hypernetx = ["hypernetx>=2.4", "fastjsonschema>=2.20"]
+xgi = ["xgi>=0.10"]
 hypergraphx = ["hypergraphx>=1.7"]
-dhg = ["dhg>=0.9", "torch>=2.0"]
 viz = ["matplotlib>=3.7"]
 bench = [
     "isalhg[hypernetx,xgi,viz]",
@@ -156,11 +156,13 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.0",
 ]
+# pynauty wraps McKay's nauty 2.8.8 -- the iso baseline for the bipartite reduction.
 eval = [
     "isalhg[hypernetx,xgi,viz,bench]",
     "python-Levenshtein>=0.21",
+    "pynauty>=2.8",
 ]
-all = ["isalhg[hypernetx,xgi,hypergraphx,dhg,viz,bench,dev]"]
+all = ["isalhg[hypernetx,xgi,hypergraphx,viz,bench,dev,eval]"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -189,8 +191,7 @@ module = [
     "hypernetx", "hypernetx.*",
     "xgi", "xgi.*",
     "hypergraphx", "hypergraphx.*",
-    "dhg", "dhg.*",
-    "torch", "torch.*",
+    "pynauty", "pynauty.*",
     "Levenshtein", "Levenshtein.*",
 ]
 ignore_missing_imports = true
@@ -239,14 +240,14 @@ conda activate isalhg
 pip install -e ".[dev]"
 ```
 
-Optional adapter extras: `pip install -e ".[hypernetx,xgi,hypergraphx,dhg]"`.
+Optional adapter extras: `pip install -e ".[hypernetx,xgi,hypergraphx]"`.
 
 ## Layout
 
 ```
 src/isalhg/
   core/         zero non-stdlib deps; the algorithm itself
-  adapters/     optional bridges to HyperNetX, XGI, HyperGraphX, DHG
+  adapters/     optional bridges to HyperNetX, XGI, HyperGraphX
 tests/          unit / integration / property / eval_validation
 benchmarks/     real_data + synthetic_data benchmark scripts
 experiments/    paper-pipeline workers
@@ -516,10 +517,6 @@ write_file src/isalhg/adapters/hypergraphx_adapter.py <<'PY'
 """Adapter for HyperGraphX."""
 PY
 
-write_file src/isalhg/adapters/dhg_adapter.py <<'PY'
-"""Adapter for DHG / DeepHypergraph (PyTorch-based)."""
-PY
-
 # ---------------------------------------------------------------------------
 # tests
 # ---------------------------------------------------------------------------
@@ -549,8 +546,7 @@ done
 for f in \
     test_hypernetx_adapter.py \
     test_xgi_adapter.py \
-    test_hypergraphx_adapter.py \
-    test_dhg_adapter.py
+    test_hypergraphx_adapter.py
 do
     write_file "tests/integration/$f" <<PY
 """Integration tests for isalhg.adapters ${f%.py}. Optional dep guard via pytest.importorskip()."""
@@ -618,8 +614,8 @@ root and the seed proposal (`docs/isalhg_idea.pdf`).
 - Implement H2S greedy with the tie-breaking cascade.
 - Implement structural tuples xi and eta.
 - Implement canonical entry point (greedy seeded from max-xi).
-- Add HyperNetX and XGI adapters first; HyperGraphX and DHG after the core
-  stabilizes.
+- Add HyperNetX and XGI adapters first; HyperGraphX after the core
+  stabilizes. DHG dropped (see project memory).
 - Hypothesis property tests for round-trip and canonical invariance.
 
 ## Open research questions (from the seed proposal)

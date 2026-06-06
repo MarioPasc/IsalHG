@@ -8,7 +8,7 @@ version = "0.0.1"
 description = "Instruction Set and Language for Hypergraphs"
 readme = "README.md"
 license = "MIT"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     {name = "Ezequiel Lopez-Rubio", email = "ezeqlr@lcc.uma.es"},
     {name = "Mario Pascual Gonzalez", email = "mpascual@uma.es"},
@@ -43,10 +43,10 @@ Repository = "https://github.com/MarioPasc/IsalHG"
 Issues = "https://github.com/MarioPasc/IsalHG/issues"
 
 [project.optional-dependencies]
-hypernetx = ["hypernetx>=2.0"]
-xgi = ["xgi>=0.9"]
+# HyperNetX 2.4.0 has a missing transitive dep (fastjsonschema); pin it explicitly.
+hypernetx = ["hypernetx>=2.4", "fastjsonschema>=2.20"]
+xgi = ["xgi>=0.10"]
 hypergraphx = ["hypergraphx>=1.7"]
-dhg = ["dhg>=0.9", "torch>=2.0"]
 viz = ["matplotlib>=3.7"]
 bench = [
     "isalhg[hypernetx,xgi,viz]",
@@ -63,11 +63,13 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.0",
 ]
+# pynauty wraps McKay's nauty 2.8.8 -- the iso baseline for the bipartite reduction.
 eval = [
     "isalhg[hypernetx,xgi,viz,bench]",
     "python-Levenshtein>=0.21",
+    "pynauty>=2.8",
 ]
-all = ["isalhg[hypernetx,xgi,hypergraphx,dhg,viz,bench,dev]"]
+all = ["isalhg[hypernetx,xgi,hypergraphx,viz,bench,dev,eval]"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -96,8 +98,7 @@ module = [
     "hypernetx", "hypernetx.*",
     "xgi", "xgi.*",
     "hypergraphx", "hypergraphx.*",
-    "dhg", "dhg.*",
-    "torch", "torch.*",
+    "pynauty", "pynauty.*",
     "Levenshtein", "Levenshtein.*",
 ]
 ignore_missing_imports = true

@@ -95,8 +95,8 @@ Every metric below is computed identically across the four methods (IsalHG, Levi
 |---|---|---|---|
 | **Wall-clock per instance** | Time to compute canonical fingerprint of `H` (or to decide `H_1 ≅ H_2`; the two are equivalent up to a constant via fingerprint equality). Measured with `time.perf_counter()` (monotonic). Median ± IQR over 10 repeats per instance. | seconds | Tier 2, 3, 5 |
 | **Peak resident-set size** | Maximum process memory during the operation. `resource.getrusage(RUSAGE_SELF).ru_maxrss` on Linux. | bytes | Tier 2, 3, 5 |
-| **Canonical-fingerprint length** | `|fp_M(H)|` in bytes for method `M`. For IsalHG: canonical-string byte length. For nauty/Traces/bliss: serialised canonical-permutation length. | bytes | Tier 2, 5 |
-| **Fingerprint compactness ratio** | `|fp_M(H)| / log_2 |Aut(H)|` — the entropy-relative encoding length introduced in IsalGraph. `|Aut(H)|` from nauty's automorphism-group output. Only reported when `|Aut(H)|` is computable within timeout. | dimensionless | Tier 5 |
+| **Canonical-fingerprint length** | `abs(fp_M(H))` in bytes for method `M`. For IsalHG: canonical-string byte length. For nauty/Traces/bliss: serialised canonical-permutation length. | bytes | Tier 2, 5 |
+| **Fingerprint compactness ratio** | `abs(fp_M(H)) / log_2 abs(Auth(H))` — the entropy-relative encoding length introduced in IsalGraph. `abs(Auth(H))` from nauty's automorphism-group output. Only reported when `abs(Auth(H))` is computable within timeout. | dimensionless | Tier 5 |
 | **Cross-method verdict agreement** | Did all four methods (IsalHG + 3 Levi engines) produce the same iso verdict on this instance / pair? | binary 0/1 per instance | Tier 2, 3, 5 |
 | **Cross-method partition agreement** | Did all four methods produce identical iso-equivalence partitions of the corpus? | binary 0/1 per dataset | Tier 5 |
 | **False-positive / false-negative rate** | IsalHG vs. Levi+nauty (oracle). FP = "IsalHG says iso, nauty says non-iso"; FN = reverse. Triangulated against Traces and bliss. **Must be 0 across all tiers.** | rate over `N × repeats` pairs | Tier 2, 3, 5 |

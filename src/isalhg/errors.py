@@ -29,6 +29,26 @@ class ArityMismatchError(IsalHGError):
     """Raised when an operation references more pointers than the machine has."""
 
 
+class InvalidPointerError(IsalHGError):
+    """Raised when a pointer index falls outside the 1..k range."""
+
+
+class InvalidLabelError(IsalHGError):
+    """Raised when a vertex or edge label is outside its declared vocabulary range."""
+
+
+class CapacityError(IsalHGError):
+    """Raised when a fixed-capacity container (CDLL, SparseHypergraph) is full."""
+
+
+class DisconnectedHypergraphError(IsalHGError):
+    """Raised when an operation requires a connected hypergraph (decision B11)."""
+
+
+class VocabularyMismatchError(IsalHGError):
+    """Raised when two hypergraphs declare incompatible label vocabularies."""
+
+
 # ---------------------------------------------------------------------------
 # adapters/ — external library bridges
 # ---------------------------------------------------------------------------

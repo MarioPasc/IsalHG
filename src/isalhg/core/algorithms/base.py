@@ -1,10 +1,15 @@
 """Abstract base class for H2S (hypergraph-to-string) algorithm variants.
 
-All H2S variants take a hypergraph and return a ``Sigma_HG*`` string. They
-differ in how they pick seed nodes and how exhaustively they explore the
-tie-breaking tree.
+All H2S variants take a hypergraph and return a ``Sigma_HG*`` token
+sequence. They differ in how they pick seed nodes and how exhaustively
+they explore the tie-breaking tree.
 
-Restriction: ZERO external dependencies. Only Python stdlib + abc + isalhg.core.
+Concrete classes are not registered through a registry pattern (these
+are not extension points consumed by experiment configs -- they are
+internal strategies driven by :mod:`isalhg.core.canonical`).
+
+Restriction: ZERO external dependencies. Only Python stdlib + abc +
+isalhg.core.
 """
 
 from __future__ import annotations
@@ -12,14 +17,15 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.types import TokenSequence
 
 
 class H2SAlgorithm(ABC):
     """Abstract hypergraph-to-string algorithm."""
 
     @abstractmethod
-    def encode(self, H: SparseHypergraph) -> str:
-        """Convert ``H`` to a ``Sigma_HG*`` instruction string."""
+    def encode(self, H: SparseHypergraph) -> TokenSequence:
+        """Convert ``H`` to a ``Sigma_HG*`` token sequence."""
         ...
 
     @property
@@ -29,4 +35,4 @@ class H2SAlgorithm(ABC):
         ...
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}()"
+        return f"{type(self).__name__}()"

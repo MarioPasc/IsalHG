@@ -1,13 +1,14 @@
 """Exhaustive H2S over every node as a candidate seed.
 
 Brute-force baseline for completeness ablations: ignores the max-xi seeding
-heuristic and runs greedy H2S from every node. Use only on small hypergraphs.
+heuristic and runs greedy H2S from every node. Out of scope for Phase 1.
 """
 
 from __future__ import annotations
 
 from isalhg.core.algorithms.base import H2SAlgorithm
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.types import TokenSequence
 
 
 class Exhaustive(H2SAlgorithm):
@@ -20,5 +21,5 @@ class Exhaustive(H2SAlgorithm):
     def name(self) -> str:
         return "exhaustive"
 
-    def encode(self, H: SparseHypergraph) -> str:
-        raise NotImplementedError
+    def encode(self, H: SparseHypergraph) -> TokenSequence:
+        raise NotImplementedError("Exhaustive is out of scope for Phase 1")

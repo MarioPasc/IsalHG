@@ -4,8 +4,51 @@ from __future__ import annotations
 
 import pytest
 
+from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
+from isalhg.iso_backends.isalhg_backend import IsalHGBackend
+
 pytestmark = pytest.mark.unit
 
 
-def test_placeholder() -> None:
-    pytest.skip("not implemented yet")
+class TestFingerprint:
+    def test_trivial(self) -> None:
+        backend = IsalHGBackend()
+        H = SparseHypergraph(n_nodes=1)
+        assert backend.fingerprint(H) == b""
+
+    def test_returns_bytes(self, fano_plane: SparseHypergraph) -> None:
+        backend = IsalHGBackend()
+        fp = backend.fingerprint(fano_plane)
+        assert isinstance(fp, bytes)
+        assert len(fp) > 0
+
+
+class TestAreIsomorphic:
+    def test_iso_pair(
+        self,
+        iso_pair_small: tuple[SparseHypergraph, SparseHypergraph, list[int]],
+    ) -> None:
+        h1, h2, _ = iso_pair_small
+        assert IsalHGBackend().are_isomorphic(h1, h2)
+
+    def test_non_iso_pair(
+        self,
+        non_iso_pair_small: tuple[SparseHypergraph, SparseHypergraph],
+    ) -> None:
+        h1, h2 = non_iso_pair_small
+        assert not IsalHGBackend().are_isomorphic(h1, h2)
+
+    def test_fano_vs_permutation(self, fano_plane: SparseHypergraph) -> None:
+        sigma = [3, 1, 4, 0, 5, 6, 2]
+        H2 = permute(fano_plane, sigma)
+        assert IsalHGBackend().are_isomorphic(fano_plane, H2)
+
+    def test_different_vocab_returns_false(self) -> None:
+        h1 = SparseHypergraph(n_nodes=2, n_vertex_labels=1)
+        h2 = SparseHypergraph(n_nodes=2, n_vertex_labels=2)
+        assert not IsalHGBackend().are_isomorphic(h1, h2)
+
+
+class TestName:
+    def test_name(self) -> None:
+        assert IsalHGBackend().name == "isalhg"

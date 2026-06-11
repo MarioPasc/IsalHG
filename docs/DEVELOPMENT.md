@@ -6,10 +6,11 @@ proposal (`docs/isalhg_idea.pdf` + `docs/PROPOSAL.md`).
 
 ## Status
 
-The repo currently holds a **scaffold + documentation refactor only**: ABCs,
-registry stubs, signature-only placeholders that `raise NotImplementedError`,
-and test files that `pytest.skip("not implemented yet")`. No algorithmic code
-yet.
+**Phase 1 + Phase 2 closed (2026-06-11).** The repo now ships a working
+canonical-string algorithm (`isalhg.core.*`) plus the `IsoBackend` interface
+with both the IsalHG and pynauty-via-Levi concrete backends, the XGI
+adapter, and a registry. Phases 3-6 (datasets, protocols, experiments,
+remaining backends) remain scaffold-only.
 
 ## Implementation order
 
@@ -20,13 +21,36 @@ until its predecessor's check passes.
 
 Phase headline (full detail in `CODE_DESIGN.md`):
 
-1. **VM + canonical** -- `core/*` + `algorithms/greedy_min` + hand-built
-   fixtures (Fano, STS(9), iso/non-iso pairs). Closes on
-   `pytest tests/unit/core/ tests/property/test_s2h_roundtrip.py`.
-2. **Backend interface + oracle** -- `xgi_adapter`,
-   `iso_backends/{isalhg_backend, levi_reduction, pynauty_levi}`. Closes on
-   `IsalHGBackend.fingerprint` and `PynautyLeviBackend.fingerprint` inducing
-   the same partition on the Phase 1 fixtures.
+1. **VM + canonical [COMPLETED 2026-06-11]** -- `core/*` +
+   `algorithms/greedy_min` + hand-built fixtures (Fano, STS(9), iso/non-iso
+   pairs). Closed on
+   `pytest tests/unit/core/ tests/property/test_s2h_roundtrip.py` --
+   136 tests green in 62s. ruff + mypy --strict clean. Implementation note:
+   `greedy_h2s` runs a **bounded backtracking over new-input orderings**
+   within each `V` emission's label classes (one extra branching point per
+   `V` step; iso-equivariance was otherwise broken on symmetric structures
+   like Fano and STS(9) by the input-id tie-break). Displacement and edge
+   selection remain pure greedy. This refinement is local to
+   `core/hypergraph_to_string.py::_encode_from` and does NOT introduce
+   `canonical_pruned.py` (open question 1 still pending PI guidance).
+2. **Backend interface + oracle [COMPLETED 2026-06-11]** -- `xgi_adapter`,
+   `iso_backends/{isalhg_backend, levi_reduction, pynauty_levi, registry}`.
+   Closed on
+   `pytest tests/unit/iso_backends/ tests/unit/adapters/ tests/integration/test_isalhg_end_to_end.py tests/integration/test_pynauty_roundtrip.py tests/property/test_canonical_invariance.py`
+   -- 37 tests green; partition-agreement table below confirms
+   `IsalHGBackend.are_isomorphic == PynautyLeviBackend.are_isomorphic` on
+   every Phase 1 fixture (4/4 iso pairs + 1/1 non-iso pair).
+
+   **Phase 2 partition-agreement table** (seed=42):
+
+   | fixture        | n, m    | IsalHG | pynauty | agree |
+   |----------------|---------|--------|---------|-------|
+   | trivial        | 1, 0    | True   | True    | True  |
+   | single_edge    | 3, 1    | True   | True    | True  |
+   | fano_plane     | 7, 7    | True   | True    | True  |
+   | sts_9          | 9, 12   | True   | True    | True  |
+   | non_iso_pair   | 4,2/4,3 | False  | False   | True  |
+
 3. **Tier 1 end-to-end** -- `datasets/{base, registry, synthetic.exhaustive_small}`
    + `metrics.correctness` + `protocols/{base, pairwise_iso, registry}` +
    `experiments/{schemas, orchestrator}` + `tier1.yaml`. Closes on
@@ -59,9 +83,18 @@ Each step also lands with its unit tests populated and passing under
 
 ## Open research questions (from the seed proposal and PROPOSAL.md)
 
-1. **Backtracking procedure for greedy ties** -- unspecified by the PI.
-   A `core/canonical_pruned.py` module will be reintroduced once an algorithm
-   exists.
+1. **Backtracking procedure for greedy ties** -- partially resolved
+   (2026-06-11). `core/hypergraph_to_string.py::_encode_from` now branches
+   on label-class permutations of new-input vertices within each `V`
+   emission and takes the lex-min completion; this restores
+   iso-equivariance on vertex-transitive fixtures (Fano, STS(9)) without
+   exploding (worst-case branching `(j!)^{num V steps}`, typically small).
+   A separate **pruned backtracking** variant covering displacement and
+   edge-selection ties (the original PI-deferred algorithm) remains
+   unspecified; `core/canonical_pruned.py` and
+   `algorithms/pruned_exhaustive.py` will be reintroduced once that
+   algorithm exists. Validated empirically by the Phase 2 partition-agreement
+   table -- IsalHG matches pynauty on every Phase 1 fixture.
 2. **Value of `k`** -- capped at 10 (decision B12). Whether `k` should be
    input-dependent within that cap is open.
 3. **Structural-tuple depth** -- fixed at 3 by analogy with IsalGraph; Tier 3

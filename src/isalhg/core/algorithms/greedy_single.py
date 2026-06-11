@@ -1,9 +1,15 @@
-"""Greedy H2S from a single max-xi seed."""
+"""Greedy H2S from a single max-xi seed.
+
+Out of scope for Phase 1; the canonical entry point uses
+:class:`isalhg.core.algorithms.greedy_min.GreedyMin` which iterates over
+all max-xi seeds.
+"""
 
 from __future__ import annotations
 
 from isalhg.core.algorithms.base import H2SAlgorithm
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.types import TokenSequence
 
 
 class GreedySingle(H2SAlgorithm):
@@ -17,5 +23,5 @@ class GreedySingle(H2SAlgorithm):
     def name(self) -> str:
         return "greedy_single"
 
-    def encode(self, H: SparseHypergraph) -> str:
-        raise NotImplementedError
+    def encode(self, H: SparseHypergraph) -> TokenSequence:
+        raise NotImplementedError("GreedySingle is out of scope for Phase 1")

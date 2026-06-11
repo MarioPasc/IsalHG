@@ -30,7 +30,9 @@ def register_backend(name: BackendName, factory: BackendFactory) -> None:
     ValueError
         If ``name`` is already registered.
     """
-    raise NotImplementedError
+    if name in _REGISTRY:
+        raise ValueError(f"backend {name!r} already registered")
+    _REGISTRY[name] = factory
 
 
 def get_backend(name: BackendName) -> IsoBackend:
@@ -41,12 +43,21 @@ def get_backend(name: BackendName) -> IsoBackend:
     isalhg.errors.BackendUnavailableError
         If no backend is registered under ``name``.
     """
-    raise NotImplementedError
+    if name not in _REGISTRY:
+        raise BackendUnavailableError(
+            f"backend {name!r} is not registered; available: {available_backends()}"
+        )
+    return _REGISTRY[name]()
 
 
 def available_backends() -> tuple[BackendName, ...]:
-    """Return the names of all registered backends."""
-    raise NotImplementedError
+    """Return the names of all registered backends, sorted alphabetically."""
+    return tuple(sorted(_REGISTRY.keys()))
+
+
+def _reset_for_testing() -> None:
+    """Empty the registry. For test isolation only -- not public API."""
+    _REGISTRY.clear()
 
 
 __all__ = [

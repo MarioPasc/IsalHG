@@ -125,11 +125,11 @@ line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM"]
-# N803: argument name should be lowercase. Disabled at project scope because
-# hypergraphs are conventionally named H, H1, H2 in mathematical notation
-# (see Berge 1973). This convention is uniform across docs/PROPOSAL.md and
-# the seed proposal.
-ignore = ["N803"]
+# N803/N806: argument and local variable names should be lowercase. Disabled
+# at project scope because hypergraphs are conventionally named H, H1, H2 in
+# mathematical notation (Berge 1973). This is uniform across docs/PROPOSAL.md
+# and the seed proposal.
+ignore = ["N803", "N806"]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**/*.py" = ["N802", "ANN", "E402"]

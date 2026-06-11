@@ -13,24 +13,39 @@ yet.
 
 ## Implementation order
 
-Coding agents should fill stubs in the order specified in
-`docs/CODE_DESIGN.md` Section 7. Brief summary:
+Coding agents should fill stubs in the six-phase order specified in
+`docs/CODE_DESIGN.md` Section 7. Each phase closes with a concrete runnable
+check that must be reproduced in the closing commit message; no phase opens
+until its predecessor's check passes.
 
-1. `core/sparse_hypergraph.py`, `core/cdll.py`, `core/pointers.py`
-   (port from IsalGraph templates).
-2. `core/instructions.py`, `core/string_to_hypergraph.py`,
-   `core/hypergraph_to_string.py`, `core/structural_tuples.py`,
-   `core/canonical.py`.
-3. `core/algorithms/{greedy_single, greedy_min, exhaustive}.py`.
-4. `adapters/xgi_adapter.py` (unlocks Tier 1, 2, 4 datasets).
-5. `iso_backends/{isalhg_backend, levi_reduction, pynauty_levi}.py`.
-6. `datasets/base.py`, `datasets/synthetic/exhaustive_small.py`,
-   `datasets/registry.py`.
-7. `protocols/{base, pairwise_iso}.py`, `protocols/registry.py`.
-8. `experiments/orchestrator.py` end-to-end on Tier 1.
-9. Remaining backends, datasets, protocols, analysis.
+Phase headline (full detail in `CODE_DESIGN.md`):
 
-Each step lands with its unit tests populated and passing under
+1. **VM + canonical** -- `core/*` + `algorithms/greedy_min` + hand-built
+   fixtures (Fano, STS(9), iso/non-iso pairs). Closes on
+   `pytest tests/unit/core/ tests/property/test_s2h_roundtrip.py`.
+2. **Backend interface + oracle** -- `xgi_adapter`,
+   `iso_backends/{isalhg_backend, levi_reduction, pynauty_levi}`. Closes on
+   `IsalHGBackend.fingerprint` and `PynautyLeviBackend.fingerprint` inducing
+   the same partition on the Phase 1 fixtures.
+3. **Tier 1 end-to-end** -- `datasets/{base, registry, synthetic.exhaustive_small}`
+   + `metrics.correctness` + `protocols/{base, pairwise_iso, registry}` +
+   `experiments/{schemas, orchestrator}` + `tier1.yaml`. Closes on
+   `python -m experiments.orchestrator --config tier1_correctness.yaml`
+   reporting FP = FN = 0.
+4. **Remaining backends** -- `bliss_levi`, then
+   `subprocess_base` + `traces_levi`. Closes on Tier 1 re-running with all
+   four backends in agreement.
+5. **Tier 2 scaling** -- `datasets.synthetic.{erdos_renyi, chung_lu}` +
+   `metrics.runtime` + `protocols.fingerprint_timing` +
+   `analysis.{aggregate, stats}` + `tier2.yaml`. Closes on a scaling sweep
+   producing per-cell median + IQR + bootstrap CI on speedup.
+6. **Tiers 3-5** -- `synthetic.hardness`, `arb_benson`, `xgi_loader`,
+   `hic_atlas`, `metrics.{partition, complexity_fit}`,
+   `protocols.{partition_agreement, structural_calibration}`, `tier{3,4,5}.yaml`,
+   `analysis.figures/`. Closes on Tier 5 reporting partition-agreement
+   across all four backends on all 12 HIC datasets.
+
+Each step also lands with its unit tests populated and passing under
 `pytest -m unit`.
 
 ## Removed in the architectural refactor
@@ -61,6 +76,22 @@ Each step lands with its unit tests populated and passing under
    two-paper split. Empirically checked in Tier 1 and Tier 5.
 7. **Worst-case complexity bound (Theorem 3 procedure)** -- empirical-only
    by decision (C17).
+8. **Isomorphism-pair generation** -- resolved by decision I44
+   (`docs/PROPOSAL.md`, 2026-06-11). Positive pairs via stdlib-only
+   `core.sparse_hypergraph.permute(H, σ)`; hard negatives from published
+   design-theoretic non-iso pairs (Kaski & Östergård 2004 STS classifications,
+   GQ(2,2) variants) embedded as Tier-1 fixtures, plus pynauty-certified
+   random sweeps for Tier 2 / Tier 3. HG-CFI source documented as empty
+   until C14 produces a construction.
+9. **Label vocabulary** -- resolved by decision I45
+   (`docs/PROPOSAL.md`, 2026-06-11). Vocabularies are dataset-scoped, fitted
+   once at load by `LabelVocabulary.fit(items)` (lexicographic sort →
+   contiguous int IDs), persisted on `DatasetMetadata`. `core/` never sees
+   semantic strings; the Levi reduction lifts both color classes onto
+   `B(H)` with disjoint id ranges. Mirrors the nauty / Traces / bliss
+   colored-graph contract; faithful to the IsalSR pattern of a
+   dataset-supplied operator catalog over a VM that stays
+   alphabet-agnostic.
 
 ## Validation tier map (from `docs/PROPOSAL.md`)
 

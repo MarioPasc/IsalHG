@@ -238,6 +238,22 @@ The five tiers (R1–R5 in the Competitive frame above) correspond to Tier 1 (co
 6. **2-GOWL-distinguishability** — distinguish the Zhang et al. Figure 3(a) pair (which 1-GWL/HWL collapses). Demonstrates IsalHG ≥ 2-GOWL expressiveness.
 7. **2-GFWL-distinguishability** — distinguish the Zhang et al. Figure 3(b) pair (which 2-GOWL collapses). Demonstrates IsalHG ≥ 2-GFWL expressiveness — above the current ICML state-of-the-art baseline.
 
+#### Isomorphism-pair generation policy (decision I44, 2026-06-11)
+
+Correctness criterion 2 above demands a stream of *isomorphic* pairs `(H, π(H))` with a *known* ground-truth permutation `π`. Criterion 3 demands a stream of *non-isomorphic* pairs that no easy invariant (degree sequence, edge-size distribution) separates. The two streams are sourced differently — bundling them under a single "random generator" is the trap that silently produces too-easy negatives.
+
+**Positive pairs (iso) — `core.permute(H, σ)`, no external library.** Generating an isomorphic copy is a one-function operation: sample `σ ∈ S_n` uniformly with the run's pinned RNG, relabel every hyperedge under `σ` (and, under the labelled v1 scope, carry vertex/edge label maps through unchanged — labels are *preserved* by iso, not permuted). This is ~10 lines on top of `SparseHypergraph` and lives in `isalhg.core.sparse_hypergraph` as a free function `permute(H: SparseHypergraph, sigma: dict[NodeId, NodeId]) -> SparseHypergraph`. We do **not** delegate to `xgi.Hypergraph.relabel_nodes` or `HyperNetX.translate`: importing either pulls an optional dep into a code path that should stay stdlib (`core/` is stdlib-only per `CODE_DESIGN.md` §4), and the existing labelled `SparseHypergraph` is the only ground-truth carrier we can trust for the bijection certificate (E24). The known `σ` is the oracle: the H2S-replay-derived bijection `π̂` is compared cell-by-cell against `σ` (or against `σ ∘ Aut(H)` when `|Aut(H)| > 1`).
+
+**Hard negative pairs — design-theoretic instances + pynauty-certified random sweeps.** Three sources, ordered by strength of guarantee:
+
+1. **Published design-theoretic non-iso pairs with classified iso classes.** For 3-uniform hypergraphs: exactly 2 non-iso STS(13), 80 non-iso STS(15) [Kaski & Östergård 2004, *Math. Comp.* 73(248):2075–2092, DOI:10.1090/S0025-5718-04-01626-6]. Two STS(13) of the same parameters and matching `|Aut|` agree on every easy invariant by construction; they are the gold-standard Tier 1 hard negatives. Embedded as Phase 1 fixtures in `tests/conftest.py`, not regenerated at run-time.
+2. **Pynauty-certified random pairs** (used in Tier 2 / Tier 3, not Tier 1). Sample two random hypergraphs from `xgi.uniform_erdos_renyi_hypergraph` or `xgi.chung_lu_hypergraph` with matched degree-and-edge-size sequence; certify non-iso via `pynauty_levi` before adding to the pair stream. This shifts the trust to nauty, which is exactly what the v3 frame already does (pynauty is the oracle in E23). Pairs that nauty cannot certify within 60 s are discarded, not silently accepted.
+3. **HG-CFI construction** (open, C14). The hypergraph lift of Cai–Fürer–Immerman would give synthetic hard negatives matched on every WL-bounded invariant. Until C14 produces a construction, this source is empty; the documentation acknowledges the gap rather than substituting random-regular hypergraphs in its place.
+
+Tier 1 uses sources (1) and the Feng / Zhang Figure-3 fixtures only. Tier 2 / Tier 3 introduce source (2). The policy is asymmetric on purpose: positive pairs are cheap and trustworthy, negative pairs are the scientific load-bearing direction and require certification.
+
+**What this rules out.** Random vertex permutation as a stand-alone "iso generator library" is *not* an import dependency — it is a 10-line function on `SparseHypergraph`. Library helpers (`xgi.relabel_nodes`, `nx.relabel_nodes` on the Levi reduction) are noted in related-work footing only; they are not on the critical path.
+
 ### Tier 2 — Runtime scaling
 
 **Goal.** Produce time-vs-size curves of IsalHG vs. the full baseline stack. Empirical-complexity argument.
@@ -382,6 +398,38 @@ Decision-log B8 + B9 (revised 2026-06-07, retained in v3): vertex and edge label
 
 Alphabet size grows from `O(k²)` to `O(k² · |Σ_v|^k · |Σ_e|)`. Tie-breaking cascade gains: minimise hyperedge-label index, then lex-minimise new-node-label tuple. Structural tuples `ξ, η` become label-aware — count labelled neighbours at distance `h` per `(label, distance)` pair. Theorem 2 proof port now tracks label-preserving isomorphisms (IsalSR Theorem 3.15 recipe).
 
+#### Label vocabulary policy (decision I45, 2026-06-11)
+
+The seed proposal (`docs/isalhg_idea.pdf`) and IsalSR ship with closed semantic alphabets — `{+, −, ×, ÷, sin, …}` in IsalSR's case. IsalHG cannot inherit that closure: the Tier-5 corpora carry domain-specific labels (IMDB actor IDs, Steam game tags, Twitter handles) that are dataset-scoped and not enumerable a priori. The labelling must therefore be *fitted per dataset*, but the fitting must stay deterministic and faithful to the colored-graph standard already established for the Levi baselines (nauty / Traces / bliss accept integer vertex colors via `vertex_coloring=[set_0, set_1, …]`; the semantics-to-color map is the caller's responsibility — see decision log H33 and McKay & Piperno 2014 §2).
+
+**Design (mirrors the nauty / bliss colored-graph contract).**
+
+1. **`SparseHypergraph` never sees strings.** Vertex and hyperedge labels are stored as `int` IDs in compact contiguous ranges `[0, |Σ_v|)` and `[0, |Σ_e|)`. The canonical algorithm, the alphabet, and `ξ` / `η` consume integers. The semantic string ("kinase", "tt0133093") is never seen by `core/`.
+2. **`LabelVocabulary` fits the dataset once at load time** (`isalhg.datasets.schemas.LabelVocabulary`):
+   ```python
+   @dataclass(frozen=True)
+   class LabelVocabulary:
+       vertex_labels: tuple[str, ...]   # index = int id; vertex_labels[i] is the semantic name of int id i
+       edge_labels:   tuple[str, ...]
+
+       @classmethod
+       def fit(cls, dataset_items: Iterable[RawHypergraph]) -> "LabelVocabulary":
+           v = sorted({lbl for H in dataset_items for lbl in H.vertex_labels.values()})
+           e = sorted({lbl for H in dataset_items for lbl in H.edge_labels.values()})
+           return cls(tuple(v), tuple(e))
+   ```
+   Sorting is lexicographic — the only deterministic-across-Python-runs canonical choice (`hash()` salts per process; `id()` is non-reproducible). The fitted vocabulary becomes part of `DatasetMetadata` and is persisted next to every cell's result JSON so reruns are reproducible.
+3. **Each `HypergraphDataset` yields `SparseHypergraph` instances pre-encoded against its vocabulary.** Stochastic datasets that synthesise labels (RHG-*, trivial-label case `ℓ = ⊥`) declare a single-symbol vocabulary `{"⊥"}` so the canonical algorithm runs identically on unlabelled and labelled inputs (no special-case branch).
+4. **Canonical strings are only iso-comparable within the same vocabulary.** Cross-dataset comparison requires reconciling vocabularies — but this is true of nauty too (its canonical permutations are only comparable when the input colorings agree). The orchestrator's partition-agreement assertion (Tier 5 acceptance criterion 1) compares partitions *within* each dataset; no cross-dataset comparison is in scope.
+5. **The Levi reduction carries both color classes.** `iso_backends.levi_reduction` emits a 3-class colouring on `B(H)`: `(v_color = vertex_label_id, e_color = |Σ_v| + edge_label_id + sentinel_offset)`. The sentinel offset guarantees vertex-color and edge-color ranges are disjoint, so the Levi engine cannot map a vertex-witness to an edge-witness. This is the standard "lift colours from H to B(H)" trick used by SageMath's `IncidenceStructure.is_isomorphic` and GAP+FinInG; we reproduce it explicitly so all four backends consume an equivalent colored-graph instance.
+
+**Faithfulness to the Isal framework.** The two-tier alphabet in the table above is unchanged. The new `LabelVocabulary` lives in the *dataset* layer, not in `core/`, so the VM and the canonical algorithm remain dataset-agnostic — exactly the IsalSR pattern where the alphabet was finite + closed and the VM was operator-agnostic. The dataset acts as the IsalSR-equivalent "operator catalog": it tells the VM how many vertex/edge labels exist and which integer maps to which semantic name. The PI's framing of "labels need not be enumerable" (note 2026-06-08, unbounded-label section above) is *also* satisfied: when `|Σ_v|` or `|Σ_e|` grows beyond practical token counts, the dataset loader switches to the parameterised-instruction regular-language form (decision I40), and the same `LabelVocabulary` carries the integer-id mapping over decimal encodings.
+
+**What this rules out.**
+- Hash-based label assignment (`hash(lbl) % N`): non-deterministic across Python runs (PYTHONHASHSEED), breaks reproducibility.
+- WL-style iterative label *replacement* (Shervashidze et al. 2011, *JMLR* 12): solves a different problem (kernel embedding), not canonicalisation; replacing semantic labels with neighborhood hashes discards the iso-preserving constraint and is wrong for our use case.
+- Per-instance vocabularies. Vocabularies are dataset-scoped, not per-hypergraph; otherwise two iso instances in the same dataset could see different integer encodings of the same semantic label and disagree on canonical form.
+
 #### Alphabet design for unbounded label spaces (E. López-Rubio note, 2026-06-08)
 
 The finite-token expansion above suffices when `|Σ_v|, |Σ_e|` are bounded — the case for all 12 Tier-5 datasets. PI's reply 2026-06-08 anticipates the v2 case where the label space is countably infinite (e.g. arbitrary integer IDs, open-ended categorical schemas):
@@ -520,13 +568,14 @@ References:
 
 ## Phase 1 deliverables (next 8–12 weeks)
 
-1. Port `core/cdll.py` and `core/sparse_hypergraph.py` from IsalGraph's templates (linked in `CLAUDE.md`).
-2. Implement `core/instructions.py` with the **labelled two-tier alphabet** (`V^{ℓ_e}_{i,j}[ℓ_{n_1}...ℓ_{n_j}]`, `C^{ℓ_e}_i`, `P_i`, `N_i`, `W`), `core/string_to_hypergraph.py`, `core/hypergraph_to_string.py` (greedy with the full tie-breaking cascade from `idea_060626.md` extended with two label-tie-breaking rules: minimise hyperedge-label index, then lex-minimise new-node-label tuple).
+1. Port `core/cdll.py` and `core/sparse_hypergraph.py` from IsalGraph's templates (linked in `CLAUDE.md`). The `SparseHypergraph` port ships with a free function `permute(H: SparseHypergraph, sigma: dict[NodeId, NodeId]) -> SparseHypergraph` (decision I44) — vertex-permutation oracle for criterion 2 of Tier 1 and for Hypothesis property tests; ~10 lines, stdlib-only, no external relabel helper.
+2. Implement `core/instructions.py` with the **labelled two-tier alphabet** (`V^{ℓ_e}_{i,j}[ℓ_{n_1}...ℓ_{n_j}]`, `C^{ℓ_e}_i`, `P_i`, `N_i`, `W`), `core/string_to_hypergraph.py`, `core/hypergraph_to_string.py` (greedy with the full tie-breaking cascade from `idea_060626.md` extended with two label-tie-breaking rules: minimise hyperedge-label index, then lex-minimise new-node-label tuple). All label inputs are `int` IDs in `[0, |Σ|)`; the semantic-string layer lives in `datasets.schemas.LabelVocabulary` (decision I45) and never reaches `core/`.
 3. Implement `core/structural_tuples.py` with **label-aware** `ξ` and `η` (count labelled neighbours at distance `h` per label class) and `core/canonical.py`.
 4. Implement `core/canonical_pruned.py` with the backtracking procedure (Theorem 3 algorithm).
 5. **Bijection certificate extractor** in `core/canonical.py` (E24).
 6. Hypothesis property tests for `S2H ∘ H2S = id`, canonical invariance, and certificate correctness over `n ≤ 10` random hypergraphs.
-7. `adapters/xgi_adapter.py` (highest priority — XGI is the source of truth for all synthetic generators).
+7. `adapters/xgi_adapter.py` (highest priority — XGI is the source of truth for all synthetic generators). The adapter consumes a `LabelVocabulary` (decision I45) and emits `SparseHypergraph` instances with integer-encoded labels; the semantic-string XGI attributes are stored on the side in `DatasetMetadata` and never passed into `core/`.
+7b. `datasets/schemas.py` — `LabelVocabulary` dataclass with `LabelVocabulary.fit(items)` (lexicographic sort → int IDs); `DatasetMetadata.vocabulary: LabelVocabulary` field. Tier 5 datasets (HIC's 12) fit one vocabulary per dataset at load time; Tier 1 / Tier 2 / Tier 3 unlabelled instances declare a trivial `LabelVocabulary(("⊥",), ("⊥",))` so the canonical algorithm runs identically on unlabelled and labelled inputs (no special-case branch in `core/`).
 8. `experiments/baselines/pynauty_bipartite.py` (~80 lines) + arity-coloring sanity test (H33).
 9. `experiments/baselines/traces_runner.py` (subprocess wrapper).
 10. `experiments/baselines/bliss_runner.py` (python-igraph).
@@ -630,6 +679,8 @@ These shape the validation experiments and remain unresolved:
 | I41 | Venue list narrowed | Drop ICML / ICLR / TPAMI / NeurIPS targets. Keep JEA / ALENEX / JCD for empirical; JSC / SIDMA for theoretical. |
 | I42 | IsoBackend abstraction kept | Retain `IsoBackend` ABC but drop `kernel_features()` method. The abstraction now spans only `fingerprint` + `are_isomorphic`. |
 | I43 | Approximate methods: cited, not implemented | HWL, k-WL on `B(H)`, k-GWL are removed from Phase 1 deliverables (items 11 and 12 struck out). Incompleteness evidence comes from the original papers' own Figure-3-style counterexamples, used as fixtures in `tests/unit/test_canonical.py` (deliverable 13). Rationale: these methods solve a different problem (differentiable feature extraction for MPNNs), not exact iso decision; racing them on runtime is uninformative. Detailed reasoning in §"Approximate methods: cited, not implemented". |
+| I44 | Isomorphism-pair generation policy (2026-06-11) | Positive pairs via `core.permute(H, σ)` — stdlib-only free function on `SparseHypergraph`, ~10 lines, no `xgi.relabel_nodes` / `HyperNetX.translate` dependency in `core/`. The pinned `σ` is the bijection-certificate oracle (E24). Hard negatives sourced as (1) published design-theoretic non-iso pairs with classified iso classes (two STS(13) from Kaski & Östergård 2004; STS(15), GQ(2,2) variants) embedded as Tier-1 fixtures, (2) pynauty-certified random pairs (Tier 2 / Tier 3 only), and (3) HG-CFI when C14 produces a construction (currently empty source — documented gap, not silently substituted). Random-vertex-permutation libraries (`xgi`, `nx` on Levi) are noted in related work only. Detailed reasoning in §"Tier 1 — Isomorphism-pair generation policy". |
+| I45 | Label vocabulary policy (2026-06-11) | Vertex and edge labels are fitted *per dataset* at load time by `LabelVocabulary.fit(dataset_items)` (sorted lexicographically → contiguous `int` IDs in `[0, \|Σ\|)`). `SparseHypergraph` carries only int IDs; `core/` never sees semantic strings — mirrors nauty / Traces / bliss colored-graph convention. `LabelVocabulary` is part of `DatasetMetadata` and is persisted next to every cell's result JSON. The Levi reduction emits a 3-class colouring with disjoint vertex- vs edge-color ranges. Trivial-label datasets declare `LabelVocabulary(("⊥",), ("⊥",))` so the canonical algorithm runs unchanged on unlabelled inputs. Hash-based assignment, WL-style label rewriting, and per-instance vocabularies are explicitly ruled out. Detailed reasoning in §"Label vocabulary policy". |
 
 ## Related-work census (compiled 2026-06-07)
 

@@ -1,10 +1,18 @@
-"""Optional bridges to external hypergraph libraries.
+"""External hypergraph-library bridges.
 
-Each adapter guards its external import; importing this package does NOT
-require any of the optional deps to be installed.
+Concrete adapters translate between :class:`isalhg.core.sparse_hypergraph.SparseHypergraph`
+and the in-memory types of:
 
-Supported backends: HyperNetX (PNNL), XGI (UVM), HyperGraphX. DHG was
-considered and rejected during scaffolding due to abandoned-package signals
-(deprecated sklearn shim + torch 1.13 pin); see project memory
-``feedback_adapter_vetting.md``.
+- HyperNetX (`hypernetx`)
+- XGI (`xgi`)
+- HypergraphX (`hypergraphx`)
+
+DHG / DeepHypergraph was dropped pre-scaffold (deprecated ``sklearn`` shim +
+torch 1.13 pin); see ``feedback_adapter_vetting.md`` in project memory.
+
+Adapters are the *only* layer permitted to import the external libraries.
+They guard imports with ``try/except ImportError`` so the package remains
+importable when an optional dependency is missing.
 """
+
+from __future__ import annotations

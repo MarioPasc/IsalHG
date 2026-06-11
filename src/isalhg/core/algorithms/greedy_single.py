@@ -1,1 +1,21 @@
-"""Greedy from one max-xi seed."""
+"""Greedy H2S from a single max-xi seed."""
+
+from __future__ import annotations
+
+from isalhg.core.algorithms.base import H2SAlgorithm
+from isalhg.core.sparse_hypergraph import SparseHypergraph
+
+
+class GreedySingle(H2SAlgorithm):
+    """Greedy H2S from one max-xi seed."""
+
+    def __init__(self, *, k: int, structural_depth: int = 3) -> None:
+        self._k = k
+        self._structural_depth = structural_depth
+
+    @property
+    def name(self) -> str:
+        return "greedy_single"
+
+    def encode(self, H: SparseHypergraph) -> str:
+        raise NotImplementedError

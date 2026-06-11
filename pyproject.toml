@@ -26,7 +26,6 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Operating System :: OS Independent",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
@@ -43,19 +42,33 @@ Repository = "https://github.com/MarioPasc/IsalHG"
 Issues = "https://github.com/MarioPasc/IsalHG/issues"
 
 [project.optional-dependencies]
-# HyperNetX 2.4.0 has a missing transitive dep (fastjsonschema); pin it explicitly.
+# Hypergraph-library bridges (isalhg.adapters)
 hypernetx = ["hypernetx>=2.4", "fastjsonschema>=2.20"]
 xgi = ["xgi>=0.10"]
 hypergraphx = ["hypergraphx>=1.7"]
+
+# Iso baselines (isalhg.iso_backends).
+# - pynauty: nauty 2.8 Python binding.
+# - python-igraph: bliss via igraph.canonical_permutation.
+# - Traces is a CLI binary (dreadnaut); install via the system package
+#   manager or build nauty from source. No Python dep.
+iso = [
+    "pynauty>=2.8",
+    "python-igraph>=0.11",
+]
+
+# Analysis and figures (experiments/analysis)
 viz = ["matplotlib>=3.7"]
 bench = [
-    "isalhg[hypernetx,xgi,viz]",
+    "isalhg[hypernetx,xgi,viz,iso]",
     "scipy>=1.10",
     "pandas>=2.0",
     "pyyaml>=6.0",
     "numpy>=1.26",
     "scikit-learn>=1.3",
 ]
+
+# Developer toolchain
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
@@ -63,11 +76,10 @@ dev = [
     "ruff>=0.4",
     "mypy>=1.0",
 ]
-# pynauty wraps McKay's nauty 2.8.8 -- the iso baseline for the bipartite reduction.
+
 eval = [
-    "isalhg[hypernetx,xgi,viz,bench]",
+    "isalhg[hypernetx,xgi,viz,bench,iso]",
     "python-Levenshtein>=0.21",
-    "pynauty>=2.8",
 ]
 all = ["isalhg[hypernetx,xgi,hypergraphx,viz,bench,dev,eval]"]
 
@@ -79,17 +91,18 @@ isalhg = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-v --tb=short"
+addopts = "-v --tb=short --strict-markers"
 markers = [
     "unit: Unit tests (no external deps)",
-    "integration: Integration tests (external hypergraph libs)",
+    "integration: Integration tests (external hypergraph libs or backend binaries)",
     "property: Property-based tests (hypothesis)",
     "slow: Long-running tests",
+    "subprocess: Tests that shell out to an external binary (dreadnaut, ...)",
     "eval_validation: Validation tests on Picasso-generated eval data",
 ]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.11"
 strict = true
 warn_return_any = true
 
@@ -99,19 +112,27 @@ module = [
     "xgi", "xgi.*",
     "hypergraphx", "hypergraphx.*",
     "pynauty", "pynauty.*",
+    "igraph", "igraph.*",
     "Levenshtein", "Levenshtein.*",
+    "scipy", "scipy.*",
+    "yaml", "yaml.*",
 ]
 ignore_missing_imports = true
 
 [tool.ruff]
-target-version = "py310"
+target-version = "py311"
 line-length = 100
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "N", "UP", "ANN", "B", "SIM"]
+# N803: argument name should be lowercase. Disabled at project scope because
+# hypergraphs are conventionally named H, H1, H2 in mathematical notation
+# (see Berge 1973). This convention is uniform across docs/PROPOSAL.md and
+# the seed proposal.
+ignore = ["N803"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/integration/*.py" = ["E402"]
-"tests/**/*.py" = ["N802"]
-"benchmarks/**/*.py" = ["E402", "ANN"]
-"tests/eval_validation/*.py" = ["E402", "ANN", "N806"]
+"tests/**/*.py" = ["N802", "ANN", "E402"]
+"experiments/**/*.py" = ["E402", "ANN401"]
+"src/isalhg/**/__init__.py" = ["F401"]
+"src/isalhg/**/*.py" = ["ANN401"]

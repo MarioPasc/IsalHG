@@ -1,1 +1,11 @@
-"""Hypothesis property: canonical(H1) == canonical(H2) iff H1 ~ H2."""
+"""Hypothesis property: canonical_string is invariant under node relabelling."""
+
+from __future__ import annotations
+
+import pytest
+
+pytestmark = pytest.mark.property
+
+
+def test_placeholder() -> None:
+    pytest.skip("not implemented yet")

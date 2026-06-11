@@ -1,0 +1,12 @@
+# Tier 2 -- Runtime scaling.
+#
+# Sweep: n in {50, 100, 250, 500, 1000, 2500}, r in {3, 4, 5},
+# m/n in {1, 5, 25}, 10 seeds per cell.
+# Generators: xgi uniform_erdos_renyi_hypergraph and chung_lu_hypergraph.
+name: tier2_scaling
+description: |
+  Wall-clock scaling sweep over n, r, m/n. Correctness cross-check of
+  IsalHG vs pynauty_levi, triangulated against traces_levi and bliss_levi.
+output_root: experiments/outputs/tier2
+
+cells: []

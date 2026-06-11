@@ -1,0 +1,9 @@
+# Tier 3 -- Hardness stress test (600 s per-instance timeout).
+name: tier3_hardness
+description: |
+  Hard families: PG(2, q) for q in {7, 8, 9, 11, 13}; large-Aut STS;
+  GQ(2, 4), GQ(3, 5); non-group Latin squares with large autotopy;
+  random r-uniform d-regular HGs at threshold density.
+output_root: experiments/outputs/tier3
+
+cells: []

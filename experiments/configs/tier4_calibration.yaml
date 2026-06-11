@@ -1,0 +1,10 @@
+# Tier 4 -- Real-world structural calibration (no iso testing).
+#
+# Feeds Tier 2 sweep ranges only. No backend is invoked.
+name: tier4_calibration
+description: |
+  Real-world hypergraph statistics from the Austin Benson ARB collection
+  and xgi.load_xgi_data. Used to calibrate Tier 2's (n, r, m/n) ranges.
+output_root: experiments/outputs/tier4
+
+cells: []

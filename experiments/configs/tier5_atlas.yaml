@@ -1,0 +1,11 @@
+# Tier 5 -- Iso-equivalence atlas.
+#
+# Acceptance: P_IsalHG = P_pynauty = P_Traces = P_bliss on all 12 HIC datasets.
+# Class labels ignored (we are testing partition agreement, not classification).
+name: tier5_atlas
+description: |
+  Iso-equivalence partition agreement across the 12 HIC datasets
+  (Feng et al. 2024, Table 5).
+output_root: experiments/outputs/tier5
+
+cells: []

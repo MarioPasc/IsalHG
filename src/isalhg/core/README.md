@@ -1,5 +1,12 @@
 # isalhg.core
 
-Pure-stdlib core. Mathematical and architectural spec for the IsalHG algorithm.
-Populated incrementally; for the seed proposal see `docs/isalhg_idea.pdf` and
-the project memory file `idea_060626.md`.
+Pure-stdlib virtual machine and canonical algorithm. The implementation of
+``Sigma_HG``, the S2H / H2S interpreters, and the canonical-string entry
+point lives here.
+
+Restriction: **no non-stdlib imports**. External hypergraph libraries are
+walled off behind :mod:`isalhg.adapters`; iso baselines live in
+:mod:`isalhg.iso_backends`.
+
+See ``docs/CODE_DESIGN.md`` for the per-module mandate and the order in which
+modules should be filled in.

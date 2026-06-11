@@ -1,0 +1,14 @@
+# Tier 1 -- Correctness on exhaustively enumerated small hypergraphs.
+#
+# Acceptance: FP = FN = 0 on every pair; bijection certificate valid on every
+# iso pair; HWL/k-GWL fixtures from Feng Fig. 3 and Zhang Fig. 3 distinguished.
+#
+# Schema mirrors experiments.schemas.ExperimentConfig.
+name: tier1_correctness
+description: |
+  Exhaustive correctness check on all connected hypergraphs with
+  n in {3..6} and r in {2, 3, 4}, plus the published designs (Fano,
+  STS(9), two non-iso STS(13), GQ(2,2)).
+output_root: experiments/outputs/tier1
+
+cells: []   # filled by a coding agent against the protocol/backend/dataset registries

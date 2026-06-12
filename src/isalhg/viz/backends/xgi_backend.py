@@ -79,7 +79,7 @@ class XGIBackend(HypergraphVizBackend):
             ax=ax,
             node_fc=node_fc,
             edge_fc=edge_fc,
-            node_size=8,
+            node_size=18,
             node_ec="#222222",
             node_lw=0.6,
             alpha=0.55,

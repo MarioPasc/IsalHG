@@ -51,6 +51,20 @@ def _kind_of(tok: Token) -> str:
     return type(tok).__name__.removeprefix("Token")
 
 
+def _auto_fontsize(n_tokens: int, axis_width_inches: float) -> float:
+    """Pick a label fontsize that does not overflow the cell.
+
+    Heuristic: per-cell width in points is ``axis_width_inches * 72 /
+    n_tokens``. A rotated label needs roughly one character height
+    (``= fontsize`` points) of horizontal room, plus 25 % margin. The
+    result is clamped to ``[3.0, 7.5]``.
+    """
+    if n_tokens <= 0:
+        return 7.5
+    per_cell_pts = axis_width_inches * 72.0 / n_tokens
+    return max(3.0, min(7.5, per_cell_pts * 0.80))
+
+
 def draw_instruction_strip(
     ax: Axes,
     tokens: tuple[Token, ...],
@@ -62,6 +76,8 @@ def draw_instruction_strip(
     cell_height: float = 1.1,
     show_labels: bool = True,
     label_rotation: float = 90.0,
+    axis_width_inches: float | None = None,
+    label_fontsize: float | None = None,
 ) -> None:
     """Draw the strip.
 
@@ -90,6 +106,8 @@ def draw_instruction_strip(
         edge_id_per_token = assign_edge_ids_to_tokens(tokens)
 
     n = len(tokens)
+    if label_fontsize is None:
+        label_fontsize = 7.0 if axis_width_inches is None else _auto_fontsize(n, axis_width_inches)
     if n == 0:
         ax.text(
             0.5,
@@ -140,7 +158,7 @@ def draw_instruction_strip(
                 tok.serialize(),
                 ha="center",
                 va="center",
-                fontsize=7,
+                fontsize=label_fontsize,
                 color="#111111" if is_active else "#666666",
                 rotation=label_rotation,
             )

@@ -65,6 +65,7 @@ def draw_column(
     hypergraph_layout: dict[NodeId, Position] | None,
     column_title: str | None = None,
     direction: str = "s2h",
+    column_inches: float | None = None,
 ) -> dict[NodeId, Position]:
     """Draw one snapshot column into ``fig`` at ``spec``.
 
@@ -107,6 +108,7 @@ def draw_column(
         current_idx=snapshot.step_idx,
         edge_palette=edge_palette,
         edge_id_per_token=edge_id_per_tok,
+        axis_width_inches=column_inches,
     )
 
     active_nodes = set(snapshot.active_nodes)
@@ -177,6 +179,7 @@ def single_card_figure(
         hypergraph_layout=None,
         column_title=title,
         direction=direction,
+        column_inches=3.0,
     )
     return fig
 
@@ -221,6 +224,7 @@ def steps_figure(
             hypergraph_layout=pinned,
             column_title=f"Step {snap.step_idx}",
             direction=direction,
+            column_inches=2.4,
         )
     if overall_title is not None:
         fig.suptitle(overall_title, fontsize=10)
@@ -278,6 +282,7 @@ def roundtrip_figure(
             hypergraph_layout=pinned_top,
             column_title=f"Step {h2s_snap.step_idx}",
             direction="h2s",
+            column_inches=2.4,
         )
         pinned_bot = draw_column(
             fig,
@@ -291,6 +296,7 @@ def roundtrip_figure(
             hypergraph_layout=pinned_bot,
             column_title=f"Step {s2h_snap.step_idx}",
             direction="s2h",
+            column_inches=2.4,
         )
     if overall_title is not None:
         fig.suptitle(overall_title, fontsize=10)

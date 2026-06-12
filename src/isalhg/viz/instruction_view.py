@@ -78,6 +78,7 @@ def draw_instruction_strip(
     label_rotation: float = 90.0,
     axis_width_inches: float | None = None,
     label_fontsize: float | None = None,
+    direction: str = "s2h",
 ) -> None:
     """Draw the strip.
 
@@ -128,7 +129,13 @@ def draw_instruction_strip(
     for i, tok in enumerate(tokens):
         x = i * cell_width
         kind = _kind_of(tok)
-        is_active = i < current_idx
+        # H2S: tokens already emitted (i < current_idx) are coloured.
+        # S2H: tokens not yet consumed (i >= current_idx) are coloured;
+        #      consumed tokens fade as their hypergraph content arrives.
+        if direction == "h2s":
+            is_active = i < current_idx
+        else:
+            is_active = i >= current_idx
         face = (
             color_for_token(
                 kind,

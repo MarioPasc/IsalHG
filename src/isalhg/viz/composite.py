@@ -109,6 +109,7 @@ def draw_column(
         edge_palette=edge_palette,
         edge_id_per_token=edge_id_per_tok,
         axis_width_inches=column_inches,
+        direction=direction,
     )
 
     active_nodes = set(snapshot.active_nodes)

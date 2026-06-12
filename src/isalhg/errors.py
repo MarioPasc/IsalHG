@@ -119,3 +119,20 @@ class ProtocolNotFoundError(ProtocolError):
 
 class ProtocolPreconditionError(ProtocolError):
     """Raised when a backend/dataset pair does not satisfy a protocol's preconditions."""
+
+
+# ---------------------------------------------------------------------------
+# viz/ — visualisation backends
+# ---------------------------------------------------------------------------
+
+
+class VizError(IsalHGError):
+    """Base class for visualisation-layer failures."""
+
+
+class VizBackendUnavailableError(VizError):
+    """Raised when a visualisation backend's library is not installed."""
+
+
+class VizBackendNotFoundError(VizError):
+    """Raised when a visualisation backend name is not registered."""

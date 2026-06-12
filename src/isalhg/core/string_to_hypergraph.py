@@ -36,11 +36,31 @@ from isalhg.core.instructions import (
     TokenV,
     TokenW,
     parse,
+    serialize,
     validate,
 )
 from isalhg.core.pointers import KPointerSet
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.core.trace import (
+    AlgorithmTrace,
+    StepSnapshot,
+    hypergraph_to_hif,
+    initial_snapshot,
+    post_step_snapshot,
+)
 from isalhg.types import NodeId
+
+_TOKEN_KIND: dict[type, str] = {
+    TokenW: "W",
+    TokenN: "N",
+    TokenP: "P",
+    TokenV: "V",
+    TokenC: "C",
+}
+
+
+def _kind_of(tok: Token) -> str:
+    return _TOKEN_KIND[type(tok)]
 
 
 def _capacity_for(tokens: Iterable[Token]) -> int:
@@ -122,6 +142,63 @@ class StringToHypergraph:
                     f"pointers={self._pointers.snapshot()}"
                 )
         return self._H, trace_log
+
+    def run_with_trace(
+        self,
+        *,
+        direction: str = "s2h",
+    ) -> tuple[SparseHypergraph, AlgorithmTrace]:
+        """Execute every token and return the final hypergraph plus an :class:`AlgorithmTrace`.
+
+        Parameters
+        ----------
+        direction : str, optional
+            ``"s2h"`` (default) or ``"h2s"``. Labels the trace for the
+            visualisation layer; the snapshot content is identical for
+            either direction of the round trip.
+
+        Returns
+        -------
+        (SparseHypergraph, AlgorithmTrace)
+            The fully-decoded hypergraph and the ordered snapshot list.
+            The trace contains ``len(tokens) + 1`` snapshots (one initial
+            state followed by one snapshot per token).
+        """
+        snapshots: list[StepSnapshot] = [
+            initial_snapshot(
+                self._H,
+                cdll_node_order=tuple(self._cdll.values()),
+                pointer_node_values=self._current_pointer_values(),
+            )
+        ]
+        emitted: list[Token] = []
+        for idx, tok in enumerate(self._tokens):
+            self._step(tok)
+            emitted.append(tok)
+            snapshots.append(
+                post_step_snapshot(
+                    step_idx=idx + 1,
+                    token_serialised=tok.serialize(),
+                    token_kind=_kind_of(tok),
+                    H=self._H,
+                    cdll_node_order=tuple(self._cdll.values()),
+                    pointer_node_values=self._current_pointer_values(),
+                    partial_string=serialize(emitted),
+                )
+            )
+        trace = AlgorithmTrace(
+            direction=direction,
+            k=self._k,
+            n_vertex_labels=self._n_vertex_labels,
+            n_edge_labels=self._n_edge_labels,
+            final_hif=hypergraph_to_hif(self._H),
+            snapshots=tuple(snapshots),
+        )
+        return self._H, trace
+
+    def _current_pointer_values(self) -> tuple[NodeId, ...]:
+        """Return the node IDs each ``p_i`` currently points to."""
+        return tuple(self._cdll.get_value(self._pointers.get(i)) for i in range(1, self._k + 1))
 
     def _step(self, tok: Token) -> None:
         if isinstance(tok, TokenW):

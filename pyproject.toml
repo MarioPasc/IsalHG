@@ -116,8 +116,16 @@ module = [
     "Levenshtein", "Levenshtein.*",
     "scipy", "scipy.*",
     "yaml", "yaml.*",
+    "networkx", "networkx.*",
+    "matplotlib", "matplotlib.*",
 ]
 ignore_missing_imports = true
+
+# Viz backends call into the above libraries; the libraries lack type
+# stubs so every call would otherwise raise no-untyped-call.
+[[tool.mypy.overrides]]
+module = ["isalhg.viz.backends.*"]
+disable_error_code = ["no-untyped-call"]
 
 [tool.ruff]
 target-version = "py311"

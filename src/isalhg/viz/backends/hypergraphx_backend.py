@@ -115,10 +115,10 @@ class HypergraphxBackend(HypergraphVizBackend):
             ax.scatter(
                 [x],
                 [y],
-                s=120,
+                s=215,
                 c=[face],
                 edgecolors="#222222",
-                linewidths=0.7,
+                linewidths=0.9,
                 zorder=5,
             )
             ax.text(
@@ -127,7 +127,7 @@ class HypergraphxBackend(HypergraphVizBackend):
                 str(int(v)),
                 ha="center",
                 va="center",
-                fontsize=6,
+                fontsize=8,
                 color="#111111",
                 zorder=6,
             )

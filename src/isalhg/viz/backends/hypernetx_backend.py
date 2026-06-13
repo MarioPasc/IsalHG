@@ -99,7 +99,7 @@ class HyperNetXBackend(HypergraphVizBackend):
             hnxH,
             pos=layout,
             ax=ax,
-            nodes_kwargs={"facecolors": node_face},
+            nodes_kwargs={"facecolors": node_face, "linewidths": 1.0},
             edges_kwargs={"edgecolors": edge_face_list, "linewidths": 1.0},
             with_node_labels=True,
             with_edge_labels=False,

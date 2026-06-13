@@ -122,19 +122,30 @@ def seed(self, seed: Seed) -> HypergraphDataset:
 datasets, and Tier 2 generators where the partition is irrelevant.
 
 **Label vocabulary.** Each dataset carries a `LabelVocabulary` on its
-`DatasetMetadata` (see `datasets/schemas.py`). The vocabulary is fitted
-once at dataset construction by `LabelVocabulary.fit(items)`, which
-collects all vertex and edge labels seen in the corpus, sorts them
-lexicographically, and assigns contiguous `int` IDs. Every yielded
-`SparseHypergraph` carries `int`-encoded labels only; the semantic strings
-("kinase", "tt0133093") live in `DatasetMetadata` and never reach `core/`.
-This mirrors the nauty / Traces / bliss colored-graph convention where the
-semantics-to-color mapping is the caller's responsibility. Trivial-label
-(synthetic, unlabelled) datasets declare a single-symbol vocabulary
-`LabelVocabulary(("⊥",), ("⊥",))` so the canonical algorithm runs
-identically on labelled and unlabelled inputs without a special-case
-branch. Stochastic datasets that synthesise labels do so deterministically
-under the bound seed before fitting the vocabulary.
+`DatasetMetadata` (see `datasets/schemas.py`). The contract is that the
+vocabulary is fitted once at dataset construction by
+`LabelVocabulary.fit(items)`, which collects all vertex and edge labels
+seen in the corpus, sorts them lexicographically, and assigns contiguous
+`int` IDs. Every yielded `SparseHypergraph` carries `int`-encoded labels
+only; the semantic strings ("kinase", "tt0133093") live in
+`DatasetMetadata` and never reach `core/`. This mirrors the nauty /
+Traces / bliss colored-graph convention where the semantics-to-color
+mapping is the caller's responsibility. Trivial-label (synthetic,
+unlabelled) datasets declare a single-symbol vocabulary
+`LabelVocabulary(("⊥",), ("⊥",))` (`LabelVocabulary.trivial()`) so the
+canonical algorithm runs identically on labelled and unlabelled inputs
+without a special-case branch. Stochastic datasets that synthesise
+labels do so deterministically under the bound seed before fitting the
+vocabulary.
+
+*Implementation status (2026-06-13).* The `LabelVocabulary` dataclass +
+`trivial()` classmethod + `DatasetMetadata.label_vocabulary` slot
+landed at Phase 3 close. The production `fit(items)` method raises
+`NotImplementedError("deferred to Phase 6 labelled-loader milestone")`;
+it is exercised first by the labelled HIC-atlas loader (Tier 5,
+Phase 6). Phase 3/4 datasets all use `LabelVocabulary.trivial()` and
+the canonical algorithm exercises the trivial-vocabulary code path
+exclusively.
 
 ### 2.3 `BenchmarkProtocol` -- `src/isalhg/protocols/base.py`
 

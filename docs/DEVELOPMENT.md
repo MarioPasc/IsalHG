@@ -6,11 +6,28 @@ proposal (`docs/isalhg_idea.pdf` + `docs/PROPOSAL.md`).
 
 ## Status
 
-**Phase 1 + Phase 2 closed (2026-06-11).** The repo now ships a working
-canonical-string algorithm (`isalhg.core.*`) plus the `IsoBackend` interface
-with both the IsalHG and pynauty-via-Levi concrete backends, the XGI
-adapter, and a registry. Phases 3-6 (datasets, protocols, experiments,
-remaining backends) remain scaffold-only.
+**Phases 1 + 2 + 3 + 4 closed (2026-06-13).** The repo now ships:
+
+- the canonical-string algorithm (`isalhg.core.*`),
+- the four `IsoBackend` implementations specified in PROPOSAL.md Tier 1
+  (`isalhg`, `pynauty_levi`, `bliss_levi` via `python-igraph`,
+  `traces_levi` via the `dreadnaut` subprocess),
+- the dataset layer (`HypergraphDataset` ABC, `LabelVocabulary`,
+  `ExhaustiveSmallHypergraphs` with itertools-enumeration +
+  fingerprint-dedup + named-design slots for Fano / STS(9) / two
+  cyclic STS(13) / GQ(2,2)),
+- the protocol layer (`BenchmarkProtocol`, `PairwiseIsoProtocol` with
+  FP/FN counting and bijection-certificate verification),
+- the metrics layer (`confusion_from_partitions`,
+  `verify_bijection_certificate`),
+- the experiment orchestrator
+  (`experiments.{schemas, orchestrator}`, atomic skip-if-exists JSON
+  persistence, hardware capture, idempotent re-runs).
+
+Phases 5-6 (Tier 2-5 datasets, runtime / partition / complexity_fit
+metrics, fingerprint_timing / partition_agreement /
+structural_calibration protocols, analysis figures) remain
+scaffold-only.
 
 ## Implementation order
 
@@ -51,14 +68,56 @@ Phase headline (full detail in `CODE_DESIGN.md`):
    | sts_9          | 9, 12   | True   | True    | True  |
    | non_iso_pair   | 4,2/4,3 | False  | False   | True  |
 
-3. **Tier 1 end-to-end** -- `datasets/{base, registry, synthetic.exhaustive_small}`
-   + `metrics.correctness` + `protocols/{base, pairwise_iso, registry}` +
-   `experiments/{schemas, orchestrator}` + `tier1.yaml`. Closes on
-   `python -m experiments.orchestrator --config tier1_correctness.yaml`
-   reporting FP = FN = 0.
-4. **Remaining backends** -- `bliss_levi`, then
-   `subprocess_base` + `traces_levi`. Closes on Tier 1 re-running with all
-   four backends in agreement.
+   **Phases 3 + 4 partition-agreement table** — pairwise iso classifier on
+   the smoke-scale dataset `ExhaustiveSmallHypergraphs(n_range=(3,4),
+   arity_range=(2,3), max_edges=3, include_designs=false,
+   permutations_per_class=2)`, 36 iso-classes × 2 reps = 72 items,
+   2,556 unordered pairs. All four backends report:
+
+   | backend       | FP | FN | TP | TN     | bijection violations |
+   |---------------|----|----|-----|--------|----------------------|
+   | isalhg        | 0  | 0  | 36  | 2 520  | n/a (no certificate)|
+   | pynauty_levi  | 0  | 0  | 36  | 2 520  | 0                    |
+   | bliss_levi    | 0  | 0  | 36  | 2 520  | 0                    |
+   | traces_levi   | 0  | 0  | 36  | 2 520  | n/a (no certificate)|
+
+   Identical TP/TN across all four backends → four-way partition agreement.
+
+3. **Tier 1 end-to-end [COMPLETED 2026-06-13]** -- shipped
+   `datasets/{base, registry, schemas (with LabelVocabulary),
+   synthetic.exhaustive_small}` + `metrics.correctness` +
+   `protocols/{base, pairwise_iso, registry}` +
+   `experiments/{schemas, orchestrator}` + `tier1_correctness.yaml`.
+   The orchestrator was validated end-to-end via
+   `tests/integration/test_orchestrator_tier1.py`:
+   `python -m experiments.orchestrator --config
+   experiments/configs/tier1_correctness.yaml` on the smoke-scale
+   parameters (`n ∈ {3, 4}`, arity `∈ {2, 3}`, `max_edges = 3`, plus
+   Fano + STS(9)) reports `FP = FN = 0` on both `isalhg` and
+   `pynauty_levi` cells, and the pynauty bijection certificate is
+   accepted by `verify_bijection_certificate` on every iso pair. The
+   full-scale Tier 1 sweep (`n ∈ {3..6}`, arity `∈ {2..4}`, including
+   the STS(13) pair and GQ(2,2) doily — currently ~3 min per
+   IsalHG fingerprint on GQ(2,2), open question #1) is queued for
+   execution on a workstation by raising the same YAML's
+   `n_range`/`max_edges` and toggling `include_large_designs: true`.
+   **Phase-2 bug fixed in passing**: `PynautyLeviBackend.bijection_certificate`
+   composed `pi2^{-1}(pi1(v))` under the assumption that
+   `pynauty.canon_label(g)[i]` is the canonical position of vertex
+   `i`. The actual semantics are the inverse (`pi[i]` is the vertex at
+   canonical position `i`), so the certificate was a permutation but
+   not an edge-preserving one. The corrected composition is
+   `pi2(pi1^{-1}(v))`.
+4. **Remaining backends [COMPLETED 2026-06-13]** -- shipped
+   `bliss_levi` (via `python-igraph` 1.0 `canonical_permutation` /
+   `isomorphic_bliss`, same canon_label semantics fix as pynauty) and
+   `subprocess_base` + `traces_levi` (subprocess to dreadnaut 2.9
+   installed via `conda install -n isalhg -c conda-forge nauty`;
+   serialises the Levi graph using the `At c -a n=N f=[...] g ... . x
+   b6 q` session shape and parses the canonical `b6` line as the
+   fingerprint). Tier 1 partition agreement across all four backends
+   confirmed by `tests/integration/test_orchestrator_tier1.py::test_tier1_orchestrator_partition_agreement`
+   (FP=FN=0 on every backend; equal TP/TN counts).
 5. **Tier 2 scaling** -- `datasets.synthetic.{erdos_renyi, chung_lu}` +
    `metrics.runtime` + `protocols.fingerprint_timing` +
    `analysis.{aggregate, stats}` + `tier2.yaml`. Closes on a scaling sweep
@@ -95,6 +154,18 @@ Each step also lands with its unit tests populated and passing under
    `algorithms/pruned_exhaustive.py` will be reintroduced once that
    algorithm exists. Validated empirically by the Phase 2 partition-agreement
    table -- IsalHG matches pynauty on every Phase 1 fixture.
+   **2026-06-13 update**: empirical fingerprint wall-clock on highly
+   symmetric designs measured at Phase 3 close:
+   Fano STS(7) 0.78 s, STS(9) 7.55 s, STS(13) cyclic (013) 62 s,
+   STS(13) cyclic (016) 76 s, GQ(2,2) doily 177 s on the workstation's
+   default Python 3.13 build. The backtracking branching factor explodes on
+   designs with large automorphism orbits; this is the same `(j!)^{num V}`
+   worst-case noted above. Mitigations: `ExhaustiveSmallHypergraphs` now
+   accepts `dedup_backend_name` so heavyweight named designs can be
+   deduplicated against `pynauty_levi` (microseconds per call), and
+   `include_large_designs` is opt-in. The full Tier 1 sweep with
+   STS(13)/GQ(2,2) is therefore tractable when scheduled on a single
+   workstation core rather than inside a unit-test budget.
 2. **Value of `k`** -- capped at 10 (decision B12). Whether `k` should be
    input-dependent within that cap is open.
 3. **Structural-tuple depth** -- fixed at 3 by analogy with IsalGraph; Tier 3
@@ -124,7 +195,63 @@ Each step also lands with its unit tests populated and passing under
    `B(H)` with disjoint id ranges. Mirrors the nauty / Traces / bliss
    colored-graph contract; faithful to the IsalSR pattern of a
    dataset-supplied operator catalog over a VM that stays
-   alphabet-agnostic.
+   alphabet-agnostic. **2026-06-13 update**: the dataclass landed in
+   `src/isalhg/datasets/schemas.py` with
+   `LabelVocabulary.trivial()` returning `(("⊥",), ("⊥",))`. The
+   production `fit(items)` path is gated behind a
+   `NotImplementedError` until the labelled HIC-atlas loader (Phase 6),
+   matching the actual sequencing in `docs/CODE_DESIGN.md`.
+
+## Phase 3.5 follow-up (queued)
+
+- Extract the Feng et al. TPAMI 2024 Figure 3 HWL-failure pair and
+  the Zhang et al. ICML 2025 Figure 3(a)/(b) `k`-GWL pairs from their
+  source PDFs; add them as `conftest.py` fixtures and as named
+  designs in `synthetic.exhaustive_small`. PROPOSAL.md Tier 1
+  acceptance criteria 5, 6, 7 cannot be ticked off until this lands.
+
+## Algorithm-R&D track (priority, pre-Tier 2)
+
+**Open question #1 (pruned canonical backtracking) is escalated to a
+priority Algorithm-R&D track.** Justification: empirical timings at
+Phase 3 close (Fano 0.78 s, STS(9) 7.55 s, STS(13) 62-76 s,
+GQ(2,2) 177 s; see open question #1) make IsalHG uncompetitive against
+pynauty / bliss / Traces on high-automorphism fixtures by 3-5 orders of
+magnitude. The full Tier 1 sweep with `include_large_designs: true` is
+estimated at >5 h of IsalHG-cell wall-clock vs. seconds for the iso
+backends. Tier 2 (Phase 5) will measure this gap at scale on random
+hypergraphs; the gap will not close without algorithm work.
+
+Scope of the Algorithm-R&D track (PI specification required):
+1. Define the pruned backtracking algorithm that branches at every tie
+   (displacement, edge-selection, label-class) and prunes via lex-min
+   completion of the partial canonical string. Inputs from
+   `IsalGraph` preprint footnotes are a starting point but were
+   themselves PI-deferred.
+2. Reintroduce `core/canonical_pruned.py` and
+   `algorithms/pruned_exhaustive.py`; tests under
+   `tests/unit/test_canonical_pruned.py`.
+3. Establish a complexity bound on the branching factor (currently
+   the worst case is `(j!)^{num V steps}` only over `V`-emission label
+   classes; the pruned variant must cover all tie sources).
+4. Re-validate on Phase 1 / Phase 2 / Phase 3 fixtures; the canonical
+   string of the new algorithm must coincide with the bounded-backtracking
+   variant on every test where both terminate.
+
+This track is **parallel to Phase 5 (Tier 2 scaling)** -- Phase 5 work
+proceeds with the current bounded backtracking and provides the
+empirical data that informs the algorithm design (which orbit shapes
+to prune first).
+
+## Workstation execution (queued, post-Phase 4)
+
+- Run `python -m experiments.orchestrator --config
+  experiments/configs/tier1_correctness.yaml` at full Tier 1 scale
+  (raise `n_range` to `[3, 6]`, `arity_range` to `[2, 4]`,
+  `max_edges` to 6, set `include_large_designs: true`). Validate that
+  the four-way partition agreement reported by
+  `test_tier1_orchestrator_partition_agreement` extends to the
+  full STS(13)/GQ(2,2) regime.
 
 ## Validation tier map (from `docs/PROPOSAL.md`)
 

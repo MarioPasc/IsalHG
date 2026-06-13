@@ -107,3 +107,57 @@ def non_iso_pair_small() -> tuple[SparseHypergraph, SparseHypergraph]:
         hyperedges=[frozenset({0, 1}), frozenset({1, 2}), frozenset({2, 3})],
     )
     return h1, h2
+
+
+def _cyclic_sts_13(base: tuple[int, int, int]) -> SparseHypergraph:
+    """Build an STS(13) via the cyclic difference-set construction.
+
+    Each block is the rotate ``{(b + i) mod 13 : b in base}`` for
+    ``i in 0..12``. Two STS(13) variants exist up to isomorphism; the
+    full classification is due to Heinlein 2023 (arXiv:2303.01207).
+    """
+    n = 13
+    edges = [frozenset((b + i) % n for b in base) for i in range(n)]
+    return SparseHypergraph(n_nodes=n, hyperedges=edges)
+
+
+@pytest.fixture
+def sts_13_pair() -> tuple[SparseHypergraph, SparseHypergraph]:
+    """The two non-isomorphic STS(13).
+
+    First system: cyclic on base ``{0, 1, 4}`` (Bose 1939).
+    Second system: cyclic on base ``{0, 1, 6}`` — a starter inequivalent
+    to ``{0, 1, 4}`` under PGL action on Z/13Z. The complete STS(13)
+    classification (Heinlein 2023) reports exactly two iso-classes; the
+    Phase 3 closing check verifies non-isomorphism empirically against
+    pynauty.
+    """
+    return _cyclic_sts_13((0, 1, 4)), _cyclic_sts_13((0, 1, 6))
+
+
+@pytest.fixture
+def gq_2_2_doily() -> SparseHypergraph:
+    """Generalised quadrangle GQ(2, 2) — the "doily".
+
+    15 points, 15 lines, automorphism group of order 720. Standard
+    symplectic realisation W(2) over GF(2) (Payne & Thas, *Finite
+    Generalized Quadrangles*, §1.2).
+    """
+    edges = [
+        frozenset({0, 1, 2}),
+        frozenset({0, 3, 4}),
+        frozenset({0, 5, 6}),
+        frozenset({1, 3, 7}),
+        frozenset({1, 5, 8}),
+        frozenset({2, 4, 9}),
+        frozenset({2, 6, 10}),
+        frozenset({3, 8, 11}),
+        frozenset({4, 7, 12}),
+        frozenset({5, 10, 13}),
+        frozenset({6, 9, 14}),
+        frozenset({7, 11, 13}),
+        frozenset({8, 12, 14}),
+        frozenset({9, 11, 12}),
+        frozenset({10, 13, 14}),
+    ]
+    return SparseHypergraph(n_nodes=15, hyperedges=edges)

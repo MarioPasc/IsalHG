@@ -1,14 +1,88 @@
 # Tier 1 -- Correctness on exhaustively enumerated small hypergraphs.
 #
 # Acceptance: FP = FN = 0 on every pair; bijection certificate valid on every
-# iso pair; HWL/k-GWL fixtures from Feng Fig. 3 and Zhang Fig. 3 distinguished.
+# iso pair predicted by a backend that exposes one (PROPOSAL.md Tier 1,
+# acceptance criteria 1-5). Feng / Zhang Fig. 3 HWL-failure pairs are deferred
+# to Phase 3.5 per decision D1 in the Phase 3 plan.
+#
+# This config ships the smoke-scale parameters (n in {3..4}, arity in {2, 3},
+# max_edges = 3) so the orchestrator runs to completion in ~5 minutes on a
+# laptop. The full sweep (n in {3..6}, arity in {2..4}, GQ(2,2) + STS(13))
+# is queued for the workstation execution under the same YAML by raising
+# n_range / arity_range / max_edges and toggling include_large_designs.
 #
 # Schema mirrors experiments.schemas.ExperimentConfig.
 name: tier1_correctness
 description: |
-  Exhaustive correctness check on all connected hypergraphs with
-  n in {3..6} and r in {2, 3, 4}, plus the published designs (Fano,
-  STS(9), two non-iso STS(13), GQ(2,2)).
+  Smoke-scale correctness check on connected hypergraphs with
+  n in {3..4} and arity in {2, 3}, plus the small published designs
+  (Fano, STS(9)).
+  Backends: isalhg + pynauty_levi (Phase 3). bliss_levi + traces_levi
+  appended at the close of Phase 4.
 output_root: experiments/outputs/tier1
 
-cells: []   # filled by a coding agent against the protocol/backend/dataset registries
+cells:
+  - protocol: pairwise_iso
+    backend: isalhg
+    dataset: exhaustive_small
+    seed: 0
+    protocol_params:
+      timeout_s: 600.0
+      check_bijection: false
+    dataset_params:
+      n_range: [3, 4]
+      arity_range: [2, 3]
+      max_edges: 3
+      include_designs: true
+      include_large_designs: false
+      dedup_backend_name: pynauty_levi
+      permutations_per_class: 2
+      seed_value: 0
+  - protocol: pairwise_iso
+    backend: pynauty_levi
+    dataset: exhaustive_small
+    seed: 0
+    protocol_params:
+      timeout_s: 600.0
+      check_bijection: true
+    dataset_params:
+      n_range: [3, 4]
+      arity_range: [2, 3]
+      max_edges: 3
+      include_designs: true
+      include_large_designs: false
+      dedup_backend_name: pynauty_levi
+      permutations_per_class: 2
+      seed_value: 0
+  - protocol: pairwise_iso
+    backend: bliss_levi
+    dataset: exhaustive_small
+    seed: 0
+    protocol_params:
+      timeout_s: 600.0
+      check_bijection: true
+    dataset_params:
+      n_range: [3, 4]
+      arity_range: [2, 3]
+      max_edges: 3
+      include_designs: true
+      include_large_designs: false
+      dedup_backend_name: pynauty_levi
+      permutations_per_class: 2
+      seed_value: 0
+  - protocol: pairwise_iso
+    backend: traces_levi
+    dataset: exhaustive_small
+    seed: 0
+    protocol_params:
+      timeout_s: 600.0
+      check_bijection: false
+    dataset_params:
+      n_range: [3, 4]
+      arity_range: [2, 3]
+      max_edges: 3
+      include_designs: true
+      include_large_designs: false
+      dedup_backend_name: pynauty_levi
+      permutations_per_class: 2
+      seed_value: 0

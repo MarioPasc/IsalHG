@@ -1,12 +1,67 @@
-"""Dataclasses describing dataset items and dataset metadata."""
+"""Dataclasses describing dataset items, dataset metadata, and label vocabularies."""
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from typing import Any
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.types import DatasetName, IsoClassId
+
+
+@dataclass(frozen=True)
+class LabelVocabulary:
+    """Per-dataset semantic-string → int-ID vocabulary (decision I45).
+
+    Attributes
+    ----------
+    vertex_symbols : tuple[str, ...]
+        Lexicographically sorted semantic strings for vertex labels.
+        Position ``i`` is the symbol whose integer ID is ``i``.
+    edge_symbols : tuple[str, ...]
+        Same for hyperedge labels.
+
+    Notes
+    -----
+    Trivial-vocabulary datasets (unlabelled synthetic hypergraphs)
+    declare ``LabelVocabulary.trivial()`` so the canonical algorithm runs
+    identically on labelled and unlabelled inputs without a special-case
+    branch.
+
+    Real labelled datasets (Tier 4 / Tier 5 loaders, e.g. the HIC atlas)
+    call :meth:`fit` at load time. The production ``fit`` implementation
+    is deferred to Phase 6.
+    """
+
+    vertex_symbols: tuple[str, ...]
+    edge_symbols: tuple[str, ...]
+
+    @property
+    def n_vertex_labels(self) -> int:
+        return len(self.vertex_symbols)
+
+    @property
+    def n_edge_labels(self) -> int:
+        return len(self.edge_symbols)
+
+    @classmethod
+    def trivial(cls) -> LabelVocabulary:
+        """Single-symbol vocabulary used by unlabelled synthetic datasets."""
+        return cls(vertex_symbols=("⊥",), edge_symbols=("⊥",))
+
+    @classmethod
+    def fit(cls, items: Iterable[Any]) -> LabelVocabulary:
+        """Collect semantic labels across a corpus and assign contiguous int IDs.
+
+        Lexicographic sort over all observed vertex and edge label strings.
+        Deferred to Phase 6 (labelled HIC atlas loader); raising here
+        keeps the contract named without realising it for Tier 1.
+        """
+        raise NotImplementedError(
+            "LabelVocabulary.fit is deferred to Phase 6 (labelled-loader milestone); "
+            "Tier 1 uses LabelVocabulary.trivial() and bypasses this path."
+        )
 
 
 @dataclass(frozen=True)
@@ -52,6 +107,9 @@ class DatasetMetadata:
         Free-text origin (URL, DOI, library function, generator name).
     citation : str
         Bibliographic citation if the dataset accompanies a publication.
+    label_vocabulary : LabelVocabulary
+        Per-dataset semantic-string → int-ID map (decision I45).
+        Defaults to the trivial vocabulary.
     """
 
     name: DatasetName
@@ -61,3 +119,4 @@ class DatasetMetadata:
     has_iso_labels: bool
     source: str
     citation: str = ""
+    label_vocabulary: LabelVocabulary = field(default_factory=LabelVocabulary.trivial)

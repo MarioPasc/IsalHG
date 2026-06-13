@@ -79,9 +79,16 @@ class PynautyLeviBackend(IsoBackend):
     ) -> dict[NodeId, NodeId] | None:
         """Return a vertex bijection ``H1 -> H2`` if iso, else ``None``.
 
-        Uses pynauty's ``canon_label`` to compute canonical permutations of
-        both Levi graphs and composes them to obtain the vertex-side
+        Uses pynauty's ``canon_label`` to compute the canonical labellings
+        of both Levi graphs and composes them to obtain the vertex-side
         bijection. The edge-side bijection is discarded.
+
+        ``canon_label(g)`` returns a list ``pi`` such that ``pi[i]`` is
+        the *original vertex* that ends up at canonical position ``i``
+        (i.e. the inverse of "canonical position of vertex ``i``").
+        Hence to map vertex ``v`` of ``H1`` to ``H2``: find its canonical
+        position ``p = pi1^{-1}(v)``, then look up the vertex at the
+        same position in ``H2`` via ``pi2(p)``.
         """
         if not self.are_isomorphic(H1, H2):
             return None
@@ -90,17 +97,14 @@ class PynautyLeviBackend(IsoBackend):
         levi2 = to_levi(H2)
         g1 = _to_pynauty(levi1)
         g2 = _to_pynauty(levi2)
-        # canon_label returns a permutation pi such that pi[i] = canonical
-        # position of node i. Composition: vertex v in H1 maps to canon
-        # position p; same p in H2's canonical maps back via pi2^{-1}.
         pi1 = pynauty.canon_label(g1)
         pi2 = pynauty.canon_label(g2)
-        pi2_inv = [0] * len(pi2)
-        for i, p in enumerate(pi2):
-            pi2_inv[p] = i
+        pi1_inv = [0] * len(pi1)
+        for i, p in enumerate(pi1):
+            pi1_inv[p] = i
         bijection: dict[NodeId, NodeId] = {}
         for v in range(levi1.n_vertex_nodes):
-            target = pi2_inv[pi1[v]]
+            target = pi2[pi1_inv[v]]
             if target >= levi2.n_vertex_nodes:
                 # Should not happen when iso and colouring is correct.
                 return None

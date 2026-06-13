@@ -222,12 +222,12 @@ The five tiers (R1–R5 in the Competitive frame above) correspond to Tier 1 (co
 **Goal.** Catch implementation bugs in S2H / H2S / canonical. Verify both directions of the iso equivalence on instances small enough to enumerate.
 
 **Instances.**
-- All connected hypergraphs on `n ∈ {3, 4, 5, 6}` vertices with arity `k ∈ {2, 3, 4}`, generated exhaustively by canonical enumeration of `xgi.generators.uniform.uniform_erdos_renyi_hypergraph(n, k, p)` over the full `p`-range.
+- All connected hypergraphs on `n ∈ {3, 4, 5, 6}` vertices with arity `k ∈ {2, 3, 4}`, enumerated exhaustively by `itertools.combinations` over the candidate-edge universe (`∪_a C(n, a)`), filtered by `SparseHypergraph.is_connected()`, and deduplicated by iso-class via the fingerprint of any registered `IsoBackend` (`pynauty_levi` is the default oracle inside `ExhaustiveSmallHypergraphs`; `isalhg` is selectable for stdlib-only dedup at much lower throughput). XGI is *not* used to enumerate iso-classes — its generators (`uniform_erdos_renyi_hypergraph`, `chung_lu_hypergraph`) are samplers, not enumerators, and do not guarantee coverage of the iso-class lattice.
 - The **Fano plane** STS(7) = PG(2, 2): 7 vertices, 7 triples, `|Aut| = 168`.
 - STS(9) = AG(2, 3): 9 vertices, 12 triples, `|Aut| = 432`.
-- Two non-isomorphic STS(13) [Heinlein 2023, arXiv:2303.01207].
+- Two non-isomorphic STS(13) [Heinlein 2023, arXiv:2303.01207]. The Phase 3 implementation realises these via the cyclic difference-set construction over Z/13Z with starter blocks `{0, 1, 4}` and `{0, 1, 6}`; non-isomorphism of the two systems is verified empirically against `pynauty_levi` at dataset construction.
 - **Generalized quadrangle GQ(2, 2) ("doily")**: 15 points, 15 lines, `|Aut| = 720`. Small, hard, classic.
-- **The HWL failure pair from Figure 3 of Feng et al. TPAMI 2024.** Two non-isomorphic hypergraphs that HWL hashes identically. **Mandatory acceptance criterion (5 below)**: IsalHG must distinguish this pair, or the headline competitive claim fails before submission.
+- **The HWL failure pair from Figure 3 of Feng et al. TPAMI 2024.** Two non-isomorphic hypergraphs that HWL hashes identically. **Mandatory acceptance criterion (5 below)**: IsalHG must distinguish this pair, or the headline competitive claim fails before submission. *Implementation note*: Per Phase 3 decision D1 (2026-06-13), extraction of the explicit edge lists for the Feng et al. Fig. 3 pair and the Zhang et al. ICML 2025 Fig. 3(a)/(b) pairs is deferred to Phase 3.5; Phases 3 and 4 close on the remaining design-theoretic fixtures.
 
 **Acceptance criteria.**
 1. `S2H(H2S(H)) ≅ H` for every instance (Hypothesis property test).

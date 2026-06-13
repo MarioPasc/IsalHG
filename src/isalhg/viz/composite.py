@@ -37,7 +37,7 @@ else:
     SubplotSpec = Any
 
 
-_ROW_RATIOS: tuple[float, float, float] = (1.3, 1.0, 1.6)
+_ROW_RATIOS: tuple[float, float, float] = (1.9, 1.0, 1.6)
 
 
 def _column_axes(
@@ -93,7 +93,7 @@ def draw_column(
     ax_cdll, ax_strip, ax_h = _column_axes(fig, spec)
 
     if column_title is not None:
-        ax_cdll.set_title(column_title, fontsize=8, pad=4)
+        ax_cdll.set_title(column_title, fontsize=10, pad=4)
 
     draw_cdll_ring(
         ax_cdll,

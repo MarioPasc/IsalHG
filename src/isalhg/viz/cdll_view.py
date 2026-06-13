@@ -34,11 +34,11 @@ def draw_cdll_ring(
     *,
     vertex_colors: dict[NodeId, str],
     grayed_vertices: frozenset[NodeId] = frozenset(),
-    node_radius: float = 0.15,
+    node_radius: float = 0.22,
     ring_radius: float = 1.0,
-    pointer_offset: float = 0.70,
-    pointer_gap: float = 0.10,
-    label_extra: float = 0.12,
+    pointer_offset: float = 0.55,
+    pointer_gap: float = 0.12,
+    label_extra: float = 0.30,
 ) -> None:
     """Draw the CDLL ring for ``snapshot`` onto ``ax``.
 
@@ -58,7 +58,7 @@ def draw_cdll_ring(
         for i in range(len(node_order)):
             a = positions[node_order[i]]
             b = positions[node_order[(i + 1) % len(node_order)]]
-            ax.plot([a[0], b[0]], [a[1], b[1]], color="#CCCCCC", lw=0.8, zorder=1)
+            ax.plot([a[0], b[0]], [a[1], b[1]], color="#CCCCCC", lw=1.4, zorder=1)
 
     # Draw the node disks.
     for v in node_order:
@@ -71,7 +71,7 @@ def draw_cdll_ring(
             node_radius,
             facecolor=face,
             edgecolor="#333333",
-            lw=0.8,
+            lw=1.2,
             alpha=alpha,
             zorder=2,
         )
@@ -82,7 +82,7 @@ def draw_cdll_ring(
             str(v),
             ha="center",
             va="center",
-            fontsize=7,
+            fontsize=11,
             color="#111111",
             zorder=3,
         )
@@ -118,9 +118,9 @@ def draw_cdll_ring(
                 (sx, sy),
                 (tx, ty),
                 arrowstyle="-|>",
-                mutation_scale=8,
+                mutation_scale=14,
                 color=color,
-                lw=1.2,
+                lw=1.8,
                 zorder=4,
             )
             ax.add_patch(arrow)
@@ -134,7 +134,7 @@ def draw_cdll_ring(
                 f"p{i_one_based}",
                 ha="center",
                 va="center",
-                fontsize=6,
+                fontsize=9,
                 color=color,
                 zorder=5,
             )

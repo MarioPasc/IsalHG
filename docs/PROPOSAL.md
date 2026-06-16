@@ -12,6 +12,17 @@ PI-approved 2026-06-08 (E. López-Rubio, Grupo ICAI, UMA). This document is the 
 - §"Decisions resolved" — change log from v1 through v3.
 - §"References" — bibliography.
 
+**Companion documents.**
+- `docs/DATA.md` — authoritative cohort spec (10 downloadable real-data
+  sources + 11 synthetic generators + implementation status + paper
+  sentence). Every per-dataset detail referenced in Tier 1-5 below is
+  expanded there.
+- `docs/CODE_DESIGN.md` — where each kind of code goes.
+- `docs/DEVELOPMENT.md` — living phase-by-phase status.
+- `docs/research/HANDOFF_hypergraph_benchmarks.md` — resolution
+  narrative for the 2026-06-14 cohort investigation (closed 2026-06-16
+  by decisions I49 + I50 below).
+
 ## PI directive 2026-06-08 (strategic pivot)
 
 E. López-Rubio's reply to the literature-survey memo (full text in project memory `ezequiel_reply_080626.md`) rules out the IsalSR-style classification downstream as a competitive axis. Verbatim points reproduced here as the binding strategic frame:
@@ -222,12 +233,28 @@ The five tiers (R1–R5 in the Competitive frame above) correspond to Tier 1 (co
 **Goal.** Catch implementation bugs in S2H / H2S / canonical. Verify both directions of the iso equivalence on instances small enough to enumerate.
 
 **Instances.**
-- All connected hypergraphs on `n ∈ {3, 4, 5, 6}` vertices with arity `k ∈ {2, 3, 4}`, enumerated exhaustively by `itertools.combinations` over the candidate-edge universe (`∪_a C(n, a)`), filtered by `SparseHypergraph.is_connected()`, and deduplicated by iso-class via the fingerprint of any registered `IsoBackend` (`pynauty_levi` is the default oracle inside `ExhaustiveSmallHypergraphs`; `isalhg` is selectable for stdlib-only dedup at much lower throughput). XGI is *not* used to enumerate iso-classes — its generators (`uniform_erdos_renyi_hypergraph`, `chung_lu_hypergraph`) are samplers, not enumerators, and do not guarantee coverage of the iso-class lattice.
+- All connected hypergraphs on `n ∈ {3, 4, 5, 6}` vertices with arity `k ∈ {2, 3, 4}`, enumerated exhaustively by `itertools.combinations` over the candidate-edge universe (`∪_a C(n, a)`), filtered by `SparseHypergraph.is_connected()`, and deduplicated by iso-class via the fingerprint of any registered `IsoBackend` (`pynauty_levi` is the default oracle inside `ExhaustiveSmallHypergraphs`; `isalhg` is selectable for stdlib-only dedup at much lower throughput). Note that "using pynauty as dedup oracle" is *not* circular under the v3 framing: IsalHG is a drop-in alternative engine, not an alternative ground-truth oracle — see `docs/DATA.md` §1 for the full framing. XGI is *not* used to enumerate iso-classes — its generators (`uniform_erdos_renyi_hypergraph`, `chung_lu_hypergraph`) are samplers, not enumerators, and do not guarantee coverage of the iso-class lattice.
 - The **Fano plane** STS(7) = PG(2, 2): 7 vertices, 7 triples, `|Aut| = 168`.
 - STS(9) = AG(2, 3): 9 vertices, 12 triples, `|Aut| = 432`.
-- Two non-isomorphic STS(13) [Heinlein 2023, arXiv:2303.01207]. The Phase 3 implementation realises these via the cyclic difference-set construction over Z/13Z with starter blocks `{0, 1, 4}` and `{0, 1, 6}`; non-isomorphism of the two systems is verified empirically against `pynauty_levi` at dataset construction.
+- **The Kaski-Östergård plaintext STS catalogs** (decision I50, 2026-06-16). Files `sts{3,7,9,13,15}.txt` from `https://pottonen.kapsi.fi/sts19/` parsed in pure Python; STS(13) ships 2 non-iso classes, STS(15) ships 80 non-iso classes — together 85 published iso classes with nauty-certified non-isomorphism via the Mathon-Phelps-Rosa 1983 classification (`Ars Combinatoria` 15:3-110). Replaces the prior cyclic-construction STS(13) (Z/13Z, starter blocks `{0, 1, 4}` and `{0, 1, 6}`, non-iso verified empirically against `pynauty_levi` at construction) with the canonical published source. STS(19) `1k_sample` (1000 non-iso classes, custom compressed binary, requires building the `stsc` C decompressor) deferred to Tier 3.
 - **Generalized quadrangle GQ(2, 2) ("doily")**: 15 points, 15 lines, `|Aut| = 720`. Small, hard, classic.
 - **The HWL failure pair from Figure 3 of Feng et al. TPAMI 2024.** Two non-isomorphic hypergraphs that HWL hashes identically. **Mandatory acceptance criterion (5 below)**: IsalHG must distinguish this pair, or the headline competitive claim fails before submission. *Implementation note*: Per Phase 3 decision D1 (2026-06-13), extraction of the explicit edge lists for the Feng et al. Fig. 3 pair and the Zhang et al. ICML 2025 Fig. 3(a)/(b) pairs is deferred to Phase 3.5; Phases 3 and 4 close on the remaining design-theoretic fixtures.
+
+#### Tier 1c — Three-way comparison on the LLM4Hypergraph corpus (decision I49, 2026-06-16)
+
+A sub-cohort added under Tier 1 to give IsalHG external validity outside the combinatorics tradition. The iMoonLab/LLM4Hypergraph repository (`github.com/iMoonLab/LLM4Hypergraph`, Apache 2.0) accompanying Feng et al. *"Beyond Graphs: Can Large Language Models Comprehend Hypergraphs?"* (ICLR 2025, arXiv:2410.10083) ships an iso-recognition benchmark — pairs of small hypergraphs (n ∈ {5-9, 10-14, 15-19}, edge count Uniform(0.2n, 1.5n), arity geometric) labelled iso / non-iso. Positive pairs come from `HyperGraph.shuffleNode()` (random vertex permutation, semantically identical to our `core.permute(H, σ)`); negative pairs come from resampling with matched arity sequence then filtering for accidental iso via `test_isomo.HGSCKernel`.
+
+**The wrinkle that creates the contribution.** `test_isomo.py` is missing from the public release — the generator crashes at line 1327 of `hypergraph_task.py` as shipped. Substituting `PynautyLeviBackend.are_isomorphic()` for the missing oracle gives the only nauty-certified version of the corpus, and the LLM verdicts from the paper's supplementary (GPT-4, Claude, etc.) give a third column. Concretely:
+
+1. Vendor LLM4Hypergraph under `third_party/llm4hypergraph/` (license-compatible).
+2. Patch `IsomorphismRecognition.prepare_examples_dict` to call `PynautyLeviBackend.are_isomorphic()`.
+3. Regenerate the cohort with `--random_seed=1234` (their hardcoded test seed).
+4. Define `LLM4HypergraphIsoRecognition` as a `HypergraphDataset` subclass under `src/isalhg/datasets/llm4hypergraph.py`.
+5. Run IsalHG via the standard `PairwiseIsoProtocol`; the LLM verdicts from the published supplementary give the third column.
+
+**Headline.** Three-way (LLM verdict, nauty ground truth, IsalHG verdict) on the only published hypergraph iso-recognition benchmark in the field. Full per-dataset narrative in `docs/DATA.md` §2.6.
+
+**Acceptance criterion (added to Tier 1).** `IsalHG.verdict == pynauty.verdict` on every pair in the corpus, and the resulting (IsalHG vs LLM) confusion matrix matches the (nauty vs LLM) confusion matrix reproduced from Feng et al. ICLR 2025 supplementary up to rounding.
 
 **Acceptance criteria.**
 1. `S2H(H2S(H)) ≅ H` for every instance (Hypothesis property test).
@@ -684,6 +711,8 @@ These shape the validation experiments and remain unresolved:
 | I46 | Token serialisation grammar (2026-06-11, Phase 1) | Each token serialises to a self-delimiting bracketed form: `V[ℓ_e;i;j;ℓ_{n_1},ℓ_{n_2},...,ℓ_{n_j}]`, `C[ℓ_e;i]`, `P[i]`, `N[i]`, `W`. Sequences join tokens with `;` at the top level; the parser is bracket-nesting-aware so the internal `;` separators inside `V[...]` and `C[...]` are not confused with the top-level separator. Lex-comparison of canonical strings runs over **token tuples** (numeric ordering on fields), not over the serialised string — this avoids the `"V[ℓ;10;...]" < "V[ℓ;2;...]"` pitfall under Python str comparison. Implemented in `src/isalhg/core/instructions.py`. |
 | I47 | Levi colouring scheme (2026-06-11, Phase 2) | Vertex side carries colour `c_v = ℓ_v` (range `[0, \|Σ_v\|)`); edge side carries colour `c_e = \|Σ_v\| + ℓ_e` (range `[\|Σ_v\|, \|Σ_v\| + \|Σ_e\|)`). Ranges are disjoint by construction, so any graph-iso engine (nauty, Traces, bliss) preserves the vertex/edge distinction without needing a special-case "partition" parameter. Empty-vocabulary collapse: trivial label data yields exactly two colour classes (`{0}` and `{\|Σ_v\|}` = `{1}`). Implemented in `src/isalhg/iso_backends/levi_reduction.py::to_levi`; consumed by `pynauty_levi.py` via `vertex_coloring=levi.color_classes()`. |
 | I48 | Iso-equivariance via bounded backtracking in greedy H2S (2026-06-11, Phase 1) | The pure greedy with input-id tie-break on new-input ordering is *not* iso-equivariant for vertex-transitive hypergraphs (Fano, STS(9)) because the "shared with future edges" vertex may be inserted first or last depending on its raw input id. Resolved by branching over label-respecting permutations of new-input vertices inside each `V` emission and taking the lex-min completion. Branching factor per `V` step: `(j!)` (trivially small for `j ≤ 3` in Phase 1 fixtures); displacement and edge selection remain pure greedy. This is local to `core/hypergraph_to_string.py::_encode_from` and does NOT introduce a separate `canonical_pruned.py` (the PI-deferred pruned backtracking for displacement+edge ties remains an open question). Validated by the partition-agreement table in `docs/DEVELOPMENT.md` Phase-2 entry: IsalHG and pynauty agree on every Phase 1 fixture. |
+| I49 | LLM4Hypergraph three-way comparison adopted as Tier 1c sub-cohort (2026-06-16) | Vendor `github.com/iMoonLab/LLM4Hypergraph` (Apache 2.0) under `third_party/llm4hypergraph/`; substitute `PynautyLeviBackend.are_isomorphic()` for the missing `test_isomo.HGSCKernel` oracle (the file is absent from the public release, so the generator crashes as shipped — substituting pynauty is the only way to *correctly* reproduce their benchmark). Define `LLM4HypergraphIsoRecognition` under `src/isalhg/datasets/llm4hypergraph.py`. Headline: three-way (LLM verdict from Feng et al. ICLR 2025 supplementary, nauty ground truth, IsalHG verdict) on the only published hypergraph iso-recognition corpus in the field. This is the cheapest source of external validity outside the combinatorics tradition. Full reasoning and per-dataset narrative in `docs/DATA.md` §2.6. |
+| I50 | Kaski-Östergård plaintext STS catalog adopted as Tier 1 published-iso-class source (2026-06-16) | Replace the cyclic-construction `sts_13_pair` (Z/13Z with starter blocks `{0,1,4}` and `{0,1,6}`, non-iso verified empirically) with the canonical published source: download `sts{3,7,9,13,15}.txt` from `https://pottonen.kapsi.fi/sts19/`, parse the `{a..o}` 3-character triple format in pure Python, ship as `KaskiOstergardSTSDataset` under `src/isalhg/datasets/catalog/kaski_ostergard.py`. Adds 80 STS(15) classes (Mathon-Phelps-Rosa 1983 classification, 80 non-iso) on top of the 2 STS(13) classes — total 85 published iso classes with nauty-certified provenance. STS(19) `1k_sample` (1000 non-iso classes, custom compressed binary requiring the `stsc` C decompressor) deferred to Tier 3 — fingerprint cost on a single STS(19) under current bounded-backtracking IsalHG is already several seconds (open question #1). Citation: Kaski, Östergård, Pottonen & Kiviluoto 2009 *Bull. Inst. Comb. Appl.* 57:35-41 + Kaski-Östergård 2004 *Math. Comp.* 73:2075-2092. Full per-cohort narrative in `docs/DATA.md` §2.1. |
 
 ## Related-work census (compiled 2026-06-07)
 

@@ -180,13 +180,23 @@ Each step also lands with its unit tests populated and passing under
    two-paper split. Empirically checked in Tier 1 and Tier 5.
 7. **Worst-case complexity bound (Theorem 3 procedure)** -- empirical-only
    by decision (C17).
-8. **Isomorphism-pair generation** -- resolved by decision I44
-   (`docs/PROPOSAL.md`, 2026-06-11). Positive pairs via stdlib-only
-   `core.sparse_hypergraph.permute(H, σ)`; hard negatives from published
-   design-theoretic non-iso pairs (Kaski & Östergård 2004 STS classifications,
-   GQ(2,2) variants) embedded as Tier-1 fixtures, plus pynauty-certified
-   random sweeps for Tier 2 / Tier 3. HG-CFI source documented as empty
-   until C14 produces a construction.
+8. **Isomorphism-pair generation** -- resolved by decisions I44
+   (`docs/PROPOSAL.md`, 2026-06-11), I49 + I50 (2026-06-16), and the
+   cohort spec in `docs/DATA.md`. Positive pairs via stdlib-only
+   `core.sparse_hypergraph.permute(H, σ)`. Cross-class fixtures from
+   (a) Kaski-Östergård plaintext STS catalogs `sts13.txt` (2 classes)
+   and `sts15.txt` (80 classes) downloaded from
+   `pottonen.kapsi.fi/sts19/` and parsed in pure Python; (b) the
+   GQ(2,2) doily already shipped from Payne-Thas 2009; (c) SageMath
+   designs library (PG(2, q), large-Aut STS, GQ(2,4)/(3,5), non-group
+   Latin squares) generated in a sibling Sage env and committed as
+   JSON fixtures; (d) the LLM4Hypergraph iso-recognition corpus
+   (Feng et al. ICLR 2025, github.com/iMoonLab/LLM4Hypergraph, Apache
+   2.0) with the missing `HGSCKernel` oracle substituted by
+   `PynautyLeviBackend.are_isomorphic()`. Pynauty-certified random
+   sweeps remain for Tier 2 / Tier 3 scale. HG-CFI confirmed unbuilt
+   anywhere in the public literature as of 2026-06-16; companion
+   paper task C14 stays open.
 9. **Label vocabulary** -- resolved by decision I45
    (`docs/PROPOSAL.md`, 2026-06-11). Vocabularies are dataset-scoped, fitted
    once at load by `LabelVocabulary.fit(items)` (lexicographic sort →
@@ -209,6 +219,29 @@ Each step also lands with its unit tests populated and passing under
   source PDFs; add them as `conftest.py` fixtures and as named
   designs in `synthetic.exhaustive_small`. PROPOSAL.md Tier 1
   acceptance criteria 5, 6, 7 cannot be ticked off until this lands.
+
+## Benchmark cohort spec (2026-06-16)
+
+The full data layer is documented in `docs/DATA.md` (authoritative
+source). Summary for navigation only:
+
+- **Cohort A — downloadable real data** (10 sources). Includes the
+  Kaski-Östergård STS plaintext catalogs (STS(13)/15 with 2/80 non-iso
+  classes), GQ(2,2) doily, Fano, STS(9), the SageMath designs library
+  via sibling Sage env + JSON fixtures, HIC's 12 datasets, the
+  LLM4Hypergraph iso-recognition corpus with pynauty oracle
+  substitution, ARB, XGI-DATA, Hypergraphx, and Yaveroglu PPI
+  hypergraphlets.
+- **Cohort B — synthetic generators** (11 generator paths). Includes
+  `core.permute()`, XGI Erdős-Rényi + Chung-Lu, XGI secondary
+  generators (configuration model, planted partition, DCSBM),
+  Hypergraphx auxiliaries (scale-free, HOAD), cyclic STS, Cayley
+  hypergraphs, random regular at threshold, PG(2, q) via Sage,
+  large-Aut Sage designs, and the HG-CFI construction (open).
+
+`docs/DATA.md` §4 holds the implementation status table; `docs/DATA.md`
+§5 enumerates nine prioritised tickets for the next round of work.
+`docs/DATA.md` §6 carries the paper sentence that cites the cohort.
 
 ## Algorithm-R&D track (priority, pre-Tier 2)
 

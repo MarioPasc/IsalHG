@@ -1,10 +1,16 @@
 # Handoff — Hypergraph-Native Benchmark Cohort
 
-**Status:** open investigation.
-**Owner of next iteration:** TBD.
-**Last touched:** 2026-06-14.
-**Parent docs:** `docs/PROPOSAL.md` (Tier 1-5), `docs/DEVELOPMENT.md` (open
-question #8 — isomorphism-pair generation), `docs/CODE_DESIGN.md` §2.2
+**Status:** RESOLVED 2026-06-16. Cohort is specified in `docs/DATA.md`
+(the authoritative source). This handoff stays as the resolution
+narrative — what was investigated, what evidence surfaced, what was
+decided.
+**Owner of next iteration:** none — work moves to implementation
+tickets enumerated in `docs/DATA.md` §5 ("Open gaps and required
+work").
+**Last touched:** 2026-06-16.
+**Parent docs:** `docs/DATA.md` (cohort spec), `docs/PROPOSAL.md`
+(Tier 1-5 + decisions I49/I50), `docs/DEVELOPMENT.md` (open question
+#8, now closed by I49/I50), `docs/CODE_DESIGN.md` §2.2
 (`HypergraphDataset` ABC).
 
 ---
@@ -232,19 +238,109 @@ A concrete deliverable proposal:
 
 ---
 
-## 4. Open questions for the PI
+## 4. Resolution (2026-06-16)
 
-- Q1. Is the HG-CFI construction (open question #5) on the roadmap
-  before Phase 5, or after? If before, it should be paired with this
-  cohort work because HG-CFI is the only known parametric non-iso
-  hypergraph family at scale.
-- Q2. Are the Mathon-Phelps-Rosa 1983 block lists worth manually
-  transcribing into a Python module, or do we want a downloader that
-  fetches them from `users.cecs.anu.edu.au/~bdm/data/`? The transcribed
-  approach is auditable and reproducible offline; the downloader
-  approach is sensitive to URL stability.
-- Q3. Tier 5 currently uses "unanimous backend verdict" as ground truth.
-  Should we keep that, or switch to "Mathon-Phelps-Rosa-style published
-  catalog for the small HIC subsets" once that catalog exists in our
-  codebase? The latter is stronger but only applies where a catalog is
-  available.
+The 2026-06-14 open questions were resolved through a deeper round of
+investigation: a literature-search subagent (full bibliography in the
+2026-06-16 transcript), a fetch of the Kaski-Östergård page contents,
+and a fetch of the iMoonLab/LLM4Hypergraph repo. Three decisions
+landed.
+
+### 4.1 Reframing — IsalHG is nauty's alternative, not nauty's audit
+
+The 2026-06-14 worry that "ExhaustiveSmallHypergraphs uses pynauty as
+oracle, so FP/FN measures agreement with pynauty rather than absolute
+correctness" was overstated. Every published hypergraph-iso evaluation
+since Bai et al. 2014 (kernel collisions) through Feng et al. 2024
+(HWL counterexamples) and Kaski-Östergård 2004 (STS classification)
+uses nauty as the ground-truth oracle, either directly or transitively
+via SageMath's `IncidenceStructure.is_isomorphic`. Demanding a
+nauty-independent ground truth would hold IsalHG to a strictly higher
+standard than the entire prior field — which is not the right
+competitive frame. IsalHG is positioned as **a drop-in alternative
+engine**; "we agree with nauty across all four backends on every
+fixture" is the correct correctness statement, and the competitive
+axis is wall-clock + `max_rss` + fingerprint compactness.
+
+`docs/DATA.md` §1 makes this framing explicit and the rest of the
+cohort design follows from it.
+
+### 4.2 Adopt Kaski-Östergård plaintext STS catalogs as Tier 1
+fixtures
+
+A fetch of `https://pottonen.kapsi.fi/sts19/` confirmed that the page
+ships **plaintext** Steiner-triple-system catalogs for orders 3, 7, 9,
+13, 15 (`sts{3,7,9,13,15}.txt`), one system per line as 3-character
+groups over `{a..o}`. STS(13) ships 2 non-iso classes; STS(15) ships
+80. Total: 85 non-iso classes, parseable in Python with no external
+tooling.
+
+Decision (PROPOSAL I50): port these as
+`KaskiOstergardSTSDataset` under `datasets/catalog/kaski_ostergard.py`.
+This replaces our current `sts_13_pair` (cyclic-construction Z/13Z with
+starter blocks `{0,1,4}` and `{0,1,6}`) with the canonical published
+source and adds 80 STS(15) classes as Tier 1 fixtures.
+
+STS(19) `1k_sample` (9 kB, 1000 non-iso classes) is deferred — it
+requires building the `stsc` C decompressor on the same page (~10
+lines of subprocess wrapping after `make`).
+
+### 4.3 Adopt LLM4Hypergraph as Tier 1c three-way comparison
+
+Q1 from the original handoff (HG-CFI) remains open — the literature
+search confirmed **no public implementation of an HG-CFI construction
+exists** as of 2026-06-16, consistent with our open question #5. We
+proceed without it; the Kaski-Östergård catalog and SageMath designs
+library (Tier 3) cover the same role at lower coverage but real
+mathematical grounding.
+
+Q2 (Mathon-Phelps-Rosa downloader vs transcription) is moot: the
+Kaski-Östergård page (§4.2) is the authoritative replacement and
+ships canonical representatives in a parseable plaintext format.
+
+Q3 (Tier 5 "unanimous backend verdict" vs published catalog) — kept
+as unanimous-verdict. None of the 12 HIC datasets has a published
+iso-class partition, and substituting a small-catalog ground truth
+would not help on the real-world IMDB / Steam / Twitter datasets.
+
+The new piece: a fetch of `github.com/iMoonLab/LLM4Hypergraph`
+(Apache 2.0) found that the iso-recognition benchmark generator
+(`hypergraph_task.py::IsomorphismRecognition`, line 1286) relies on a
+`test_isomo.HGSCKernel` oracle that **is missing from the public
+release** — the pipeline crashes at line 1327 as shipped. Substituting
+`PynautyLeviBackend.are_isomorphic()` for the missing oracle gives
+ground-truth-corrected pairs, and the LLM verdicts already reported in
+Feng et al. ICLR 2025 supplementary give a third column.
+
+Decision (PROPOSAL I49): port as
+`LLM4HypergraphIsoRecognition` under `datasets/llm4hypergraph.py`;
+vendor the upstream code under `third_party/llm4hypergraph/` with the
+pynauty patch. This yields the only published three-way (LLM, nauty,
+IsalHG) comparison on a hypergraph iso-recognition corpus.
+
+### 4.4 What changed in the surrounding docs
+
+- `docs/DATA.md` created as the authoritative cohort spec (Cohorts A
+  and B, ten downloadable real-data sources, eleven synthetic
+  generators, implementation status table, paper sentence).
+- `docs/PROPOSAL.md` gained decisions I49 (LLM4Hypergraph cohort) and
+  I50 (Kaski-Östergård catalog adoption); Tier 1 section augmented with
+  Tier 1c sub-cohort and the catalog cross-reference.
+- `docs/DEVELOPMENT.md` open question #8 marked resolved; new
+  "Benchmark cohort spec" pointer to `docs/DATA.md`.
+- This handoff retained as the resolution narrative; will not be
+  updated further.
+
+### 4.5 What carries over to implementation
+
+The next round of work is enumerated in `docs/DATA.md` §5 as nine
+prioritised tickets, the top three of which are:
+
+1. Wire Tier 2 generators (XGI ER + Chung-Lu): 60 lines + YAML +
+   `metrics/runtime.py` + `protocols/fingerprint_timing.py`.
+2. Port Kaski-Östergård STS(13)/15 plaintext: 80 lines + parser.
+3. Port LLM4Hypergraph corpus with pynauty oracle substitution: 200
+   lines split across vendoring, patching, and the dataset class.
+
+Items 4-9 (SageMath sibling env, STS(19) decompressor, Tier 4
+loaders, Cayley generator, regular-threshold sampler, HG-CFI) follow.

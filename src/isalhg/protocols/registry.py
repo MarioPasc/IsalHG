@@ -26,6 +26,7 @@ _REGISTRY: dict[ProtocolName, ProtocolFactory] = {}
 # Name → module that calls register_protocol(name, ...) at import time.
 _LAZY_MODULES: dict[ProtocolName, str] = {
     "pairwise_iso": "isalhg.protocols.pairwise_iso",
+    "fingerprint_timing": "isalhg.protocols.fingerprint_timing",
 }
 
 

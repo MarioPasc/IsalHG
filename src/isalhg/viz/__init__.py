@@ -11,6 +11,7 @@ Dependency rule: this package may import :mod:`isalhg.core` and
 """
 
 from isalhg.viz.base import HypergraphVizBackend, Position
+from isalhg.viz.cohort_panel import cohort_grid_figure
 from isalhg.viz.registry import (
     available_backends,
     get_backend,
@@ -21,6 +22,7 @@ __all__ = [
     "HypergraphVizBackend",
     "Position",
     "available_backends",
+    "cohort_grid_figure",
     "get_backend",
     "register_backend",
 ]

@@ -1,0 +1,81 @@
+name: preprint_smoke
+description: |
+  Smoke-scale subset of the preprint random-hypergraph sweep. Four
+  cells — one per backend — at (n=10, r=3, c=3, seed=0). The cell is
+  intentionally small (≈21 edges) so IsalHG sees a connected
+  hypergraph (decision B11) AND fingerprints in under ~2 seconds
+  (open question #1 — fingerprint runtime grows steeply with edge
+  count). The four-backend chain completes in well under a minute on
+  a laptop. Confirms the full chain
+  (orchestrator → registry → dataset → protocol → backend → atomic
+  JSON persistence) wires correctly end-to-end before the 720-cell
+  Picasso array dispatch.
+
+  Acceptance: 4 JSONs written under experiments/outputs/preprint_smoke,
+  each with measurements.positive_pair_passes == 1 and
+  measurements.n_dnf == 0. The disconnected-graph case is exercised
+  elsewhere by the production sweep at sparse (c=1) settings, where
+  IsalHG DNFs are real and expected.
+
+output_root: experiments/outputs/preprint_smoke
+
+cells:
+  - protocol: fingerprint_timing
+    backend: isalhg
+    dataset: random_erdos_renyi
+    seed: 0
+    protocol_params:
+      timeout_s: 300.0
+      repeats: 3
+      check_positive_pair: true
+    dataset_params:
+      n: 10
+      r: 3
+      c: 3
+      seed: 0
+    backend_params: {}
+
+  - protocol: fingerprint_timing
+    backend: pynauty_levi
+    dataset: random_erdos_renyi
+    seed: 0
+    protocol_params:
+      timeout_s: 300.0
+      repeats: 3
+      check_positive_pair: true
+    dataset_params:
+      n: 10
+      r: 3
+      c: 3
+      seed: 0
+    backend_params: {}
+
+  - protocol: fingerprint_timing
+    backend: bliss_levi
+    dataset: random_erdos_renyi
+    seed: 0
+    protocol_params:
+      timeout_s: 300.0
+      repeats: 3
+      check_positive_pair: true
+    dataset_params:
+      n: 10
+      r: 3
+      c: 3
+      seed: 0
+    backend_params: {}
+
+  - protocol: fingerprint_timing
+    backend: traces_levi
+    dataset: random_erdos_renyi
+    seed: 0
+    protocol_params:
+      timeout_s: 300.0
+      repeats: 3
+      check_positive_pair: true
+    dataset_params:
+      n: 10
+      r: 3
+      c: 3
+      seed: 0
+    backend_params: {}

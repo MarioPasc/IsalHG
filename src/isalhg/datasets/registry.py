@@ -27,6 +27,7 @@ _REGISTRY: dict[DatasetName, DatasetFactory] = {}
 # Name → module that calls register_dataset(name, ...) at import time.
 _LAZY_MODULES: dict[DatasetName, str] = {
     "exhaustive_small": "isalhg.datasets.synthetic.exhaustive_small",
+    "random_erdos_renyi": "isalhg.datasets.synthetic.erdos_renyi",
 }
 
 

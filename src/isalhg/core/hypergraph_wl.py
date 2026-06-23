@@ -159,7 +159,7 @@ def _partition_equiv(a: list[int], b: list[int]) -> bool:
     map_b: dict[int, int] = {}
     next_a = 0
     next_b = 0
-    for x, y in zip(a, b):
+    for x, y in zip(a, b, strict=True):
         if x not in map_a:
             map_a[x] = next_a
             next_a += 1

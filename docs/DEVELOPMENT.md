@@ -4,6 +4,64 @@ Living document for IsalHG development. Pair-read with `CLAUDE.md` at the
 repo root, `docs/CODE_DESIGN.md` (architectural lookup), and the seed
 proposal (`docs/isalhg_idea.pdf` + `docs/PROPOSAL.md`).
 
+## C++ core extension
+
+The hot path of the canonical-string algorithm now lives in C++17 under
+`src/isalhg/_core/`, exposed to Python via nanobind as the
+`isalhg._core` extension. The Python files in `src/isalhg/core/` are
+thin shims that delegate to the C++ implementation; the pre-port
+references stay under `_python_*` names for differential tests.
+
+Build flow:
+
+```bash
+conda activate isalhg
+pip install -e ".[dev]"        # scikit-build-core + CMake driven; first build ~30s
+python -c "import isalhg._core; print(isalhg._core.ping())"  # smoke test
+```
+
+Iteration:
+
+- Edit any `src/isalhg/core/*.py` shim or test — takes effect immediately
+  (scikit-build-core editable mode uses a `.pth` redirect).
+- Edit any `src/isalhg/_core/**/*.{cpp,hpp}` — re-run
+  `pip install -e ".[dev]"` (CMake does an incremental rebuild, usually
+  seconds after the first full build).
+
+Sanitizer build:
+
+```bash
+CMAKE_ARGS="-DISALHG_ENABLE_SANITIZERS=ON" pip install -e ".[dev]" --no-build-isolation
+LIBASAN=$(gcc -print-file-name=libasan.so)
+LIBSTDCPP=$(gcc -print-file-name=libstdc++.so)
+PYTHONMALLOC=malloc ASAN_OPTIONS=detect_leaks=0:halt_on_error=1 \
+LD_PRELOAD="$LIBASAN:$LIBSTDCPP" \
+    python -m pytest tests/property/ tests/unit/core/ -q
+```
+
+The `LIBSTDCPP` preload is required because ASan's `__cxa_throw`
+interceptor must bind to the real C++ exception machinery before any
+nanobind code runs.
+
+Speedup (`scratchpad/cpp_speedup.py`, local laptop, single-threaded):
+
+| Design          | greedy_min PY | C++     | Ratio |
+|-----------------|--------------:|--------:|------:|
+| Fano STS(7)     |        649 ms |    6 ms |  101× |
+| STS(9) AG(2,3)  |       6.11 s  |   44 ms |  138× |
+| STS(13) cyclic  |       63.4 s  |  352 ms |  180× |
+| GQ(2,2) doily   |  DNF >300 s   |  659 ms |  DNF→s |
+
+Extending the algorithm pool:
+
+- Pure-Python algorithm: subclass `isalhg.core.algorithms.base.H2SAlgorithm`,
+  call `register_algorithm("name", factory)`. `canonical_string(..., algorithm="name")`
+  picks it up via the Python registry.
+- C++-native variant: add an enum entry to
+  `src/isalhg/_core/include/isalhg/canonical.hpp::AlgorithmVariant`,
+  implement its filter in `canonical_string_compute`, recompile, then
+  call `isalhg.core.canonical.register_cpp_variant("name", enum_id)`.
+
 ## Status
 
 **Phases 1 + 2 + 3 + 4 closed (2026-06-13).** The repo now ships:

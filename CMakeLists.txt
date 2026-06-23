@@ -14,7 +14,15 @@ endif()
 # where the dev workstation and CI share a CPU family.
 add_compile_options(-Wall -Wextra -Wpedantic)
 if(CMAKE_BUILD_TYPE STREQUAL "Release")
-    add_compile_options(-O3 -march=native -DNDEBUG)
+    add_compile_options(-O3 -march=native -DNDEBUG -fno-plt -funroll-loops)
+    # Link-time optimisation across translation units. nanobind's helper
+    # already enables LTO for the binding shim; this propagates the
+    # setting to the rest of the C++ sources too.
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT _IPO_OK OUTPUT _IPO_ERR)
+    if(_IPO_OK)
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION ON)
+    endif()
 endif()
 
 option(ISALHG_ENABLE_SANITIZERS "Enable Address + Undefined sanitizers" OFF)

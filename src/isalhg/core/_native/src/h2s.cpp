@@ -643,12 +643,18 @@ void enumerate_label_perms(
         return true;
     }
 
-    // V branch: enumerate label-respecting permutations, take lex-min completion.
+    // V branch: enumerate label-respecting permutations and take the lex-min
+    // sub_completion. ``best_prefix`` is identical across all permutations
+    // of this V emission, so we compare only the per-permutation
+    // sub_completion vectors — avoids allocating + copying the prefix per
+    // permutation and avoids redundant element-by-element comparison of
+    // the prefix tokens during lex-min selection.
     std::vector<std::vector<NodeId>> perms;
     enumerate_label_perms(best_new_inputs, H, wl_colors, perms);
 
     bool have_completion = false;
-    std::vector<Token> best_completion;
+    std::vector<Token> best_sub_completion;
+    std::vector<Token> sub_completion;
 
     for (const auto& perm : perms) {
         std::array<SlotIdx, K_MAX> saved_ptrs{};
@@ -678,7 +684,7 @@ void enumerate_label_perms(
         }
         state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
 
-        std::vector<Token> sub_completion;
+        sub_completion.clear();
         const bool ok = encode_from(H, k, state, wl_colors, sub_completion);
 
         // Undo.
@@ -695,20 +701,17 @@ void enumerate_label_perms(
 
         if (!ok) continue;
 
-        // Build candidate completion: best_prefix + sub_completion.
-        std::vector<Token> candidate;
-        candidate.reserve(best_prefix.size() + sub_completion.size());
-        for (const auto& t : best_prefix) candidate.push_back(t);
-        for (const auto& t : sub_completion) candidate.push_back(t);
-
-        if (!have_completion || sequence_cmp(candidate, best_completion) < 0) {
-            best_completion = std::move(candidate);
+        if (!have_completion || sequence_cmp(sub_completion, best_sub_completion) < 0) {
+            best_sub_completion.swap(sub_completion);
             have_completion = true;
         }
     }
 
     if (!have_completion) return false;
-    out_completion = std::move(best_completion);
+    out_completion.clear();
+    out_completion.reserve(best_prefix.size() + best_sub_completion.size());
+    for (const auto& t : best_prefix) out_completion.push_back(t);
+    for (auto& t : best_sub_completion) out_completion.push_back(std::move(t));
     return true;
 }
 

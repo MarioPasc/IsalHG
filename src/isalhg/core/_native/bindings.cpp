@@ -190,9 +190,17 @@ NB_MODULE(_core, m) {
     m.def(
         "canonical_string",
         [](nb::object py_H, int k, int structural_depth, int algorithm_id) -> std::string {
+            // Build the SHG view under the GIL (touches Python objects).
             const isalhg::SHG H = shg_from_python(py_H);
             const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
-            return isalhg::canonical_string_compute(H, k, structural_depth, variant);
+            // The compute phase is GIL-free so the seed loop can fan
+            // out across hardware threads without contending with Python.
+            std::string result;
+            {
+                nb::gil_scoped_release release;
+                result = isalhg::canonical_string_compute(H, k, structural_depth, variant);
+            }
+            return result;
         },
         "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a,
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"

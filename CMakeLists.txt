@@ -26,12 +26,13 @@ endif()
 find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(nanobind CONFIG REQUIRED)
 
-# Phase 0: the module is a single bindings.cpp stub. Subsequent phases
-# add cdll.cpp, token.cpp, h2s.cpp, structural_tuples.cpp, wl.cpp,
-# canonical.cpp under src/isalhg/_core/src/ and append them here.
 nanobind_add_module(_core
     NB_STATIC
     src/isalhg/_core/bindings.cpp
+    src/isalhg/_core/src/cdll.cpp
+    src/isalhg/_core/src/token.cpp
+    src/isalhg/_core/src/sparse_hypergraph.cpp
+    src/isalhg/_core/src/h2s.cpp
 )
 
 target_include_directories(_core PRIVATE src/isalhg/_core/include)

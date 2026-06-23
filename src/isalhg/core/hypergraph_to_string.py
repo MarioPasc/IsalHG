@@ -41,7 +41,6 @@ from isalhg.core.instructions import (
     TokenP,
     TokenV,
     sequence_sort_key,
-    serialize,
 )
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import eta
@@ -432,7 +431,7 @@ def _encode_from(
 # ---------------------------------------------------------------------------
 
 
-def greedy_h2s(
+def _python_greedy_h2s(
     H: SparseHypergraph,
     *,
     seed_node: NodeId,
@@ -440,37 +439,9 @@ def greedy_h2s(
     inplace: bool = False,
     wl_colors: list[int] | None = None,
 ) -> TokenSequence:
-    """Greedy single-seed H2S encoder with bounded backtracking.
+    """Pure-Python reference implementation (kept for differential tests).
 
-    Parameters
-    ----------
-    H : SparseHypergraph
-        Connected hypergraph to encode.
-    seed_node : NodeId
-        First node placed at slot 0 of the CDLL.
-    k : int
-        Pointer count of the VM. Must satisfy ``k >= max arity of H``.
-    inplace : bool, optional
-        When ``True`` reuse a single mutable state across all V/C
-        branches via undo records instead of cloning. The emitted token
-        tuple is identical; the constant factor is lower (no per-branch
-        ``state.clone()`` of an O(n) CDLL). Default ``False``.
-    wl_colors : list[int] or None, optional
-        Per-vertex stable WL colours used to prune the V-branch
-        permutation set: within a label class, WL-equivalent vertices
-        are required to appear in ascending ID order. Has no effect on
-        non-symmetric inputs (every WL orbit is a singleton). Default
-        ``None`` (no pruning).
-
-    Returns
-    -------
-    tuple[Token, ...]
-        Emitted token sequence.
-
-    Raises
-    ------
-    H2SStuckError
-        If the encoder cannot make progress from a non-terminal state.
+    See :func:`greedy_h2s` for the production C++-backed entry point.
     """
     n = H.n_nodes
     if n == 0:
@@ -498,6 +469,65 @@ def greedy_h2s(
     return result
 
 
+# ---------------------------------------------------------------------------
+# C++ fast path. The shim parses the serialised string returned by the C++
+# encoder back into the Python ``Token`` dataclasses so the public surface
+# matches the pre-port API.
+# ---------------------------------------------------------------------------
+
+from isalhg._core import greedy_h2s as _cpp_greedy_h2s  # noqa: E402
+from isalhg.core.instructions import parse as _parse_tokens  # noqa: E402
+
+
+def greedy_h2s(
+    H: SparseHypergraph,
+    *,
+    seed_node: NodeId,
+    k: int,
+    inplace: bool = False,  # noqa: ARG001  # accepted for API compatibility
+    wl_colors: list[int] | None = None,
+) -> TokenSequence:
+    """Greedy single-seed H2S encoder (C++ implementation).
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Connected hypergraph to encode.
+    seed_node : NodeId
+        First node placed at slot 0 of the CDLL.
+    k : int
+        Pointer count of the VM. Must satisfy ``k >= max arity of H``.
+    inplace : bool, optional
+        Accepted for API compatibility; the C++ implementation always
+        uses inplace mutation with stack-allocated undo records, so this
+        flag has no observable effect.
+    wl_colors : list[int] or None, optional
+        Per-vertex stable WL colours used to prune the V-branch
+        permutation set. Default ``None`` (no pruning).
+
+    Returns
+    -------
+    tuple[Token, ...]
+        Emitted token sequence (parsed back from the C++ string output).
+
+    Raises
+    ------
+    H2SStuckError
+        If the encoder cannot make progress from a non-terminal state.
+    ValueError
+        If ``seed_node`` is out of range or ``k < 1``.
+    """
+    n = H.n_nodes
+    if n == 0:
+        return ()
+    if not 0 <= seed_node < n:
+        raise ValueError(f"seed_node {seed_node} out of [0, {n})")
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k}")
+    raw = _cpp_greedy_h2s(H, seed_node, k, wl_colors)
+    return tuple(_parse_tokens(raw))
+
+
 def hypergraph_to_string(
     H: SparseHypergraph,
     *,
@@ -505,4 +535,11 @@ def hypergraph_to_string(
     k: int,
 ) -> str:
     """Greedy single-seed encoder returning the serialised string form."""
-    return serialize(list(greedy_h2s(H, seed_node=seed_node, k=k)))
+    n = H.n_nodes
+    if n == 0:
+        return ""
+    if not 0 <= seed_node < n:
+        raise ValueError(f"seed_node {seed_node} out of [0, {n})")
+    if k < 1:
+        raise ValueError(f"k must be >= 1, got {k}")
+    return _cpp_greedy_h2s(H, seed_node, k, None)

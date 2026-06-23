@@ -8,15 +8,16 @@ for tie-breaking during greedy H2S (lex ``eta`` over candidate edges).
 Default depth ``3`` is inherited from IsalGraph (invariant 8); deviation
 requires re-validating Theorem 2 (canonical completeness conjecture).
 
-The label-aware extension keeps the same depth but records one count per
-``(distance, label)`` cell so seed selection respects vertex labels:
-``xi_label(v) = (count by label at distance 1, ..., by label at distance depth)``.
-For the trivial vocabulary the label-aware tuple collapses to the plain one.
+Both implementations live in this module: the pure-Python reference under
+``_python_max_xi_nodes`` and the C++-backed wrapper under
+``_cpp_max_xi_nodes``. :func:`max_xi_nodes` dispatches between them via
+the ``backend=`` kwarg (default ``"cpp"``).
 """
 
 from __future__ import annotations
 
-from isalhg._core import max_xi_nodes as _cpp_max_xi_nodes
+from isalhg.core._core import max_xi_nodes as _core_max_xi_nodes
+from isalhg.core.backends import Backend, resolve
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.types import EdgeId, NodeId
 
@@ -91,9 +92,6 @@ def _seed_key(H: SparseHypergraph, v: NodeId, depth: int) -> tuple[object, ...]:
     Maximised lexicographically:
     1. ``xi_labelled(v)`` -- shell-by-shell label-aware count tuple.
     2. ``H.vertex_label(v)`` -- the seed's own label.
-
-    Ties resolved by the caller (canonical entry point) by running greedy
-    H2S from each survivor and picking the lex-min token sequence.
     """
     return (xi_labelled(H, v, depth), H.vertex_label(v))
 
@@ -102,22 +100,49 @@ def _python_max_xi_nodes(
     H: SparseHypergraph,
     depth: int = DEFAULT_DEPTH,
 ) -> tuple[NodeId, ...]:
-    """Pure-Python reference implementation. Kept for differential tests."""
+    """Pure-Python reference implementation of :func:`max_xi_nodes`."""
     if H.n_nodes == 0:
         return ()
     best_key = max(_seed_key(H, v, depth) for v in H.nodes())
     return tuple(v for v in H.nodes() if _seed_key(H, v, depth) == best_key)
 
 
+def _cpp_max_xi_nodes(
+    H: SparseHypergraph,
+    depth: int = DEFAULT_DEPTH,
+) -> tuple[NodeId, ...]:
+    """C++-backed implementation of :func:`max_xi_nodes`."""
+    if H.n_nodes == 0:
+        return ()
+    return tuple(_core_max_xi_nodes(H, depth))
+
+
+_MAX_XI_BACKENDS: dict[str, object] = {
+    "python": _python_max_xi_nodes,
+    "cpp": _cpp_max_xi_nodes,
+}
+
+
 def max_xi_nodes(
     H: SparseHypergraph,
     depth: int = DEFAULT_DEPTH,
+    *,
+    backend: Backend | None = None,
 ) -> tuple[NodeId, ...]:
     """Return all nodes attaining the lexicographic maximum of the seed key.
 
     Invariant 4: this is the *only* admissible seed set for the canonical
-    algorithm. Delegates to the C++ implementation for speed.
+    algorithm.
+
+    Parameters
+    ----------
+    H, depth
+        See module docstring.
+    backend : {"cpp", "python"}, optional
+        Implementation to use. Defaults to ``"cpp"`` (see
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`).
     """
     if H.n_nodes == 0:
         return ()
-    return tuple(_cpp_max_xi_nodes(H, depth))
+    impl = resolve(backend, _MAX_XI_BACKENDS)
+    return impl(H, depth)

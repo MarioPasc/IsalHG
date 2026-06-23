@@ -28,16 +28,19 @@ find_package(nanobind CONFIG REQUIRED)
 
 nanobind_add_module(_core
     NB_STATIC
-    src/isalhg/_core/bindings.cpp
-    src/isalhg/_core/src/cdll.cpp
-    src/isalhg/_core/src/token.cpp
-    src/isalhg/_core/src/sparse_hypergraph.cpp
-    src/isalhg/_core/src/h2s.cpp
-    src/isalhg/_core/src/structural_tuples.cpp
-    src/isalhg/_core/src/wl.cpp
-    src/isalhg/_core/src/canonical.cpp
+    src/isalhg/core/_native/bindings.cpp
+    src/isalhg/core/_native/src/cdll.cpp
+    src/isalhg/core/_native/src/token.cpp
+    src/isalhg/core/_native/src/sparse_hypergraph.cpp
+    src/isalhg/core/_native/src/h2s.cpp
+    src/isalhg/core/_native/src/structural_tuples.cpp
+    src/isalhg/core/_native/src/wl.cpp
+    src/isalhg/core/_native/src/canonical.cpp
 )
 
-target_include_directories(_core PRIVATE src/isalhg/_core/include)
+target_include_directories(_core PRIVATE src/isalhg/core/_native/include)
 
-install(TARGETS _core LIBRARY DESTINATION isalhg)
+# Install the extension inside the isalhg.core package so the C++
+# implementation is importable at ``isalhg.core._core`` — mirroring
+# the Python ``_python_*`` references that live in the same package.
+install(TARGETS _core LIBRARY DESTINATION isalhg/core)

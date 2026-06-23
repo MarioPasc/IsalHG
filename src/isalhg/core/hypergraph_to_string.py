@@ -41,6 +41,7 @@ from isalhg.core.instructions import (
     TokenP,
     TokenV,
     sequence_sort_key,
+    serialize,
 )
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import eta
@@ -470,13 +471,38 @@ def _python_greedy_h2s(
 
 
 # ---------------------------------------------------------------------------
-# C++ fast path. The shim parses the serialised string returned by the C++
-# encoder back into the Python ``Token`` dataclasses so the public surface
-# matches the pre-port API.
+# Backend-aware public entry. Both implementations live in this module: the
+# pure-Python reference above and the C++-backed wrapper below. The
+# dispatcher selects between them via the ``backend=`` kwarg.
 # ---------------------------------------------------------------------------
 
-from isalhg._core import greedy_h2s as _cpp_greedy_h2s  # noqa: E402
+from isalhg.core._core import greedy_h2s as _core_greedy_h2s  # noqa: E402
+from isalhg.core.backends import Backend, resolve  # noqa: E402
 from isalhg.core.instructions import parse as _parse_tokens  # noqa: E402
+
+
+def _cpp_greedy_h2s(
+    H: SparseHypergraph,
+    *,
+    seed_node: NodeId,
+    k: int,
+    inplace: bool = False,  # noqa: ARG001  # accepted for API parity with _python
+    wl_colors: list[int] | None = None,
+) -> TokenSequence:
+    """C++-backed implementation of :func:`greedy_h2s`.
+
+    Delegates to ``isalhg.core._core.greedy_h2s`` and parses the
+    serialised result back into Python ``Token`` dataclasses so the
+    public return type matches the Python reference.
+    """
+    raw = _core_greedy_h2s(H, seed_node, k, wl_colors)
+    return tuple(_parse_tokens(raw))
+
+
+_GREEDY_H2S_BACKENDS: dict[str, object] = {
+    "python": _python_greedy_h2s,
+    "cpp": _cpp_greedy_h2s,
+}
 
 
 def greedy_h2s(
@@ -484,10 +510,11 @@ def greedy_h2s(
     *,
     seed_node: NodeId,
     k: int,
-    inplace: bool = False,  # noqa: ARG001  # accepted for API compatibility
+    inplace: bool = False,
     wl_colors: list[int] | None = None,
+    backend: Backend | None = None,
 ) -> TokenSequence:
-    """Greedy single-seed H2S encoder (C++ implementation).
+    """Greedy single-seed H2S encoder.
 
     Parameters
     ----------
@@ -498,24 +525,27 @@ def greedy_h2s(
     k : int
         Pointer count of the VM. Must satisfy ``k >= max arity of H``.
     inplace : bool, optional
-        Accepted for API compatibility; the C++ implementation always
-        uses inplace mutation with stack-allocated undo records, so this
-        flag has no observable effect.
+        Accepted for API compatibility. The C++ backend always runs
+        inplace with stack-allocated undo records; the Python backend
+        honours the flag (clone vs undo log) at no observable cost.
     wl_colors : list[int] or None, optional
         Per-vertex stable WL colours used to prune the V-branch
         permutation set. Default ``None`` (no pruning).
+    backend : {"cpp", "python"}, optional
+        Implementation to use. Defaults to ``"cpp"`` (see
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`).
 
     Returns
     -------
     tuple[Token, ...]
-        Emitted token sequence (parsed back from the C++ string output).
+        Emitted token sequence.
 
     Raises
     ------
     H2SStuckError
         If the encoder cannot make progress from a non-terminal state.
     ValueError
-        If ``seed_node`` is out of range or ``k < 1``.
+        If ``seed_node`` is out of range, ``k < 1``, or ``backend`` is unknown.
     """
     n = H.n_nodes
     if n == 0:
@@ -524,8 +554,8 @@ def greedy_h2s(
         raise ValueError(f"seed_node {seed_node} out of [0, {n})")
     if k < 1:
         raise ValueError(f"k must be >= 1, got {k}")
-    raw = _cpp_greedy_h2s(H, seed_node, k, wl_colors)
-    return tuple(_parse_tokens(raw))
+    impl = resolve(backend, _GREEDY_H2S_BACKENDS)
+    return impl(H, seed_node=seed_node, k=k, inplace=inplace, wl_colors=wl_colors)
 
 
 def hypergraph_to_string(
@@ -533,13 +563,8 @@ def hypergraph_to_string(
     *,
     seed_node: NodeId,
     k: int,
+    backend: Backend | None = None,
 ) -> str:
     """Greedy single-seed encoder returning the serialised string form."""
-    n = H.n_nodes
-    if n == 0:
-        return ""
-    if not 0 <= seed_node < n:
-        raise ValueError(f"seed_node {seed_node} out of [0, {n})")
-    if k < 1:
-        raise ValueError(f"k must be >= 1, got {k}")
-    return _cpp_greedy_h2s(H, seed_node, k, None)
+    tokens = greedy_h2s(H, seed_node=seed_node, k=k, backend=backend)
+    return serialize(list(tokens))

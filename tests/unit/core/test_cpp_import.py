@@ -13,7 +13,7 @@ pytestmark = pytest.mark.unit
 
 
 def test_core_extension_imports() -> None:
-    import isalhg._core as _core
+    import isalhg.core._core as _core
 
     assert hasattr(_core, "ping")
     assert _core.ping() == "pong"

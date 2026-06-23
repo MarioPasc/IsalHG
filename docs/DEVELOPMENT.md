@@ -6,25 +6,43 @@ proposal (`docs/isalhg_idea.pdf` + `docs/PROPOSAL.md`).
 
 ## C++ core extension
 
-The hot path of the canonical-string algorithm now lives in C++17 under
-`src/isalhg/_core/`, exposed to Python via nanobind as the
-`isalhg._core` extension. The Python files in `src/isalhg/core/` are
-thin shims that delegate to the C++ implementation; the pre-port
-references stay under `_python_*` names for differential tests.
+The canonical-string algorithm has two implementations, both living
+inside the `isalhg.core` package:
+
+- Pure-Python reference: regular functions named `_python_<fn>` in the
+  same modules that expose the public entry points
+  (`hypergraph_to_string.py`, `hypergraph_wl.py`, `structural_tuples.py`,
+  `canonical.py`).
+- C++17 extension: native module at `isalhg.core._core`, compiled from
+  the source tree under `src/isalhg/core/_native/` via nanobind +
+  scikit-build-core.
+
+The two are selected per call with a `backend="cpp"|"python"` keyword;
+the default backend is `"cpp"` (see `isalhg.core.backends.DEFAULT_BACKEND`).
+
+```python
+from isalhg.core.canonical import canonical_string
+canonical_string(H)                        # cpp (default)
+canonical_string(H, backend="cpp")         # explicit cpp
+canonical_string(H, backend="python")      # pure-python reference
+```
+
+The same `backend=` kwarg is honoured by `greedy_h2s`,
+`hypergraph_to_string`, `wl_hash`, `wl_partition`, and `max_xi_nodes`.
 
 Build flow:
 
 ```bash
 conda activate isalhg
 pip install -e ".[dev]"        # scikit-build-core + CMake driven; first build ~30s
-python -c "import isalhg._core; print(isalhg._core.ping())"  # smoke test
+python -c "import isalhg.core._core; print(isalhg.core._core.ping())"  # smoke test
 ```
 
 Iteration:
 
 - Edit any `src/isalhg/core/*.py` shim or test — takes effect immediately
   (scikit-build-core editable mode uses a `.pth` redirect).
-- Edit any `src/isalhg/_core/**/*.{cpp,hpp}` — re-run
+- Edit any `src/isalhg/core/_native/**/*.{cpp,hpp}` — re-run
   `pip install -e ".[dev]"` (CMake does an incremental rebuild, usually
   seconds after the first full build).
 
@@ -54,11 +72,14 @@ Speedup (`scratchpad/cpp_speedup.py`, local laptop, single-threaded):
 
 Extending the algorithm pool:
 
+- New backend (e.g. Rust): append the implementation callable to the
+  per-module dispatch dict (`_GREEDY_H2S_BACKENDS`,
+  `_CANONICAL_STRING_BACKENDS`, etc.) at import time.
 - Pure-Python algorithm: subclass `isalhg.core.algorithms.base.H2SAlgorithm`,
   call `register_algorithm("name", factory)`. `canonical_string(..., algorithm="name")`
   picks it up via the Python registry.
 - C++-native variant: add an enum entry to
-  `src/isalhg/_core/include/isalhg/canonical.hpp::AlgorithmVariant`,
+  `src/isalhg/core/_native/include/isalhg/canonical.hpp::AlgorithmVariant`,
   implement its filter in `canonical_string_compute`, recompile, then
   call `isalhg.core.canonical.register_cpp_variant("name", enum_id)`.
 

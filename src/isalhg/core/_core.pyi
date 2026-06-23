@@ -1,9 +1,10 @@
-"""Type stubs for the C++ extension ``isalhg._core``.
+"""Type stubs for the C++ extension ``isalhg.core._core``.
 
 The actual implementation lives in
-``src/isalhg/_core/_core.cpython-*.so`` built by scikit-build-core +
-nanobind. This stub declares the public surface so mypy ``--strict``
-passes on the Python shims that consume it.
+``src/isalhg/core/_core.cpython-*.so`` built by scikit-build-core +
+nanobind from the C++ sources under ``src/isalhg/core/_native/``. This
+stub declares the public surface so mypy ``--strict`` passes on the
+Python shims that consume it.
 """
 
 from __future__ import annotations

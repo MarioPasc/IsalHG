@@ -25,6 +25,10 @@ class CanonicalizationTimeoutError(IsalHGError):
     """Raised when canonical-string computation exceeds its time budget."""
 
 
+class AlgorithmUnavailableError(IsalHGError):
+    """Raised when an H2S algorithm name is not registered (or fails to import)."""
+
+
 class ArityMismatchError(IsalHGError):
     """Raised when an operation references more pointers than the machine has."""
 

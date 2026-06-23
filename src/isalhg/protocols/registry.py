@@ -27,6 +27,7 @@ _REGISTRY: dict[ProtocolName, ProtocolFactory] = {}
 _LAZY_MODULES: dict[ProtocolName, str] = {
     "pairwise_iso": "isalhg.protocols.pairwise_iso",
     "fingerprint_timing": "isalhg.protocols.fingerprint_timing",
+    "algorithm_benchmark": "isalhg.protocols.algorithm_benchmark",
 }
 
 

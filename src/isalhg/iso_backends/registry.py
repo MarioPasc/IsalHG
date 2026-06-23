@@ -28,6 +28,13 @@ _REGISTRY: dict[BackendName, BackendFactory] = {}
 # Name → module that calls register_backend(name, ...) at import time.
 _LAZY_MODULES: dict[BackendName, str] = {
     "isalhg": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_greedy_min": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_greedy_single": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_exhaustive": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_greedy_min_inplace": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_greedy_min_wl_pruned": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_greedy_min_inplace_wl_pruned": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_pruned_exhaustive": "isalhg.iso_backends.isalhg_backend",
     "pynauty_levi": "isalhg.iso_backends.pynauty_levi",
     "bliss_levi": "isalhg.iso_backends.bliss_levi",
     "traces_levi": "isalhg.iso_backends.traces_levi",

@@ -1,6 +1,15 @@
-"""Greedy H2S from every max-xi seed; emit lex-min result.
+"""``greedy_min`` with in-place mutation + undo at branch points.
 
-This is the variant the canonical entry point uses.
+Same canonical output as :class:`~isalhg.core.algorithms.greedy_min.GreedyMin`
+by construction: only the per-branch state-management strategy differs.
+The clone-based variant copies the full ``_State`` (including the
+``O(n)`` CDLL) at every V/C branch; this variant mutates the state
+forward, recurses, and undoes the mutation on return.
+
+Optimisation imported from IsalSR's canonical-string implementation
+(``IsalSR/src/isalsr/core/canonical.py::_step`` undo block,
+lines 537--542 in the IsalSR repository at the time of porting). The
+reduction is from ``O(j * n)`` per V step to ``O(j)`` per V step.
 """
 
 from __future__ import annotations
@@ -15,8 +24,8 @@ from isalhg.errors import DisconnectedHypergraphError
 from isalhg.types import TokenSequence
 
 
-class GreedyMin(H2SAlgorithm):
-    """Greedy H2S over every max-xi seed; take the lex-min token tuple."""
+class GreedyMinInplace(H2SAlgorithm):
+    """``greedy_min`` with in-place mutation + undo at V/C branches."""
 
     def __init__(self, *, k: int, structural_depth: int = DEFAULT_DEPTH) -> None:
         self._k = k
@@ -24,7 +33,7 @@ class GreedyMin(H2SAlgorithm):
 
     @property
     def name(self) -> str:
-        return "greedy_min"
+        return "greedy_min_inplace"
 
     @property
     def k(self) -> int:
@@ -35,25 +44,20 @@ class GreedyMin(H2SAlgorithm):
         return self._structural_depth
 
     def encode(self, H: SparseHypergraph) -> TokenSequence:
-        """Encode ``H`` by running greedy from every max-xi seed and taking lex-min.
-
-        Raises
-        ------
-        DisconnectedHypergraphError
-            If ``H`` is not connected (decision B11).
-        """
         if H.n_nodes == 0:
             return ()
         if not H.is_connected():
             raise DisconnectedHypergraphError(
-                "GreedyMin requires a connected hypergraph (decision B11)"
+                "GreedyMinInplace requires a connected hypergraph (decision B11)"
             )
         seeds = max_xi_nodes(H, depth=self._structural_depth)
-        candidates: list[TokenSequence] = [greedy_h2s(H, seed_node=s, k=self._k) for s in seeds]
+        candidates: list[TokenSequence] = [
+            greedy_h2s(H, seed_node=s, k=self._k, inplace=True) for s in seeds
+        ]
         return min(candidates, key=sequence_sort_key)
 
 
 register_algorithm(
-    "greedy_min",
-    lambda k, d: GreedyMin(k=k, structural_depth=d),
+    "greedy_min_inplace",
+    lambda k, d: GreedyMinInplace(k=k, structural_depth=d),
 )

@@ -29,17 +29,29 @@ class IsalHGBackend(IsoBackend):
         Depth of the ``xi`` / ``eta`` structural tuples (invariant 8).
     """
 
-    def __init__(self, *, k: int | None = None, structural_depth: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        k: int | None = None,
+        structural_depth: int = 3,
+        algorithm: str = "greedy_min",
+    ) -> None:
         self._k = k
         self._structural_depth = structural_depth
+        self._algorithm = algorithm
 
     @property
     def name(self) -> BackendName:
-        return "isalhg"
+        return f"isalhg_{self._algorithm}"
 
     def fingerprint(self, H: SparseHypergraph) -> Fingerprint:
         k_eff = required_k(H) if self._k is None else self._k
-        s = canonical_string(H, k=k_eff, structural_depth=self._structural_depth)
+        s = canonical_string(
+            H,
+            k=k_eff,
+            structural_depth=self._structural_depth,
+            algorithm=self._algorithm,
+        )
         return s.encode("utf-8")
 
     def are_isomorphic(self, H1: SparseHypergraph, H2: SparseHypergraph) -> bool:
@@ -48,10 +60,37 @@ class IsalHGBackend(IsoBackend):
         if H1.n_edge_labels != H2.n_edge_labels:
             return False
         k_eff = max(required_k(H1), required_k(H2)) if self._k is None else self._k
-        s1 = canonical_string(H1, k=k_eff, structural_depth=self._structural_depth)
-        s2 = canonical_string(H2, k=k_eff, structural_depth=self._structural_depth)
+        s1 = canonical_string(
+            H1,
+            k=k_eff,
+            structural_depth=self._structural_depth,
+            algorithm=self._algorithm,
+        )
+        s2 = canonical_string(
+            H2,
+            k=k_eff,
+            structural_depth=self._structural_depth,
+            algorithm=self._algorithm,
+        )
         return s1 == s2
 
 
 # Self-register at import time (per registry pattern, CODE_DESIGN.md §3).
-register_backend("isalhg", lambda: IsalHGBackend())
+# ``isalhg`` is the legacy alias for the production canonical
+# (``greedy_min``); per-algorithm aliases ``isalhg_<name>`` are
+# registered for the algorithm-comparison preprint study.
+register_backend("isalhg", lambda: IsalHGBackend(algorithm="greedy_min"))
+for _algo in (
+    "greedy_min",
+    "greedy_single",
+    "exhaustive",
+    "greedy_min_inplace",
+    "greedy_min_wl_pruned",
+    "greedy_min_inplace_wl_pruned",
+    "pruned_exhaustive",
+):
+    register_backend(
+        f"isalhg_{_algo}",
+        lambda algo=_algo: IsalHGBackend(algorithm=algo),
+    )
+del _algo

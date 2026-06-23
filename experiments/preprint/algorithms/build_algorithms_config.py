@@ -1,0 +1,221 @@
+"""Generate per-algorithm YAML configs for the preprint algorithm-comparison study.
+
+One YAML per registered ``H2SAlgorithm`` variant (each becomes one
+Picasso SLURM job). Each YAML carries the SAME ``(dataset_params,
+seed)`` cells across algorithms so the orchestrator output filenames
+collide deterministically and the downstream aggregator can join on
+``(dataset, seed, item_id)``.
+
+Grid (5-seed subset of PREPRINT.md §3 + symmetric-designs cohort):
+
+- ER cohort: ``n ∈ {50, 200, 1000}`` × ``r ∈ {3, 5}`` × ``c ∈ {1, 5, 25}``
+  × ``seed ∈ 0..4`` -> 90 cells per algorithm.
+- Symmetric-designs cohort: 1 cell per algorithm (5 deterministic items).
+
+7 algorithms × 91 cells = 637 cells total. The slow algorithms
+(``exhaustive``, ``pruned_exhaustive``) will DNF on the largest cells
+within the 600-second timeout; the DNF curve is itself the experimental
+signal.
+
+Usage
+-----
+::
+
+    python experiments/preprint/algorithms/build_algorithms_config.py
+    python experiments/preprint/algorithms/build_algorithms_config.py --smoke
+    python experiments/preprint/algorithms/build_algorithms_config.py --output-dir <path>
+"""
+
+from __future__ import annotations
+
+import argparse
+import logging
+from pathlib import Path
+from typing import Any
+
+import yaml
+
+logger = logging.getLogger(__name__)
+
+ALGORITHMS: tuple[str, ...] = (
+    "greedy_single",
+    "greedy_min",
+    "greedy_min_inplace",
+    "greedy_min_wl_pruned",
+    "greedy_min_inplace_wl_pruned",
+    "exhaustive",
+    "pruned_exhaustive",
+)
+
+N_VALUES: tuple[int, ...] = (50, 200, 1000)
+R_VALUES: tuple[int, ...] = (3, 5)
+C_VALUES: tuple[float, ...] = (1.0, 5.0, 25.0)
+SEEDS: tuple[int, ...] = tuple(range(5))
+
+PROTOCOL_NAME: str = "algorithm_benchmark"
+ER_DATASET: str = "random_erdos_renyi"
+DESIGNS_DATASET: str = "symmetric_designs"
+
+REPEATS: int = 5
+TIMEOUT_S: float = 600.0
+
+DEFAULT_LOCAL_RESULTS_ROOT: Path = Path(
+    "/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/preprint/algorithms"
+)
+
+
+def _er_cells(algorithm: str) -> list[dict[str, Any]]:
+    cells: list[dict[str, Any]] = []
+    backend_name = f"isalhg_{algorithm}"
+    for n in N_VALUES:
+        for r in R_VALUES:
+            for c in C_VALUES:
+                for seed in SEEDS:
+                    cells.append(
+                        {
+                            "protocol": PROTOCOL_NAME,
+                            "backend": backend_name,
+                            "dataset": ER_DATASET,
+                            "seed": int(seed),
+                            "protocol_params": {
+                                "timeout_s": float(TIMEOUT_S),
+                                "repeats": int(REPEATS),
+                                "check_roundtrip": True,
+                                "check_iso_invariance": True,
+                                "store_fingerprint_bytes": True,
+                            },
+                            "dataset_params": {
+                                "n": int(n),
+                                "r": int(r),
+                                "c": float(c),
+                                "seed": int(seed),
+                            },
+                            "backend_params": {},
+                        }
+                    )
+    return cells
+
+
+def _designs_cell(algorithm: str) -> dict[str, Any]:
+    backend_name = f"isalhg_{algorithm}"
+    return {
+        "protocol": PROTOCOL_NAME,
+        "backend": backend_name,
+        "dataset": DESIGNS_DATASET,
+        "seed": 0,
+        "protocol_params": {
+            "timeout_s": float(TIMEOUT_S),
+            "repeats": int(REPEATS),
+            "check_roundtrip": True,
+            "check_iso_invariance": True,
+            "store_fingerprint_bytes": True,
+        },
+        "dataset_params": {},
+        "backend_params": {},
+    }
+
+
+def _smoke_cells(algorithm: str) -> list[dict[str, Any]]:
+    """3 small ER cells used for the local pre-Picasso check."""
+    backend_name = f"isalhg_{algorithm}"
+    cells: list[dict[str, Any]] = []
+    for s in (0, 1, 2):
+        cells.append(
+            {
+                "protocol": PROTOCOL_NAME,
+                "backend": backend_name,
+                "dataset": ER_DATASET,
+                "seed": int(s),
+                "protocol_params": {
+                    "timeout_s": 60.0,
+                    "repeats": 2,
+                    "check_roundtrip": True,
+                    "check_iso_invariance": True,
+                    "store_fingerprint_bytes": True,
+                },
+                "dataset_params": {"n": 10, "r": 3, "c": 3.0, "seed": int(s)},
+                "backend_params": {},
+            }
+        )
+    return cells
+
+
+def _write_config(
+    *, algorithm: str, cells: list[dict[str, Any]], output_root: Path, dest: Path
+) -> int:
+    payload: dict[str, Any] = {
+        "name": f"algo_{algorithm}",
+        "description": (
+            f"Algorithm-benchmark study for {algorithm}. Generated by "
+            "experiments/preprint/algorithms/build_algorithms_config.py."
+        ),
+        "output_root": str(output_root),
+        "cells": cells,
+    }
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    with dest.open("w", encoding="utf-8") as fh:
+        yaml.safe_dump(payload, fh, sort_keys=False, default_flow_style=False)
+    logger.info("wrote %d cells -> %s", len(cells), dest)
+    return len(cells)
+
+
+def build_full_configs(*, output_dir: Path, results_root: Path) -> int:
+    total = 0
+    for algorithm in ALGORITHMS:
+        cells = _er_cells(algorithm) + [_designs_cell(algorithm)]
+        dest = output_dir / f"algo_{algorithm}.yaml"
+        out_root = results_root / "full" / algorithm
+        total += _write_config(algorithm=algorithm, cells=cells, output_root=out_root, dest=dest)
+    return total
+
+
+def build_smoke_configs(*, output_dir: Path, results_root: Path) -> int:
+    total = 0
+    for algorithm in ALGORITHMS:
+        cells = _smoke_cells(algorithm)
+        dest = output_dir / f"algo_smoke_{algorithm}.yaml"
+        out_root = results_root / "smoke" / algorithm
+        total += _write_config(algorithm=algorithm, cells=cells, output_root=out_root, dest=dest)
+    return total
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("experiments/preprint/algorithms/configs"),
+        help="Where to write the per-algorithm YAML files.",
+    )
+    parser.add_argument(
+        "--results-root",
+        type=Path,
+        default=DEFAULT_LOCAL_RESULTS_ROOT,
+        help="Per-algorithm orchestrator output_root prefix.",
+    )
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="Generate smoke YAMLs (3 small ER cells per algorithm).",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+    )
+    args = parser.parse_args(argv)
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+    if args.smoke:
+        n_cells = build_smoke_configs(output_dir=args.output_dir, results_root=args.results_root)
+    else:
+        n_cells = build_full_configs(output_dir=args.output_dir, results_root=args.results_root)
+    print(f"wrote {n_cells} cells across {len(ALGORITHMS)} algorithm YAMLs")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -214,9 +214,17 @@ def _best_c_for_displacement(
 def _label_respecting_perms(
     new_inputs_set: frozenset[NodeId],
     H: SparseHypergraph,
+    wl_colors: list[int] | None = None,
 ) -> list[tuple[NodeId, ...]]:
     """Yield all orderings of ``new_inputs_set`` consistent with the sorted
     label tuple (smaller labels first; within a label class, all permutations).
+
+    When ``wl_colors`` is provided, prune permutations that swap two
+    WL-equivalent vertices within the same label class: in any such
+    swap the resulting completion is isomorphic, so the lex-min is
+    unaffected if we require WL-equivalent vertices to appear in
+    ascending ID order. This collapses the ``j!`` branching factor on
+    inputs whose WL orbit has size > 1.
     """
     by_label: dict[int, list[NodeId]] = defaultdict(list)
     for v in new_inputs_set:
@@ -225,8 +233,25 @@ def _label_respecting_perms(
     groups = [by_label[lab] for lab in sorted_labels]
     out: list[tuple[NodeId, ...]] = []
     for prod_perm in product(*[permutations(g) for g in groups]):
+        if wl_colors is not None and not _wl_orbit_canonical(prod_perm, wl_colors):
+            continue
         out.append(tuple(v for group in prod_perm for v in group))
     return out
+
+
+def _wl_orbit_canonical(
+    prod_perm: tuple[tuple[NodeId, ...], ...],
+    wl_colors: list[int],
+) -> bool:
+    """True iff WL-equivalent vertices within each label group appear in ascending ID order."""
+    for grp in prod_perm:
+        last_id_at_color: dict[int, NodeId] = {}
+        for v in grp:
+            colour = wl_colors[v]
+            if colour in last_id_at_color and last_id_at_color[colour] >= v:
+                return False
+            last_id_at_color[colour] = v
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -234,8 +259,27 @@ def _label_respecting_perms(
 # ---------------------------------------------------------------------------
 
 
-def _encode_from(H: SparseHypergraph, k: int, state: _State) -> TokenSequence | None:
-    """Recursive lex-min completion from ``state``. Returns ``None`` if stuck."""
+def _encode_from(
+    H: SparseHypergraph,
+    k: int,
+    state: _State,
+    *,
+    inplace: bool = False,
+    wl_colors: list[int] | None = None,
+) -> TokenSequence | None:
+    """Recursive lex-min completion from ``state``. Returns ``None`` if stuck.
+
+    Parameters
+    ----------
+    inplace : bool, optional
+        When ``True`` mutate ``state`` directly at each branch and undo
+        on return instead of cloning. Equivalent output; lower per-branch
+        cost. Default ``False`` (clone-on-branch, identical to the
+        original behaviour).
+    wl_colors : list[int] or None, optional
+        Per-vertex WL hashes for orbit-aware pruning of the V-branch
+        permutation set. ``None`` disables pruning (default).
+    """
     if len(state.i2o) == H.n_nodes and len(state.consumed_edges) == H.n_edges:
         return ()
 
@@ -306,10 +350,20 @@ def _encode_from(H: SparseHypergraph, k: int, state: _State) -> TokenSequence | 
     if best_kind == "C":
         assert best_c_info is not None
         edge_id_c, _, _ = best_c_info
+        if inplace:
+            saved_ptrs = tuple(state.pointers)
+            state.set_ptrs(best_new_slots)
+            state.consumed_edges.add(edge_id_c)
+            sub_completion = _encode_from(H, k, state, inplace=True, wl_colors=wl_colors)
+            state.consumed_edges.discard(edge_id_c)
+            state.pointers[:] = list(saved_ptrs)
+            if sub_completion is None:
+                return None
+            return move_prefix + sub_completion
         sub_state = state.clone()
         sub_state.set_ptrs(best_new_slots)
         sub_state.consumed_edges.add(edge_id_c)
-        sub_completion = _encode_from(H, k, sub_state)
+        sub_completion = _encode_from(H, k, sub_state, inplace=False, wl_colors=wl_colors)
         if sub_completion is None:
             return None
         return move_prefix + sub_completion
@@ -320,19 +374,49 @@ def _encode_from(H: SparseHypergraph, k: int, state: _State) -> TokenSequence | 
 
     best_completion: TokenSequence | None = None
     best_completion_key: tuple[Any, ...] | None = None
-    for new_input_seq in _label_respecting_perms(new_inputs_set, H):
-        sub_state = state.clone()
-        sub_state.set_ptrs(best_new_slots)
-        anchor_slot = sub_state.get_ptr(1)
-        for input_v in new_input_seq:
-            out_v: NodeId = sub_state.next_output_id
-            sub_state.next_output_id += 1
-            new_slot = sub_state.cdll.insert_after(anchor_slot, out_v)
-            sub_state.i2o[input_v] = out_v
-            sub_state.o2i[out_v] = input_v
-            anchor_slot = new_slot
-        sub_state.consumed_edges.add(edge_id_v)
-        sub_completion = _encode_from(H, k, sub_state)
+    for new_input_seq in _label_respecting_perms(new_inputs_set, H, wl_colors=wl_colors):
+        if inplace:
+            saved_ptrs = tuple(state.pointers)
+            saved_next_id = state.next_output_id
+            state.set_ptrs(best_new_slots)
+            anchor_slot = state.get_ptr(1)
+            new_cdll_slots: list[int] = []
+            new_o_ids: list[NodeId] = []
+            new_i_ids: list[NodeId] = []
+            for input_v in new_input_seq:
+                out_v_local: NodeId = state.next_output_id
+                state.next_output_id += 1
+                new_slot = state.cdll.insert_after(anchor_slot, out_v_local)
+                state.i2o[input_v] = out_v_local
+                state.o2i[out_v_local] = input_v
+                new_cdll_slots.append(new_slot)
+                new_o_ids.append(out_v_local)
+                new_i_ids.append(input_v)
+                anchor_slot = new_slot
+            state.consumed_edges.add(edge_id_v)
+            sub_completion = _encode_from(H, k, state, inplace=True, wl_colors=wl_colors)
+            state.consumed_edges.discard(edge_id_v)
+            for slot in reversed(new_cdll_slots):
+                state.cdll.remove(slot)
+            for input_v in new_i_ids:
+                state.i2o.pop(input_v, None)
+            for out_v_local in new_o_ids:
+                state.o2i.pop(out_v_local, None)
+            state.next_output_id = saved_next_id
+            state.pointers[:] = list(saved_ptrs)
+        else:
+            sub_state = state.clone()
+            sub_state.set_ptrs(best_new_slots)
+            anchor_slot = sub_state.get_ptr(1)
+            for input_v in new_input_seq:
+                out_v: NodeId = sub_state.next_output_id
+                sub_state.next_output_id += 1
+                new_slot = sub_state.cdll.insert_after(anchor_slot, out_v)
+                sub_state.i2o[input_v] = out_v
+                sub_state.o2i[out_v] = input_v
+                anchor_slot = new_slot
+            sub_state.consumed_edges.add(edge_id_v)
+            sub_completion = _encode_from(H, k, sub_state, inplace=False, wl_colors=wl_colors)
         if sub_completion is None:
             continue
         candidate = list(move_prefix) + list(sub_completion)
@@ -353,6 +437,8 @@ def greedy_h2s(
     *,
     seed_node: NodeId,
     k: int,
+    inplace: bool = False,
+    wl_colors: list[int] | None = None,
 ) -> TokenSequence:
     """Greedy single-seed H2S encoder with bounded backtracking.
 
@@ -364,6 +450,17 @@ def greedy_h2s(
         First node placed at slot 0 of the CDLL.
     k : int
         Pointer count of the VM. Must satisfy ``k >= max arity of H``.
+    inplace : bool, optional
+        When ``True`` reuse a single mutable state across all V/C
+        branches via undo records instead of cloning. The emitted token
+        tuple is identical; the constant factor is lower (no per-branch
+        ``state.clone()`` of an O(n) CDLL). Default ``False``.
+    wl_colors : list[int] or None, optional
+        Per-vertex stable WL colours used to prune the V-branch
+        permutation set: within a label class, WL-equivalent vertices
+        are required to appear in ascending ID order. Has no effect on
+        non-symmetric inputs (every WL orbit is a singleton). Default
+        ``None`` (no pruning).
 
     Returns
     -------
@@ -393,7 +490,7 @@ def greedy_h2s(
         consumed_edges=set(),
         next_output_id=1,
     )
-    result = _encode_from(H, k, state)
+    result = _encode_from(H, k, state, inplace=inplace, wl_colors=wl_colors)
     if result is None:
         raise H2SStuckError(
             f"H2S stuck from seed {seed_node} on hypergraph with {n} nodes, {H.n_edges} edges"

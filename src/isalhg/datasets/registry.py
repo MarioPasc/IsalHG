@@ -28,6 +28,7 @@ _REGISTRY: dict[DatasetName, DatasetFactory] = {}
 _LAZY_MODULES: dict[DatasetName, str] = {
     "exhaustive_small": "isalhg.datasets.synthetic.exhaustive_small",
     "random_erdos_renyi": "isalhg.datasets.synthetic.erdos_renyi",
+    "symmetric_designs": "isalhg.datasets.synthetic.symmetric_designs",
 }
 
 

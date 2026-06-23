@@ -14,6 +14,7 @@ Disconnected hypergraphs are rejected per decision B11.
 from __future__ import annotations
 
 from isalhg.core.algorithms.greedy_min import GreedyMin
+from isalhg.core.algorithms.registry import get_algorithm
 from isalhg.core.instructions import serialize
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 
@@ -30,6 +31,7 @@ def canonical_string(
     *,
     k: int | None = None,
     structural_depth: int = 3,
+    algorithm: str = "greedy_min",
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
 
@@ -44,6 +46,14 @@ def canonical_string(
         equality MUST be encoded with the same ``k``.
     structural_depth : int
         Depth of the structural tuples (xi/eta). Defaults to 3 (invariant 8).
+    algorithm : str
+        Name of a registered :class:`~isalhg.core.algorithms.base.H2SAlgorithm`
+        variant. Defaults to ``"greedy_min"`` -- the production canonical
+        algorithm. Other registered variants (``"greedy_single"``,
+        ``"greedy_min_inplace"``, ``"greedy_min_wl_pruned"``,
+        ``"greedy_min_inplace_wl_pruned"``, ``"exhaustive"``,
+        ``"pruned_exhaustive"``) are exposed for the preprint
+        algorithm-comparison study.
 
     Returns
     -------
@@ -56,6 +66,9 @@ def canonical_string(
         If ``H`` is disconnected (decision B11).
     """
     effective_k = required_k(H) if k is None else k
-    algo = GreedyMin(k=effective_k, structural_depth=structural_depth)
+    if algorithm == "greedy_min":
+        algo = GreedyMin(k=effective_k, structural_depth=structural_depth)
+    else:
+        algo = get_algorithm(algorithm, k=effective_k, structural_depth=structural_depth)
     tokens = algo.encode(H)
     return serialize(list(tokens))

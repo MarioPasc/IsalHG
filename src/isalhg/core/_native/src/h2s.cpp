@@ -390,49 +390,33 @@ struct CCandidate {
 // within a label class in ascending input-id order.
 // ---------------------------------------------------------------------------
 
-struct LabelGroup {
-    std::int16_t label;
-    std::vector<NodeId> members;
-};
+// ``new_inputs`` is bounded by MAX_NEW = K_MAX - 1 = 9, so every working
+// buffer in this section fits on the stack. group_by_label / the odometer
+// loop / wl_orbit_canonical all operate on fixed-size arrays. The
+// callback ``Fn`` receives one assembled permutation per call as a
+// ``(const NodeId*, int)`` pair; the encoder consumes it directly,
+// avoiding the previous ``vector<vector<NodeId>>`` perm-list build-up.
 
-void group_by_label(const std::vector<NodeId>& new_inputs, const SHG& H,
-                    std::vector<LabelGroup>& groups) {
-    groups.clear();
-    // Build a label -> members map; new_inputs is small (<= K_MAX).
-    for (NodeId v : new_inputs) {
-        const std::int16_t lab =
-            static_cast<std::int16_t>(H.vertex_labels[static_cast<std::size_t>(v)]);
-        // Find or insert group.
-        std::size_t idx = groups.size();
-        for (std::size_t g = 0; g < groups.size(); ++g) {
-            if (groups[g].label == lab) { idx = g; break; }
-        }
-        if (idx == groups.size()) {
-            groups.push_back(LabelGroup{lab, {}});
-        }
-        groups[idx].members.push_back(v);
-    }
-    std::sort(groups.begin(), groups.end(),
-              [](const LabelGroup& a, const LabelGroup& b) { return a.label < b.label; });
-    for (auto& g : groups) std::sort(g.members.begin(), g.members.end());
-}
+struct LabelGroupStack {
+    std::int16_t label = 0;
+    std::array<NodeId, MAX_NEW> members{};
+    int n_members = 0;
+};
 
 // WL-orbit canonical filter: within each group, WL-equivalent vertices must
 // appear in ascending node-id order.
-[[nodiscard]] bool wl_orbit_canonical(const std::vector<LabelGroup>& groups,
-                                      const std::vector<std::array<NodeId, K_MAX>>& /*unused*/,
-                                      const std::vector<std::int64_t>& wl_colors,
-                                      const std::vector<std::vector<NodeId>>& current_perm)
+[[nodiscard]] bool wl_orbit_canonical_stack(
+    const std::array<LabelGroupStack, MAX_NEW>& current,
+    int n_groups,
+    const std::vector<std::int64_t>& wl_colors) noexcept
 {
-    (void)groups;
-    for (const auto& grp : current_perm) {
-        // For each WL color present in the group, track the last node id we saw.
-        // We use a small linear scan because group sizes are small.
-        for (std::size_t a = 0; a < grp.size(); ++a) {
-            const NodeId va = grp[a];
+    for (int g = 0; g < n_groups; ++g) {
+        const auto& grp = current[static_cast<std::size_t>(g)];
+        for (int a = 0; a < grp.n_members; ++a) {
+            const NodeId va = grp.members[static_cast<std::size_t>(a)];
             const std::int64_t ca = wl_colors[static_cast<std::size_t>(va)];
-            for (std::size_t b = a + 1; b < grp.size(); ++b) {
-                const NodeId vb = grp[b];
+            for (int b = a + 1; b < grp.n_members; ++b) {
+                const NodeId vb = grp.members[static_cast<std::size_t>(b)];
                 if (wl_colors[static_cast<std::size_t>(vb)] == ca && vb <= va) {
                     return false;
                 }
@@ -442,41 +426,68 @@ void group_by_label(const std::vector<NodeId>& new_inputs, const SHG& H,
     return true;
 }
 
-void enumerate_label_perms(
-    const std::vector<NodeId>& new_inputs, const SHG& H,
-    const std::optional<std::vector<std::int64_t>>& wl_colors,
-    std::vector<std::vector<NodeId>>& out_perms)
+template <typename Fn>
+void enumerate_label_perms_cb(
+    const NodeId* new_inputs, int n_new, const SHG& H,
+    const std::optional<std::vector<std::int64_t>>& wl_colors, Fn&& callback)
 {
-    out_perms.clear();
-    std::vector<LabelGroup> groups;
-    group_by_label(new_inputs, H, groups);
+    // group_by_label, stack-allocated.
+    std::array<LabelGroupStack, MAX_NEW> groups{};
+    int n_groups = 0;
+    for (int i = 0; i < n_new; ++i) {
+        const NodeId v = new_inputs[i];
+        const std::int16_t lab =
+            static_cast<std::int16_t>(H.vertex_labels[static_cast<std::size_t>(v)]);
+        int idx = -1;
+        for (int g = 0; g < n_groups; ++g) {
+            if (groups[static_cast<std::size_t>(g)].label == lab) { idx = g; break; }
+        }
+        if (idx < 0) {
+            idx = n_groups++;
+            groups[static_cast<std::size_t>(idx)].label = lab;
+        }
+        auto& grp = groups[static_cast<std::size_t>(idx)];
+        grp.members[static_cast<std::size_t>(grp.n_members++)] = v;
+    }
+    // Sort groups by label ascending; within each group sort members ascending.
+    std::sort(groups.begin(), groups.begin() + n_groups,
+              [](const LabelGroupStack& a, const LabelGroupStack& b) {
+                  return a.label < b.label;
+              });
+    for (int g = 0; g < n_groups; ++g) {
+        auto& grp = groups[static_cast<std::size_t>(g)];
+        std::sort(grp.members.begin(), grp.members.begin() + grp.n_members);
+    }
 
-    // Recursive enumeration: for each group, permute, then combine across groups.
-    std::vector<std::vector<NodeId>> current(groups.size());
-    for (std::size_t g = 0; g < groups.size(); ++g) current[g] = groups[g].members;
+    // ``current`` is the working state of the odometer. Each group keeps
+    // a permutation of its members; std::next_permutation cycles through
+    // them in lex order.
+    std::array<LabelGroupStack, MAX_NEW> current = groups;
 
-    // We use std::next_permutation per group, iterating like an odometer.
-    // The starting per-group permutation is the ascending one (already sorted).
+    std::array<NodeId, MAX_NEW> flat{};
 
     while (true) {
-        if (!wl_colors.has_value()
-            || wl_orbit_canonical(groups, /*unused*/{}, wl_colors.value(), current)) {
-            std::vector<NodeId> flat;
-            flat.reserve(new_inputs.size());
-            for (const auto& grp : current) {
-                for (NodeId v : grp) flat.push_back(v);
+        const bool keep = !wl_colors.has_value()
+            || wl_orbit_canonical_stack(current, n_groups, wl_colors.value());
+        if (keep) {
+            int pos = 0;
+            for (int g = 0; g < n_groups; ++g) {
+                const auto& grp = current[static_cast<std::size_t>(g)];
+                for (int m = 0; m < grp.n_members; ++m) {
+                    flat[static_cast<std::size_t>(pos++)] =
+                        grp.members[static_cast<std::size_t>(m)];
+                }
             }
-            out_perms.push_back(std::move(flat));
+            callback(flat.data(), pos);
         }
-        // Advance: try next_permutation on group 0; if rolls over, roll group 1; ...
-        std::size_t g = 0;
+        // Odometer step: roll group 0; if it wraps, roll group 1; ...
+        int g = 0;
         bool rolled = true;
-        while (g < current.size() && rolled) {
-            rolled = !std::next_permutation(current[g].begin(), current[g].end());
-            if (rolled) {
-                // current[g] is now the smallest permutation; carry to the next group.
-                ++g;
-            }
+        while (g < n_groups && rolled) {
+            auto& grp = current[static_cast<std::size_t>(g)];
+            rolled = !std::next_permutation(grp.members.begin(),
+                                             grp.members.begin() + grp.n_members);
+            if (rolled) ++g;
         }
         if (rolled) break;
     }
@@ -650,73 +661,62 @@ void enumerate_label_perms(
         return true;
     }
 
-    // V branch: enumerate label-respecting permutations and take the lex-min
-    // sub_completion. ``best_prefix`` is identical across all permutations
-    // of this V emission, so we compare only the per-permutation
-    // sub_completion vectors — avoids allocating + copying the prefix per
-    // permutation and avoids redundant element-by-element comparison of
-    // the prefix tokens during lex-min selection.
-    std::vector<std::vector<NodeId>> perms;
-    {
-        std::vector<NodeId> bni(best_new_inputs.begin(),
-                                best_new_inputs.begin() + best_new_inputs_n);
-        enumerate_label_perms(bni, H, wl_colors, perms);
-    }
-
+    // V branch: enumerate label-respecting permutations and take the
+    // lex-min sub_completion. ``best_prefix`` is identical across all
+    // permutations of this V emission, so we compare only per-permutation
+    // sub_completion vectors. The enumerator is callback-driven so no
+    // intermediate ``vector<vector<NodeId>>`` perm list is materialised.
     bool have_completion = false;
     std::vector<Token> best_sub_completion;
     std::vector<Token> sub_completion;
 
-    for (const auto& perm : perms) {
-        std::array<SlotIdx, K_MAX> saved_ptrs{};
-        for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
-        const NodeId saved_next_id = state.next_output_id;
+    enumerate_label_perms_cb(
+        best_new_inputs.data(), best_new_inputs_n, H, wl_colors,
+        [&](const NodeId* perm, int new_count) {
+            std::array<SlotIdx, K_MAX> saved_ptrs{};
+            for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
+            const NodeId saved_next_id = state.next_output_id;
 
-        // Apply ptrs.
-        for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
+            for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
 
-        // Insert new nodes after pointer 1 (anchor).
-        SlotIdx anchor = state.get_ptr(1);
-        std::array<SlotIdx, K_MAX> recorded_slots{};
-        std::array<NodeId, K_MAX> recorded_inputs{};
-        std::array<NodeId, K_MAX> recorded_outs{};
-        const int new_count = static_cast<int>(perm.size());
+            SlotIdx anchor = state.get_ptr(1);
+            std::array<SlotIdx, K_MAX> recorded_slots{};
+            std::array<NodeId, K_MAX> recorded_inputs{};
+            std::array<NodeId, K_MAX> recorded_outs{};
 
-        for (int idx = 0; idx < new_count; ++idx) {
-            const NodeId input_v = perm[static_cast<std::size_t>(idx)];
-            const NodeId out_v = state.next_output_id++;
-            const SlotIdx new_slot = state.cdll.insert_after(anchor, out_v);
-            state.i2o[static_cast<std::size_t>(input_v)] = out_v;
-            state.o2i[static_cast<std::size_t>(out_v)] = input_v;
-            recorded_slots[static_cast<std::size_t>(idx)] = new_slot;
-            recorded_inputs[static_cast<std::size_t>(idx)] = input_v;
-            recorded_outs[static_cast<std::size_t>(idx)] = out_v;
-            anchor = new_slot;
-        }
-        state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
+            for (int idx = 0; idx < new_count; ++idx) {
+                const NodeId input_v = perm[idx];
+                const NodeId out_v = state.next_output_id++;
+                const SlotIdx new_slot = state.cdll.insert_after(anchor, out_v);
+                state.i2o[static_cast<std::size_t>(input_v)] = out_v;
+                state.o2i[static_cast<std::size_t>(out_v)] = input_v;
+                recorded_slots[static_cast<std::size_t>(idx)] = new_slot;
+                recorded_inputs[static_cast<std::size_t>(idx)] = input_v;
+                recorded_outs[static_cast<std::size_t>(idx)] = out_v;
+                anchor = new_slot;
+            }
+            state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
 
-        sub_completion.clear();
-        const bool ok = encode_from(H, k, state, wl_colors, sub_completion);
+            sub_completion.clear();
+            const bool ok = encode_from(H, k, state, wl_colors, sub_completion);
 
-        // Undo.
-        state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
-        for (int idx = new_count - 1; idx >= 0; --idx) {
-            state.cdll.remove(recorded_slots[static_cast<std::size_t>(idx)]);
-            state.i2o[static_cast<std::size_t>(
-                recorded_inputs[static_cast<std::size_t>(idx)])] = -1;
-            state.o2i[static_cast<std::size_t>(
-                recorded_outs[static_cast<std::size_t>(idx)])] = -1;
-        }
-        state.next_output_id = saved_next_id;
-        for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = saved_ptrs[idx];
+            state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
+            for (int idx = new_count - 1; idx >= 0; --idx) {
+                state.cdll.remove(recorded_slots[static_cast<std::size_t>(idx)]);
+                state.i2o[static_cast<std::size_t>(
+                    recorded_inputs[static_cast<std::size_t>(idx)])] = -1;
+                state.o2i[static_cast<std::size_t>(
+                    recorded_outs[static_cast<std::size_t>(idx)])] = -1;
+            }
+            state.next_output_id = saved_next_id;
+            for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = saved_ptrs[idx];
 
-        if (!ok) continue;
-
-        if (!have_completion || sequence_cmp(sub_completion, best_sub_completion) < 0) {
-            best_sub_completion.swap(sub_completion);
-            have_completion = true;
-        }
-    }
+            if (!ok) return;
+            if (!have_completion || sequence_cmp(sub_completion, best_sub_completion) < 0) {
+                best_sub_completion.swap(sub_completion);
+                have_completion = true;
+            }
+        });
 
     if (!have_completion) return false;
     out_completion.clear();

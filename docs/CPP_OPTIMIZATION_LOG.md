@@ -117,7 +117,7 @@ thread-spawn overhead. greedy_single sequential path unchanged.
 | STS13       | 42.89 ms | 43.04 ms |  +0.4 % (noise) |
 | Doily       | 69.88 ms | 69.70 ms |  −0.3 % (noise) |
 
-**Combined ratios vs the Python reference baseline:**
+**Combined ratios vs the Python reference baseline (after round 5):**
 
 | Design | C++ now | Python | Speedup vs Python |
 |---|---:|---:|---:|
@@ -125,3 +125,72 @@ thread-spawn overhead. greedy_single sequential path unchanged.
 | STS9  |  7.14 ms |  6 113 ms |   856× |
 | STS13 | 43.04 ms | 63 389 ms | 1 472× |
 | Doily | 69.70 ms |    DNF   |  >4 300× |
+
+## Round 6 — Callback-based perm enumeration with stack groups
+
+**Change.** ``enumerate_label_perms`` previously materialised a
+``vector<vector<NodeId>>`` of permutations and the caller iterated over
+it. Replaced by ``enumerate_label_perms_cb`` which receives a callback
+``cb(const NodeId*, int)`` and invokes it inline as each permutation is
+assembled. Both the label-grouping data structures
+(``std::array<LabelGroupStack, MAX_NEW>``) and the odometer's per-group
+permutation buffer are stack-allocated. Eliminates one
+``vector<vector>`` build-up + a temporary input vector per V branch.
+
+**Result.** Marginal on its own (~0–4 %); useful as cleanup that
+removes the last heap allocations from the inner enumeration path.
+
+| Design | greedy_min round 5 | round 6 | Δ |
+|---|---:|---:|---:|
+| Fano        |  1.36 ms |  1.31 ms |  −3.7 % |
+| STS9        |  7.14 ms |  7.21 ms |  noise  |
+| STS13       | 43.04 ms | 43.34 ms |  noise  |
+| Doily       | 69.70 ms | 69.24 ms |  noise  |
+
+## Round 7 — Profile-Guided Optimisation (PGO)
+
+**Change.** Added ``ISALHG_PGO_GENERATE`` / ``ISALHG_PGO_USE`` CMake
+options. Two-stage build flow:
+
+```
+CMAKE_ARGS="-DISALHG_PGO_GENERATE=ON" pip install -e ".[dev]" --no-build-isolation
+python scratchpad/cpp_pgo_train.py
+CMAKE_ARGS="-DISALHG_PGO_GENERATE=OFF -DISALHG_PGO_USE=ON" \
+    pip install -e ".[dev]" --no-build-isolation --force-reinstall
+```
+
+Profile data persists in ``build/pgo-data/``. Training driver runs
+``canonical_string`` on Fano / STS(9) / STS(13) / doily across all
+three native variants so GCC sees the inner-loop branch distributions.
+
+**Result.** Small Fano win, noise elsewhere — the bigger designs sit at
+the parallel ceiling so improved codegen barely shows.
+
+| Design | greedy_min round 6 | round 7 (PGO) | Δ |
+|---|---:|---:|---:|
+| Fano        |  1.31 ms |  1.27 ms |  −3.1 % |
+| STS9        |  7.21 ms |  7.23 ms |  noise  |
+| STS13       | 43.34 ms | 43.07 ms |  noise  |
+| Doily       | 69.24 ms | 68.88 ms |  noise  |
+
+PGO is opt-in (default off) because the workflow is two-stage and the
+profile data is host-specific.
+
+## Summary (round 0 → round 7)
+
+| Design | round 0 | round 7 | Speedup | vs Python (baseline) |
+|---|---:|---:|---:|---:|
+| Fano        |   5.91 ms |   1.27 ms |  4.7× |    511× |
+| STS9        |  44.17 ms |   7.23 ms |  6.1× |    845× |
+| STS13       | 353.46 ms |  43.07 ms |  8.2× | 1 471× |
+| Doily       | 654.90 ms |  68.88 ms |  9.5× | >4 351× (Python DNF) |
+
+**Where the remaining budget went.** After round 5 (parallel + thread
+pool) the larger designs are limited by per-seed wall-clock and Intel
+hybrid-core scheduling. The greedy_single (single-seed, sequential)
+timings shrink barely 1–2 % across rounds 6–7 because the dominant
+cost is the V-branch backtracking inside the H2S algorithm itself.
+Closing the remaining 30 ms parallel-overhead gap on the doily would
+require either (a) pinning workers to P-cores only (Linux-specific) or
+(b) the PI-deferred pruned-canonical algorithm — both out of scope of
+the implementation-overhead component this port targets.

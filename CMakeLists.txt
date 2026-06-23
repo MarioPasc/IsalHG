@@ -31,6 +31,26 @@ if(ISALHG_ENABLE_SANITIZERS)
     add_link_options(-fsanitize=address,undefined)
 endif()
 
+# Profile-guided optimisation. Two-stage build:
+#  1. CMAKE_ARGS="-DISALHG_PGO_GENERATE=ON" pip install -e ".[dev]"
+#  2. Run the training script (scratchpad/cpp_pgo_train.py)
+#  3. CMAKE_ARGS="-DISALHG_PGO_USE=ON" pip install -e ".[dev]"
+# Profile data persists in ${ISALHG_PGO_DATA}; remove between fresh runs.
+option(ISALHG_PGO_GENERATE "Build with -fprofile-generate" OFF)
+option(ISALHG_PGO_USE "Build with -fprofile-use" OFF)
+set(ISALHG_PGO_DATA "${CMAKE_SOURCE_DIR}/build/pgo-data"
+    CACHE PATH "Directory holding GCC PGO .gcda files")
+if(ISALHG_PGO_GENERATE)
+    file(MAKE_DIRECTORY ${ISALHG_PGO_DATA})
+    add_compile_options(-fprofile-generate=${ISALHG_PGO_DATA})
+    add_link_options(-fprofile-generate=${ISALHG_PGO_DATA})
+endif()
+if(ISALHG_PGO_USE)
+    add_compile_options(-fprofile-use=${ISALHG_PGO_DATA}
+                        -fprofile-correction -Wno-missing-profile)
+    add_link_options(-fprofile-use=${ISALHG_PGO_DATA})
+endif()
+
 find_package(Python 3.11 REQUIRED COMPONENTS Interpreter Development.Module)
 find_package(nanobind CONFIG REQUIRED)
 

@@ -1,6 +1,23 @@
 [build-system]
-requires = ["setuptools>=68.0", "setuptools-scm>=8.0"]
-build-backend = "setuptools.build_meta"
+requires = [
+    "scikit-build-core>=0.9",
+    "nanobind>=2.0",
+]
+build-backend = "scikit_build_core.build"
+
+[tool.scikit-build]
+minimum-version = "build-system.requires"
+cmake.version = ">=3.18"
+ninja.version = ">=1.10"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/isalhg"]
+# Editable installs: scikit-build-core's default "redirect" mode places
+# a .pth file that points sys.path at this src/ tree. The .so produced
+# by CMake is installed inside src/isalhg/, so `import isalhg._core`
+# finds it without copying. C++ edits require re-running `pip install -e`.
+
+[tool.scikit-build.cmake.define]
+CMAKE_BUILD_TYPE = "Release"
 
 [project]
 name = "isalhg"
@@ -82,12 +99,6 @@ eval = [
     "python-Levenshtein>=0.21",
 ]
 all = ["isalhg[hypernetx,xgi,hypergraphx,viz,bench,dev,eval]"]
-
-[tool.setuptools.packages.find]
-where = ["src"]
-
-[tool.setuptools.package-data]
-isalhg = ["py.typed"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

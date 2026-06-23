@@ -22,10 +22,13 @@
 #include <nanobind/stl/tuple.h>
 #include <nanobind/stl/vector.h>
 
+#include "isalhg/canonical.hpp"
 #include "isalhg/errors.hpp"
 #include "isalhg/h2s.hpp"
 #include "isalhg/sparse_hypergraph.hpp"
+#include "isalhg/structural_tuples.hpp"
 #include "isalhg/token.hpp"
+#include "isalhg/wl.hpp"
 
 namespace nb = nanobind;
 using namespace nb::literals;
@@ -151,6 +154,50 @@ NB_MODULE(_core, m) {
         "Greedy H2S encoder; returns the canonical-token sequence serialised as a ;-joined "
         "string. ``wl_colors`` (length n_nodes) prunes V-branch label permutations to canonical "
         "orbit representatives when supplied.");
+
+    m.def(
+        "required_k",
+        [](nb::object py_H) -> int {
+            const isalhg::SHG H = shg_from_python(py_H);
+            return isalhg::required_k_compute(H);
+        },
+        "H"_a, "Return max(2, max arity) — the smallest admissible VM pointer count.");
+
+    m.def(
+        "max_xi_nodes",
+        [](nb::object py_H, int depth) -> std::vector<isalhg::NodeId> {
+            const isalhg::SHG H = shg_from_python(py_H);
+            return isalhg::max_xi_nodes_compute(H, depth);
+        },
+        "H"_a, "depth"_a = isalhg::DEFAULT_STRUCTURAL_DEPTH,
+        "Return the lex-argmax-(xi_labelled, vertex_label) seed set.");
+
+    m.def(
+        "wl_hash",
+        [](nb::object py_H, int max_rounds) -> std::vector<std::int64_t> {
+            const isalhg::SHG H = shg_from_python(py_H);
+            const auto raw = isalhg::wl_hash_compute(H, max_rounds);
+            // Python uses signed Python int; FNV-1a values fit in uint64.
+            // Cast through int64 for nanobind list-of-int conversion.
+            std::vector<std::int64_t> out;
+            out.reserve(raw.size());
+            for (std::uint64_t c : raw) out.push_back(static_cast<std::int64_t>(c));
+            return out;
+        },
+        "H"_a, "max_rounds"_a = isalhg::WL_MAX_ROUNDS,
+        "Per-vertex stable 1-WL colour using FNV-1a 64-bit (cross-process stable).");
+
+    m.def(
+        "canonical_string",
+        [](nb::object py_H, int k, int structural_depth, int algorithm_id) -> std::string {
+            const isalhg::SHG H = shg_from_python(py_H);
+            const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
+            return isalhg::canonical_string_compute(H, k, structural_depth, variant);
+        },
+        "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a,
+        "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
+        "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
+        "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).

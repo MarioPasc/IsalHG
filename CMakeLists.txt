@@ -33,6 +33,9 @@ nanobind_add_module(_core
     src/isalhg/_core/src/token.cpp
     src/isalhg/_core/src/sparse_hypergraph.cpp
     src/isalhg/_core/src/h2s.cpp
+    src/isalhg/_core/src/structural_tuples.cpp
+    src/isalhg/_core/src/wl.cpp
+    src/isalhg/_core/src/canonical.cpp
 )
 
 target_include_directories(_core PRIVATE src/isalhg/_core/include)

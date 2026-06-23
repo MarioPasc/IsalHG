@@ -16,6 +16,7 @@ For the trivial vocabulary the label-aware tuple collapses to the plain one.
 
 from __future__ import annotations
 
+from isalhg._core import max_xi_nodes as _cpp_max_xi_nodes
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.types import EdgeId, NodeId
 
@@ -97,6 +98,17 @@ def _seed_key(H: SparseHypergraph, v: NodeId, depth: int) -> tuple[object, ...]:
     return (xi_labelled(H, v, depth), H.vertex_label(v))
 
 
+def _python_max_xi_nodes(
+    H: SparseHypergraph,
+    depth: int = DEFAULT_DEPTH,
+) -> tuple[NodeId, ...]:
+    """Pure-Python reference implementation. Kept for differential tests."""
+    if H.n_nodes == 0:
+        return ()
+    best_key = max(_seed_key(H, v, depth) for v in H.nodes())
+    return tuple(v for v in H.nodes() if _seed_key(H, v, depth) == best_key)
+
+
 def max_xi_nodes(
     H: SparseHypergraph,
     depth: int = DEFAULT_DEPTH,
@@ -104,9 +116,8 @@ def max_xi_nodes(
     """Return all nodes attaining the lexicographic maximum of the seed key.
 
     Invariant 4: this is the *only* admissible seed set for the canonical
-    algorithm.
+    algorithm. Delegates to the C++ implementation for speed.
     """
     if H.n_nodes == 0:
         return ()
-    best_key = max(_seed_key(H, v, depth) for v in H.nodes())
-    return tuple(v for v in H.nodes() if _seed_key(H, v, depth) == best_key)
+    return tuple(_cpp_max_xi_nodes(H, depth))

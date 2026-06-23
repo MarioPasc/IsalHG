@@ -27,6 +27,7 @@ Restriction: ZERO non-stdlib dependencies.
 
 from __future__ import annotations
 
+from isalhg._core import wl_hash as _cpp_wl_hash
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.types import NodeId
 
@@ -34,9 +35,70 @@ __all__ = ["wl_hash", "wl_partition"]
 
 _MAX_ROUNDS: int = 64
 
+# ---------------------------------------------------------------------------
+# FNV-1a 64-bit deterministic hash (mirrors src/isalhg/_core/include/isalhg/fnv.hpp).
+# Replaces Python's salted hash() so the colour partition is cross-process
+# stable. The pure-Python implementation below produces byte-identical
+# output to the C++ ``_core.wl_hash`` path.
+# ---------------------------------------------------------------------------
+
+_FNV_OFFSET = 14695981039346656037
+_FNV_PRIME = 1099511628211
+_MASK64 = (1 << 64) - 1
+_DOMAIN_VERTEX_INIT = 0xABCD0001
+_DOMAIN_EDGE_SIG = 0xABCD0002
+_DOMAIN_VERTEX_NEW = 0xABCD0003
+
+
+def _fnv1a_mix(h: int, v: int) -> int:
+    return ((h ^ (v & _MASK64)) * _FNV_PRIME) & _MASK64
+
+
+def _fnv1a_init(v: int) -> int:
+    return _fnv1a_mix(_FNV_OFFSET, v)
+
+
+def _python_wl_hash(H: SparseHypergraph, *, max_rounds: int = _MAX_ROUNDS) -> list[int]:
+    """Pure-Python reference WL hash (FNV-1a). Kept for differential tests."""
+    n = H.n_nodes
+    if n == 0:
+        return []
+
+    colours: list[int] = [
+        _fnv1a_mix(_fnv1a_init(_DOMAIN_VERTEX_INIT), H.vertex_label(v)) for v in range(n)
+    ]
+    edges_data: list[tuple[int, frozenset[NodeId]]] = [
+        (H.edge_label(e), H.members(e)) for e in H.edges()
+    ]
+    incident: list[tuple[int, ...]] = [tuple(sorted(H.incident_edges(v))) for v in range(n)]
+
+    if not edges_data:
+        return colours
+
+    for _round in range(max_rounds):
+        edge_sigs: list[int] = []
+        for lab, members in edges_data:
+            h = _fnv1a_init(_DOMAIN_EDGE_SIG)
+            h = _fnv1a_mix(h, lab)
+            for c in sorted(colours[u] for u in members):
+                h = _fnv1a_mix(h, c)
+            edge_sigs.append(h)
+        new_colours: list[int] = []
+        for v in range(n):
+            h = _fnv1a_init(_DOMAIN_VERTEX_NEW)
+            h = _fnv1a_mix(h, colours[v])
+            for s in sorted(edge_sigs[e] for e in incident[v]):
+                h = _fnv1a_mix(h, s)
+            new_colours.append(h)
+        if _partition_equiv(new_colours, colours):
+            colours = new_colours
+            break
+        colours = new_colours
+    return colours
+
 
 def wl_hash(H: SparseHypergraph, *, max_rounds: int = _MAX_ROUNDS) -> list[int]:
-    """Return per-vertex stable 1-WL colours under hyperedge-incidence refinement.
+    """Return per-vertex stable 1-WL colours (cross-process stable, FNV-1a).
 
     Parameters
     ----------
@@ -52,42 +114,15 @@ def wl_hash(H: SparseHypergraph, *, max_rounds: int = _MAX_ROUNDS) -> list[int]:
         ``hashes`` such that ``hashes[v]`` is the WL colour of vertex
         ``v``. Two vertices with the same colour are WL-equivalent
         (necessary but not sufficient for being in the same automorphism
-        orbit).
-
-    Notes
-    -----
-    The colours are Python ``hash`` values; equality between two
-    invocations on the same Python process is guaranteed but
-    cross-process equality is NOT (``PYTHONHASHSEED`` randomises). Use
-    only as a within-process equivalence-class key, never as a fingerprint.
+        orbit). Colours are FNV-1a 64-bit values — stable across
+        processes regardless of ``PYTHONHASHSEED``.
     """
-    n = H.n_nodes
-    if n == 0:
+    if H.n_nodes == 0:
         return []
-
-    colours: list[int] = [hash(("v", H.vertex_label(v))) for v in range(n)]
-    edges_data: list[tuple[int, frozenset[NodeId]]] = [
-        (H.edge_label(e), H.members(e)) for e in H.edges()
-    ]
-    incident: list[tuple[int, ...]] = [tuple(sorted(H.incident_edges(v))) for v in range(n)]
-
-    if not edges_data:
-        return colours
-
-    for _round in range(max_rounds):
-        edge_sigs: list[int] = [
-            hash(("e", lab, tuple(sorted(colours[u] for u in members))))
-            for lab, members in edges_data
-        ]
-        new_colours: list[int] = [
-            hash(("v", colours[v], tuple(sorted(edge_sigs[e] for e in incident[v]))))
-            for v in range(n)
-        ]
-        if _partition_equiv(new_colours, colours):
-            colours = new_colours
-            break
-        colours = new_colours
-    return colours
+    raw = _cpp_wl_hash(H, max_rounds)
+    # nanobind returns int64; values are FNV-1a uint64. Re-interpret to the
+    # unsigned domain so downstream comparisons match the Python reference.
+    return [v & _MASK64 for v in raw]
 
 
 def wl_partition(H: SparseHypergraph, *, max_rounds: int = _MAX_ROUNDS) -> dict[int, list[NodeId]]:

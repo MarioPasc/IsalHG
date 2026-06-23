@@ -34,6 +34,12 @@ struct EncoderState {
     int k = 0;
     NodeId n_nodes = 0;
     EdgeId n_edges = 0;
+    // Running counters maintained by V/C emit + undo paths. Both
+    // ``i2o_count()`` and ``consumed_count()`` are called at every
+    // recursion entry; the running form replaces an O(n)+O(m) scan with
+    // an O(1) field read (round 8).
+    std::int32_t mapped_count = 0;
+    std::int32_t consumed_cnt = 0;
 
     EncoderState(NodeId n_nodes_, EdgeId n_edges_, int k_, NodeId seed_node)
         : cdll(std::max(1, n_nodes_)),
@@ -50,6 +56,8 @@ struct EncoderState {
         i2o[static_cast<std::size_t>(seed_node)] = 0;
         o2i[0] = seed_node;
         next_output_id = 1;
+        mapped_count = 1;  // seed
+        consumed_cnt = 0;
     }
 
     [[nodiscard]] SlotIdx get_ptr(int i_1based) const noexcept {
@@ -60,23 +68,8 @@ struct EncoderState {
         return i2o[static_cast<std::size_t>(v)] != -1;
     }
 
-    // Convenience: count of currently mapped input nodes. O(n) but only
-    // called at recursion entry (cheap relative to the body).
-    [[nodiscard]] std::int32_t i2o_count() const noexcept {
-        std::int32_t c = 0;
-        for (auto v : i2o) {
-            if (v != -1) ++c;
-        }
-        return c;
-    }
-
-    [[nodiscard]] std::int32_t consumed_count() const noexcept {
-        std::int32_t c = 0;
-        for (auto b : consumed) {
-            if (b) ++c;
-        }
-        return c;
-    }
+    [[nodiscard]] std::int32_t i2o_count() const noexcept { return mapped_count; }
+    [[nodiscard]] std::int32_t consumed_count() const noexcept { return consumed_cnt; }
 };
 
 }  // namespace isalhg

@@ -79,7 +79,6 @@ void SHG::finalise(int depth) {
     eta_cache.assign(static_cast<std::size_t>(n_edges),
                      std::vector<std::int32_t>(static_cast<std::size_t>(std::max(0, depth)), 0));
     if (depth >= 1) {
-        // Pre-compute xi per vertex once, then reuse.
         std::vector<std::vector<std::int32_t>> xi_per_v(static_cast<std::size_t>(n_nodes));
         for (NodeId v = 0; v < n_nodes; ++v) {
             xi_per_v[static_cast<std::size_t>(v)] = xi_counts(*this, v, depth);

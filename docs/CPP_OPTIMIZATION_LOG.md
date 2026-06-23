@@ -176,21 +176,180 @@ the parallel ceiling so improved codegen barely shows.
 PGO is opt-in (default off) because the workflow is two-stage and the
 profile data is host-specific.
 
-## Summary (round 0 → round 7)
+## Round 8 — Running counters in EncoderState
 
-| Design | round 0 | round 7 | Speedup | vs Python (baseline) |
+**Change.** ``encode_from`` called ``state.i2o_count()`` (O(n) scan)
+and ``state.consumed_count()`` (O(m) scan) at every recursion entry.
+Replaced both with running counters ``mapped_count`` and
+``consumed_cnt`` on ``EncoderState``, incremented/decremented at each
+V-emit + C-emit (and their undo) site. ``i2o_count()`` /
+``consumed_count()`` now return field reads.
+
+**Result.** Small but consistent win on the small-design / shallow-
+recursion case; noise on the deep-recursion doily where the
+O(n+m) scan was already a tiny fraction of the per-frame cost. Most
+importantly the change is unambiguously correctness-preserving and
+removes the only scaling-with-n operation that was repeated per
+recursion entry, which sets a better baseline for future inputs where
+n is large (1k+ vertices).
+
+| Design | greedy_min HEAD | greedy_min rd8 | Δ |
+|---|---:|---:|---:|
+| Fano        |  1.51 ms |  1.36 ms |  −9.9 % |
+| STS9        |  7.70 ms |  7.65 ms |  −0.6 % |
+| STS13       | 48.84 ms | 48.31 ms |  −1.1 % |
+| Doily       | 80.03 ms | 78.99 ms |  −1.3 % |
+
+| Design | greedy_single HEAD | greedy_single rd8 | Δ |
+|---|---:|---:|---:|
+| Fano        |  0.75 ms |  0.73 ms |  −2.7 % |
+| STS9        |  4.59 ms |  4.48 ms |  −2.4 % |
+| STS13       | 23.78 ms | 23.40 ms |  −1.6 % |
+| Doily       | 41.18 ms | 40.78 ms |  −1.0 % |
+
+All Δ are *thermally matched* — both baseline and rd8 measured on the
+same workstation thermal state (median of 4 best-of-9 runs each, with
+6 s sleeps between runs and a 30 s cooldown after the rebuild). Raw
+JSON in ``scratchpad/bench/HEAD_baseline_rep[1-4].json`` and
+``scratchpad/bench/round8_matched_rep[1-4].json``.
+
+## Round 8 + PGO regeneration
+
+**Change.** Regenerated the GCC ``.gcda`` profile data against the
+round 8 source via ``scratchpad/cpp_pgo_train.py`` (training rep
+counts scaled per-design: Fano × 30, STS9 × 15, STS13 × 6,
+Doily × 4 — each across all three native variants). Then rebuilt
+with ``-DISALHG_PGO_USE=ON``. Same source as round 8.
+
+**Result.** Small extra win across the larger designs; combined with
+round 8 this is the best-shipped state.
+
+| Design | greedy_min rd8 | greedy_min rd8+PGO | Δ |
+|---|---:|---:|---:|
+| Fano        |  1.36 ms |  1.34 ms |  −1.5 % |
+| STS9        |  7.65 ms |  7.56 ms |  −1.2 % |
+| STS13       | 48.31 ms | 47.82 ms |  −1.0 % |
+| Doily       | 78.99 ms | 76.30 ms |  −3.4 % |
+
+## Round 8 + PGO — vs HEAD baseline (final shipped speedup)
+
+| Design | HEAD | rd8 + PGO | Δ vs HEAD | Speedup vs round 0 | Speedup vs Python (round 0 ref) |
+|---|---:|---:|---:|---:|---:|
+| Fano        |  1.51 ms |  1.34 ms |  −11.3 % |  4.4× |    484× |
+| STS9        |  7.70 ms |  7.56 ms |   −1.8 % |  5.8× |    809× |
+| STS13       | 48.84 ms | 47.82 ms |   −2.1 % |  7.4× |  1 325× |
+| Doily       | 80.03 ms | 76.30 ms |   −4.7 % |  8.6× | >3 930× (Python DNF) |
+
+(``Speedup vs round 0`` divides the post-restructure round-0 numbers
+from the top of this file by the rd8+PGO numbers. ``Speedup vs
+Python`` divides the pure-Python reference timings in
+``analysis_full/cells.csv`` / ``scratchpad/bench/`` by the same.)
+
+## Negative results — what did not work
+
+Documented for future rounds so the same ground is not re-walked.
+
+1. **Per-frame slot-displacement cache.** Pre-compute, at the top of
+   ``encode_from``, every (pointer, signed offset) → CDLL slot at every
+   offset in ``[-radius, +radius]``. Replaces ``displaced_slot`` walks
+   in the cost-class loop with table lookups.
+   *Outcome.* Math is exact net-zero (population cost equals per-disp
+   savings), and the per-frame 2.5 kB stack array thrashes L1d under
+   16-thread parallel load. Net regression of 5–15 % on greedy_min for
+   the larger designs.
+2. **Stack-allocated ``best_prefix`` + ``tmp_move_block``.** Replace
+   the per-frame ``std::vector<Token>`` with
+   ``std::array<Token, 32>``. Eliminates the heap-allocation churn from
+   the move-block emit path.
+   *Outcome.* Helped greedy_single by ~2 %; net regression on parallel
+   greedy_min because each worker thread pays the same extra stack
+   pressure and the heap allocator amortises well across the worker
+   pool.
+3. **Arena-pooled sub-completion vectors keyed by recursion depth.**
+   Two ``std::vector<Token>`` per recursion level pooled in a per-call
+   arena indexed by ``depth * 2 + slot``.
+   *Outcome.* ``std::vector<std::vector<Token>>`` storage reallocates
+   on grow and invalidates the references held by outer frames; the
+   fix (``std::deque<std::vector<Token>>``) costs more in indirection
+   than it saves in allocation. Reverted.
+4. **Flat 1-D eta cache** (``vector<int32_t>`` + stride instead of
+   ``vector<vector<int32_t>>``). Drops one pointer chase per V/C key
+   comparison.
+   *Outcome.* The eta comparison is past the cascade short-circuit
+   gate (``(i, j, edge_label, sorted_new_labels)``) for the vast
+   majority of candidate pairs; rarely reached. The extra arithmetic
+   in the key constructor was visible on greedy_single (~3 % regression
+   on STS13/Doily). Reverted.
+5. **CPU pinning to P-cores via ``taskset -c 0-11``.** Hides hybrid-
+   core scheduler noise.
+   *Outcome.* With 15 seeds and the persistent thread pool, capping at
+   12 cores leaves seeds queued and *worsens* doily greedy_min from
+   ~80 ms to ~110 ms. The OS scheduler does the right thing when given
+   all 16 logical CPUs — leave it alone.
+
+## Round 8 + PGO — vs nauty / bliss / Traces
+
+Apples-to-apples comparison of ``fingerprint(H)`` wall-clock across
+the four IsoBackends (post-round-8+PGO IsalHG, pynauty 2.9, bliss via
+python-igraph 1.0, Traces via dreadnaut 2.9), median of 4 best-of-9
+runs on the same workstation in the same thermal state:
+
+| Design | IsalHG cpp min | IsalHG cpp single | pynauty_levi | bliss_levi | traces_levi |
+|---|---:|---:|---:|---:|---:|
+| Fano STS(7)    |  1.34 ms |  0.74 ms | 0.02 ms | 0.04 ms | 0.40 ms |
+| STS(9) AG(2,3) |  7.56 ms |  4.49 ms | 0.02 ms | 0.06 ms | 0.42 ms |
+| STS(13) cyclic | 47.82 ms | 24.29 ms | 0.02 ms | 0.05 ms | 0.45 ms |
+| GQ(2,2) doily  | 76.30 ms | 42.05 ms | 0.03 ms | 0.06 ms | 0.45 ms |
+
+The factor against pynauty is 67× (Fano), 378× (STS9), 2 391× (STS13),
+2 543× (doily). This is the algorithmic ceiling identified in
+``docs/ALGORITHMS.md`` §3: a multi-seed greedy backtracking encoder
+with no individualisation–refinement is structurally bounded by
+``(j!)^E`` on vertex-transitive designs, and that bound is hit hardest
+on Steiner triple systems and generalised quadrangles. Levi + nauty /
+bliss / Traces operate inside an I/R search frame which prunes these
+orbits, and run two decades of engineering ahead on the constants
+(McKay & Piperno 2014; Junttila & Kaski 2007). Closing this gap
+requires not a faster encoder but a *different* algorithm — the I/R
+canonical-string variant from Schweitzer & Wiebking (STOC 2019), or
+the PI-deferred pruned-canonical backtracking already listed as the
+priority Algorithm-R&D track in ``docs/DEVELOPMENT.md``.
+
+## Summary (round 0 → round 8+PGO)
+
+| Design | round 0 | round 7 (PGO, prior log) | round 8 + PGO (this round) | Speedup vs round 0 |
 |---|---:|---:|---:|---:|
-| Fano        |   5.91 ms |   1.27 ms |  4.7× |    511× |
-| STS9        |  44.17 ms |   7.23 ms |  6.1× |    845× |
-| STS13       | 353.46 ms |  43.07 ms |  8.2× | 1 471× |
-| Doily       | 654.90 ms |  68.88 ms |  9.5× | >4 351× (Python DNF) |
+| Fano        |   5.91 ms |   1.27 ms |   1.34 ms |  4.4× |
+| STS9        |  44.17 ms |   7.23 ms |   7.56 ms |  5.8× |
+| STS13       | 353.46 ms |  43.07 ms |  47.82 ms |  7.4× |
+| Doily       | 654.90 ms |  68.88 ms |  76.30 ms |  8.6× |
 
-**Where the remaining budget went.** After round 5 (parallel + thread
-pool) the larger designs are limited by per-seed wall-clock and Intel
-hybrid-core scheduling. The greedy_single (single-seed, sequential)
-timings shrink barely 1–2 % across rounds 6–7 because the dominant
-cost is the V-branch backtracking inside the H2S algorithm itself.
-Closing the remaining 30 ms parallel-overhead gap on the doily would
-require either (a) pinning workers to P-cores only (Linux-specific) or
-(b) the PI-deferred pruned-canonical algorithm — both out of scope of
-the implementation-overhead component this port targets.
+The round-8 numbers above are ~5–10 % above the prior round-7 log
+numbers in absolute terms; that is *thermal* — the round-7 numbers
+were captured on a cold machine, the round-8 numbers on a workstation
+that had been continuously benchmarking for several hours. The
+*thermally matched* baseline (HEAD vs round 8+PGO on the same hot
+workstation) shows the round-8 work consistently saves 2–11 %.
+
+## Stop criterion
+
+The 13th-Gen i7-13620H parallel ceiling on the doily sits at
+~76 ms / 42 ms (parallel / single-seed). Removing the remaining ~34 ms
+parallel-overhead gap requires one of the three exit ramps the user
+flagged as out-of-scope for this loop:
+
+- **Platform-specific.** Linux ``sched_setaffinity`` to P-cores only,
+  ``pthread_setname_np`` + perf scheduling priority, or AVX-512
+  intrinsics in the cascade compare. All Linux/x86-specific.
+- **Hypergraph-type-specific.** Restrict to uniform-arity designs and
+  hard-code the V-perm enumeration for j = 2 only (avoids
+  ``std::next_permutation`` overhead). Loses generality for arity-k.
+- **Algorithmic.** Implement the PI-deferred pruned-canonical
+  backtracking (open question #1 in ``docs/DEVELOPMENT.md``) or the
+  Schweitzer-Wiebking I/R encoder (``docs/ALGORITHMS.md`` §6). Either
+  changes the asymptotic worst case from ``(j!)^E`` to something
+  smaller and would dwarf any constant-factor work.
+
+This loop stops here. The shipped state is round 8 (running counters,
+default build) with PGO available as an opt-in two-stage flow
+documented in ``docs/DEVELOPMENT.md``.

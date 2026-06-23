@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <deque>
 #include <numeric>
 #include <stdexcept>
 
@@ -170,7 +171,6 @@ struct VCandidate {
     if (a.i_val != b.i_val) return a.i_val < b.i_val ? -1 : 1;
     if (a.j_val != b.j_val) return a.j_val < b.j_val ? -1 : 1;
     if (a.edge_label != b.edge_label) return a.edge_label < b.edge_label ? -1 : 1;
-    // sorted_new_labels lex compare.
     {
         const int la = a.n_labels;
         const int lb = b.n_labels;
@@ -186,7 +186,6 @@ struct VCandidate {
         }
         if (la != lb) return la < lb ? -1 : 1;
     }
-    // eta tuple lex.
     {
         const auto& ea = *a.key_eta;
         const auto& eb = *b.key_eta;
@@ -506,13 +505,19 @@ void enumerate_label_perms_cb(
 // recurse over multiple permutations and take the lex-min.
 // ---------------------------------------------------------------------------
 
-[[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
-                               const std::optional<std::vector<std::int64_t>>& wl_colors,
-                               std::vector<Token>& out_completion);
+struct WorkArena {
+    std::vector<Disp> cost_class;
+};
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
                                const std::optional<std::vector<std::int64_t>>& wl_colors,
-                               std::vector<Token>& out_completion)
+                               std::vector<Token>& out_completion,
+                               WorkArena& arena);
+
+[[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
+                               const std::optional<std::vector<std::int64_t>>& wl_colors,
+                               std::vector<Token>& out_completion,
+                               WorkArena& arena)
 {
     out_completion.clear();
     const std::int32_t mapped = state.i2o_count();
@@ -526,7 +531,7 @@ void enumerate_label_perms_cb(
 
     // Track the best emission found across displacements.
     bool have_best = false;
-    int best_total_len = 0;        // == best_cost + 1
+    int best_total_len = 0;          // == best_cost + 1
     std::vector<Token> best_prefix;  // move_block + main_tok
     bool best_kind_is_v = false;
     EdgeId best_edge_id = -1;
@@ -538,7 +543,7 @@ void enumerate_label_perms_cb(
     std::array<NodeId, K_MAX> tentative_inputs{};
     int tentative_count = 0;
 
-    std::vector<Disp> cost_class;
+    std::vector<Disp>& cost_class = arena.cost_class;
 
     for (int cost = 0; cost <= max_cost; ++cost) {
         // Cost classes higher than the current best's cost yield strictly
@@ -648,11 +653,13 @@ void enumerate_label_perms_cb(
         for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
         for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
         state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
+        ++state.consumed_cnt;
 
         std::vector<Token> sub_completion;
-        const bool ok = encode_from(H, k, state, wl_colors, sub_completion);
+        const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena);
 
         state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
+        --state.consumed_cnt;
         for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = saved_ptrs[idx];
 
         if (!ok) return false;
@@ -695,12 +702,16 @@ void enumerate_label_perms_cb(
                 recorded_outs[static_cast<std::size_t>(idx)] = out_v;
                 anchor = new_slot;
             }
+            state.mapped_count += new_count;
             state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
+            ++state.consumed_cnt;
 
             sub_completion.clear();
-            const bool ok = encode_from(H, k, state, wl_colors, sub_completion);
+            const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena);
 
             state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
+            --state.consumed_cnt;
+            state.mapped_count -= new_count;
             for (int idx = new_count - 1; idx >= 0; --idx) {
                 state.cdll.remove(recorded_slots[static_cast<std::size_t>(idx)]);
                 state.i2o[static_cast<std::size_t>(
@@ -749,7 +760,9 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     EncoderState state(H.n_nodes, H.n_edges, k, seed_node);
 
     std::vector<Token> out;
-    const bool ok = encode_from(H, k, state, wl_colors, out);
+    WorkArena arena;
+    arena.cost_class.reserve(64);
+    const bool ok = encode_from(H, k, state, wl_colors, out, arena);
     if (!ok) {
         throw H2SStuckError("H2S stuck from seed");
     }

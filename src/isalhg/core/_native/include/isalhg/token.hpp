@@ -46,17 +46,22 @@ struct Token {
                      static_cast<std::int16_t>(edge_label_), 0, {}};
     }
     static Token make_v(int edge_label_, int i_val, int j_val,
-                        const std::vector<std::int16_t>& sorted_labels) {
+                        const std::int16_t* sorted_labels, int n_labels) noexcept {
         Token t{};
         t.kind = TokenKind::V;
         t.i = static_cast<std::int16_t>(i_val);
         t.j = static_cast<std::int16_t>(j_val);
         t.edge_label = static_cast<std::int16_t>(edge_label_);
-        t.n_labels = static_cast<std::uint8_t>(sorted_labels.size());
-        for (std::size_t k = 0; k < sorted_labels.size(); ++k) {
-            t.labels[k] = sorted_labels[k];
+        t.n_labels = static_cast<std::uint8_t>(n_labels);
+        for (int k = 0; k < n_labels; ++k) {
+            t.labels[static_cast<std::size_t>(k)] = sorted_labels[k];
         }
         return t;
+    }
+    static Token make_v(int edge_label_, int i_val, int j_val,
+                        const std::vector<std::int16_t>& sorted_labels) {
+        return make_v(edge_label_, i_val, j_val, sorted_labels.data(),
+                      static_cast<int>(sorted_labels.size()));
     }
 };
 

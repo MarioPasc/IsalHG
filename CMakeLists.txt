@@ -44,7 +44,11 @@ nanobind_add_module(_core
     src/isalhg/core/_native/src/structural_tuples.cpp
     src/isalhg/core/_native/src/wl.cpp
     src/isalhg/core/_native/src/canonical.cpp
+    src/isalhg/core/_native/src/thread_pool.cpp
 )
+
+find_package(Threads REQUIRED)
+target_link_libraries(_core PRIVATE Threads::Threads)
 
 target_include_directories(_core PRIVATE src/isalhg/core/_native/include)
 

@@ -150,36 +150,41 @@ void emit_movement_tokens(const Disp& disp, std::vector<Token>& out) {
 // Cascade key (lex-min): (i, j, edge_label, sorted_new_labels, eta(e), edge_id).
 // ---------------------------------------------------------------------------
 
+// Stack-allocated candidate (no heap). Round-4 optimisation removes the
+// std::vector members so that ``best_v_for_displacement`` can be called
+// at every recursion level without entering the allocator. eta is fetched
+// from H on demand (pointer to the cached vector inside SHG).
 struct VCandidate {
-    EdgeId edge_id;
-    int i_val;
-    int j_val;
-    EdgeLabel edge_label;
-    std::vector<std::int16_t> sorted_new_labels;  // size j_val
-    std::vector<NodeId> new_inputs;               // size j_val, set form (sorted)
-
-    // Key for cascade comparison.
-    int key_i;
-    int key_j;
-    EdgeLabel key_le;
-    // sorted_new_labels (already a member)
-    const std::vector<std::int32_t>* key_eta = nullptr;
-    EdgeId key_edge_id = 0;
+    EdgeId edge_id = -1;
+    int i_val = 0;
+    int j_val = 0;
+    EdgeLabel edge_label = 0;
+    std::uint8_t n_labels = 0;                              // == j_val
+    std::array<std::int16_t, MAX_NEW> sorted_new_labels{};  // first n_labels
+    std::uint8_t n_new_inputs = 0;                          // == j_val
+    std::array<NodeId, MAX_NEW> new_inputs{};               // first n_new_inputs
+    const std::vector<std::int32_t>* key_eta = nullptr;     // points into SHG cache
 };
 
 [[nodiscard]] int compare_v_keys(const VCandidate& a, const VCandidate& b) noexcept {
-    if (a.key_i != b.key_i) return a.key_i < b.key_i ? -1 : 1;
-    if (a.key_j != b.key_j) return a.key_j < b.key_j ? -1 : 1;
-    if (a.key_le != b.key_le) return a.key_le < b.key_le ? -1 : 1;
+    if (a.i_val != b.i_val) return a.i_val < b.i_val ? -1 : 1;
+    if (a.j_val != b.j_val) return a.j_val < b.j_val ? -1 : 1;
+    if (a.edge_label != b.edge_label) return a.edge_label < b.edge_label ? -1 : 1;
     // sorted_new_labels lex compare.
     {
-        const auto& la = a.sorted_new_labels;
-        const auto& lb = b.sorted_new_labels;
-        const std::size_t common = std::min(la.size(), lb.size());
-        for (std::size_t k = 0; k < common; ++k) {
-            if (la[k] != lb[k]) return la[k] < lb[k] ? -1 : 1;
+        const int la = a.n_labels;
+        const int lb = b.n_labels;
+        const int common = la < lb ? la : lb;
+        for (int k = 0; k < common; ++k) {
+            if (a.sorted_new_labels[static_cast<std::size_t>(k)]
+                != b.sorted_new_labels[static_cast<std::size_t>(k)]) {
+                return a.sorted_new_labels[static_cast<std::size_t>(k)]
+                                   < b.sorted_new_labels[static_cast<std::size_t>(k)]
+                           ? -1
+                           : 1;
+            }
         }
-        if (la.size() != lb.size()) return la.size() < lb.size() ? -1 : 1;
+        if (la != lb) return la < lb ? -1 : 1;
     }
     // eta tuple lex.
     {
@@ -191,7 +196,7 @@ struct VCandidate {
         }
         if (ea.size() != eb.size()) return ea.size() < eb.size() ? -1 : 1;
     }
-    if (a.key_edge_id != b.key_edge_id) return a.key_edge_id < b.key_edge_id ? -1 : 1;
+    if (a.edge_id != b.edge_id) return a.edge_id < b.edge_id ? -1 : 1;
     return 0;
 }
 
@@ -235,9 +240,9 @@ struct VCandidate {
             if (i_val > k - 1) continue;
 
             // pointed = set of tentative_inputs[0..i_val-1]; new_inputs = members - pointed.
-            // Members are sorted; pointed is small (<=k). Linear scan.
-            std::vector<NodeId> new_inputs;
-            new_inputs.reserve(static_cast<std::size_t>(j_val));
+            // Both fit on the stack: j_val <= MAX_NEW = K_MAX - 1 = 9.
+            std::array<NodeId, MAX_NEW> cand_new_inputs{};
+            int cand_n_new = 0;
             bool skip = false;
             for (NodeId m : members) {
                 bool in_pointed = false;
@@ -252,40 +257,39 @@ struct VCandidate {
                     skip = true;
                     break;
                 }
-                new_inputs.push_back(m);
+                if (cand_n_new >= MAX_NEW) { skip = true; break; }
+                cand_new_inputs[static_cast<std::size_t>(cand_n_new++)] = m;
             }
             if (skip) continue;
-            if (static_cast<int>(new_inputs.size()) != j_val) continue;
+            if (cand_n_new != j_val) continue;
 
-            std::vector<std::int16_t> sorted_new_labels;
-            sorted_new_labels.reserve(static_cast<std::size_t>(j_val));
-            for (NodeId v : new_inputs) {
-                sorted_new_labels.push_back(
-                    static_cast<std::int16_t>(H.vertex_labels[static_cast<std::size_t>(v)]));
+            std::array<std::int16_t, MAX_NEW> cand_sorted_labels{};
+            for (int n = 0; n < cand_n_new; ++n) {
+                cand_sorted_labels[static_cast<std::size_t>(n)] = static_cast<std::int16_t>(
+                    H.vertex_labels[static_cast<std::size_t>(cand_new_inputs[static_cast<std::size_t>(n)])]);
             }
-            std::sort(sorted_new_labels.begin(), sorted_new_labels.end());
+            std::sort(cand_sorted_labels.begin(),
+                      cand_sorted_labels.begin() + cand_n_new);
 
-            VCandidate cand{};
+            VCandidate cand;
             cand.edge_id = e;
             cand.i_val = i_val;
             cand.j_val = j_val;
             cand.edge_label = H.edge_labels[static_cast<std::size_t>(e)];
-            cand.sorted_new_labels = sorted_new_labels;
-            cand.new_inputs = std::move(new_inputs);
-            cand.key_i = i_val;
-            cand.key_j = j_val;
-            cand.key_le = cand.edge_label;
+            cand.n_labels = static_cast<std::uint8_t>(cand_n_new);
+            cand.sorted_new_labels = cand_sorted_labels;
+            cand.n_new_inputs = static_cast<std::uint8_t>(cand_n_new);
+            cand.new_inputs = cand_new_inputs;
             cand.key_eta = &H.eta(e);
-            cand.key_edge_id = e;
 
             if (!have || compare_v_keys(cand, best) < 0) {
-                best = std::move(cand);
+                best = cand;  // trivial copy, no heap
                 have = true;
             }
         }
     }
 
-    if (have) out = std::move(best);
+    if (have) out = best;
     return have;
 }
 
@@ -516,7 +520,8 @@ void enumerate_label_perms(
     bool best_kind_is_v = false;
     EdgeId best_edge_id = -1;
     std::array<SlotIdx, K_MAX> best_new_slots{};
-    std::vector<NodeId> best_new_inputs;  // V only
+    std::array<NodeId, MAX_NEW> best_new_inputs{};  // V only; valid prefix length below
+    int best_new_inputs_n = 0;
 
     std::vector<Token> tmp_move_block;
     std::array<NodeId, K_MAX> tentative_inputs{};
@@ -556,7 +561,8 @@ void enumerate_label_perms(
                                                    v_cand);
         if (has_v) {
             Token main_tok = Token::make_v(v_cand.edge_label, v_cand.i_val, v_cand.j_val,
-                                           v_cand.sorted_new_labels);
+                                           v_cand.sorted_new_labels.data(),
+                                           v_cand.n_labels);
             const int total_len = static_cast<int>(tmp_move_block.size()) + 1;
 
             // Compare against current best by (total_len, *sort_keys).
@@ -582,6 +588,7 @@ void enumerate_label_perms(
                 best_edge_id = v_cand.edge_id;
                 best_new_slots = new_slots;
                 best_new_inputs = v_cand.new_inputs;
+                best_new_inputs_n = v_cand.n_new_inputs;
                 have_best = true;
             }
         }
@@ -614,7 +621,7 @@ void enumerate_label_perms(
                 best_kind_is_v = false;
                 best_edge_id = c_cand.edge_id;
                 best_new_slots = new_slots;
-                best_new_inputs.clear();
+                best_new_inputs_n = 0;
                 have_best = true;
             }
         }
@@ -650,7 +657,11 @@ void enumerate_label_perms(
     // permutation and avoids redundant element-by-element comparison of
     // the prefix tokens during lex-min selection.
     std::vector<std::vector<NodeId>> perms;
-    enumerate_label_perms(best_new_inputs, H, wl_colors, perms);
+    {
+        std::vector<NodeId> bni(best_new_inputs.begin(),
+                                best_new_inputs.begin() + best_new_inputs_n);
+        enumerate_label_perms(bni, H, wl_colors, perms);
+    }
 
     bool have_completion = false;
     std::vector<Token> best_sub_completion;

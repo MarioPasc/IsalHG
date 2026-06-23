@@ -9,6 +9,7 @@
 #include "isalhg/errors.hpp"
 #include "isalhg/h2s.hpp"
 #include "isalhg/structural_tuples.hpp"
+#include "isalhg/thread_pool.hpp"
 #include "isalhg/token.hpp"
 #include "isalhg/wl.hpp"
 
@@ -87,32 +88,32 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
     // greedy_min_wl_pruned.py — V-branch pruning is intentionally disabled).
     const std::optional<std::vector<std::int64_t>> wl_for_h2s = std::nullopt;
 
-    // Multi-seed parallelism. Each seed runs an independent
-    // ``greedy_h2s_tokens`` over a shared read-only ``SHG``; the per-seed
-    // ``EncoderState`` is thread-local. We fan out with std::async when
-    // there are enough seeds and the host has enough hardware threads to
-    // amortise the spawn overhead. Single-seed (greedy_single) is
-    // sequential. The caller releases the GIL at the FFI boundary so
-    // these threads run concurrently with the rest of Python.
+    // Multi-seed parallelism via a persistent thread pool. Each seed
+    // runs an independent ``greedy_h2s_tokens`` over a shared read-only
+    // ``SHG``; the per-seed ``EncoderState`` is thread-local. Workers
+    // are reused across canonical_string calls, so back-to-back
+    // fingerprinting (e.g. dataset sweeps) doesn't pay thread-creation
+    // costs again. Single-seed (greedy_single) is sequential.
+    // The caller releases the GIL at the FFI boundary so the C++ workers
+    // don't contend with Python.
     const std::size_t n_seeds = seeds.size();
     std::vector<std::vector<Token>> per_seed(n_seeds);
-    const unsigned hw = std::max(1u, std::thread::hardware_concurrency());
-    const bool parallel = (n_seeds >= 2 && hw >= 2);
+    auto& pool = canonical_thread_pool();
+    const bool parallel = (n_seeds >= 2 && pool.size() >= 2);
     if (parallel) {
-        const std::size_t max_workers =
-            std::min<std::size_t>(hw, n_seeds);
+        const std::size_t max_jobs = std::min<std::size_t>(pool.size(), n_seeds);
         std::vector<std::future<void>> futures;
-        futures.reserve(max_workers);
+        futures.reserve(max_jobs);
         std::atomic<std::size_t> next_idx{0};
-        auto worker = [&]() {
-            while (true) {
-                const std::size_t i = next_idx.fetch_add(1, std::memory_order_relaxed);
-                if (i >= n_seeds) return;
-                per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s);
-            }
-        };
-        for (std::size_t w = 0; w < max_workers; ++w) {
-            futures.push_back(std::async(std::launch::async, worker));
+        for (std::size_t w = 0; w < max_jobs; ++w) {
+            futures.push_back(pool.submit([&]() {
+                while (true) {
+                    const std::size_t i =
+                        next_idx.fetch_add(1, std::memory_order_relaxed);
+                    if (i >= n_seeds) return;
+                    per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s);
+                }
+            }));
         }
         for (auto& f : futures) f.get();
     } else {

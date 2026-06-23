@@ -74,10 +74,54 @@ near-linear up to the hardware limit. ``greedy_single`` unchanged.
 **Notes.**
 - For inputs with very few seeds (e.g. structures where max-xi returns
   a small set after WL pruning), the spawn overhead can dominate. The
-  current threshold is ``n_seeds >= 2 && hw >= 2``; this could be
-  raised if profiling on real datasets shows regressions.
-- The ``std::async(std::launch::async)`` path creates fresh threads per
-  call. A pool (``std::jthread`` + condition variable) would amortise
-  thread-creation cost across consecutive calls; not worth doing until
-  a workload that fingerprints many small hypergraphs back-to-back
-  surfaces a regression.
+  current threshold is ``n_seeds >= 2 && pool.size() >= 2``.
+
+## Round 4 — Stack-allocated VCandidate
+
+**Change.** ``VCandidate`` previously held two ``std::vector``s
+(``sorted_new_labels``, ``new_inputs``). These were rebuilt for every
+edge that passed the eligibility filter inside
+``best_v_for_displacement``, even when the candidate was immediately
+rejected. Switched both to ``std::array<…, MAX_NEW>`` plus a length
+counter; the candidate is now trivially copyable and never touches the
+heap. ``Token::make_v`` got a pointer-plus-length overload to consume
+the array form directly.
+
+**Result.** Noise-level on its own (~0–2 %). The heap allocations being
+removed were already cheap because most attempted edges short-circuit
+before allocating, and the surviving allocation amortised through
+``std::move`` into the running ``best`` candidate. Kept for cleanliness
+(no allocator activity in the inner loop) and because it sets up
+round 5 to actually win.
+
+## Round 5 — Persistent thread pool
+
+**Change.** Round 3 used ``std::async(std::launch::async)`` which
+creates fresh OS threads per ``canonical_string`` call. For workloads
+that fingerprint many hypergraphs back-to-back (dataset sweeps), thread
+creation amortised badly. Added a process-wide ``ThreadPool`` sized to
+``hardware_concurrency()`` in ``_native/include/isalhg/thread_pool.hpp``;
+``canonical_string_compute`` submits work to it via a shared atomic
+work-queue counter (same workstealing-style fan-out as round 3, just
+without thread creation).
+
+**Result.** Helps designs where per-seed work is small (Fano:
+1.55 → 1.36 ms = −12 %; STS(9): 7.62 → 7.14 ms = −6 %). Doily/STS(13)
+unchanged because per-seed work (~40 ms) already dominates any
+thread-spawn overhead. greedy_single sequential path unchanged.
+
+| Design | greedy_min round 3 | round 5 | Δ |
+|---|---:|---:|---:|
+| Fano        |  1.55 ms |  1.36 ms | −12.3 % |
+| STS9        |  7.62 ms |  7.14 ms |  −6.3 % |
+| STS13       | 42.89 ms | 43.04 ms |  +0.4 % (noise) |
+| Doily       | 69.88 ms | 69.70 ms |  −0.3 % (noise) |
+
+**Combined ratios vs the Python reference baseline:**
+
+| Design | C++ now | Python | Speedup vs Python |
+|---|---:|---:|---:|
+| Fano  |  1.36 ms |   649 ms |   477× |
+| STS9  |  7.14 ms |  6 113 ms |   856× |
+| STS13 | 43.04 ms | 63 389 ms | 1 472× |
+| Doily | 69.70 ms |    DNF   |  >4 300× |

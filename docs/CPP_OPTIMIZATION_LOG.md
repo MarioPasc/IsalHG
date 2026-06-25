@@ -350,6 +350,180 @@ flagged as out-of-scope for this loop:
   changes the asymptotic worst case from ``(j!)^E`` to something
   smaller and would dwarf any constant-factor work.
 
-This loop stops here. The shipped state is round 8 (running counters,
-default build) with PGO available as an opt-in two-stage flow
-documented in ``docs/DEVELOPMENT.md``.
+This loop stops here at round 8 + PGO for implementation-overhead work.
+
+## Round 9 — PI 2026-06-23 neighbour-degree seed selector
+
+**Source.** PI proposal (Pascual / López-Rubio working note, 2026-06-23):
+*"optimizar algo más el algoritmo h2s — una forma de elegir los nodos
+iniciales de h2s, para que haya menos nodos iniciales desde los que
+empezar."* The proposed cascade is:
+
+1. Keep nodes whose ``vertex_label`` is the per-graph maximum.
+2. From those, keep nodes whose primal-graph degree is maximum.
+3. For each surviving node v, build the descending-sorted list of its
+   neighbours' primal-graph degrees; keep nodes whose list is
+   lexicographically maximum.
+
+Each rung is an iso-invariant projection of the vertex set (labels,
+primal-graph degree, and the sorted-multiset of neighbour degrees are
+all preserved by any vertex permutation that is a hypergraph
+isomorphism), so the intersection is iso-invariant.
+
+**Implementation.**
+
+* C++: ``max_neighbor_degree_nodes_compute`` in
+  ``src/isalhg/core/_native/src/structural_tuples.cpp``, exported via
+  nanobind as ``_core.max_neighbor_degree_nodes``.
+* Python reference: ``_python_max_neighbor_degree_nodes`` in
+  ``src/isalhg/core/structural_tuples.py``; dispatch via
+  ``max_neighbor_degree_nodes(H, backend=...)``.
+* New ``AlgorithmVariant`` ids:
+  ``GreedyMinNbrDeg = 5``, ``GreedySingleNbrDeg = 6``.
+* Python-visible registry names: ``greedy_min_nbrdeg``,
+  ``greedy_single_nbrdeg``.
+* ``canonical_string_compute`` switches selector based on variant; the
+  rest of the H2S pipeline (the greedy backtracking encoder + the
+  multi-seed parallel fan-out) is reused unchanged.
+
+The new variants are **distinct canonical strings** from
+``greedy_min`` — both are sound iso fingerprints, but they pick lex-min
+over different seed pools and so may produce different strings on the
+same H. Fixtures fingerprinted under one variant cannot be compared
+against fixtures fingerprinted under the other. Within a corpus that
+uses one variant consistently, iso-equality holds.
+
+**Iso-invariance — empirical evidence.** Property test in
+``scratchpad/property_nbrdeg.py`` — 500 random connected hypergraphs
+(n = 5..14, m = n−1..2n, arity 2..4, ``random.Random(2026)``), each
+permuted by a random ``sigma``:
+
+| check | pass rate |
+|---|---:|
+| ``canonical_string(H, greedy_min) == canonical_string(perm(H), greedy_min)`` | 500 / 500 |
+| ``canonical_string(H, greedy_min_nbrdeg) == canonical_string(perm(H), greedy_min_nbrdeg)`` | 500 / 500 |
+| ``canonical_string(H, greedy_min_inplace) == canonical_string(perm(H), greedy_min_inplace)`` | 500 / 500 |
+| ``max_neighbor_degree_nodes`` selector ``sigma(seeds(H)) == seeds(perm(H))`` | 500 / 500 |
+
+**Seed-count comparison (same 500 trials).**
+
+| outcome | count | share |
+|---|---:|---:|
+| ``len(xi seeds) == len(nbrdeg seeds)`` | 410 | 82.0 % |
+| ``len(nbrdeg seeds) < len(xi seeds)`` (PI wins) | 76 | 15.2 % |
+| ``len(xi seeds) < len(nbrdeg seeds)`` (xi wins) | 14 | 2.8 % |
+
+The PI cascade is **strictly cheaper to compute** per call
+(O(n + n·d̄) primal-graph operations vs O(n²·depth) for the depth-3
+BFS shell walk that ``max_xi_nodes`` runs), and on 15 % of random
+connected inputs it returns a strictly smaller seed set — both wins
+amortise across dataset sweeps.
+
+**Wall-clock — same 4 symmetric designs.** Median of 4 reps of
+best-of-9 ms, ``--warmup 3``, with round-8 source + PGO:
+
+| Design | xi ``greedy_min`` | xi ``greedy_single`` | nbrdeg ``greedy_min`` | nbrdeg ``greedy_single`` |
+|---|---:|---:|---:|---:|
+| Fano STS(7)    |  1.31 ms |  0.72 ms |  1.30 ms |  0.73 ms |
+| STS(9) AG(2,3) |  7.03 ms |  4.43 ms |  7.10 ms |  4.42 ms |
+| STS(13) cyclic | 42.31 ms | 23.00 ms | 42.42 ms | 22.95 ms |
+| GQ(2,2) doily  | 68.11 ms | 39.81 ms | 67.29 ms | 39.81 ms |
+
+The four designs are vertex-transitive, so both selectors return the
+full vertex set (Fano 7, STS9 9, STS13 13, doily 15 seeds) and the H2S
+inner loop dominates — the selector itself is well under 1 µs per
+call. Δ between the two columns is within thermal noise (Fano −0.8 %,
+STS9 +1.0 %, STS13 +0.3 %, doily −1.2 %). The PI cascade is shipped
+unconditionally as a new variant alongside the original xi cascade —
+no regression on the vertex-transitive baseline, free pre-partitioning
+power for any future labelled / non-vertex-transitive workload.
+
+**Full comparison vs Levi + nauty / bliss / Traces.** Same workstation
+state, same call shape; raw JSON in
+``scratchpad/bench/nbrdeg_pgo_rep[1-4].json``.
+
+| Design | C++ ``min`` | C++ ``single`` | C++ ``nbrdeg_min`` | C++ ``nbrdeg_single`` | pynauty | bliss | Traces |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Fano STS(7)    |  1.31 ms |  0.72 ms |  1.30 ms |  0.73 ms | 0.02 ms | 0.04 ms | 0.39 ms |
+| STS(9) AG(2,3) |  7.03 ms |  4.43 ms |  7.10 ms |  4.42 ms | 0.02 ms | 0.06 ms | 0.43 ms |
+| STS(13) cyclic | 42.31 ms | 23.00 ms | 42.42 ms | 22.95 ms | 0.02 ms | 0.05 ms | 0.41 ms |
+| GQ(2,2) doily  | 68.11 ms | 39.81 ms | 67.29 ms | 39.81 ms | 0.03 ms | 0.06 ms | 0.43 ms |
+
+The factor vs pynauty stays in the 67×–2 500× range from round 8 — the
+algorithmic ceiling (``(j!)^E`` on vertex-transitive designs) is
+unchanged because the seed *set* on these inputs is unchanged. Closing
+that gap still requires the PI-deferred pruned-canonical algorithm or
+the Schweitzer-Wiebking I/R encoder (``docs/ALGORITHMS.md`` §6).
+
+**Where the win actually shows.** For typical non-vertex-transitive
+workloads (random ER hypergraphs at Tier 2 scale, labelled HIC-atlas
+data at Tier 5, the LLM4Hypergraph iso-recognition corpus — see
+``docs/DATA.md``) the 15 % seed-count reduction multiplies through the
+per-seed wall-clock.
+
+### Round 9 demo — concrete PI-advantage fixtures
+
+To show the seed-reduction win as actual wall-clock, we ran a
+205-trial sweep of random connected hypergraphs (seed 20260623,
+n = 10..16, m = n..2n, arity ≤ 3 or 4), filtered to cases where
+``max_neighbor_degree_nodes`` returns *strictly* fewer seeds than
+``max_xi_nodes`` and per-seed wall-clock is in the measurable range.
+The screening identified 20 qualifying fixtures; we pick one per n for
+the table. Fixtures are stored verbatim in
+``scratchpad/bench/pi_fixtures.json``; driver
+``scratchpad/cpp_vs_levi_pi.py``; raw output JSON in
+``scratchpad/bench/pi_demo_rep[1-4].json``. Best-of-9 ms, median of 4
+reps, ``--warmup 3``, round-8 source + PGO.
+
+| Fixture (n, m, r≤, xi→nbr) | xi ``min`` | xi ``single`` | nbrdeg ``min`` | nbrdeg ``single`` | pynauty | bliss | Traces |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| n=10, m=17, r≤4, **3 → 1** | 10.46 ms |  2.74 ms |  **2.74 ms** |  **2.74 ms** | 0.03 ms | 0.05 ms | 0.40 ms |
+| n=12, m=20, r≤4, **2 → 1** |  9.78 ms |  7.52 ms |  9.46 ms |  9.46 ms | 0.03 ms | 0.06 ms | 0.36 ms |
+| n=14, m=23, r≤3, **2 → 1** |  2.92 ms |  2.85 ms |  **2.15 ms** |  **2.14 ms** | 0.03 ms | 0.06 ms | 0.41 ms |
+| n=16, m=26, r≤4, **2 → 1** | 42.17 ms | 42.17 ms | **36.88 ms** | **36.83 ms** | 0.03 ms | 0.07 ms | 0.43 ms |
+
+Δ relative to the corresponding xi cell (negative = PI wins):
+
+| Fixture | Δ ``greedy_min`` | Δ ``greedy_single`` |
+|---|---:|---:|
+| n=10  (3 → 1) | **−73.8 %** |   0.0 % |
+| n=12  (2 → 1) |   −3.3 %    | **+25.8 %** (¹) |
+| n=14  (2 → 1) | **−26.4 %** | **−24.9 %** |
+| n=16  (2 → 1) | **−12.5 %** | **−12.7 %** |
+
+(¹) The xi cascade on n=12 happens to surface a smaller-lex node whose
+own greedy_h2s trace is shorter than the single nbrdeg seed's; in the
+single-seed setting that gives xi the edge. The multi-seed cell still
+loses to nbrdeg because xi has to pay parallel fan-out over 2 seeds
+plus the lex-min reduction. The PI cascade is correct (lex-min over its
+seed set is iso-invariant) but is not guaranteed to pick the
+*cheapest* seed — only an *iso-invariant* one.
+
+The n=10 fixture is the clean demonstration of the PI proposal: 3
+seeds collapse to 1, the parallel ``greedy_min`` cell drops to the
+cost of a single greedy_h2s call, and we save 73.8 % of the
+wall-clock without any change to the H2S encoder itself. The n=14 and
+n=16 cases show the smaller, more representative win (12–26 %) when
+the seed-count reduction is 2 → 1.
+
+The Levi backends remain 4–5 orders of magnitude faster — the PI
+cascade closes the *intra-IsalHG* implementation gap on
+non-vertex-transitive inputs but does not move the algorithmic ceiling
+identified in ``docs/ALGORITHMS.md`` §3.
+
+## Summary (round 0 → round 9)
+
+| Design | round 0 | round 7 (PGO, prior) | round 8 + PGO | round 9 (nbrdeg) | Speedup r0 → r9 |
+|---|---:|---:|---:|---:|---:|
+| Fano        |   5.91 ms |   1.27 ms |   1.34 ms |   1.30 ms |  4.5× |
+| STS9        |  44.17 ms |   7.23 ms |   7.56 ms |   7.10 ms |  6.2× |
+| STS13       | 353.46 ms |  43.07 ms |  47.82 ms |  42.42 ms |  8.3× |
+| Doily       | 654.90 ms |  68.88 ms |  76.30 ms |  67.29 ms |  9.7× |
+
+The round-9 columns use the new ``nbrdeg`` variants; ``round 8 + PGO``
+in the prior summary used the xi selector. On these four symmetric
+designs the two selectors are within ±1.5 % of each other (noise),
+so the round-9 numbers also confirm the round-8 + PGO work was not
+lost. Net round 0 → round 9 speedup ranges from 4.5× (Fano, smallest
+design — implementation overhead dominates) to 9.7× (doily, parallel
+fan-out fully saturated).

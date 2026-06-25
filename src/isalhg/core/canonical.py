@@ -54,7 +54,10 @@ from isalhg.core.hypergraph_to_string import _python_greedy_h2s
 from isalhg.core.hypergraph_wl import _python_wl_hash
 from isalhg.core.instructions import sequence_sort_key, serialize
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.core.structural_tuples import _python_max_xi_nodes
+from isalhg.core.structural_tuples import (
+    _python_max_neighbor_degree_nodes,
+    _python_max_xi_nodes,
+)
 from isalhg.errors import DisconnectedHypergraphError
 
 # Registry of C++ ``AlgorithmVariant`` ids — see
@@ -66,6 +69,12 @@ _CPP_VARIANT_IDS: dict[str, int] = {
     "greedy_min_inplace": 2,
     "greedy_min_wl_pruned": 3,
     "greedy_min_inplace_wl_pruned": 4,
+    # PI 2026-06-23 — neighbour-degree seed selector. Same H2S inner loop as
+    # greedy_min / greedy_single, but the seed set is computed via the
+    # (max label, max degree, lex-max sorted-desc neighbour degrees) cascade
+    # instead of (xi_labelled, vertex_label).
+    "greedy_min_nbrdeg": 5,
+    "greedy_single_nbrdeg": 6,
 }
 
 
@@ -105,10 +114,14 @@ def _python_canonical_string(
         raise DisconnectedHypergraphError(
             f"{algorithm} requires a connected hypergraph (decision B11)"
         )
-    seeds = _python_max_xi_nodes(H, structural_depth)
+    # Seed selector dispatch — the PI 2026-06-23 variants replace max_xi.
+    if algorithm in ("greedy_min_nbrdeg", "greedy_single_nbrdeg"):
+        seeds = _python_max_neighbor_degree_nodes(H)
+    else:
+        seeds = _python_max_xi_nodes(H, structural_depth)
     if not seeds:
         return ""
-    if algorithm == "greedy_single":
+    if algorithm in ("greedy_single", "greedy_single_nbrdeg"):
         seeds = (min(seeds),)
     elif algorithm in ("greedy_min_wl_pruned", "greedy_min_inplace_wl_pruned"):
         colours = _python_wl_hash(H)

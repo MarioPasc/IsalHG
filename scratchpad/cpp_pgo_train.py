@@ -88,6 +88,10 @@ def main() -> None:
         "greedy_min",
         "greedy_single",
         "greedy_min_wl_pruned",
+        # PI 2026-06-23 — train the neighbour-degree selector variants too
+        # so GCC sees their branch-distribution and inlines the cascade.
+        "greedy_min_nbrdeg",
+        "greedy_single_nbrdeg",
     ]
     for name, H, reps in designs:
         for algo in variants:

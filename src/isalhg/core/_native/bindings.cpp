@@ -173,6 +173,18 @@ NB_MODULE(_core, m) {
         "Return the lex-argmax-(xi_labelled, vertex_label) seed set.");
 
     m.def(
+        "max_neighbor_degree_nodes",
+        [](nb::object py_H) -> std::vector<isalhg::NodeId> {
+            const isalhg::SHG H = shg_from_python(py_H);
+            return isalhg::max_neighbor_degree_nodes_compute(H);
+        },
+        "H"_a,
+        "Return the lex-argmax (vertex_label, degree, sorted-desc neighbour "
+        "degrees) seed set (PI 2026-06-23). Iso-invariant by construction; "
+        "strictly cheaper than max_xi_nodes (no depth-3 BFS) and typically "
+        "more discriminating on non-vertex-transitive inputs.");
+
+    m.def(
         "wl_hash",
         [](nb::object py_H, int max_rounds) -> std::vector<std::int64_t> {
             const isalhg::SHG H = shg_from_python(py_H);

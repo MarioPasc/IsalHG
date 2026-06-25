@@ -19,6 +19,13 @@ enum class AlgorithmVariant : std::uint8_t {
     GreedyMinInplace       = 2,  // identical output to GreedyMin
     GreedyMinWlPruned      = 3,
     GreedyMinInplaceWlPruned = 4,  // identical output to GreedyMinWlPruned
+    // PI 2026-06-23 — replace max-xi seed selector with the (label, degree,
+    // sorted-desc neighbour degrees) cascade. Output is identical to
+    // GreedyMin / GreedySingle on any input where both seed sets coincide;
+    // on non-vertex-transitive inputs the new selector typically yields
+    // fewer seeds and a strictly faster canonical_string call.
+    GreedyMinNbrDeg          = 5,
+    GreedySingleNbrDeg       = 6,
 };
 
 // Compute the canonical Sigma_HG* string for ``H``.

@@ -58,13 +58,21 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
             "canonical_string requires a connected hypergraph (decision B11)");
     }
 
-    std::vector<NodeId> seeds = max_xi_nodes_compute(H, structural_depth);
+    // Variant dispatch — seed selector first, then per-variant filters.
+    // The PI 2026-06-23 variants substitute the seed selector but otherwise
+    // reuse greedy_min / greedy_single semantics.
+    const bool use_nbr_deg = (variant == AlgorithmVariant::GreedyMinNbrDeg)
+                          || (variant == AlgorithmVariant::GreedySingleNbrDeg);
+    std::vector<NodeId> seeds = use_nbr_deg
+        ? max_neighbor_degree_nodes_compute(H)
+        : max_xi_nodes_compute(H, structural_depth);
     if (seeds.empty()) return "";
 
-    // Variant-specific seed filtering.
-    if (variant == AlgorithmVariant::GreedySingle) {
-        // Smallest-id tiebreak.
-        seeds.resize(1);  // max_xi_nodes_compute returns ascending node-id order.
+    // Variant-specific seed filtering on top of the selector output.
+    if (variant == AlgorithmVariant::GreedySingle
+        || variant == AlgorithmVariant::GreedySingleNbrDeg) {
+        // Smallest-id tiebreak (both selectors return ascending node-id order).
+        seeds.resize(1);
     } else if (variant == AlgorithmVariant::GreedyMinWlPruned
                || variant == AlgorithmVariant::GreedyMinInplaceWlPruned) {
         // Keep seeds whose WL colour equals the lex-min WL colour among the
@@ -82,7 +90,8 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
         }
         seeds.swap(filtered);
     }
-    // GreedyMin / GreedyMinInplace keep all max-xi seeds.
+    // GreedyMin / GreedyMinInplace / GreedyMinNbrDeg keep all seeds returned
+    // by their selector.
 
     // None of the five fast variants pass wl_colors into greedy_h2s (see
     // greedy_min_wl_pruned.py — V-branch pruning is intentionally disabled).

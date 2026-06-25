@@ -606,3 +606,194 @@ python -m experiments.orchestrator --config experiments/configs/preprint_random_
 The orchestrator writes one JSON per cell under
 `experiments/outputs/preprint_random_sweep/`. Cells whose JSON
 exists and parses are skipped on resubmission.
+
+---
+
+## 12. Jun-25-2026 Results — first Picasso sweep
+
+First end-to-end execution of the §3 cohort on Picasso. The sweep
+completed; all 720 cells terminated; the four-way correctness
+invariant held. IsalHG produced **no** wall-clock measurement on any
+cell, confirming the open-question #1 algorithmic ceiling
+(`docs/DEVELOPMENT.md`) on the chosen grid.
+
+Raw artefacts: `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/preprint/experiment/`
+(rsync'd from Picasso `/mnt/.../fscratch/isalhg_results/preprint/pipeline/`).
+
+### 12.1 Cohort parameters (as run)
+
+| Axis | Values |
+|---|---|
+| Vertex count `n` | `{50, 200, 1000}` |
+| Arity `r` | `{3, 5}` |
+| Density `c` (expected edges-per-vertex) | `{1, 5, 25}` |
+| Seeds | `{0, 1, …, 9}` |
+| Backends | `{isalhg, pynauty_levi, bliss_levi, traces_levi}` |
+| Per-fingerprint timeout | 600 s (POSIX `signal.alarm` + multiprocessing hard kill) |
+| `repeats` per fingerprint | **1** (deviation from §4.2; was reduced from 10 to bound wall-clock at exactly 600 s per cell) |
+| IsalHG algorithm | `greedy_single` (deviation from §4.1; was switched from `greedy_min` after observing exponential blow-up of the V-permutation backtracking on dense inputs) |
+| C++ engine | Built on Picasso login node (`pip install -e .` → scikit-build-core + nanobind, GCC 7.5, `-O3 -march=native -flto`). Verified live: Fano = 2.31 ms, ER `n=10, r=3, c=2` (14 edges) = 7.5 ms. |
+| SLURM partition | CPU partition, `--constraint=avx512` (env baked for Intel `sd*` + AMD `bc*/bl*` AVX-512 nodes; vanilla AMD `sr*` nodes crash on import) |
+| Memory | 32 GB/CPU fast tier, 64 GB/CPU slow tier |
+| Wall budget per task | 30 min SLURM + 22 min inner `timeout(1)` reaper (orphan-subprocess safety net) |
+| Subprocess isolation | `ISALHG_BACKEND_ISOLATE=1` — every `canonical_string` call runs in a forked child; `SIGSEGV`/`SIGABRT` surface as `IsalHGBackendCrashError` rather than killing the SLURM task |
+
+### 12.2 Headline numbers
+
+**Correctness invariant.** 540 positive-pair checks
+(`backend.are_isomorphic(H, σ(H))`) across the three Levi backends ×
+180 instances. **Pass rate = 1.0; zero failures across all four
+backends.** IsalHG could not check positive pairs because its
+fingerprint call never completed.
+
+**Per-cell median wall-clock (ms, median over 10 seeds).**
+
+| `n` | `r` | `c` | pynauty | bliss | traces | isalhg |
+|----:|----:|----:|--------:|------:|-------:|-------:|
+|  50 | 3 |  1 |   0.46 |  0.96 |  5.03 | 10×DNF |
+|  50 | 3 |  5 |   1.24 |  2.42 |  6.23 | 10×DNF |
+|  50 | 3 | 25 |   8.88 |  9.58 |  8.31 | 10×DNF |
+|  50 | 5 |  1 |   0.43 |  1.28 |  4.91 | 10×DNF |
+|  50 | 5 |  5 |   1.40 |  3.95 |  6.54 | 10×DNF |
+|  50 | 5 | 25 |  12.09 | 16.89 |  9.69 | 10×DNF |
+| 200 | 3 |  1 |   1.65 |  2.26 |  5.74 | 10×DNF |
+| 200 | 3 |  5 |   8.97 |  7.39 |  8.78 | 10×DNF |
+| 200 | 3 | 25 | 138.29 | 34.48 | 22.59 | 10×DNF |
+| 200 | 5 |  1 |   1.48 |  2.58 |  6.11 | 10×DNF |
+| 200 | 5 |  5 |   8.42 | 13.39 |  9.61 | 10×DNF |
+| 200 | 5 | 25 | 136.44 | 113.31 | 31.52 | 10×DNF |
+| 1000 | 3 |  1 |   29.46 |  10.76 |   9.39 | 10×DNF |
+| 1000 | 3 |  5 |  354.89 |  38.83 |  22.86 | 10×DNF |
+| 1000 | 3 | 25 | 13048.79 | 399.10 |  93.34 | 10×DNF |
+| 1000 | 5 |  1 |   18.94 |  13.92 |  11.01 | 10×DNF |
+| 1000 | 5 |  5 |  253.78 | 113.38 |  28.19 | 10×DNF |
+| 1000 | 5 | 25 | 15016.91 | 861.42 | 143.15 | 10×DNF |
+
+**Levi-backend ranking across the grid** (median of medians):
+`traces (9.6 ms) < pynauty (12.1 ms) < bliss (13.4 ms)`. Traces is
+the steadiest scaler; pynauty wins on the smallest cells but blows up
+to 13–15 s on `n=1000, c=25`; bliss is the most consistent
+middle-of-the-pack.
+
+**IsalHG DNF breakdown.** 49 / 180 `DisconnectedHypergraphError`
+(decision B11, exclusively the `c=1` cells where ER almost surely
+returns a disconnected hypergraph); 131 / 180 `TimeoutError` (the
+600 s watchdog fired on every other cell). Zero successful
+fingerprints.
+
+### 12.3 Findings
+
+1. **The grid sits entirely beyond the IsalHG algorithmic wall.** A
+   targeted compute-node sanity job (SLURM job `1312802`,
+   `--constraint=avx512`) called `canonical_string` with the C++
+   engine on hand-built and small ER fixtures and recorded:
+
+   | Fixture | C++ `greedy_single` |
+   |---|---:|
+   | Fano STS(7) — 7 nodes, 7 edges | **2.31 ms** ✓ |
+   | Fano STS(7) — `greedy_min` | 8.00 ms ✓ |
+   | ER `n=10, r=3, c=2` (14 edges) | **7.5 ms** ✓ |
+   | ER `n=20, r=3, c=2` (36 edges) | disconnected (B11) |
+   | ER `n=30, r=3, c=2` (58 edges) | **TIMEOUT > 60 s** |
+   | ER `n=50, r=3, c=1` (48 edges) | disconnected (B11) |
+   | ER `n=50, r=3, c=2` (108 edges) | disconnected (B11) |
+
+   The wall lies near `(n, m) ≈ (20–30, 40–60)` for `r=3`. The
+   preprint grid's smallest cell is `(n=50, r=3, c=1)` with
+   `E[m] ≈ 50` edges — already in the disconnected band, and the
+   smallest connected cell `(n=50, r=3, c=5)` has `m ≈ 250`, an order
+   of magnitude past the wall.
+
+2. **The C++ engine is correctly built and dispatched on Picasso.**
+   `_core.cpython-311-x86_64-linux-gnu.so` resolved, `DEFAULT_BACKEND
+   = cpp`, Fano completed in 2.31 ms (matches the home-machine table
+   in `docs/CPP_SPEEDUP.md` to within thermal noise). The DNFs are
+   not a build or PATH artefact.
+
+3. **The four-way partition agreement holds where it can be checked.**
+   540 / 540 positive-pair checks pass; no Levi backend disagrees
+   with another on any seed. The single statistical claim the preprint
+   could still make if the cohort were re-scoped is therefore intact.
+
+4. **traces_levi is the cohort's runtime winner.** On every cell where
+   pynauty exceeds 100 ms, traces is at least 4× faster; on `n=1000,
+   r=3, c=25` traces is 140× faster than pynauty. This was not
+   anticipated in §4.1 (pynauty was treated as the default oracle).
+
+5. **Per-tier deviations from the spec.** Two changes from §4 had to
+   land to make the sweep terminate at all:
+
+   - `repeats` reduced from 10 → 1 so each cell terminates at exactly
+     600 s rather than 6 000 s in the worst case.
+   - IsalHG algorithm switched from `greedy_min` to `greedy_single`.
+     `greedy_min` runs `greedy_h2s` from every max-`ξ` seed in
+     parallel and takes the lex-min; on dense ER the seed set is
+     large enough that the parallel-fan-out + lex-min reduction blew
+     past the timeout even on cells where `greedy_single` would have
+     finished within a few seconds (which is to say: none of them).
+
+### 12.4 Re-scoping plan for the next sweep (recommendation)
+
+The current grid produces no IsalHG measurement and the headline
+characterisation collapses to a single observation ("IsalHG DNFs the
+entire grid"). To populate the heat-grid with actual ratios — i.e.
+to actually identify the regime where IsalHG dominates, ties, or
+loses — the cohort must move into the regime where IsalHG completes.
+The verify job above pins the boundary at `m ≲ 40–50` edges for
+`r=3`. Concrete proposal:
+
+| Axis | Current grid (§3) | Proposed sparse grid |
+|---|---|---|
+| Vertex count `n` | `{50, 200, 1000}` | **`{8, 12, 16, 20, 24, 28}`** |
+| Arity `r` | `{3, 5}` | **`{3}`** (drop `r=5` until `r=3` is mapped) |
+| Density `c` (edges-per-vertex) | `{1, 5, 25}` | **`{1.0, 1.5, 2.0}`** (E[m] ≈ n to 2n; stays connected with high probability at `n ≥ 12` and below the wall) |
+| Seeds | 10 | 10 (keep) |
+| Backends | 4 (keep) | 4 (keep) |
+| Per-fingerprint timeout | 600 s | **60 s** (cells either finish in seconds or DNF cleanly) |
+| `repeats` | 1 (deviation) | **10** (restore §4.2 spec — at 1 ms/call the budget is back) |
+| IsalHG algorithm | `greedy_single` (deviation) | **`greedy_min`** (restore §4.1; small `n` keeps the seed set small) |
+
+Estimated cell counts: `6 × 1 × 3 × 10 × 4 = 720` cells — the same
+total as the current grid, single SLURM array, all cells expected
+to finish in seconds. The dataset is also drawn from the same
+generator (`UniformErdosRenyiHypergraphs`) so no code changes are
+required beyond regenerating
+`experiments/configs/preprint_random_sweep.yaml`.
+
+If the sparse grid shows IsalHG competitive on (say) `n ≤ 16`, the
+preprint claim becomes: *"IsalHG dominates on small dense
+hypergraphs (`n ≤ 16, m ≤ 30`); Levi backends dominate above the
+edge-count threshold ≈ 40."* That is a real characterisation with
+both sides of the boundary populated, and matches the descriptive
+PI directive of 2026-06-17.
+
+Optional second sweep, after the sparse grid: keep the original `n ∈
+{50, 200, 1000}` grid alongside the sparse one, with IsalHG cells
+explicitly tagged as expected-DNF, to give the preprint a "where it
+*does not yet* scale" complementary heat-grid. The full empirical
+paper would carry both.
+
+### 12.5 Run-level provenance
+
+- Picasso jobs (in time order):
+  1300829 → 1301489 → 1303339 (cancelled; algorithm switch),
+  1303339 / 1303340 (full-grid sweep, cancelled at 110 / 0
+  completions to switch to `greedy_single`),
+  1304726 / 1304727 (60 s subprocess timeout — too tight),
+  1305872 / 1305873 (600 s + `repeats=1`; cancelled at 437 / 0 due
+  to orphan-subprocess holding SLURM slots),
+  **1306419 / 1306420 (final fast + slow tier — drained cleanly)**,
+  1318428 / 1318440 (traces backfill after installing `dreadnaut`
+  via conda-forge `nauty`).
+- C++ rebuild on Picasso: editable install via
+  `pip install -e . --no-build-isolation` → 95 KB
+  `_core.cpython-311-x86_64-linux-gnu.so` deposited in
+  `/mnt/.../conda_envs/isalhg/lib/python3.11/site-packages/isalhg/core/`.
+- `dreadnaut` installed via `conda install -c conda-forge nauty`
+  (2.9.1) — required for `traces_levi` backend; absence had caused
+  every Traces cell to report `BackendUnavailableError` in the first
+  full-sweep pass.
+- Artefacts archived to
+  `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/preprint/experiment/`
+  (full Picasso `pipeline/` tree, rsync'd 2026-06-25).
+

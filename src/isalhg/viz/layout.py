@@ -63,6 +63,8 @@ def compact_primal_layout(
     seed: int = 0,
     margin: float = 0.18,
     spring_iterations: int = 80,
+    spring_k: float | None = 0.9,
+    fit_fraction: float = 0.78,
 ) -> dict[NodeId, Position]:
     """Spring layout on the primal graph with stray vertices pulled in.
 
@@ -72,9 +74,15 @@ def compact_primal_layout(
     cluster to shrink. This helper produces a single layout that:
 
     1. Builds the primal (clique-expansion) graph of ``H``.
-    2. Spring-layouts the largest connected component, normalised to the
-       ``[-1, 1]^2`` box.
-    3. Places isolated / smaller-component vertices on a vertical strip
+    2. Spring-layouts the largest connected component, with an optimal
+       inter-node distance of ``spring_k`` (larger k → more spread,
+       more whitespace between the rendered hyperedge blobs).
+    3. Normalises the result into a square of side ``2 * fit_fraction``
+       centred at the origin (i.e. the hypergraph occupies the inner
+       ``fit_fraction`` of the ``[-1, 1]^2`` canvas, leaving the outer
+       band visually empty so adjacent hyperedge blobs do not touch
+       the rounded frame).
+    4. Places isolated / smaller-component vertices on a vertical strip
        just outside the main component's bounding box, separated by
        ``margin`` and ordered by ``NodeId``. The strip stays inside
        ``[-1.0 - margin, 1.0 + margin]``, so the main component still
@@ -98,6 +106,15 @@ def compact_primal_layout(
     spring_iterations : int, optional
         Number of force iterations; lower values are faster but
         noisier.
+    spring_k : float | None, optional
+        Optimal inter-vertex distance forwarded to
+        ``nx.spring_layout(k=...)``. Larger values push hyperedge
+        blobs apart visually. ``None`` reverts to NetworkX's default
+        ``1/sqrt(n)``.
+    fit_fraction : float, optional
+        Fraction of the ``[-1, 1]^2`` canvas the main component is
+        scaled to occupy (default ``0.78``). Smaller fractions leave
+        more empty margin between hyperedges and the panel frame.
 
     Returns
     -------
@@ -128,6 +145,7 @@ def compact_primal_layout(
         main_subgraph,
         seed=seed,
         iterations=spring_iterations,
+        k=spring_k,
     )
     xs = [p[0] for p in raw.values()]
     ys = [p[1] for p in raw.values()]
@@ -136,11 +154,14 @@ def compact_primal_layout(
     span_x = max(xmax - xmin, 1e-6)
     span_y = max(ymax - ymin, 1e-6)
     span = max(span_x, span_y)
-    # Centre and rescale into [-1, 1]^2 keeping aspect.
+    # Centre and rescale: the hypergraph occupies the inner
+    # ``[-fit_fraction, fit_fraction]^2`` band; the outer ring of the
+    # ``[-1, 1]^2`` canvas is visual padding.
     cx, cy = (xmax + xmin) / 2.0, (ymax + ymin) / 2.0
+    scale = 2.0 * fit_fraction
     positions: dict[NodeId, Position] = {}
     for v, (x, y) in raw.items():
-        positions[v] = (2.0 * (x - cx) / span, 2.0 * (y - cy) / span)
+        positions[v] = (scale * (x - cx) / span, scale * (y - cy) / span)
 
     strays: list[NodeId] = sorted(v for comp in components[1:] for v in comp)
     if strays:

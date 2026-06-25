@@ -1,30 +1,33 @@
 """Cohort-axes figure for the preprint.
 
-Generates a single 5-panel figure showing how the three generator axes
-``(n, r, c)`` reshape an Erdős-Rényi hypergraph. Sizes are
-visualisation-scale (``n ≤ 20``), not the
-``n ∈ {50, 200, 1000}`` the benchmark sweep uses; the figure is
-qualitative, illustrating the effect of each axis on the structure.
+Generates a single 5-panel figure showing how the two live generator
+axes ``(n, c)`` reshape an Erdős-Rényi hypergraph at fixed arity
+``r = 3``. The panels are drawn from the **actual sweep grid** of
+PREPRINT.md §12.4 — `n ∈ {8, 12, 16, 20, 24, 28}` × `r = 3` × `c ∈
+{1.0, 1.5, 2.0}` — under the connectivity policy of §12.4-NEW
+(*ER conditional on connectivity*, deterministic reject-resample).
 
-Panels (one baseline + four single-axis variations):
+Panels (one baseline + two `n` variations + two `c` variations):
 
 ==============  ===  ===  ===  ============
 panel           n    r    c    varied axis
 ==============  ===  ===  ===  ============
-1 baseline      12   3    2    -
-2 larger n      20   3    2    n
-3 higher arity  12   5    2    r
-4 sparser       12   3    1    c (down)
-5 denser        12   3    5    c (up)
+1 smaller n      8   3    1.5  n (down)
+2 baseline      16   3    1.5  -
+3 larger n      25   3    1.5  n (up)
+4 sparser       16   3    1.0  c (down)
+5 denser        16   3    2.0  c (up)
 ==============  ===  ===  ===  ============
 
 Each panel caption carries the cohort axes (``n``, ``r``, ``c``), the
-realised generator probability ``p = c·n/C(n, r)``, the realised edge
-count ``m``, the mean vertex degree, the number of connected
-components (CC), and the length of the canonical fingerprint produced
-by ``pynauty_levi`` (universal — works on disconnected hypergraphs).
-The fingerprint-length quantity ties the figure directly to the
-preprint's headline characterisation (PREPRINT.md §4.4).
+realised generator probability ``p = c·n/C(n, r)``, the number of ER
+reject-resample attempts taken to draw a connected sample (1 ≡ no
+resample), the realised edge count ``m``, the mean vertex degree, the
+number of connected components (CC, always 1 by construction), and
+the length of the canonical fingerprint produced by ``pynauty_levi``
+on the displayed instance. The fingerprint-length quantity ties the
+figure directly to the preprint's headline characterisation
+(PREPRINT.md §4.4).
 
 Usage
 -----
@@ -71,11 +74,11 @@ class _PanelSpec:
 
 
 PANELS: tuple[_PanelSpec, ...] = (
-    _PanelSpec("Baseline", 12, 3, 2.0),
-    _PanelSpec("Larger N", 20, 3, 2.0),
-    _PanelSpec("Higher Arity", 12, 5, 2.0),
-    _PanelSpec("Sparser", 12, 3, 1.0),
-    _PanelSpec("Denser", 12, 3, 5.0),
+    _PanelSpec("Smaller N", 8, 3, 1.5),
+    _PanelSpec("Baseline", 16, 3, 1.5),
+    _PanelSpec("Larger N", 25, 3, 1.5),
+    _PanelSpec("Sparser", 16, 3, 1.0),
+    _PanelSpec("Denser", 16, 3, 2.0),
 )
 
 
@@ -116,27 +119,43 @@ def _build_panel(
     seed: int,
     fp_backend: object,
 ) -> tuple[str, str, SparseHypergraph]:
-    """Materialise the panel's hypergraph, bold label, and stats subtitle."""
-    ds = UniformErdosRenyiHypergraphs(n=spec.n, r=spec.r, c=spec.c, seed=seed)
+    """Materialise the panel's hypergraph, bold label, and minimal subtitle.
+
+    Uses ``require_connected=True`` (PREPRINT.md §12.4-NEW) so the
+    rendered hypergraph matches the conditional-on-connectivity
+    distribution the benchmark sweep actually fingerprinted.
+
+    Subtitle carries only the generator inputs ``(n, r, c, seed)`` —
+    the four-tuple that uniquely identifies the hypergraph under the
+    sweep's reject-resample. Derived quantities (edge count, mean
+    degree, fingerprint length, ER probability) are dropped; readers
+    who want them can recompute from the YAML / per-cell JSON.
+    """
+    ds = UniformErdosRenyiHypergraphs(
+        n=spec.n,
+        r=spec.r,
+        c=spec.c,
+        seed=seed,
+        require_connected=True,
+    )
     item = next(iter(ds))
     H = item.hypergraph
+    # Diagnostics logged but not rendered in the figure.
     p = spec.c * spec.n / math.comb(spec.n, spec.r)
     mean_deg = _mean_degree(H)
     n_cc = _n_connected_components(H)
+    attempts = int(item.extra.get("connected_attempts", 1))
     fp_len = len(fp_backend.fingerprint(H))  # type: ignore[attr-defined]
-    cc_marker = "" if n_cc == 1 else f"  (CC={n_cc})"
-    subtitle = (
-        f"n={spec.n}, r={spec.r}, c={spec.c:g}, p={p:.2e}\n"
-        f"m={H.n_edges}, ⟨deg⟩={mean_deg:.1f}{cc_marker}\n"
-        f"|fp_nauty|={fp_len} B"
-    )
+    subtitle = f"n={spec.n}, r={spec.r}, c={spec.c:g}, seed={seed}"
     logger.info(
-        "panel %-13s n=%-3d r=%-2d c=%-4g p=%.3e m=%d <deg>=%.2f CC=%d fp=%dB",
+        "panel %-13s n=%-3d r=%-2d c=%-4g seed=%d p=%.3e attempts=%d m=%d <deg>=%.2f CC=%d fp=%dB",
         spec.label,
         spec.n,
         spec.r,
         spec.c,
+        seed,
         p,
+        attempts,
         H.n_edges,
         mean_deg,
         n_cc,

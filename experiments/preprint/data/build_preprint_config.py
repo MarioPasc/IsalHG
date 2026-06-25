@@ -49,9 +49,14 @@ logger = logging.getLogger(__name__)
 # Grid (edit here when the axes change; rerun the script to regenerate the YAML)
 # -----------------------------------------------------------------------------
 
-N_VALUES: tuple[int, ...] = (50, 200, 1000)
-R_VALUES: tuple[int, ...] = (3, 5)
-C_VALUES: tuple[float, ...] = (1.0, 5.0, 25.0)
+# PREPRINT.md §12.4 (Jun-25-2026 re-scope): sparse grid that sits BELOW
+# the IsalHG algorithmic ceiling (open question #1). Empirically the
+# wall for r=3 lies near m ≈ 40-50 edges; max n capped at 25 so the
+# slowest IsalHG cells still terminate within the 600 s per-fingerprint
+# budget rather than DNFing at the upper rim.
+N_VALUES: tuple[int, ...] = (8, 12, 16, 20, 25)
+R_VALUES: tuple[int, ...] = (3,)
+C_VALUES: tuple[float, ...] = (1.0, 1.5, 2.0)
 SEEDS: tuple[int, ...] = tuple(range(10))
 BACKENDS: tuple[str, ...] = (
     "isalhg",
@@ -63,8 +68,10 @@ BACKENDS: tuple[str, ...] = (
 PROTOCOL_NAME: str = "fingerprint_timing"
 DATASET_NAME: str = "random_erdos_renyi"
 
-# Per PREPRINT.md §4.2 the protocol takes the median of 10 repeats per
-# fingerprint to suppress per-call noise.
+# Per-fingerprint timeout restored to PREPRINT.md §4.2 spec (600 s).
+# At n=25 the slowest observed IsalHG fingerprint in the Jun-25 sweep
+# was ≈ 5 s with a 60 s ceiling; budgeting an order of magnitude past
+# that absorbs the n=24/25 tail without flipping cells to DNF.
 REPEATS: int = 10
 TIMEOUT_S: float = 600.0
 CHECK_POSITIVE_PAIR: bool = True

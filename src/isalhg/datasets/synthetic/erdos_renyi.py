@@ -1,4 +1,4 @@
-"""Preprint dataset: r-uniform Erdos-Renyi hypergraphs.
+"""Preprint dataset: r-uniform Erdos-Renyi hypergraphs (connected variant).
 
 Thin wrapper around
 ``xgi.generators.uniform.uniform_erdos_renyi_hypergraph(n, m, p, p_type='prob',
@@ -8,6 +8,23 @@ multiedges=False, seed=seed)`` (Chodrow 2020 arXiv:1902.09302; Landry et al.
 ``(backend, n, r, c, seed)`` cell as a separate :class:`CellSpec`, so the
 dataset's only responsibility is to materialise the single hypergraph that
 matches its constructor parameters.
+
+Connectivity policy
+-------------------
+By default the dataset rejects disconnected samples and resamples with a
+deterministic seed walk ``seed, seed+1_000_003, seed+2*1_000_003, …``
+until the primal graph (clique expansion) is connected. The resulting
+distribution is *Erdős–Rényi conditional on connectivity* — every
+backend sees the same connected input, removing the IsalHG-vs-Levi
+asymmetry imposed by decision B11 (``core/algorithms/greedy_min``
+rejects disconnected hypergraphs while the Levi reduction accepts them).
+
+Up to ``connected_max_attempts`` samples are tried before raising
+:class:`DatasetError`; on the (n, r, c) grid of PREPRINT.md §12.4 the
+typical attempt count is 1–3.
+
+Set ``require_connected=False`` to recover the raw ER distribution
+(historical behaviour; useful for replaying the pre-Jun-25-2026 sweep).
 
 Parameter conventions
 ---------------------
@@ -85,6 +102,8 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
         p: float | None = None,
         c: float | None = None,
         seed: Seed = 0,
+        require_connected: bool = True,
+        connected_max_attempts: int = 1000,
     ) -> None:
         if n < 1:
             raise ValueError(f"n must be >= 1, got {n}")
@@ -96,6 +115,8 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
             raise ValueError(f"p must lie in [0, 1]; got {p}")
         if c is not None and c < 0:
             raise ValueError(f"c must be >= 0; got {c}")
+        if connected_max_attempts < 1:
+            raise ValueError(f"connected_max_attempts must be >= 1; got {connected_max_attempts}")
 
         self._n = int(n)
         self._r = int(r)
@@ -104,6 +125,8 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
             float(p) if p is not None else _p_from_c(float(c), self._n, self._r)  # type: ignore[arg-type]
         )
         self._seed: Seed = int(seed)
+        self._require_connected = bool(require_connected)
+        self._connected_max_attempts = int(connected_max_attempts)
         self._cached_item: DatasetItem | None = None
         self._cached_metadata: DatasetMetadata | None = None
 
@@ -155,6 +178,8 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
             r=self._r,
             p=self._p,
             seed=seed,
+            require_connected=self._require_connected,
+            connected_max_attempts=self._connected_max_attempts,
         )
 
     # ------------------------------------------------------------------
@@ -173,15 +198,54 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
 
         # Note: positional API is (n, m, p, ...) where `m` is the arity (uniform
         # hyperedge size) and `p` is the probability when p_type='prob'.
-        xgi_H = xgi.uniform_erdos_renyi_hypergraph(  # type: ignore[no-untyped-call]
-            self._n,
-            self._r,
-            self._p,
-            p_type="prob",
-            multiedges=False,
-            seed=self._seed,
-        )
-        H = XGIAdapter().from_external(xgi_H)
+        # Deterministic seed-walk for the connectivity reject-resample. The
+        # 1_000_003 stride is a prime well above 10 (the seed range used by
+        # PREPRINT.md §3) so successive attempts hash into independent XGI
+        # PRNG states.
+        attempts_seed_stride = 1_000_003
+        attempt = 0
+        last_n_edges = -1
+        while True:
+            attempt += 1
+            effective_seed = int(self._seed) + (attempt - 1) * attempts_seed_stride
+            xgi_H = xgi.uniform_erdos_renyi_hypergraph(  # type: ignore[no-untyped-call]
+                self._n,
+                self._r,
+                self._p,
+                p_type="prob",
+                multiedges=False,
+                seed=effective_seed,
+            )
+            H = XGIAdapter().from_external(xgi_H)
+            last_n_edges = H.n_edges
+            if not self._require_connected:
+                break
+            if H.is_connected():
+                break
+            if attempt >= self._connected_max_attempts:
+                raise DatasetError(
+                    "UniformErdosRenyiHypergraphs: exhausted "
+                    f"{self._connected_max_attempts} attempts trying to draw a "
+                    f"connected ER hypergraph at (n={self._n}, r={self._r}, "
+                    f"p={self._p:.3e}, seed={self._seed}). Increase "
+                    "connected_max_attempts, raise c, or set "
+                    "require_connected=False."
+                )
+
+        if attempt > 1:
+            logger.info(
+                "ER reject-resample: connected sample drawn on attempt %d "
+                "(n=%d, r=%d, p=%.3e, base seed=%d, effective seed=%d, "
+                "n_edges=%d)",
+                attempt,
+                self._n,
+                self._r,
+                self._p,
+                self._seed,
+                effective_seed,
+                last_n_edges,
+            )
+
         c_repr = f"{self._c:g}" if self._c is not None else "na"
         item_id = f"er_n{self._n}_r{self._r}_c{c_repr}_s{self._seed}"
         extra: dict[str, Any] = {
@@ -191,6 +255,9 @@ class UniformErdosRenyiHypergraphs(HypergraphDataset):
             "p": self._p,
             "c": self._c,
             "seed": self._seed,
+            "effective_seed": effective_seed,
+            "connected_attempts": attempt,
+            "require_connected": self._require_connected,
             "n_edges": H.n_edges,
             "n_nodes": H.n_nodes,
         }
@@ -215,6 +282,8 @@ def _factory(params: dict[str, Any]) -> HypergraphDataset:
         p=(float(params["p"]) if params.get("p") is not None else None),
         c=(float(params["c"]) if params.get("c") is not None else None),
         seed=int(params.get("seed", 0)),
+        require_connected=bool(params.get("require_connected", True)),
+        connected_max_attempts=int(params.get("connected_max_attempts", 1000)),
     )
 
 

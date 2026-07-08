@@ -49,7 +49,10 @@ class TestMeasureSmoke:
         result = proto.measure(backend, ds, seed=0)
 
         assert result.protocol == "fingerprint_timing"
-        assert result.backend == "isalhg"
+        # ``result.backend`` is the backend's per-algorithm ``name``
+        # (``isalhg_<algorithm>``); the ``"isalhg"`` registry key resolves
+        # to the production default.
+        assert result.backend.startswith("isalhg")
         assert result.dataset == "random_erdos_renyi"
         assert result.seed == 0
         assert result.wall_clock_s > 0

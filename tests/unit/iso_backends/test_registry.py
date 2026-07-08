@@ -20,7 +20,9 @@ class TestRegistryAPI:
         backend = registry.get_backend("isalhg")
         assert isinstance(backend, IsoBackend)
         assert isinstance(backend, IsalHGBackend)
-        assert backend.name == "isalhg"
+        # The ``"isalhg"`` registry key resolves to the production default,
+        # whose per-algorithm name is ``isalhg_<algorithm>``.
+        assert backend.name.startswith("isalhg_")
 
     def test_get_unknown_raises(self) -> None:
         with pytest.raises(BackendUnavailableError):

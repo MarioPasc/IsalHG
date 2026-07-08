@@ -50,5 +50,12 @@ class TestAreIsomorphic:
 
 
 class TestName:
-    def test_name(self) -> None:
-        assert IsalHGBackend().name == "isalhg"
+    def test_name_reflects_algorithm(self) -> None:
+        # ``name`` is the per-algorithm identifier ``isalhg_<algorithm>``
+        # used to disambiguate the variant-comparison study.
+        assert IsalHGBackend(algorithm="greedy_min").name == "isalhg_greedy_min"
+        assert IsalHGBackend(algorithm="greedy_single").name == "isalhg_greedy_single"
+
+    def test_default_name_is_nbrdeg(self) -> None:
+        # T-M0 default: the neighbour-degree seed cascade.
+        assert IsalHGBackend().name == "isalhg_greedy_min_nbrdeg"

@@ -136,8 +136,11 @@ def max_xi_nodes(
 ) -> tuple[NodeId, ...]:
     """Return all nodes attaining the lexicographic maximum of the seed key.
 
-    Invariant 4: this is the *only* admissible seed set for the canonical
-    algorithm.
+    Invariant 4: one iso-invariant seed set for the canonical algorithm
+    (the historical ``xi`` cascade). Any iso-invariant node set is
+    admissible; :func:`max_neighbor_degree_nodes` is the tighter default
+    used since T-M0. The soundness of the canonical string requires only
+    that the seed set is preserved by hypergraph automorphisms.
 
     Parameters
     ----------

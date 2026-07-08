@@ -44,29 +44,42 @@ def small_connected_hypergraph(draw, max_n: int = 5, max_arity: int = 3) -> Spar
     return SparseHypergraph(n_nodes=n, hyperedges=spanning_edges + extra)
 
 
+# Both iso-invariant seed strategies are guarded: the historical xi
+# cascade (``greedy_min``) and the T-M0 neighbour-degree cascade
+# (``greedy_min_nbrdeg``, the default). ``greedy_single*`` is deliberately
+# excluded -- it selects by raw node id and is not iso-invariant.
+_ISO_INVARIANT_VARIANTS = ["greedy_min", "greedy_min_nbrdeg"]
+
+
+@pytest.mark.parametrize("algorithm", _ISO_INVARIANT_VARIANTS)
 @settings(max_examples=30, deadline=None)
 @given(small_connected_hypergraph(), st.integers(min_value=0, max_value=2**32 - 1))
-def test_isalhg_fingerprint_invariant_under_perm(H: SparseHypergraph, seed: int) -> None:
+def test_isalhg_fingerprint_invariant_under_perm(
+    algorithm: str, H: SparseHypergraph, seed: int
+) -> None:
     import random as _r
 
     rng = _r.Random(seed)
     sigma = list(range(H.n_nodes))
     rng.shuffle(sigma)
     H2 = permute(H, sigma)
-    backend = IsalHGBackend()
+    backend = IsalHGBackend(algorithm=algorithm)
     assert backend.fingerprint(H) == backend.fingerprint(H2)
 
 
+@pytest.mark.parametrize("algorithm", _ISO_INVARIANT_VARIANTS)
 @settings(max_examples=20, deadline=None)
 @given(small_connected_hypergraph(), st.integers(min_value=0, max_value=2**32 - 1))
-def test_pynauty_agrees_with_isalhg_on_perm_pair(H: SparseHypergraph, seed: int) -> None:
+def test_pynauty_agrees_with_isalhg_on_perm_pair(
+    algorithm: str, H: SparseHypergraph, seed: int
+) -> None:
     import random as _r
 
     rng = _r.Random(seed)
     sigma = list(range(H.n_nodes))
     rng.shuffle(sigma)
     H2 = permute(H, sigma)
-    isalhg = IsalHGBackend()
+    isalhg = IsalHGBackend(algorithm=algorithm)
     pyn = PynautyLeviBackend()
     assert isalhg.are_isomorphic(H, H2)
     assert pyn.are_isomorphic(H, H2)

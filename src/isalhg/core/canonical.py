@@ -1,7 +1,12 @@
 """Canonical-string entry point.
 
-Computes ``w*(H) = argmin_lex { greedy_H2S(H, v_0) : v_0 in argmax_lex xi(v) }``
-(invariant 4). Returns the serialised string form for consumption by
+Computes ``w*(H) = argmin_lex { greedy_H2S(H, v_0) : v_0 in S(H) }`` where
+``S(H)`` is an *iso-invariant* seed set (invariant 4). The default seed
+set is the neighbour-degree cascade ``max_neighbor_degree_nodes`` (max
+label -> max degree -> lex-max sorted-desc neighbour degrees, T-M0);
+``algorithm="greedy_min"`` selects the historical ``argmax_lex xi(v)``
+set. Both are iso-invariant, so ``w*`` is an isomorphism invariant under
+either. Returns the serialised string form for consumption by
 :class:`isalhg.iso_backends.isalhg_backend.IsalHGBackend`.
 
 Conjecture (Theorem 2 of PROPOSAL.md): ``w*(H1) == w*(H2)`` iff ``H1`` and
@@ -154,7 +159,7 @@ def canonical_string(
     *,
     k: int | None = None,
     structural_depth: int = 3,
-    algorithm: str = "greedy_min",
+    algorithm: str = "greedy_min_nbrdeg",
     backend: Backend | None = None,
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
@@ -172,7 +177,11 @@ def canonical_string(
     algorithm : str
         Algorithm name. Resolved against the C++ variant registry
         (single-FFI fast path) first, then the Python algorithm registry.
-        Defaults to ``"greedy_min"``.
+        Defaults to ``"greedy_min_nbrdeg"`` -- the neighbour-degree seed
+        cascade (max label -> max degree -> lex-max sorted-desc neighbour
+        degrees), iso-invariant and cheaper than the ``xi`` cascade
+        (T-M0). Pass ``"greedy_min"`` for the historical ``xi``-seeded
+        canonical.
     backend : {"cpp", "python"}, optional
         Implementation to use for the five native variants
         (``greedy_min``, ``greedy_single``, ``greedy_min_inplace``,

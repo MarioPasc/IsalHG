@@ -74,7 +74,7 @@ def _doily() -> SparseHypergraph:
     return SparseHypergraph(n_nodes=15, hyperedges=lines)
 
 
-# Fast designs covered with all five native variants. The doily is too
+# Fast designs covered with all seven native variants. The doily is too
 # slow in the Python backend (greedy_h2s single-seed ~21 s; multi-seed
 # variants DNF >300 s) so we only check single-seed equivalence on it,
 # under the ``slow`` marker.
@@ -86,6 +86,8 @@ _NATIVE_VARIANTS = [
     "greedy_min_inplace",
     "greedy_min_wl_pruned",
     "greedy_min_inplace_wl_pruned",
+    "greedy_min_nbrdeg",
+    "greedy_single_nbrdeg",
 ]
 
 

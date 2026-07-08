@@ -17,14 +17,57 @@ virtual machine. Members:
 - **IsalHG** (this repo) -- hypergraphs of arity `2 <= a <= k`. Seed proposal
   2026-06.
 
-Primary application of IsalHG: a native hypergraph isomorphism test via
-canonical-string equality, **benchmarked against nauty, Traces, and bliss**
-on the Levi bipartite reduction. Target venue: a Computational Mathematics
-journal.
+IsalHG has produced **two papers**:
 
-Full seed proposal: see project memory `idea_060626.md` (also at
-`docs/isalhg_idea.pdf`). Full validation methodology and architectural design:
-`docs/PROPOSAL.md`. Code-layout lookup for coding agents: `docs/CODE_DESIGN.md`.
+1. **Iso-benchmark preprint (complete).** A native hypergraph isomorphism test
+   via canonical-string equality, benchmarked against nauty, Traces, and bliss
+   on the Levi bipartite reduction. Its methodology lives in
+   `docs/preprint/{PROPOSAL,DATA,PREPRINT}.md` and the code-as-built spec in
+   `docs/engineering/{CODE_DESIGN,DEVELOPMENT,ALGORITHMS}.md`. The C++ core is
+   competitive but does not beat mature graph-iso engines on speed.
+2. **Metric-space journal article (ACTIVE, target *Information Sciences*).** The
+   pivot: the canonical string `w*(H)` embeds every hypergraph into the discrete
+   metric space `(Σ_HG*, d_Lev)`; because `w*` is isomorphism-invariant,
+   `d_I(H,H') = Levenshtein(w*(H), w*(H'))` is an iso-invariant hypergraph
+   distance. The paper proves a **stability theorem** relating `d_I` to hypergraph
+   edit distance and exploits it in classical applications (MDS, k-medoids,
+   dendrograms, kNN, shortest path). This scope supersedes the *paper* framing of
+   the preprint but **does not remove** the iso-detection code, which is its
+   foundation.
+
+Full seed proposal: `docs/isalhg_idea.pdf`. The active-article scope is the
+context map below.
+
+## Active scope — metric-space article (2026-07)
+
+**Thesis.** IsalHG induces a structure-faithful metric on hypergraph space via
+edit distance on canonical strings; a stability bound `d_I ≤ C(k,Δ)·HGED`
+(provable, unlike the sibling's empirical-only claim) explains why the induced
+geometry drives standard unsupervised/supervised pipelines, and its `Δ`-dependence
+is a falsifiable prediction the density-sweep experiment tests.
+
+**Context map (the hub — read the file relevant to your task).**
+
+| Doc | Holds |
+|---|---|
+| `docs/article/PROPOSAL.md` | thesis, central experiment, applications, open questions |
+| `docs/article/DATA.md` | corpora: exact-HGED correlation corpus + planted-family applications corpus |
+| `docs/article/COMPETITORS.md` | the four competing representations + the fairness framing |
+| `docs/article/CODE_DESIGN.md` | the `src/isalhg` refactor + `metric_space/` additions for this article |
+| `docs/article/RELATED_WORK.md` | verified bibliography (theory + competitors, with code URLs) |
+| `docs/article/theoretical/stability.md` | completeness → metric → **stability** theorem, proof strategy |
+| `docs/article/empirical/correlation.md` | controlled validation: HGED oracle, correlation/density/info-content |
+| `docs/article/empirical/applications.md` | MDS (flagship), clustering, kNN, shortest path |
+| `docs/article/DEVELOPMENT.md` | **the task ledger** — the live list of work |
+
+**Workflow.** Pick up work with the `task-reader` skill on a task in
+`docs/article/DEVELOPMENT.md`. When you find work outside your current task, log
+it with the `task-handoff` skill rather than scope-creeping.
+
+**Doc split.** `docs/article/` = the new article. `docs/preprint/`
+(`PROPOSAL/DATA/PREPRINT.md`) = the iso-benchmark preprint's methodology.
+`docs/engineering/` (`CODE_DESIGN/DEVELOPMENT/ALGORITHMS/CPP_*.md`) = the current
+code's spec — still authoritative for the code as built.
 
 ## Scientific Mindset
 
@@ -35,7 +78,7 @@ Full seed proposal: see project memory `idea_060626.md` (also at
   (string length bound, structural-tuple completeness, complexity), produce
   the derivation. Heuristic answers are flagged as heuristic.
 - **Proactive.** Surface ablations, missing proofs, untested edge cases
-  without being prompted. Open questions in `docs/PROPOSAL.md` (backtracking,
+  without being prompted. Open questions in `docs/preprint/PROPOSAL.md` (backtracking,
   value of `k`, tuple depth, completeness) are research tasks, not silent
   defaults.
 - **Pursue completeness.** Every canonical-string claim must be empirically
@@ -63,9 +106,9 @@ Full seed proposal: see project memory `idea_060626.md` (also at
 
 The architecture is documented in three layers:
 
-1. `docs/PROPOSAL.md` -- scientific scope and validation methodology
+1. `docs/preprint/PROPOSAL.md` -- scientific scope and validation methodology
    (5 tiers, competitors, datasets, metrics).
-2. `docs/CODE_DESIGN.md` -- "where does code go": the four ABCs, the
+2. `docs/engineering/CODE_DESIGN.md` -- "where does code go": the four ABCs, the
    registry pattern, per-module mandates, the implementation order.
 3. `.claude/rules/coding_rules.md` -- project-agnostic patterns (ABC +
    registry + lazy import, refactor protocol, style).
@@ -119,11 +162,11 @@ experiments/    (repo root, not installable)
 
 `core/` must never import from `adapters/`, `iso_backends/`, `datasets/`,
 `protocols/`, or `metrics/`. Each higher layer imports only from layers
-below it. See `docs/CODE_DESIGN.md` Section 4 for the full direction.
+below it. See `docs/engineering/CODE_DESIGN.md` Section 4 for the full direction.
 
 ### Key modules
 
-See `docs/CODE_DESIGN.md` Section 6 for the per-module mandate table.
+See `docs/engineering/CODE_DESIGN.md` Section 6 for the per-module mandate table.
 
 ## Critical Invariants
 
@@ -132,9 +175,16 @@ See `docs/CODE_DESIGN.md` Section 6 for the per-module mandate table.
 2. **Closed alphabet.** Every string in `Sigma_HG*` decodes to a valid
    hypergraph. The S2H interpreter never rejects input.
 3. **Round-trip.** `S2H(H2S(H)) ~ H` for every valid hypergraph `H`.
-4. **Canonical seed.** The canonical algorithm runs greedy H2S from nodes of
-   *maximum lexicographic* `(xi_1, xi_2, xi_3)`. Any other seed strategy
-   breaks the isomorphism-invariance claim.
+4. **Canonical seed.** The canonical algorithm runs greedy H2S from an
+   *iso-invariant* seed set -- a node set preserved by every hypergraph
+   automorphism -- and takes the lex-min string over it. The default
+   (since T-M0) is the neighbour-degree cascade `max_neighbor_degree_nodes`
+   (max label -> max degree -> lex-max sorted-desc neighbour degrees,
+   variant `greedy_min_nbrdeg`); the historical `argmax_lex (xi_1, xi_2,
+   xi_3)` set (`greedy_min`) is equally sound. What breaks the
+   isomorphism-invariance claim is a *non*-iso-invariant seed rule -- e.g.
+   selecting by raw node id (`greedy_single*`, a speed heuristic, not an
+   exact iso test).
 5. **`V` over `C` in ties.** Step 2 of the tie-breaking cascade is
    non-optional -- switching `V/C` priority changes the canonical string.
 6. **`W` is meaningful.** Even though `W` is a no-op on the VM, it can appear
@@ -201,7 +251,7 @@ conjecture above, correct by construction.
 
 ### 1. Evidence-grounded changes
 Every implementation decision points to either (a) a section of
-`docs/PROPOSAL.md` or the seed PDF (`docs/isalhg_idea.pdf`), (b) a section
+`docs/preprint/PROPOSAL.md` or the seed PDF (`docs/isalhg_idea.pdf`), (b) a section
 of an IsalGraph or IsalSR paper, or (c) a unit test that fails without the
 change. No silent defaults.
 
@@ -245,6 +295,9 @@ under hypothesis. Report the table even if all green.
 | `test-runner` | haiku | Bash, Read | Run pytest + ruff + mypy in the `isalhg` env; report summary table |
 
 Useful skills:
+- `task-reader` -- pick up a task from `docs/article/DEVELOPMENT.md` and execute
+  it context-first (plan mode, read cited context, flag decisions, verify).
+- `task-handoff` -- park out-of-scope work as a new ledger entry mid-development.
 - `picasso-sbatch` -- SLURM scripts for Picasso.
 - `research-rigor` -- audits experimental plans for missing ablations /
   leakage / unjustified parameters.
@@ -269,6 +322,16 @@ Useful skills:
 
 ## Detailed Specifications
 
-@docs/CODE_DESIGN.md
-@docs/DEVELOPMENT.md
+Active-article scope (auto-loaded): thesis + the live task ledger.
+
+@docs/article/PROPOSAL.md
+@docs/article/DEVELOPMENT.md
+
+Code map (iso-benchmark spec, still authoritative for the code as built):
+
+@docs/engineering/CODE_DESIGN.md
 @.claude/rules/coding_rules.md
+
+The iso-benchmark dev log `docs/engineering/DEVELOPMENT.md` is no longer auto-loaded; it is
+reachable via the context map above. The article code map is
+`docs/article/CODE_DESIGN.md`.

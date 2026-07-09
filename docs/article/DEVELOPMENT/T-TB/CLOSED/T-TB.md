@@ -119,3 +119,44 @@ changed per defect:
   from [x] to [ ]. The round-1 note's "Recovered from the analytical criterion"
   is superseded. B-cond constant corrected: C(k,Δ) ≤ (2k+1)(1+Δ), not
   (2k+1)(1+kΔ).
+
+---
+
+## Orchestrator post-audit (2026-07-09 19:16 CEST, Fable — after the worker's two rounds)
+
+The two-round iteration budget was spent; the orchestrator audited the round-2
+artifacts and applied the remaining corrections directly (both proof `.tex`
+files, `stability.md` §2.2/§3/§6). Both `.tex` files compile (`pdflatex`,
+2026-07-09). Corrections of record:
+
+- **Condition (ii) was unsatisfiable.** The round-2 "V-candidate non-incidence"
+  form (no V-candidate at any reachable state has a member in `N_r[e]`) is met
+  by no edit on any hypergraph — every edge, perturbed or not, must eventually
+  become a candidate and be consumed — so Lemma B1 and B-cond were vacuously
+  true. Replaced by **key-crossing freedom**: perturbed-vs-unperturbed
+  comparisons resolve identically at every state; perturbed-vs-perturbed may
+  permute freely (absorbed in the window).
+- **Pointer-run terms were uncounted.** `P_i`/`N_i` are unit steps, so run
+  lengths are slot counts: Part B's "relative order ⇒ same pointer tokens" was
+  false. Made explicit: `T_span(e)` (±1 per post-window run spanning an
+  inserted/removed slot; `v±` edits) and `R(e)` (window runs to changed member
+  slots). Neither is bounded by (k,Δ) worst-case ⇒ new **layout-locality
+  conditions (iv)–(v)**; Lemma B1, T-B2, and B-cond restated over (i)–(v).
+  The task's original "CDLL-index hazard" is thereby vindicated, not resolved:
+  worst-case unconditional O(kΔ) locality is false by explicit mechanism.
+- **Constants re-derived.** (★) is now `s(e) ≤ (1+Δ) + R + T_span ≤ (1+Δ) +
+  (c₃+c₄)kΔ` under (i)–(v); the round-2 `(2k+1)(1+Δ)` rested on the false
+  "≤2k+1 tokens per edge" premise. B-worst restated with the honest length
+  envelope `|w*_c| ≤ m(1+kn)` (W-emission proviso flagged).
+- **Macro-steps added to the reduction.** `d_I` is undefined on the
+  disconnected intermediate after a bare `v⁺`; the Corollary now groups paired
+  vertex+incidence ops so every telescoping step is evaluated on connected
+  states. T-B0's `k=2`, `s=1`, arity-`k` case folded into the delete-reinsert
+  residual (cost `+2c₀`, zero under genericity).
+- **T-B4 checkbox corrected** from [x] to [ ] (a sketch is not done).
+
+Open theory consolidated in **T-TBb** (`OPEN/T-TBb.md`): generic (iv)–(v)
+amortization, analytical T-B3, rigorous B-avg, W-token check. Disposition
+unchanged: T-TB is DONE as a **conditional** theorem (the acceptance clause
+explicitly admits one), with T-B5 pending T-M5a and the conditions honestly
+stated.

@@ -54,7 +54,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — stability | 0 | 2 |
+| [`T-TB`](T-TB/) | Theorem B — stability | 1 | 2 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the scope decision (2026-07-08)
@@ -138,29 +138,31 @@ experiments:
    T-M5b MDS · M5c clustering+dendrogram · M5d kNN · M5e shortest-path
                         ← M1b, M3a–d, M4 (+ M4' for the real anchor)      [HGED-free]
 
-theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► T-TB ✔ stability (DONE; T-B3 analytical recovery pending)
+theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► T-TB ✔ stability (conditional)
+                                                                        └─► T-TBb  pointer-run amortization + analytical T-B3 + rigorous B-avg
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09, T-TB complete).** The entire canonical-form
-track closed 2026-07-09 (T-TAf → T-TAd → T-TAg → T-TAh): `w*_c` is the
-package default, `d_I` is a metric on isomorphism classes, and the unsound
-pruning is gone. T-TBa restated Lemma B1 over `w*_c` (three-condition
-tie-set transparency; four-source avalanche; coherent/incoherent split).
-T-TB then closed (2026-07-09, round-1 proof + round-2 math-audit): Theorem B
-`d_I(H,H') ≤ (2k+1)(1+Δ)·HGED(H,H')` (B-cond) and `(2k+1)max(m,m')·HGED`
-(B-worst) are proved; B-avg is an honest sketch; six defects from the
-orchestrator audit fixed in the external .tex and in `stability.md`. The
-only open theory item is **T-B3 analytical recovery** (deriving the
-Fano/STS(9)-vs-STS(13)/GQ(2,2) coherence split from the Prop 6.0
-stabiliser-transitivity criterion alone); this is tracked in the T-B3 [ ]
-checkbox in `stability.md §6` and does not block experiments.
-The article-critical path now runs through the T-M5 prerequisites (T-M2c,
-T-M3a–d, T-M4).
+**Critical path (2026-07-09, T-TB closed conditionally).** The entire
+canonical-form track closed 2026-07-09 (T-TAf → T-TAd → T-TAg → T-TAh):
+`w*_c` is the package default, `d_I` is a metric on isomorphism classes, and
+the unsound pruning is gone. T-TBa restated Lemma B1 over `w*_c`. T-TB then
+closed (worker rounds 1–2 + orchestrator post-audit): **Theorem B holds as
+B-worst** (`d_I ≤ m(1+kn)·HGED`, unconditional) **and B-cond**
+(`d_I ≤ [(1+Δ) + (c₃+c₄)kΔ]·HGED = O(kΔ)·HGED`) — the latter conditional on
+five hypotheses: tie-set transparency (i)–(iii) *plus* layout-locality
+(iv)–(v) for the pointer-run terms `R(e)`/`T_span(e)`, which are **not**
+bounded by (k,Δ) in adversarial layouts (the CDLL-index hazard, vindicated).
+B-avg is an honest sketch. The Δ-linear falsifiable prediction stands for
+T-M5a, which should also log per-edit run statistics. Remaining theory is
+consolidated in **T-TBb** (generic (iv)–(v) amortization, analytical T-B3,
+rigorous B-avg, W-token check); it sharpens the paper's claims but does not
+block experiments. The article-critical path now runs through the T-M5
+prerequisites (T-M2c, T-M3a–d, T-M4).
 
-**Runnable in parallel right now:** T-M2c's P3 decision (theory, no code),
-T-M4' (HIC loader), T-M3a–d (competitors). Use isolated git worktrees for
-agents that touch overlapping `core/` files.
+**Runnable in parallel right now:** T-TBb (theory), T-M2c's P3 decision
+(theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use isolated
+git worktrees for agents that touch overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
 invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`

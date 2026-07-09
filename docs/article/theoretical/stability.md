@@ -232,41 +232,55 @@ where `w*_greedy = w*_c` was verified at T-TAa, all-depth coherence is *inferred
 by Prop 6.0's sufficient direction; the coherence criterion predicts no heavy
 tail in the E2b histogram for those designs (§4), which is the falsification test.
 
-**Proof risk (unchanged).** Pointer values are CDLL *indices* (`CLAUDE.md`
-invariant 1); a vertex insertion shifts absolute indices globally. The proof must
-be phrased in terms of *relative* CDLL order throughout and must construct a
-state correspondence between the branching searches of `H` and `H⊕e` from `v_0`.
-This is the crux of T-B1. The C branch requires separate treatment: from the
+**Proof risk (vindicated at T-TB).** Pointer values are CDLL *indices*
+(`CLAUDE.md` invariant 1); a vertex insertion shifts absolute indices globally.
+The T-TB proof works in *relative* CDLL order via a shifted state
+correspondence φ — but φ resolves state *identification* only. Because `P_i`/
+`N_i` are **unit steps**, run lengths are slot counts: a vertex-count-changing
+edit adds ±1 token to every later pointer run spanning the edited slot
+(`T_span(e)`), and a window re-encoding's run to a changed member costs its
+CDLL distance (`R(e)`). Neither term is bounded by any function of `(k,Δ)` in
+the worst case, so the O(kΔ) locality is **conditional on layout-locality**
+(conditions (iv)–(v), `theorem_b_stability.tex` Def. layout); the hazard this
+paragraph originally flagged is real, and its generic (average-case) resolution
+is ledger task T-TBb. The C branch requires separate treatment: from the
 T-TAa closing analysis, "a C candidate requires `members == set(tentative_inputs
 [:arity])` and `SparseHypergraph` forbids duplicate member sets, so the C tie set
 is always a singleton — there is no edge-id dependence to remove" (T-TAa.md,
 closing note). C therefore never produces a tie and never triggers an avalanche
 via the tie-set mechanism.
 
-**Conditional bound.** Under the hypotheses of Lemma B1 (a *tie-set transparent* edit),
+**Conditional bound.** Under tie-set transparency (i)–(iii) *and*
+layout-locality (iv)–(v),
 ```
-        s(e) ≤ (2k+1)·(1+Δ) = O(k·Δ).                            (★)
+        s(e) ≤ (1+Δ) + R(e) + T_span(e) ≤ (1+Δ) + (c_3+c_4)·k·Δ = O(k·Δ). (★)
 ```
-The bound decomposes as: (2k+1) tokens for the directly edited edge re-encoding
-(one `V`/`C` instruction + ≤2k pointer moves) plus at most `Δ` further affected
-edge encodings in the window (counted **per edge**, each ≤2k+1 tokens). The
-previous formula (`c_2·k·Δ`) double-counted by charging `k` pointer moves **per
-vertex** in `N_1[e]` — corrected here by counting per edge (T-B2 of
-`stability/theorem_b_stability.tex`).
+The bound decomposes as: at most `1+Δ` **structural** (`V`/`C`) token changes —
+counted per edge, one token per affected edge encoding — plus the two
+**pointer-run** terms: `R(e)` (window runs to changed member slots) and
+`T_span(e)` (post-window runs spanning an inserted/removed CDLL slot, `v±`
+edits only). The run terms are O(kΔ) *by hypothesis* (iv)–(v), not by
+combinatorics: unit-step pointer semantics make them Θ(n)/Θ(m) in adversarial
+layouts. Two earlier formulas are retracted: `c_2·k·Δ` (per-vertex double
+count) and `(2k+1)·(1+Δ)` (rested on a false "≤2k+1 tokens per edge" premise).
+See T-B2 of `stability/theorem_b_stability.tex`.
 
-**Remark (why Qin's costing tightens the constant).** Re-encoding an arity-`a`
-edge costs ≤ 2k+1 tokens in `w*`; Qin prices the corresponding whole-edge edit
-at `a+1`. The ratio (tokens per Qin cost) ≤ 2 at arity `a = k`. Per unit of
-HGED, the direct-cost contribution to `s(e)` is O(1) in arity; `C(k,Δ)`'s
-`k`-dependence is linear (from the `2k+1` token-width factor), not quadratic.
-Verified at T-B2.
+**Remark (why Qin's costing tightens the constant).** Per affected edge the
+structural cost is exactly one `V`/`C` token against Qin cost ≥ 1 — ratio ≤ 1,
+uniformly in arity. The entire `k`-dependence of `C(k,Δ)` enters through the
+layout-locality run budget `(c_3+c_4)·k·Δ`, not through the edit's structural
+footprint. Sharpened at T-B2.
 
 ---
 
 ## 3. The avalanche obstruction (why the bound is conditional)
 
-Bound (★) fails when any of the three transparency conditions of Lemma B1 is
-violated. The failure modes, grouped by mechanism:
+Bound (★) fails when any of Lemma B1's five conditions is violated. Conditions
+(i)–(iii) fail through the four *avalanche* sources below (branch/seed jumps —
+large, discontinuous `s(e)`); conditions (iv)–(v) fail through *pointer-run
+drift* (accumulated ±1 token edits — a distinct, non-avalanche mechanism, up to
+O(m) for `v±` edits in adversarial layouts; see the vindicated proof-risk note
+in §2.2). The avalanche failure modes, grouped by mechanism:
 
 **Four avalanche sources:**
 1. **Seed set change** (condition i fails): edit changes `S(H)` so `v_0 ∉ S(H⊕e)`
@@ -405,34 +419,50 @@ criterion). Consequences the applications section must own:
       addition, pair each vertex deletion with its last incidence removal, and
       delete leaf-first. Every intermediate on the first leg then contains the
       connected spanning `H`; on the second leg, the connected spanning `H'`.
-      *Residual hypothesis to discharge:* `H ∪ H'` is connected, i.e. `π`
-      identifies at least one vertex — this fails only in the degenerate
-      near-maximal-HGED regime, where the bound is slack and the case is handled
-      separately. Still owed alongside it: no arity`->k` intermediates
-      (reduce-before-extend interleaving).
-- [x] T-B1: **PROVED (T-TB, 2026-07-09, §3 of `stability/theorem_b_stability.tex`).** prove the restated Lemma B1 — locality of `w*_c` under tie-set
-      transparency (three conditions: seed membership (i), tie-set stability in
-      `N_r[e]` r=3 (ii), argmin-seed preservation (iii)) — in terms of *relative*
-      CDLL order. The proof must construct a correspondence between the branching
-      search trees of `H` and `H⊕e` from `v_0`, showing trees are isomorphic
-      outside the encoding of `N_1[e]` when all three conditions hold. The
-      global-index-shift risk from pointer values (CDLL indices, `CLAUDE.md`
-      invariant 1) requires the argument to work in relative CDLL order
-      throughout. C candidates are a singleton tie set by construction (T-TAa.md
-      closing: "a C candidate requires `members == set(tentative_inputs[:arity])`
-      and `SparseHypergraph` forbids duplicate member sets, so the C tie set is
-      always a singleton") — no C-tie avalanche possible; treat separately.
-- [x] T-B2: **PROVED (T-TB, 2026-07-09, §4 of `stability/theorem_b_stability.tex`; bound (2k+1)(1+Δ), counted per edge).** bound the *branching window* — the instruction positions that change
-      for a tie-set-transparent edit — to `O(k·Δ)`. Window ≤ Δ affected edge
-      encodings (counted per edge, not per vertex), each ≤ 2k+1 tokens (one
-      `V`/`C` + ≤2k pointer moves). Direct re-encoding of the edited edge adds
-      ≤ 2k+1 tokens. Total: `s(e) ≤ (2k+1)(1+Δ) = O(k·Δ)`. The previous
-      per-vertex derivation (c_2·k·Δ) was a double-count corrected in the
-      round-2 revision. Qin-costing remark: direct term O(1) in arity per unit
-      HGED; C(k,Δ)'s k-dependence is linear, not quadratic.
+      *Residuals (documented in the proof):* (a) `H ∪ H'` connected — fails only
+      in the degenerate near-maximal-HGED regime, handled by B-worst; (b) the
+      reduce-before-extend interleaving (P3) is now proved per edge, with an
+      honest cost residual: matched edge pairs that are disjoint at arity `k`
+      (and the `k=2`, one-shared-member case) fall back to delete-and-reinsert,
+      inflating cost by ≤ 2 per such edge — zero under genericity, `≤ 2c_0`
+      in general, giving `d_I ≤ C·(HGED + 2c_0)`.
+- [x] T-B1: **PROVED under (i)–(v) (T-TB + orchestrator post-audit, 2026-07-09,
+      §3 of `stability/theorem_b_stability.tex`).** Lemma B1 — locality of `w*_c`
+      — holds under five conditions: seed membership (i), key-crossing freedom
+      over `N_r[e]` r=3 (ii — the earlier "V-candidate non-incidence" form was
+      unsatisfiable and is retracted), argmin-seed preservation (iii), plus the
+      **layout-locality** conditions span-boundedness (iv) and run-locality (v)
+      for the pointer-run terms `T_span(e)`, `R(e)`. The φ correspondence
+      resolves state identification in relative CDLL order; it does NOT bound
+      the run terms — unit-step `P_i`/`N_i` semantics make unconditional O(kΔ)
+      locality FALSE in adversarial layouts (the vindicated §2.2 proof risk).
+      Generic validity of (iv)–(v) is open → T-TBb. C candidates are a
+      singleton tie set by construction (T-TAa.md closing: "a C candidate
+      requires `members == set(tentative_inputs[:arity])` and
+      `SparseHypergraph` forbids duplicate member sets, so the C tie set is
+      always a singleton") — no C-tie avalanche possible; treated separately.
+- [x] T-B2: **PROVED — structural part; run terms conditional (T-TB +
+      orchestrator post-audit, 2026-07-09, §4 of
+      `stability/theorem_b_stability.tex`).** Token-difference decomposition:
+      ≤ `1+Δ` structural `V`/`C` token changes (one per affected edge encoding;
+      per-edge count) + `R(e)` + `T_span(e)` pointer-run tokens. Under (iv)–(v):
+      `s(e) ≤ (1+Δ) + (c_3+c_4)·k·Δ = O(k·Δ)` — see (★). Two prior formulas
+      retracted (per-vertex `c_2·k·Δ` double count; `(2k+1)(1+Δ)` via the false
+      "≤2k+1 tokens per edge" premise). Qin-costing remark: structural cost is
+      one token per affected edge per unit Qin cost (ratio ≤ 1, uniform in
+      arity); all `k`-dependence lives in the layout-locality run budget.
 - [ ] T-B3: **criterion STATED (T-TBa via Prop 6.0); analytical recovery of the design classification PENDING.** Prop 6.0 (from `theorem_a_completeness.tex` §6) gives a criterion: a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act transitively on `T(σ_d)`. §5 of `theorem_b_stability.tex` records this criterion and notes that Fano/STS(9) are observed coherent and STS(13)/GQ(2,2) incoherent (T-TAa empirical measurement), but the derivation that the Prop 6.0 criterion *implies* this classification — from stabiliser structure alone, without the T-TAa empirical string-equality measurement — is not given. The analytical recovery from the stabiliser-transitivity criterion remains open.
-- [x] T-B4 (stretch): **SKETCH with heuristic probability estimates (T-TB, 2026-07-09, §5 B-avg, Thm 3 of `stability/theorem_b_stability.tex`; flagged as non-proved).** the average-case/high-probability unconditional bound
-      (B-avg) over a random hypergraph model.
+- [ ] T-B4 (stretch): **SKETCH ONLY — not proved** (T-TB, 2026-07-09, §5 B-avg,
+      Thm 3 of `stability/theorem_b_stability.tex`). The average-case bound
+      (B-avg) over a random hypergraph model. A rigorous version must also show
+      layout-locality (iv)–(v) holds w.h.p. (an amortization claim about the
+      κ-lex-min encoder, not a consequence of tie scarcity) → T-TBb.
 - [ ] T-B5: **PENDING T-M5a** — verify constants against measured `s(e)` histograms (Exp E2b).
       Predictions stated in §6 of `stability/theorem_b_stability.tex` and §4 of this file.
-      Empirical match is a documented pending clause; T-TB closes with this clause recorded.
+      T-M5a should additionally log `R(e)`/`T_span(e)` per edit to separate
+      layout drift from avalanche effects. Empirical match is a documented
+      pending clause; T-TB closed with this clause recorded.
+- [ ] T-TBb (filed 2026-07-09, post-audit): pointer-run amortization — prove or
+      refute generic layout-locality (iv)–(v); analytical T-B3 recovery; rigorous
+      B-avg; verify the encoder emits no `W` tokens (length-lemma proviso). See
+      `DEVELOPMENT/T-TB/OPEN/T-TBb.md`.

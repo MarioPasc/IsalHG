@@ -876,7 +876,11 @@ def qin_edit_cost(before: SparseHypergraph, after: SparseHypergraph) -> int:
     )
 
 
-def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[SparseHypergraph, str]:
+def random_connected_edit(
+    H: SparseHypergraph,
+    rng: random.Random,
+    max_arity: int | None = None,
+) -> tuple[SparseHypergraph, str]:
     """Apply one randomly-chosen connectivity-preserving unit edit to ``H``.
 
     Like :func:`random_edit` but guarantees that the returned hypergraph is
@@ -888,12 +892,17 @@ def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[Spar
       one logical step and named ``"insert_vertex_and_edge"``; its Qin cost is
       correctly measured by :func:`qin_edit_cost` as the sum of both atomic
       costs (1 + 1 + arity).
-    - ``insert_hyperedge`` over existing vertices and ``add_incidence`` only add
-      connections and are therefore always connectivity-preserving.
+    - ``insert_hyperedge`` over existing vertices is included only when its
+      sampled arity does not exceed ``max_arity`` (when set).
+    - ``add_incidence`` is included only when it would not push the target
+      edge's arity above ``max_arity`` (when set).
     - ``delete_hyperedge`` and ``remove_incidence`` are included only when the
       result is connected (checked via :meth:`SparseHypergraph.is_connected`).
     - ``delete_vertex`` is never offered: a connected hypergraph with
       ``n_nodes >= 2`` has no isolated vertices.
+
+    ``insert_vertex_and_edge`` always creates an arity-2 edge, which is within
+    the alphabet minimum and safe for any ``max_arity >= 2``.
 
     Parameters
     ----------
@@ -901,6 +910,12 @@ def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[Spar
         Source hypergraph; must be connected and have ``n_nodes >= 1``.
     rng : random.Random
         Seeded stdlib RNG.
+    max_arity : int or None, optional
+        When set, reject any candidate edit that would produce a hyperedge
+        with arity greater than ``max_arity``.  Corpus generators that
+        must stay within ``Sigma_HG(k)`` pass ``k`` here (same pattern as
+        the connectivity filter — see :func:`random_connected_hypergraph`).
+        Default ``None`` (no arity cap).
 
     Returns
     -------
@@ -911,8 +926,8 @@ def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[Spar
     candidates: list[tuple[str, SparseHypergraph]] = []
 
     vlabel = rng.randrange(H.n_vertex_labels)
-    # Paired insert: new vertex + edge connecting it to a random existing vertex.
-    # Always applicable when n_nodes >= 1 and always connectivity-preserving.
+    # Paired insert: new vertex + arity-2 edge to one existing vertex.
+    # Always connectivity-preserving; arity-2 is below any valid max_arity.
     if H.n_nodes >= 1:
         existing = rng.randrange(H.n_nodes)
         v_new = H.n_nodes
@@ -922,17 +937,20 @@ def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[Spar
             ("insert_vertex_and_edge", insert_hyperedge(H1, [existing, v_new], elabel_new))
         )
 
-    # insert_hyperedge over existing vertices: only adds connections, always safe.
+    # insert_hyperedge over existing vertices: connectivity-preserving, but
+    # _sample_new_hyperedge can draw up to n_nodes members — gate on max_arity.
     fresh = _sample_new_hyperedge(H, rng)
     if fresh is not None:
         members, elabel = fresh
-        candidates.append(("insert_hyperedge", insert_hyperedge(H, members, elabel)))
+        if max_arity is None or len(members) <= max_arity:
+            candidates.append(("insert_hyperedge", insert_hyperedge(H, members, elabel)))
 
-    # add_incidence: only adds a vertex to an existing edge, always safe.
+    # add_incidence: grows the target edge by 1 — gate on max_arity.
     grow = _sample_add_incidence(H, rng)
     if grow is not None:
         gv, ge = grow
-        candidates.append(("add_incidence", add_incidence(H, gv, ge)))
+        if max_arity is None or len(H.members(ge)) + 1 <= max_arity:
+            candidates.append(("add_incidence", add_incidence(H, gv, ge)))
 
     # delete_hyperedge: only when the result remains connected.
     if H.n_edges >= 1:

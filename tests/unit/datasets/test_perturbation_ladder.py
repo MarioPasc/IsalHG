@@ -75,6 +75,60 @@ class TestStructure:
         assert base_a != base_b
 
 
+class TestArityBound:
+    """T-M2c amendment: ladder snapshots must not exceed arity_range[1].
+
+    Pre-fix (before max_arity filter): add_incidence and insert_hyperedge were
+    uncapped, so a base-arity-4 edge could reach arity 6+ after a single step
+    (observed at seed=0, item=L0_t1) and arity 14+ over 10 steps (Picasso
+    crash job 1547134_4: arity_range=[2,4], max_t=10, IsalHGError k>K_MAX).
+    """
+
+    def test_pre_fix_arity_overflow_is_observable(self) -> None:
+        """Documents the bug: random_connected_edit without max_arity can exceed arity."""
+        import random
+
+        from isalhg.core.sparse_hypergraph import _sample_new_hyperedge
+        from isalhg.datasets.synthetic._random_hg import random_connected_hypergraph
+
+        rng = random.Random(0)
+        H, _ = random_connected_hypergraph(n_nodes=6, n_edges=4, arity_range=(2, 4), rng=rng)
+        # Without max_arity, insert_hyperedge can create edges up to n_nodes arity.
+        # Confirm _sample_new_hyperedge would produce arity > 4 given a large-enough n.
+        found_oversized = False
+        for _ in range(200):
+            fresh = _sample_new_hyperedge(H, rng)
+            if fresh is not None and len(fresh[0]) > 4:
+                found_oversized = True
+                break
+        assert found_oversized, (
+            "Expected _sample_new_hyperedge to produce arity > 4 on a 6-node base"
+        )
+
+    def test_all_snapshots_within_arity_range(self) -> None:
+        """All ladder snapshots respect arity_range[1] after the fix."""
+        ds = PerturbationLadderHypergraphs(
+            n_nodes=6, n_edges=4, n_ladders=5, max_t=10, arity_range=(2, 4), seed=0
+        )
+        for it in ds:
+            H = it.hypergraph
+            for members in H.hyperedges():
+                assert len(members) <= 4, f"item={it.item_id}: arity {len(members)} > 4"
+
+    def test_arity_bound_across_seeds(self) -> None:
+        """Arity bound holds across multiple seeds and long ladders."""
+        for seed in range(10):
+            ds = PerturbationLadderHypergraphs(
+                n_nodes=8, n_edges=6, n_ladders=3, max_t=10, arity_range=(2, 4), seed=seed
+            )
+            for it in ds:
+                H = it.hypergraph
+                for members in H.hyperedges():
+                    assert len(members) <= 4, (
+                        f"seed={seed}, item={it.item_id}: arity {len(members)} > 4"
+                    )
+
+
 class TestConnectivity:
     """T-M2c acceptance (a): all ladder snapshots are connected.
 

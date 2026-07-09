@@ -199,3 +199,58 @@ Measured acceptance rates (clause c, seed 0, default parameters):
 Observed `d_I = 0` between adjacent corpus items: legitimate (corpus items are
 not deduplicated; by Theorem A completeness `d_I = 0` ⇔ isomorphic, and such
 pairs contribute valid (HGED=0, d_I=0) points to E1).
+
+---
+
+## Amendment — arity-bound defect (2026-07-09, coordinator round 2)
+
+**Defect found at full scale (Picasso job 1547134_4):** `random_connected_edit`
+filtered for connectivity but not for the alphabet's arity domain. Both
+`_sample_new_hyperedge` (samples `size = rng.randint(1, n_nodes)`) and
+`add_incidence` (grows an edge by 1 per call) are unbounded. With
+`arity_range=[2,4], max_t=10`, a base-arity-4 edge could reach arity 14 in
+10 steps, pushing past the C++ encoder's `K_MAX` and raising `IsalHGError`.
+The local smoke used `max_t=6, base arity 3 → max 9` — exactly one step under
+the cliff.
+
+**Root cause verified:** `_sample_new_hyperedge` with `n_nodes=6` produces
+arity 6 > 4 on the very first step at seed=0 — observable even without running
+10 steps. Both `insert_hyperedge` and `add_incidence` candidates needed gating.
+
+**Fix:** Added `max_arity: int | None = None` to `random_connected_edit`
+(consistent with the connectivity filter pattern documented at
+`sparse_hypergraph.py:462`). When set:
+- `insert_hyperedge` candidate excluded if `len(members) > max_arity`.
+- `add_incidence` candidate excluded if `len(H.members(ge)) + 1 > max_arity`.
+- `insert_vertex_and_edge` always creates arity-2 edges — safe for any
+  `max_arity >= 2`.
+`PerturbationLadderHypergraphs._build` passes `max_arity=self._arity_range[1]`.
+
+**HGED ≤ budget guarantee:** unaffected. Budget records `sum(qin_edit_cost(H_{t-1}, H_t))`
+for the *actual* applied edits; those edits form a valid HGED path regardless
+of which candidates were rejected. Same argument as the connectivity rejection.
+Noted in the class docstring.
+
+**`correlation_corpus` safe:** confirmed. It calls `random_connected_hypergraph`
+(no edits), which respects `arity_range` from the base generator. No arity-growing
+operations are applied to corpus items.
+
+**Test with teeth:** `test_perturbation_ladder_arity_bounded` (Hypothesis,
+`arity_range=(2,4), max_t=10`) fails against the pre-fix code at seed=0,
+item=L0_t1 (arity 6 > 4) and passes post-fix. Unit class `TestArityBound`
+in `test_perturbation_ladder.py` documents the pre-fix overflow and validates
+the bound across seeds and long ladders.
+
+**Post-amendment checks (env isalhg-T-M2c):**
+
+```
+pytest tests/unit tests/property tests/integration -m "not slow" --hypothesis-seed=0 -q
+697 passed, 8 skipped, 7 deselected in 76.71s
+
+ruff check src/ tests/
+Found 3 errors  (all pre-existing: isalhg_backend.py:52, viz/instruction_view.py:135,
+                 tests/unit/core/algorithms/test_registry.py:48 — none in amended files)
+
+mypy src/isalhg/
+Found 20 errors in 6 files  (baseline 21 — matched/improved)
+```

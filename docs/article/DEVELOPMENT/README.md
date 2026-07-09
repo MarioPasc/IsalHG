@@ -51,7 +51,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 0 | 2 |
-| [`T-M5`](T-M5/) | The experiments | 4 | 1 |
+| [`T-M5`](T-M5/) | The experiments | 5 | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 1 | 2 |
@@ -134,7 +134,8 @@ canonical-form track (the metric's foundation):
           └► T-TAh ✔ remove the unsound wl_colors pruning (DONE 2026-07-09)
 
 experiments:
-   T-M5a ✔ correlation / density-sweep / info-content  ← M1b, M2, M4     [DONE 2026-07-09]
+   T-M5a ✔ correlation / density-sweep / info-content  ← M1b, M2, M4     [pipeline DONE 2026-07-09]
+      └─► T-M5a'  full-scale Picasso execution + full-scale figures       [needs HPC]
    T-M5b MDS · M5c clustering+dendrogram · M5d kNN · M5e shortest-path
                         ← M1b, M3a–d, M4 (+ M4' for the real anchor)      [HGED-free]
 

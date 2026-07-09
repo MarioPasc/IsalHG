@@ -133,3 +133,20 @@ bash slurm/T-M5a_launcher.sh experiments/article/configs/e2_density_sweep.yaml
 
 Worker requests: 4 CPU, 16 GB, 6 h, no GPU (cpu-only experiment).
 
+
+---
+
+## Orchestrator post-merge verification (2026-07-09)
+
+Independent re-run in the worker's env: full triple suite **824 passed / 8
+skipped** (worker's quoted 663/5 was a subset run); `ruff check src/ tests/`
+= 3 pre-existing (the quoted "13" scanned directories outside the gate; the
+new `experiments/article/` code itself is ruff-clean); mypy 20 = baseline.
+Merged-main gate identical. Smoke artifacts verified on disk
+(`results/T-M5a/smoke/analysis/{e1,e2,e2b,e3,info_content}/` — JSON + PDF,
+including `rho_vs_delta.pdf`).
+
+**Acceptance scope:** the task's closing criteria are met at smoke scale
+(ρ-vs-Δ decay 0.769/0.782 → 0.521 for Δ 3→5). Full-scale acceptance against
+`correlation.md` (density sweep n>10, info-content reversal at n=8–12)
+transfers to **T-M5a'** (full-scale Picasso execution, filed 2026-07-09).

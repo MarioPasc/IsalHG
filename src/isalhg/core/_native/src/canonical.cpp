@@ -94,10 +94,6 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
     // GreedyMin / GreedyMinInplace / GreedyMinNbrDeg / GreedyMinComplete keep
     // all seeds returned by their selector.
 
-    // None of the fast variants pass wl_colors into greedy_h2s (see
-    // greedy_min_wl_pruned.py — V-branch pruning is intentionally disabled).
-    const std::optional<std::vector<std::int64_t>> wl_for_h2s = std::nullopt;
-
     // Only GreedyMinComplete branches over the residual V tie set; the
     // others commit to the min-edge-id candidate.
     const bool tie_branch = (variant == AlgorithmVariant::GreedyMinComplete);
@@ -126,7 +122,7 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                         next_idx.fetch_add(1, std::memory_order_relaxed);
                     if (i >= n_seeds) return;
                     per_seed[i] =
-                        greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch, max_expansions);
+                        greedy_h2s_tokens(H, seeds[i], k, tie_branch, max_expansions);
                 }
             }));
         }
@@ -144,7 +140,7 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
         if (first_exc) std::rethrow_exception(first_exc);
     } else {
         for (std::size_t i = 0; i < n_seeds; ++i) {
-            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch, max_expansions);
+            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, tie_branch, max_expansions);
         }
     }
 

@@ -179,3 +179,23 @@ tests/unit/core/algorithms/test_registry.py:48) — none in files I modified.
 
 **Mypy:** 20 errors in 6 files (baseline 21 — matched / improved by 1).
 Errors are all pre-existing in canonical.py, isalhg_backend.py.
+
+---
+
+## Orchestrator post-merge verification (2026-07-09)
+
+Independent re-run in the worker's env: full triple suite **693 passed / 8
+skipped** (worker's quoted 643/5 was a subset run); merged-main gate **812
+passed / 8 skipped**, ruff 3 / mypy 20 = preflight baselines. Literal E1/E3
+dry-run (30 correlation-corpus items + 5 ladders × 9 snapshots = 75 items):
+`canonical_fingerprint` and `d_I` raised nothing.
+
+Measured acceptance rates (clause c, seed 0, default parameters):
+- `correlation_corpus`: **0.020** (30 items / 1472 draws) — the low-`m/n`
+  conditioning bite anticipated by the PI resolution; rejection sampling costs
+  ~50× oversampling here. T-M5a must report this per corpus cell.
+- `perturbation_ladder` bases: **0.294** (5 bases / 17 draws).
+
+Observed `d_I = 0` between adjacent corpus items: legitimate (corpus items are
+not deduplicated; by Theorem A completeness `d_I = 0` ⇔ isomorphic, and such
+pairs contribute valid (HGED=0, d_I=0) points to E1).

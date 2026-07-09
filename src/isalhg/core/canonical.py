@@ -13,9 +13,9 @@ Completeness status (T-TA, 2026-07-08): ``w*(H1) == w*(H2)`` implies
 isomorphism for every variant (round-trip soundness). The converse is FALSE
 for the single-branch greedy variants -- their residual V-tie-break by raw
 edge id makes ``w*`` depend on the edge insertion order -- and PROVED for
-``algorithm="greedy_min_complete"`` (tie-complete branching). See the
+``algorithm="canonical"`` (tie-complete branching). See the
 Theorem A proof in the ISAL proofs archive and
-``tests/unit/core/test_greedy_min_complete.py``.
+``tests/unit/core/test_canonical.py``.
 
 The forward direction holds over the *augmented fingerprint*
 ``F(H) = (seed vertex label, w*(H))``, not over the bare string: ``V`` tokens
@@ -80,6 +80,12 @@ from isalhg.core.structural_tuples import (
 from isalhg.errors import DisconnectedHypergraphError, InvalidLabelError
 from isalhg.types import VertexLabel
 
+# The registered name of the canonical algorithm — the only variant whose
+# ``w*`` is a complete isomorphism invariant (Theorem A, D-TA2, T-TAd).
+# Referenced by :class:`isalhg.metric_space.distances.IsalHGLevenshtein`
+# to guard against misuse of the greedy one-sided heuristics for ``d_I``.
+CANONICAL_ALGORITHM: str = "canonical"
+
 # Registry of C++ ``AlgorithmVariant`` ids — see
 # ``src/isalhg/core/_native/include/isalhg/canonical.hpp``. Extend via
 # :func:`register_cpp_variant`.
@@ -97,8 +103,9 @@ _CPP_VARIANT_IDS: dict[str, int] = {
     "greedy_single_nbrdeg": 6,
     # T-TAa — neighbour-degree seeds plus tie-complete V branching. The only
     # variant whose w* is a complete isomorphism invariant (Theorem A); the
-    # rest resolve the residual V tie by raw edge id.
-    "greedy_min_complete": 7,
+    # rest resolve the residual V tie by raw edge id. Renamed at T-TAg to
+    # reflect the output (the canonical form w*_c) rather than the search strategy.
+    CANONICAL_ALGORITHM: 7,
 }
 
 
@@ -139,7 +146,7 @@ def _python_canonical_string(
             f"{algorithm} requires a connected hypergraph (decision B11)"
         )
     # Seed selector dispatch — the PI 2026-06-23 variants replace max_xi.
-    if algorithm in ("greedy_min_nbrdeg", "greedy_single_nbrdeg", "greedy_min_complete"):
+    if algorithm in ("greedy_min_nbrdeg", "greedy_single_nbrdeg", CANONICAL_ALGORITHM):
         seeds = _python_max_neighbor_degree_nodes(H)
     else:
         seeds = _python_max_xi_nodes(H, structural_depth)
@@ -151,7 +158,7 @@ def _python_canonical_string(
         colours = _python_wl_hash(H)
         min_colour = min(colours[s] for s in seeds)
         seeds = tuple(s for s in seeds if colours[s] == min_colour)
-    tie_branch = algorithm == "greedy_min_complete"
+    tie_branch = algorithm == CANONICAL_ALGORITHM
     candidates = [
         _python_greedy_h2s(H, seed_node=s, k=k, inplace=tie_branch, tie_branch=tie_branch)
         for s in seeds
@@ -182,7 +189,7 @@ def canonical_string(
     *,
     k: int | None = None,
     structural_depth: int = 3,
-    algorithm: str = "greedy_min_complete",
+    algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
@@ -200,13 +207,15 @@ def canonical_string(
     algorithm : str
         Algorithm name. Resolved against the C++ variant registry
         (single-FFI fast path) first, then the Python algorithm registry.
-        Defaults to ``"greedy_min_complete"`` -- the unpruned tie-complete
-        lex-min ``w*_c`` over the neighbour-degree seed cascade, the only
-        variant whose string is a complete isomorphism invariant
-        (Theorem A; frozen at D-TA2, flipped at D-TA1/T-TAd). The greedy
-        variants (``"greedy_min_nbrdeg"``, ``"greedy_min"``) are faster
-        one-sided heuristics whose string depends on the edge insertion
-        order on tie-degenerate inputs.
+        Defaults to ``"canonical"`` -- the unpruned tie-complete lex-min
+        ``w*_c`` over the neighbour-degree seed cascade, the only variant
+        whose string is a complete isomorphism invariant (Theorem A; frozen
+        at D-TA2, flipped at D-TA1/T-TAd). The greedy variants
+        (``"greedy_min_nbrdeg"``, ``"greedy_min"``) are faster one-sided
+        heuristics whose string depends on the edge insertion order on
+        tie-degenerate inputs; they are sound (equal fingerprints certify
+        isomorphism) but not complete (unequal fingerprints are inconclusive
+        on tie-degenerate inputs).
     backend : {"cpp", "python"}, optional
         Implementation to use for the native variants (the names in
         :func:`available_cpp_variants`). Defaults to ``"cpp"`` (see
@@ -293,7 +302,7 @@ def canonical_fingerprint(
     *,
     k: int | None = None,
     structural_depth: int = 3,
-    algorithm: str = "greedy_min_complete",
+    algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute the augmented fingerprint ``F(H) = (seed label, w*(H))``.
@@ -303,7 +312,7 @@ def canonical_fingerprint(
     two non-isomorphic hypergraphs differing only in that label share ``w*``.
     Pairing the string with the seed label restores the forward direction of
     Theorem A (equal fingerprints imply isomorphism) for every variant, and the
-    biconditional for ``algorithm="greedy_min_complete"``.
+    biconditional for ``algorithm="canonical"``.
 
     Parameters
     ----------

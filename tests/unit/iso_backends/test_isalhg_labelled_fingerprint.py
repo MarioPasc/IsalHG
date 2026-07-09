@@ -24,7 +24,7 @@ pytestmark = pytest.mark.unit
 _VARIANTS = (
     "greedy_min",
     "greedy_min_nbrdeg",
-    "greedy_min_complete",
+    "canonical",
     "exhaustive",
 )
 

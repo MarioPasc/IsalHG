@@ -36,7 +36,7 @@ _LAZY_MODULES: dict[str, str] = {
     "greedy_min_wl_pruned": "isalhg.core.algorithms.greedy_min_wl_pruned",
     "greedy_min_inplace_wl_pruned": "isalhg.core.algorithms.greedy_min_inplace_wl_pruned",
     "pruned_exhaustive": "isalhg.core.algorithms.pruned_exhaustive",
-    "greedy_min_complete": "isalhg.core.algorithms.greedy_min_complete",
+    "canonical": "isalhg.core.algorithms.canonical",
 }
 
 

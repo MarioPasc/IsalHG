@@ -1,9 +1,12 @@
-"""Unit tests for the tie-complete encoder (``greedy_min_complete``).
+"""Unit tests for the ``canonical`` algorithm (tie-complete encoder, T-TAg).
 
 Pins the minimal counterexample showing that the single-branch greedy
 variants are functions of the *presentation* (edge insertion order), not
-of the abstract hypergraph, and asserts that the tie-complete variant
+of the abstract hypergraph, and asserts that the ``canonical`` variant
 removes that dependence. Found during T-TA (Theorem A / completeness).
+The algorithm was previously named ``greedy_min_complete``; renamed to
+``canonical`` at T-TAg because the name reflects the output (the canonical
+form ``w*_c``) rather than the search strategy.
 """
 
 from __future__ import annotations
@@ -52,48 +55,46 @@ def test_greedy_is_edge_order_dependent_known_limitation(algorithm: str) -> None
 
 
 def test_complete_is_edge_order_invariant_on_counterexample() -> None:
-    w_a = canonical_string(_presentation_a(), k=3, algorithm="greedy_min_complete")
-    w_b = canonical_string(_presentation_b(), k=3, algorithm="greedy_min_complete")
+    w_a = canonical_string(_presentation_a(), k=3, algorithm="canonical")
+    w_b = canonical_string(_presentation_b(), k=3, algorithm="canonical")
     assert w_a == w_b
 
 
 def test_complete_is_invariant_under_perm_plus_reorder() -> None:
     H = _presentation_a()
-    w_ref = canonical_string(H, k=3, algorithm="greedy_min_complete")
+    w_ref = canonical_string(H, k=3, algorithm="canonical")
     sigma = [2, 0, 3, 1]
     H_iso = permute(H, sigma)
     H_iso_reordered = SparseHypergraph(
         n_nodes=4,
         hyperedges=[m for _, m, _ in H_iso.iter_edges()][::-1],
     )
-    assert canonical_string(H_iso_reordered, k=3, algorithm="greedy_min_complete") == w_ref
+    assert canonical_string(H_iso_reordered, k=3, algorithm="canonical") == w_ref
 
 
 def test_complete_registered_and_encode_matches_canonical_string() -> None:
     """``encode()`` is the Python reference; ``canonical_string`` is the C++
     twin (native variant 7). This assertion is therefore a differential."""
-    assert "greedy_min_complete" in available_algorithms()
+    assert "canonical" in available_algorithms()
     H = _presentation_a()
-    algo = get_algorithm("greedy_min_complete", k=3)
-    assert serialize(list(algo.encode(H))) == canonical_string(
-        H, k=3, algorithm="greedy_min_complete"
-    )
+    algo = get_algorithm("canonical", k=3)
+    assert serialize(list(algo.encode(H))) == canonical_string(H, k=3, algorithm="canonical")
 
 
 def test_complete_cpp_matches_python_backend_on_counterexample() -> None:
     for H in (_presentation_a(), _presentation_b()):
-        cpp = canonical_string(H, k=3, algorithm="greedy_min_complete", backend="cpp")
-        py = canonical_string(H, k=3, algorithm="greedy_min_complete", backend="python")
+        cpp = canonical_string(H, k=3, algorithm="canonical", backend="cpp")
+        py = canonical_string(H, k=3, algorithm="canonical", backend="python")
         assert cpp == py
 
 
 def test_complete_on_fano_invariant_under_reorder(fano_plane: SparseHypergraph) -> None:
-    w_ref = canonical_string(fano_plane, k=3, algorithm="greedy_min_complete")
+    w_ref = canonical_string(fano_plane, k=3, algorithm="canonical")
     reordered = SparseHypergraph(
         n_nodes=fano_plane.n_nodes,
         hyperedges=[m for _, m, _ in fano_plane.iter_edges()][::-1],
     )
-    assert canonical_string(reordered, k=3, algorithm="greedy_min_complete") == w_ref
+    assert canonical_string(reordered, k=3, algorithm="canonical") == w_ref
 
 
 @pytest.mark.slow
@@ -103,12 +104,12 @@ def test_complete_on_designs_invariant_under_reorder(
 ) -> None:
     H: SparseHypergraph = request.getfixturevalue(fixture_name)
     k = max(len(m) for _, m, _ in H.iter_edges())
-    w_ref = canonical_string(H, k=k, algorithm="greedy_min_complete")
+    w_ref = canonical_string(H, k=k, algorithm="canonical")
     reordered = SparseHypergraph(
         n_nodes=H.n_nodes,
         hyperedges=[m for _, m, _ in H.iter_edges()][::-1],
     )
-    assert canonical_string(reordered, k=k, algorithm="greedy_min_complete") == w_ref
+    assert canonical_string(reordered, k=k, algorithm="canonical") == w_ref
 
 
 def test_complete_differs_from_greedy_on_sts13() -> None:
@@ -123,7 +124,7 @@ def test_complete_differs_from_greedy_on_sts13() -> None:
         n_nodes=13, hyperedges=[[i, (i + 1) % 13, (i + 3) % 13] for i in range(13)]
     )
     greedy = canonical_string(H, k=3, algorithm="greedy_min_nbrdeg")
-    complete = canonical_string(H, k=3, algorithm="greedy_min_complete")
+    complete = canonical_string(H, k=3, algorithm="canonical")
     assert greedy != complete
 
 
@@ -138,5 +139,5 @@ def test_complete_differs_from_greedy_on_doily(gq_2_2_doily: SparseHypergraph) -
     reading; the proof's Remark on recursive coherence rests on both.
     """
     greedy = canonical_string(gq_2_2_doily, k=3, algorithm="greedy_min_nbrdeg")
-    complete = canonical_string(gq_2_2_doily, k=3, algorithm="greedy_min_complete")
+    complete = canonical_string(gq_2_2_doily, k=3, algorithm="canonical")
     assert greedy != complete

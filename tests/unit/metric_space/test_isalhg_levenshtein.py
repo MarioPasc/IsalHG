@@ -172,3 +172,97 @@ class TestRegistry:
         d = registry.get_distance("isalhg_levenshtein")
         assert isinstance(d, IsalHGLevenshtein)
         assert "isalhg_levenshtein" in registry.available_distances()
+
+
+# ---------------------------------------------------------------------------
+# T-TAg hardenings
+# ---------------------------------------------------------------------------
+
+
+class TestGuard:
+    """IsalHGLevenshtein must reject non-canonical algorithms at construction
+    time (hardening (a) from T-TAg): the greedy one-sided heuristics do not
+    satisfy the metric axioms and must not silently feed into d_I.
+    """
+
+    def test_default_algorithm_accepted(self) -> None:
+        """Default construction (algorithm='canonical') must not raise."""
+        from isalhg.core.canonical import CANONICAL_ALGORITHM
+
+        d = IsalHGLevenshtein()
+        assert d._algorithm == CANONICAL_ALGORITHM
+
+    @pytest.mark.parametrize(
+        "bad_algo",
+        ["greedy_min_nbrdeg", "greedy_min", "greedy_single", "greedy_single_nbrdeg"],
+    )
+    def test_non_canonical_algorithm_raises(self, bad_algo: str) -> None:
+        from isalhg.errors import DistanceComputationError
+
+        with pytest.raises(DistanceComputationError, match="canonical"):
+            IsalHGLevenshtein(algorithm=bad_algo)
+
+
+class TestEdgeOrderInvariance:
+    """d_I must be 0.0 on both presentations of the n=4 counterexample
+    (hardening (a)/(c) from T-TAg): before T-TAd this was 4.0 because the
+    greedy default was edge-order dependent.
+    """
+
+    _CE_EDGES: list[frozenset[int]] = [
+        frozenset({1, 3}),
+        frozenset({0, 1, 3}),
+        frozenset({0, 2, 3}),
+        frozenset({1, 2}),
+    ]
+    _CE_ORDER_B: list[int] = [1, 2, 3, 0]
+
+    def _presentation_a(self) -> SparseHypergraph:
+        return SparseHypergraph(n_nodes=4, hyperedges=self._CE_EDGES)
+
+    def _presentation_b(self) -> SparseHypergraph:
+        return SparseHypergraph(n_nodes=4, hyperedges=[self._CE_EDGES[i] for i in self._CE_ORDER_B])
+
+    def test_d_i_zero_on_both_presentations(self) -> None:
+        d = IsalHGLevenshtein()
+        assert d.pairwise(self._presentation_a(), self._presentation_b()) == 0.0
+
+    def test_self_distance_zero_on_counterexample(self) -> None:
+        H = self._presentation_a()
+        assert IsalHGLevenshtein().pairwise(H, H) == 0.0
+
+
+class TestBudget:
+    """CanonicalEncoder(max_expansions=N).encode() must raise
+    CanonicalizationTimeoutError on eta-degenerate inputs before hanging
+    (hardening (b) from T-TAg).
+    """
+
+    def test_budget_raises_on_high_automorphism_design(self) -> None:
+        from isalhg.core.algorithms.canonical import CanonicalEncoder
+        from isalhg.errors import CanonicalizationTimeoutError
+
+        # Cyclic STS(13) — vertex-transitive, hits large tie sets.
+        H = SparseHypergraph(
+            n_nodes=13,
+            hyperedges=[frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)],
+        )
+        enc = CanonicalEncoder(k=3, max_expansions=5)
+        with pytest.raises(CanonicalizationTimeoutError, match="budget"):
+            enc.encode(H)
+
+    def test_unlimited_budget_succeeds(self) -> None:
+        from isalhg.core.algorithms.canonical import CanonicalEncoder
+
+        H = SparseHypergraph(
+            n_nodes=4,
+            hyperedges=[
+                frozenset({1, 3}),
+                frozenset({0, 1, 3}),
+                frozenset({0, 2, 3}),
+                frozenset({1, 2}),
+            ],
+        )
+        enc = CanonicalEncoder(k=3, max_expansions=None)
+        result = enc.encode(H)
+        assert len(result) > 0

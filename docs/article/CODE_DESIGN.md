@@ -41,8 +41,9 @@ map — see "Current state" below.
   (BFS-shell) and `max_neighbor_degree_nodes` (PI 2026-06-23), each with a C++
   twin in `_native/include/isalhg/structural_tuples.hpp`. Algorithm variants
   `greedy_min_nbrdeg` / `greedy_single_nbrdeg` already route to the latter.
-- **Package default (T-TAd, 2026-07-09):** the canonical algorithm defaults to
-  `greedy_min_complete` — the frozen `w*_c` (D-TA2) — at all three surfaces:
+- **Package default (T-TAd, 2026-07-09; renamed at T-TAg):** the canonical
+  algorithm defaults to `"canonical"` — the frozen `w*_c` (D-TA2) — at all three
+  surfaces:
   `canonical_string`/`canonical_fingerprint`, `IsalHGBackend` (the
   `ISALHG_ALGORITHM` env override is preserved), and `IsalHGLevenshtein`. The
   greedy variants stay registered as fast one-sided heuristics (the preprint's

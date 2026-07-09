@@ -125,14 +125,16 @@ class IsalHGBackend(IsoBackend):
         Depth of the ``xi`` / ``eta`` structural tuples (invariant 8).
     algorithm : str
         Canonical-string variant (invariant 4). Defaults to
-        ``"greedy_min_complete"`` -- the unpruned tie-complete lex-min
+        ``"canonical"`` -- the unpruned tie-complete lex-min
         ``w*_c`` over the neighbour-degree seed cascade, for which
         fingerprint equality is *exact* on connected inputs (Theorem A;
-        D-TA1/T-TAd). The greedy variants remain sound one-sided tests
-        (equal fingerprints certify isomorphism, unequal ones are
-        inconclusive on tie-degenerate inputs); ``greedy_single*``
-        variants additionally trade seed soundness for speed and must not
-        be used where an exact iso decision is required.
+        D-TA1/T-TAd). The greedy variants (``"greedy_min_nbrdeg"``,
+        ``"greedy_min"``, ``"greedy_single_nbrdeg"``, etc.) are one-sided
+        iso heuristics: equal fingerprints certify isomorphism, but unequal
+        fingerprints are inconclusive on tie-degenerate inputs (see the
+        n=4 counterexample in ``tests/unit/core/test_canonical.py``).
+        ``greedy_single*`` variants additionally trade seed soundness for
+        speed and must not be used where an exact iso decision is required.
     """
 
     def __init__(
@@ -140,7 +142,7 @@ class IsalHGBackend(IsoBackend):
         *,
         k: int | None = None,
         structural_depth: int = 3,
-        algorithm: str = "greedy_min_complete",
+        algorithm: str = "canonical",
     ) -> None:
         self._k = k
         self._structural_depth = structural_depth
@@ -189,20 +191,20 @@ class IsalHGBackend(IsoBackend):
 # aliases ``isalhg_<name>`` are registered for the algorithm-comparison
 # preprint study.
 #
-# Default algorithm is ``greedy_min_complete`` (D-TA1, flipped at T-TAd):
+# Default algorithm is ``"canonical"`` (D-TA1/T-TAd, renamed at T-TAg):
 # the unpruned tie-complete lex-min ``w*_c``, the only variant whose
 # fingerprint equality is exact on connected inputs (Theorem A; frozen at
-# D-TA2).
+# D-TA2). The greedy variants are one-sided iso heuristics registered
+# under ``isalhg_greedy_*`` for the preprint algorithm-comparison study.
 #
 # ``ISALHG_ALGORITHM`` env var overrides the default algorithm bound to
-# the ``"isalhg"`` registry name. Used by the preprint Picasso pipeline
-# to pin ``greedy_single`` when the multi-seed variants are empirically
-# too slow (they backtrack over label-class permutations and are
-# exponential on dense random ER hypergraphs -- open question #1 in
-# docs/engineering/DEVELOPMENT.md; the neighbour-degree seed set shrinks
-# the seed count but does not change that inner-loop cost). A pipeline
-# that sets the env var is therefore unaffected by the default flip.
-_DEFAULT_ISALHG_ALGORITHM = os.environ.get("ISALHG_ALGORITHM", "greedy_min_complete")
+# the ``"isalhg"`` registry name. The preprint Picasso pipeline sets this
+# to ``greedy_min_nbrdeg`` so preprint runs use the greedy heuristic that
+# was empirically benchmarked (the tie-complete encoder is exponential on
+# dense random ER hypergraphs -- open question #1 in
+# docs/engineering/DEVELOPMENT.md). A pipeline that sets the env var is
+# therefore unaffected by the default flip to ``"canonical"``.
+_DEFAULT_ISALHG_ALGORITHM = os.environ.get("ISALHG_ALGORITHM", "canonical")
 register_backend("isalhg", lambda: IsalHGBackend(algorithm=_DEFAULT_ISALHG_ALGORITHM))
 for _algo in (
     "greedy_min",
@@ -213,7 +215,7 @@ for _algo in (
     "greedy_min_inplace_wl_pruned",
     "greedy_min_nbrdeg",
     "greedy_single_nbrdeg",
-    "greedy_min_complete",
+    "canonical",
     "pruned_exhaustive",
 ):
     register_backend(

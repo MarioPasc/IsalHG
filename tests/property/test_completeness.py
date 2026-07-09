@@ -36,7 +36,7 @@ from ._labelled_oracle import brute_force_iso, labelled_hypergraph_pair
 
 pytestmark = pytest.mark.property
 
-_ALGO = "greedy_min_complete"
+_ALGO = "canonical"
 
 
 @st.composite

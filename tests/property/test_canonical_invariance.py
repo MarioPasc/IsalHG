@@ -58,7 +58,7 @@ def small_connected_hypergraph(draw, max_n: int = 5, max_arity: int = 3) -> Spar
 # (``greedy_min_nbrdeg``) -- plus the tie-complete package default
 # (``greedy_min_complete``, T-TAd). ``greedy_single*`` is deliberately
 # excluded -- it selects by raw node id and is not iso-invariant.
-_ISO_INVARIANT_VARIANTS = ["greedy_min", "greedy_min_nbrdeg", "greedy_min_complete"]
+_ISO_INVARIANT_VARIANTS = ["greedy_min", "greedy_min_nbrdeg", "canonical"]
 
 
 @pytest.mark.parametrize("algorithm", _ISO_INVARIANT_VARIANTS)

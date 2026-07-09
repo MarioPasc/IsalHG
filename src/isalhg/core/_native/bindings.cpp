@@ -219,7 +219,7 @@ NB_MODULE(_core, m) {
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
         "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
         "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned,\n"
-        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = greedy_min_complete.");
+        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = canonical.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).

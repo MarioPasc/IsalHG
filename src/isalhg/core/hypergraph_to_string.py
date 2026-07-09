@@ -28,12 +28,12 @@ key ``(i, j, edge_label, new_node_labels, eta)``, and the residual tie is
 broken by raw edge id (insertion order). The greedy string is therefore a
 function of the *presentation* (vertex ids + edge insertion order); two
 edge orderings of the same hypergraph can produce different strings
-(counterexample pinned in ``tests/unit/core/test_greedy_min_complete.py``).
+(counterexample pinned in ``tests/unit/core/test_canonical.py``).
 Passing ``tie_branch=True`` to :func:`_python_greedy_h2s` instead recurses
 over *every* cascade-tied candidate and keeps the lex-min completion,
 which removes edge ids from observable behaviour and makes the per-seed
 output isomorphism-equivariant (Theorem A, metric-space article). The
-``greedy_min_complete`` algorithm variant exposes this mode.
+``canonical`` algorithm variant exposes this mode.
 
 Disconnected hypergraphs are rejected by :func:`isalhg.core.canonical.canonical_string`,
 not here.
@@ -59,7 +59,7 @@ from isalhg.core.instructions import (
 )
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import eta
-from isalhg.errors import IsalHGError
+from isalhg.errors import CanonicalizationTimeoutError, IsalHGError
 from isalhg.types import EdgeId, NodeId, TokenSequence
 
 
@@ -340,6 +340,8 @@ def _encode_from(
     inplace: bool = False,
     wl_colors: list[int] | None = None,
     tie_branch: bool = False,
+    _counter: list[int] | None = None,
+    _max_expansions: int | None = None,
 ) -> TokenSequence | None:
     """Recursive lex-min completion from ``state``. Returns ``None`` if stuck.
 
@@ -437,7 +439,14 @@ def _encode_from(
             state.set_ptrs(best_new_slots)
             state.consumed_edges.add(edge_id_c)
             sub_completion = _encode_from(
-                H, k, state, inplace=True, wl_colors=wl_colors, tie_branch=tie_branch
+                H,
+                k,
+                state,
+                inplace=True,
+                wl_colors=wl_colors,
+                tie_branch=tie_branch,
+                _counter=_counter,
+                _max_expansions=_max_expansions,
             )
             state.consumed_edges.discard(edge_id_c)
             state.pointers[:] = list(saved_ptrs)
@@ -448,7 +457,14 @@ def _encode_from(
         sub_state.set_ptrs(best_new_slots)
         sub_state.consumed_edges.add(edge_id_c)
         sub_completion = _encode_from(
-            H, k, sub_state, inplace=False, wl_colors=wl_colors, tie_branch=tie_branch
+            H,
+            k,
+            sub_state,
+            inplace=False,
+            wl_colors=wl_colors,
+            tie_branch=tie_branch,
+            _counter=_counter,
+            _max_expansions=_max_expansions,
         )
         if sub_completion is None:
             return None
@@ -474,6 +490,12 @@ def _encode_from(
         for seq_b in _label_respecting_perms(inputs_b, H, wl_colors=wl_colors)
     )
     for edge_id_v, new_input_seq in branches:
+        if _counter is not None:
+            if _counter[0] >= _max_expansions:  # type: ignore[operator]
+                raise CanonicalizationTimeoutError(
+                    f"canonical-string branch budget exceeded ({_max_expansions} expansions)"
+                )
+            _counter[0] += 1
         if inplace:
             saved_ptrs = tuple(state.pointers)
             saved_next_id = state.next_output_id
@@ -494,7 +516,14 @@ def _encode_from(
                 anchor_slot = new_slot
             state.consumed_edges.add(edge_id_v)
             sub_completion = _encode_from(
-                H, k, state, inplace=True, wl_colors=wl_colors, tie_branch=tie_branch
+                H,
+                k,
+                state,
+                inplace=True,
+                wl_colors=wl_colors,
+                tie_branch=tie_branch,
+                _counter=_counter,
+                _max_expansions=_max_expansions,
             )
             state.consumed_edges.discard(edge_id_v)
             for slot in reversed(new_cdll_slots):
@@ -518,7 +547,14 @@ def _encode_from(
                 anchor_slot = new_slot
             sub_state.consumed_edges.add(edge_id_v)
             sub_completion = _encode_from(
-                H, k, sub_state, inplace=False, wl_colors=wl_colors, tie_branch=tie_branch
+                H,
+                k,
+                sub_state,
+                inplace=False,
+                wl_colors=wl_colors,
+                tie_branch=tie_branch,
+                _counter=_counter,
+                _max_expansions=_max_expansions,
             )
         if sub_completion is None:
             continue
@@ -543,13 +579,23 @@ def _python_greedy_h2s(
     inplace: bool = False,
     wl_colors: list[int] | None = None,
     tie_branch: bool = False,
+    max_expansions: int | None = None,
 ) -> TokenSequence:
     """Pure-Python reference implementation (kept for differential tests).
 
     See :func:`greedy_h2s` for the production C++-backed entry point.
     ``tie_branch=True`` selects the tie-complete search (module docstring),
     mirrored bit-for-bit by the C++ twin and exposed as the
-    ``greedy_min_complete`` algorithm variant.
+    ``canonical`` algorithm variant.
+
+    Parameters
+    ----------
+    max_expansions : int or None, optional
+        Maximum number of V-branch expansions across the entire search tree.
+        ``None`` (default) means unlimited (current behaviour). When the
+        budget is exceeded, :class:`isalhg.errors.CanonicalizationTimeoutError`
+        is raised. Only meaningful when ``tie_branch=True``; single-branch
+        greedy never branches so the counter stays at 0.
     """
     n = H.n_nodes
     if n == 0:
@@ -569,7 +615,17 @@ def _python_greedy_h2s(
         consumed_edges=set(),
         next_output_id=1,
     )
-    result = _encode_from(H, k, state, inplace=inplace, wl_colors=wl_colors, tie_branch=tie_branch)
+    _counter: list[int] | None = [0] if max_expansions is not None else None
+    result = _encode_from(
+        H,
+        k,
+        state,
+        inplace=inplace,
+        wl_colors=wl_colors,
+        tie_branch=tie_branch,
+        _counter=_counter,
+        _max_expansions=max_expansions,
+    )
     if result is None:
         raise H2SStuckError(
             f"H2S stuck from seed {seed_node} on hypergraph with {n} nodes, {H.n_edges} edges"

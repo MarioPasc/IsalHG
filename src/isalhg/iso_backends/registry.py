@@ -36,7 +36,7 @@ _LAZY_MODULES: dict[BackendName, str] = {
     "isalhg_greedy_min_inplace_wl_pruned": "isalhg.iso_backends.isalhg_backend",
     "isalhg_greedy_min_nbrdeg": "isalhg.iso_backends.isalhg_backend",
     "isalhg_greedy_single_nbrdeg": "isalhg.iso_backends.isalhg_backend",
-    "isalhg_greedy_min_complete": "isalhg.iso_backends.isalhg_backend",
+    "isalhg_canonical": "isalhg.iso_backends.isalhg_backend",
     "isalhg_pruned_exhaustive": "isalhg.iso_backends.isalhg_backend",
     "pynauty_levi": "isalhg.iso_backends.pynauty_levi",
     "bliss_levi": "isalhg.iso_backends.bliss_levi",

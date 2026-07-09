@@ -38,10 +38,15 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any, TypeAlias
 
 from isalhg.core.backends import Backend
-from isalhg.core.canonical import canonical_string, required_k, seed_vertex_label
+from isalhg.core.canonical import (
+    CANONICAL_ALGORITHM,
+    canonical_string,
+    required_k,
+    seed_vertex_label,
+)
 from isalhg.core.instructions import parse
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.errors import RepresentationDependencyMissingError
+from isalhg.errors import DistanceComputationError, RepresentationDependencyMissingError
 from isalhg.metric_space.base import HypergraphDistance
 from isalhg.metric_space.registry import register_distance
 from isalhg.types import DistanceName
@@ -102,9 +107,11 @@ class IsalHGLevenshtein(HypergraphDistance):
         per comparison (pair maximum for :meth:`pairwise`, corpus maximum for
         :meth:`matrix`) so the two strings under comparison always share ``k``.
     algorithm : str, optional
-        Canonical-string algorithm; defaults to ``"greedy_min_complete"``
-        (``w*_c``, the tie-complete lex-min) -- the only variant under
-        which ``d_I`` is a metric on isomorphism classes (Corollary A).
+        Canonical-string algorithm; must be ``"canonical"`` (``w*_c``,
+        the tie-complete lex-min) -- the only variant under which ``d_I``
+        is a metric on isomorphism classes (Corollary A). Passing any
+        other name raises :class:`isalhg.errors.DistanceComputationError`
+        at construction time.
     structural_depth : int, optional
         Structural-tuple depth passed to :func:`canonical_string`. Defaults to 3.
     normalize : bool, optional
@@ -118,11 +125,19 @@ class IsalHGLevenshtein(HypergraphDistance):
         self,
         *,
         k: int | None = None,
-        algorithm: str = "greedy_min_complete",
+        algorithm: str = CANONICAL_ALGORITHM,
         structural_depth: int = 3,
         normalize: bool = False,
         backend: Backend | None = None,
     ) -> None:
+        if algorithm != CANONICAL_ALGORITHM:
+            raise DistanceComputationError(
+                f"IsalHGLevenshtein requires algorithm={CANONICAL_ALGORITHM!r} "
+                f"(the only variant under which d_I is a metric); "
+                f"got {algorithm!r}. "
+                f"To compute non-metric fingerprint distances for ablation, "
+                f"call canonical_string() directly."
+            )
         self._k = k
         self._algorithm = algorithm
         self._structural_depth = structural_depth

@@ -37,13 +37,13 @@ add/remove); NP-hard, exact only at small scale.
     m=4 counterexample (primal graph K4, constant η) yields two different `w*`
     for two edge orderings of the *same* hypergraph. The historical property
     suite missed it because `permute` preserves edge insertion order.
-  - **(⇐) proved for the tie-complete encoder** `greedy_min_complete`
+  - **(⇐) proved for the tie-complete encoder** `"canonical"`
     (added at T-TA: branches over the full η-tie set, `tie_branch=True`;
     execution-forest bijection, the IsalGraph Step-2 argument done right).
-    **Theorem A holds for `w*_c := w*_complete`**; empirically backed
+    **Theorem A holds for `w*_c := w*_canonical`**; empirically backed
     (150/150 shuffle+relabel invariance; biconditional == pynauty under
     Hypothesis; pinned regression tests in
-    `tests/{unit/core/test_greedy_min_complete,property/test_completeness}.py`).
+    `tests/{unit/core/test_canonical_encoder,property/test_completeness}.py`).
     Ported to C++ at T-TAa (native `AlgorithmVariant::GreedyMinComplete`,
     byte-identical to the Python reference on 3,344 per-seed comparisons):
     `w*_c` costs 6.4 ms on the Fano plane and 1.1 s on GQ(2,2), so every
@@ -271,7 +271,7 @@ criterion). Consequences the applications section must own:
 ## 6. Proof-effort checklist (what has to be done)
 
 - [x] T-A: **PROVED AND PI-REVIEWED** (T-TA, proof 2026-07-08, review passed
-      2026-07-09): proof for `greedy_min_complete` + counterexamples for the greedy
+      2026-07-09): proof for `"canonical"` + counterexamples for the greedy
       variants + empirical completeness suite. Corollary A — `d_I` is a metric on
       isomorphism classes of connected hypergraphs at fixed `k`, depth and
       vocabulary — is therefore **established, not conjectured**, and every claim

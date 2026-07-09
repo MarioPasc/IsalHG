@@ -175,16 +175,18 @@ See `docs/engineering/CODE_DESIGN.md` Section 6 for the per-module mandate table
 2. **Closed alphabet.** Every string in `Sigma_HG*` decodes to a valid
    hypergraph. The S2H interpreter never rejects input.
 3. **Round-trip.** `S2H(H2S(H)) ~ H` for every valid hypergraph `H`.
-4. **Canonical seed.** The canonical algorithm runs greedy H2S from an
+4. **Canonical seed.** The canonical algorithm runs H2S from an
    *iso-invariant* seed set -- a node set preserved by every hypergraph
-   automorphism -- and takes the lex-min string over it. The default
+   automorphism -- and takes the lex-min string over it. The seed cascade
    (since T-M0) is the neighbour-degree cascade `max_neighbor_degree_nodes`
-   (max label -> max degree -> lex-max sorted-desc neighbour degrees,
-   variant `greedy_min_nbrdeg`); the historical `argmax_lex (xi_1, xi_2,
-   xi_3)` set (`greedy_min`) is equally sound. What breaks the
-   isomorphism-invariance claim is a *non*-iso-invariant seed rule -- e.g.
-   selecting by raw node id (`greedy_single*`, a speed heuristic, not an
-   exact iso test).
+   (max label -> max degree -> lex-max sorted-desc neighbour degrees); the
+   historical `argmax_lex (xi_1, xi_2, xi_3)` set (`greedy_min`) is equally
+   sound. The package default variant (since T-TAd, D-TA1) is
+   `greedy_min_complete` -- tie-complete branching over that seed set,
+   computing the frozen `w*_c`; the greedy variants remain one-sided
+   heuristics. What breaks the isomorphism-invariance claim is a
+   *non*-iso-invariant seed rule -- e.g. selecting by raw node id
+   (`greedy_single*`, a speed heuristic, not an exact iso test).
 5. **`V` over `C` in ties.** Step 2 of the tie-breaking cascade is
    non-optional -- switching `V/C` priority changes the canonical string.
 6. **`W` is meaningful.** Even though `W` is a no-op on the VM, it can appear

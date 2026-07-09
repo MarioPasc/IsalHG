@@ -56,6 +56,6 @@ class TestName:
         assert IsalHGBackend(algorithm="greedy_min").name == "isalhg_greedy_min"
         assert IsalHGBackend(algorithm="greedy_single").name == "isalhg_greedy_single"
 
-    def test_default_name_is_nbrdeg(self) -> None:
-        # T-M0 default: the neighbour-degree seed cascade.
-        assert IsalHGBackend().name == "isalhg_greedy_min_nbrdeg"
+    def test_default_name_is_complete(self) -> None:
+        # T-TAd default (D-TA1): the tie-complete lex-min ``w*_c``.
+        assert IsalHGBackend().name == "isalhg_greedy_min_complete"

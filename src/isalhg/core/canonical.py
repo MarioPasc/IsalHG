@@ -182,7 +182,7 @@ def canonical_string(
     *,
     k: int | None = None,
     structural_depth: int = 3,
-    algorithm: str = "greedy_min_nbrdeg",
+    algorithm: str = "greedy_min_complete",
     backend: Backend | None = None,
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
@@ -200,11 +200,13 @@ def canonical_string(
     algorithm : str
         Algorithm name. Resolved against the C++ variant registry
         (single-FFI fast path) first, then the Python algorithm registry.
-        Defaults to ``"greedy_min_nbrdeg"`` -- the neighbour-degree seed
-        cascade (max label -> max degree -> lex-max sorted-desc neighbour
-        degrees), iso-invariant and cheaper than the ``xi`` cascade
-        (T-M0). Pass ``"greedy_min"`` for the historical ``xi``-seeded
-        canonical.
+        Defaults to ``"greedy_min_complete"`` -- the unpruned tie-complete
+        lex-min ``w*_c`` over the neighbour-degree seed cascade, the only
+        variant whose string is a complete isomorphism invariant
+        (Theorem A; frozen at D-TA2, flipped at D-TA1/T-TAd). The greedy
+        variants (``"greedy_min_nbrdeg"``, ``"greedy_min"``) are faster
+        one-sided heuristics whose string depends on the edge insertion
+        order on tie-degenerate inputs.
     backend : {"cpp", "python"}, optional
         Implementation to use for the native variants (the names in
         :func:`available_cpp_variants`). Defaults to ``"cpp"`` (see
@@ -291,7 +293,7 @@ def canonical_fingerprint(
     *,
     k: int | None = None,
     structural_depth: int = 3,
-    algorithm: str = "greedy_min_nbrdeg",
+    algorithm: str = "greedy_min_complete",
     backend: Backend | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute the augmented fingerprint ``F(H) = (seed label, w*(H))``.

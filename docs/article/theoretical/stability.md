@@ -48,6 +48,10 @@ add/remove); NP-hard, exact only at small scale.
     byte-identical to the Python reference on 3,344 per-seed comparisons):
     `w*_c` costs 6.4 ms on the Fano plane and 1.1 s on GQ(2,2), so every
     downstream `d_I` computation runs on `w*_c` at corpus scale.
+    **Package default since T-TAd (D-TA1, 2026-07-09):** `canonical_string`,
+    `canonical_fingerprint`, `IsalHGBackend`, and `IsalHGLevenshtein` all
+    compute `w*_c` unless an algorithm is explicitly overridden
+    (`ISALHG_ALGORITHM` env var preserved for the preprint pipeline).
     Measured on the designs, `w*_greedy = w*_c` on Fano and STS(9)
     (automorphism-coherent ties) but **differs on STS(13) and GQ(2,2)** — the
     greedy string is not canonical even on vertex-transitive designs.

@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 3 | 6 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 2 | 7 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -129,7 +129,7 @@ canonical-form track (the metric's foundation):
       ├─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
       └─► the closing chain, STRICTLY SEQUENTIAL — no parallelism available:
              T-TAf ✔ freeze w*_c (orchestrator, DONE 2026-07-09)
-          └► T-TAd  flip the package default to w*_c  (orchestrator-only) ← THE BLOCKER
+          └► T-TAd ✔ flip the package default to w*_c (orchestrator, DONE 2026-07-09)
           └► T-TAg  harden the canonical surface      (delegable)
           └► T-TAh  remove the unsound wl_colors pruning (shares h2s.cpp with T-TAg)
 
@@ -142,15 +142,16 @@ theory (parallel):  T-TA ✔ ─► T-TBa restate Lemma B1 over w*_c ─► T-TB
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09).** `T-TAd` — the package still defaults to
-`greedy_min_nbrdeg`, which is *presentation-dependent*, so `d_I` is not a metric
-and every downstream number is computed on a string that is not a canonical form.
-Nothing in T-M5 is meaningful until the default flips. `T-TAf` (freeze the
-definition) must land with or before it, and `T-TBa` before any of T-TB is
-written.
+**Critical path (2026-07-09, post-flip).** T-TAf (freeze) and T-TAd (default
+flip) landed 2026-07-09: the package computes the frozen `w*_c` by default and
+`d_I` is a metric on isomorphism classes. Remaining on the T-TA chain: T-TAg
+(harden the canonical surface) then T-TAh (remove the unsound `wl_colors`
+pruning; same worker, shared `h2s.cpp` lane). The article-critical path now
+runs through `T-TBa` (restate Lemma B1 over `w*_c`, gating T-TB) and the
+T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
 
-**Runnable in parallel right now:** T-TAd + T-TAf + T-TAg (the canonical-form
-landing), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d
+**Runnable in parallel right now:** T-TAg→T-TAh (one worker, strictly after
+the flip), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d
 (competitors). Use isolated git worktrees for agents that touch overlapping
 `core/` files.
 

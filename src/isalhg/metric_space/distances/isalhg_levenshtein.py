@@ -102,8 +102,9 @@ class IsalHGLevenshtein(HypergraphDistance):
         per comparison (pair maximum for :meth:`pairwise`, corpus maximum for
         :meth:`matrix`) so the two strings under comparison always share ``k``.
     algorithm : str, optional
-        Canonical-string algorithm; defaults to the T-M0 seed cascade
-        ``"greedy_min_nbrdeg"``.
+        Canonical-string algorithm; defaults to ``"greedy_min_complete"``
+        (``w*_c``, the tie-complete lex-min) -- the only variant under
+        which ``d_I`` is a metric on isomorphism classes (Corollary A).
     structural_depth : int, optional
         Structural-tuple depth passed to :func:`canonical_string`. Defaults to 3.
     normalize : bool, optional
@@ -117,7 +118,7 @@ class IsalHGLevenshtein(HypergraphDistance):
         self,
         *,
         k: int | None = None,
-        algorithm: str = "greedy_min_nbrdeg",
+        algorithm: str = "greedy_min_complete",
         structural_depth: int = 3,
         normalize: bool = False,
         backend: Backend | None = None,

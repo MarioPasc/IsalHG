@@ -40,12 +40,17 @@ _LADDER_STRIDE = 1_000_003
 class PerturbationLadderHypergraphs(HypergraphDataset):
     """Ladders of unit-edit snapshots off connected random base hypergraphs.
 
-    All bases and snapshots are connected (T-M2c / D-CONN1): the base is
-    drawn via rejection-sampling (:func:`random_connected_hypergraph`) and
-    each step applies a connectivity-preserving edit
-    (:func:`random_connected_edit`).  The acceptance-attempt count for each
-    base is stored in the step-0 item's ``extra`` field so the caller can
-    report the conditioned-ER acceptance rate.
+    All bases and snapshots are connected (T-M2c / D-CONN1) and have maximum
+    hyperedge arity ``<= arity_range[1]``.  The base is drawn via
+    rejection-sampling (:func:`random_connected_hypergraph`) and each step
+    applies a connectivity-preserving, arity-bounded edit
+    (:func:`random_connected_edit` with ``max_arity=arity_range[1]``).
+    This keeps every snapshot inside ``Sigma_HG(k)`` where ``k = arity_range[1]``
+    and prevents the ``k exceeds K_MAX`` error in the C++ canonical encoder.
+    The ``HGED <= budget`` guarantee is unaffected: budget records the actual
+    Qin costs of the applied edits, forming a valid HGED path regardless of
+    which candidate edits were rejected.  The acceptance-attempt count for each
+    base is stored in the step-0 item's ``extra`` field.
 
     Parameters
     ----------
@@ -120,7 +125,7 @@ class PerturbationLadderHypergraphs(HypergraphDataset):
             )
             budget = 0
             for step in range(1, self._max_t + 1):
-                nxt, op = random_connected_edit(current, rng)
+                nxt, op = random_connected_edit(current, rng, max_arity=self._arity_range[1])
                 budget += qin_edit_cost(current, nxt)
                 current = nxt
                 items.append(

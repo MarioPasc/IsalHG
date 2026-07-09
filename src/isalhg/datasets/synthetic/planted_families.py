@@ -207,6 +207,19 @@ class PlantedFamilyDataset(HypergraphDataset):
                             attempt,
                         )
                         continue
+                    # Arity gate: add_incidence can grow a hyperedge past k, violating
+                    # Σ_HG(k) membership and causing IsalHGError from the C++ encoder
+                    # when arity exceeds K_MAX=10 (sparse_hypergraph.py:462 — filtering
+                    # is the caller's responsibility, not the edit ops').
+                    if current.n_edges > 0 and max(len(e) for e in current.hyperedges()) > self._k:
+                        logger.debug(
+                            "family %d member %d attempt %d arity > k=%d; retrying",
+                            fam_idx,
+                            needed,
+                            attempt,
+                            self._k,
+                        )
+                        continue
                     fp = backend.fingerprint(current)
                     if fp in family_fps:
                         logger.debug(

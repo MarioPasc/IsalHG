@@ -25,9 +25,8 @@ from isalhg.core.algorithms.greedy_min_inplace_wl_pruned import GreedyMinInplace
 from isalhg.core.algorithms.greedy_min_wl_pruned import GreedyMinWLPruned
 from isalhg.core.algorithms.pruned_exhaustive import PrunedExhaustive
 from isalhg.core.canonical import required_k
-from isalhg.core.hypergraph_to_string import greedy_h2s
 from isalhg.core.hypergraph_wl import wl_hash
-from isalhg.core.instructions import sequence_sort_key, serialize
+from isalhg.core.instructions import serialize
 from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
 from isalhg.errors import DisconnectedHypergraphError
 
@@ -209,22 +208,3 @@ def test_seed_filtered_wl_variants_are_relabel_invariant(cls, n, edges) -> None:
         sigma = list(range(n))
         rng.shuffle(sigma)
         assert _encode(cls, permute(H, dict(enumerate(sigma)))) == base
-
-
-def test_wl_colors_pruning_discards_the_lex_min() -> None:
-    # greedy_h2s(..., wl_colors=...) keeps only id-ascending orderings of
-    # WL-equivalent new inputs. Here that discards the lex-min completion, which
-    # the pruning's docstring claimed was impossible.
-    H = _build(5, [(0, 1, 2), (0, 1, 3), (0, 2, 4), (0, 3, 4)])
-    raw = wl_hash(H)
-    assert raw[0] != raw[1] and len(set(raw[1:])) == 1
-
-    # Densify: the pruning reads colour equality only, and the C++ binding
-    # declares int64 while wl_hash returns unsigned 64-bit values.
-    order = {c: i for i, c in enumerate(sorted(set(raw)))}
-    colours = [order[c] for c in raw]
-
-    plain = greedy_h2s(H, seed_node=0, k=3)
-    pruned = greedy_h2s(H, seed_node=0, k=3, wl_colors=colours)
-    assert pruned != plain
-    assert sequence_sort_key(plain) < sequence_sort_key(pruned)

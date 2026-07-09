@@ -275,23 +275,10 @@ def _best_c_for_displacement(
 def _label_respecting_perms(
     new_inputs_set: frozenset[NodeId],
     H: SparseHypergraph,
-    wl_colors: list[int] | None = None,
 ) -> list[tuple[NodeId, ...]]:
-    """Yield all orderings of ``new_inputs_set`` consistent with the sorted
-    label tuple (smaller labels first; within a label class, all permutations).
+    """All orderings of ``new_inputs_set`` consistent with the sorted label tuple.
 
-    When ``wl_colors`` is provided, orderings that place two WL-equivalent
-    vertices of one label class in descending id order are discarded. **This
-    pruning is unsound: it can discard the lex-min completion.** Its
-    justification would need WL-equivalent vertices to be interchangeable by an
-    automorphism fixing the already-encoded prefix pointwise, which is strictly
-    stronger than sharing a WL colour (WL colour classes are only an upper bound
-    on automorphism orbits, and the stabiliser of the partial map shrinks as the
-    search descends). A five-vertex counterexample is pinned in
-    ``test_wl_colors_pruning_discards_the_lex_min``.
-
-    No registered algorithm passes ``wl_colors``; the parameter is retained only
-    on the public ``greedy_h2s`` signature and its C++ binding.
+    Smaller labels first; within a label class, all permutations are emitted.
     """
     by_label: dict[int, list[NodeId]] = defaultdict(list)
     for v in new_inputs_set:
@@ -300,31 +287,8 @@ def _label_respecting_perms(
     groups = [by_label[lab] for lab in sorted_labels]
     out: list[tuple[NodeId, ...]] = []
     for prod_perm in product(*[permutations(g) for g in groups]):
-        if wl_colors is not None and not _wl_orbit_canonical(prod_perm, wl_colors):
-            continue
         out.append(tuple(v for group in prod_perm for v in group))
     return out
-
-
-def _wl_orbit_canonical(
-    prod_perm: tuple[tuple[NodeId, ...], ...],
-    wl_colors: list[int],
-) -> bool:
-    """True iff WL-equivalent vertices within each label group appear in ascending ID order.
-
-    Raw vertex ids are not transported by an isomorphism, so this is an
-    inadmissible pruning key: the surviving ordering depends on the vertex
-    numbering, not on the hypergraph. Used only by the unsound ``wl_colors``
-    branch of :func:`_label_respecting_perms`.
-    """
-    for grp in prod_perm:
-        last_id_at_color: dict[int, NodeId] = {}
-        for v in grp:
-            colour = wl_colors[v]
-            if colour in last_id_at_color and last_id_at_color[colour] >= v:
-                return False
-            last_id_at_color[colour] = v
-    return True
 
 
 # ---------------------------------------------------------------------------
@@ -338,7 +302,6 @@ def _encode_from(
     state: _State,
     *,
     inplace: bool = False,
-    wl_colors: list[int] | None = None,
     tie_branch: bool = False,
     _counter: list[int] | None = None,
     _max_expansions: int | None = None,
@@ -352,11 +315,6 @@ def _encode_from(
         on return instead of cloning. Equivalent output; lower per-branch
         cost. Default ``False`` (clone-on-branch, identical to the
         original behaviour).
-    wl_colors : list[int] or None, optional
-        Per-vertex WL hashes for id-ascending pruning of the V-branch
-        permutation set. **Unsound** -- can discard the lex-min completion;
-        see :func:`_label_respecting_perms`. ``None`` disables pruning
-        (default), and no registered algorithm passes it.
     tie_branch : bool, optional
         When ``True``, recurse over *every* V candidate tying on the
         iso-invariant cascade key-prefix instead of committing to the
@@ -443,7 +401,6 @@ def _encode_from(
                 k,
                 state,
                 inplace=True,
-                wl_colors=wl_colors,
                 tie_branch=tie_branch,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
@@ -461,7 +418,6 @@ def _encode_from(
             k,
             sub_state,
             inplace=False,
-            wl_colors=wl_colors,
             tie_branch=tie_branch,
             _counter=_counter,
             _max_expansions=_max_expansions,
@@ -487,7 +443,7 @@ def _encode_from(
     branches = (
         (edge_id_b, seq_b)
         for edge_id_b, inputs_b in tied
-        for seq_b in _label_respecting_perms(inputs_b, H, wl_colors=wl_colors)
+        for seq_b in _label_respecting_perms(inputs_b, H)
     )
     for edge_id_v, new_input_seq in branches:
         if _counter is not None:
@@ -520,7 +476,6 @@ def _encode_from(
                 k,
                 state,
                 inplace=True,
-                wl_colors=wl_colors,
                 tie_branch=tie_branch,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
@@ -551,7 +506,6 @@ def _encode_from(
                 k,
                 sub_state,
                 inplace=False,
-                wl_colors=wl_colors,
                 tie_branch=tie_branch,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
@@ -577,7 +531,6 @@ def _python_greedy_h2s(
     seed_node: NodeId,
     k: int,
     inplace: bool = False,
-    wl_colors: list[int] | None = None,
     tie_branch: bool = False,
     max_expansions: int | None = None,
 ) -> TokenSequence:
@@ -592,10 +545,10 @@ def _python_greedy_h2s(
     ----------
     max_expansions : int or None, optional
         Maximum number of V-branch expansions across the entire search tree.
-        ``None`` (default) means unlimited (current behaviour). When the
-        budget is exceeded, :class:`isalhg.errors.CanonicalizationTimeoutError`
-        is raised. Only meaningful when ``tie_branch=True``; single-branch
-        greedy never branches so the counter stays at 0.
+        ``None`` (default) means unlimited. When the budget is exceeded,
+        :class:`isalhg.errors.CanonicalizationTimeoutError` is raised.
+        Only meaningful when ``tie_branch=True``; single-branch greedy never
+        branches so the counter stays at 0.
     """
     n = H.n_nodes
     if n == 0:
@@ -621,7 +574,6 @@ def _python_greedy_h2s(
         k,
         state,
         inplace=inplace,
-        wl_colors=wl_colors,
         tie_branch=tie_branch,
         _counter=_counter,
         _max_expansions=max_expansions,
@@ -650,7 +602,6 @@ def _cpp_greedy_h2s(
     seed_node: NodeId,
     k: int,
     inplace: bool = False,  # noqa: ARG001  # accepted for API parity with _python
-    wl_colors: list[int] | None = None,
     tie_branch: bool = False,
 ) -> TokenSequence:
     """C++-backed implementation of :func:`greedy_h2s`.
@@ -659,7 +610,7 @@ def _cpp_greedy_h2s(
     serialised result back into Python ``Token`` dataclasses so the
     public return type matches the Python reference.
     """
-    raw = _core_greedy_h2s(H, seed_node, k, wl_colors, tie_branch)
+    raw = _core_greedy_h2s(H, seed_node, k, tie_branch)
     return tuple(_parse_tokens(raw))
 
 
@@ -675,7 +626,6 @@ def greedy_h2s(
     seed_node: NodeId,
     k: int,
     inplace: bool = False,
-    wl_colors: list[int] | None = None,
     tie_branch: bool = False,
     backend: Backend | None = None,
 ) -> TokenSequence:
@@ -693,12 +643,6 @@ def greedy_h2s(
         Accepted for API compatibility. The C++ backend always runs
         inplace with stack-allocated undo records; the Python backend
         honours the flag (clone vs undo log) at no observable cost.
-    wl_colors : list[int] or None, optional
-        Per-vertex stable WL colours used to prune the V-branch permutation
-        set. **Unsound** -- the pruning key is the raw vertex id, so it can
-        discard the lex-min completion; see :func:`_label_respecting_perms`.
-        Default ``None`` (no pruning). Values must fit in a signed 64-bit
-        integer for the C++ backend, which :func:`wl_hash` does not guarantee.
     tie_branch : bool, optional
         When ``True``, branch over every V candidate tying on the
         iso-invariant cascade key-prefix instead of committing to the
@@ -733,7 +677,6 @@ def greedy_h2s(
         seed_node=seed_node,
         k=k,
         inplace=inplace,
-        wl_colors=wl_colors,
         tie_branch=tie_branch,
     )
 

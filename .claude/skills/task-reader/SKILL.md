@@ -86,8 +86,18 @@ task's scope and status.
 
 ## Rules
 
+- **Know which environment you are in.** The editable install is path-pinned to
+  the main checkout, so `~/.conda/envs/isalhg` always imports the main tree's
+  source. If you are working in a git worktree, you MUST clone the env
+  (`conda create -y -n isalhg-<TASK> --clone isalhg`), `pip install -e ".[dev]"`
+  inside your worktree, and invoke only `~/.conda/envs/isalhg-<TASK>/bin/python`.
+  Otherwise your tests silently exercise code you did not write. If you edit
+  `core/_native/`, reinstall before testing — a stale `.so` against new bindings
+  produces phantom failures.
 - Respect the task's `Depends on` — do not start a task whose dependency is not
   `DONE` (i.e. not filed under `CLOSED/`) without flagging it.
+- Respect the task's `Delegation:` field if present. `orchestrator-only` means a
+  human or the `task-orchestrator` runs it, not a subagent.
 - Respect the task's `Out of scope here` — that boundary is deliberate.
 - A task file is append-only apart from its `Status` line: never rewrite an
   existing entry's description or acceptance to match what you built.

@@ -310,8 +310,22 @@ under hypothesis. Report the table even if all green.
 | Agent | Model | Tools | Purpose |
 |---|---|---|---|
 | `test-runner` | haiku | Bash, Read | Run pytest + ruff + mypy in the `isalhg` env; report summary table |
+| `ledger-worker` | opus (max) | full | Execute one ledger task in an isolated worktree + cloned conda env. Spawned only by `task-orchestrator`. |
+
+**Environment hazard.** The editable install is path-pinned to the main checkout,
+so `~/.conda/envs/isalhg` imports the main tree's source no matter which worktree
+you are standing in. Any agent working in a worktree must clone the env
+(`conda create -y -n isalhg-<TASK> --clone isalhg`), `pip install -e ".[dev]"`
+inside its worktree, and use only `~/.conda/envs/isalhg-<TASK>/bin/python`. Two
+agents must never share an env, and a stale `.so` against new bindings produces
+phantom test failures.
 
 Useful skills:
+- `task-orchestrator` -- the only agent you spawn by hand. Builds the dependency
+  DAG from the ledger, runs <=3 isolated `ledger-worker` agents in parallel,
+  verifies each closing note by re-running it, merges on a re-verified green
+  suite, and keeps the irreversible work (default flips, golden regeneration,
+  definitional freezes) for itself.
 - `task-reader` -- pick up a task from `docs/article/DEVELOPMENT/` and execute
   it context-first (plan mode, read cited context, flag decisions, verify).
 - `task-handoff` -- park out-of-scope work as a new ledger task mid-development.

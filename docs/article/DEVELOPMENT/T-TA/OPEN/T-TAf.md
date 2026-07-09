@@ -2,6 +2,8 @@
 **Declared:** 2026-07-09 11:25 CEST (handoff from the T-TAa/T-TAd assessment)
 **Status:** OPEN
 **Depends on:** T-TA (proof) — must land **with or before** T-TAd
+**Delegation:** orchestrator-only — this freezes the *definition* of the paper's
+central object; getting it subtly wrong is unrecoverable once tables exist.
 **Why out of scope:** T-TAa's mandate was to port and measure the tie-complete
 encoder; T-TAd's is to flip the default. Neither settles *which* tie-complete
 lex-min is the article's `w*_c`, and that is a definitional decision with a

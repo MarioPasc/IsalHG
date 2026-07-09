@@ -11,6 +11,9 @@ tie-degenerate inputs — `w*_greedy ≠ w*_c` on STS(13) and GQ(2,2) (T-TAa
 finding), so any cached design fingerprint is affected.
 **Depends on:** T-TA (proof + Python reference, DONE pending review); T-TAa
 (C++ port, DONE) — which it originally absorbed and now merely follows.
+**Delegation:** orchestrator-only — the golden regeneration requires deciding, per
+changed string, whether it moved because `w*_greedy ≠ w*_c` (expected, e.g. STS(13))
+or because something broke. That judgment does not survive an acceptance checklist.
 **Why out of scope:** T-TA's mandate was the theorem; making the complete
 algorithm *fast* and *the default* is an engineering + promotion effort the PI
 authorized on 2026-07-09 after reviewing the T-TA findings.

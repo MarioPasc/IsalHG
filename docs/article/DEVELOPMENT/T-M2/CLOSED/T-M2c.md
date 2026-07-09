@@ -2,7 +2,7 @@
 **Declared:** 2026-07-08 23:25 CEST (handoff from T-M2b)
 **Rewritten:** 2026-07-09 12:46 CEST — P1/P2/P3 resolved by the PI; scope narrowed
 from "blocking theoretical fork" to "generator engineering + one lemma handed to T-TB"
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** — (gates T-M5a E1/E3; hands a lemma to T-TB)
 **Why out of scope:** found while assessing HGED completeness for Theorem B at
 T-M2b close; fixing it touches corpus generators and the dataset loaders, not the
@@ -125,3 +125,57 @@ reports per-class LCC retention.
 bound itself (T-TB); the HGED oracles (unaffected — they are defined on
 disconnected inputs already); the degenerate `n = 0` vs single-vertex collision
 (T-M1c).
+
+---
+
+## Closing check — 2026-07-09 (worktree agent-abdc04243e869e750)
+
+**Implementation summary:**
+
+- `src/isalhg/datasets/synthetic/_random_hg.py`: added `_backbone_connected_hypergraph`
+  and `random_connected_hypergraph(*, ..., max_attempts=200) -> tuple[SparseHypergraph, int]`.
+  Returns `(H, n_attempts)`; `n_attempts == max_attempts + 1` signals backbone fallback.
+  Single-vertex case handled directly (trivially connected).
+- `src/isalhg/core/sparse_hypergraph.py`: added `random_connected_edit(H, rng) -> tuple[SparseHypergraph, str]`.
+  Candidates: `insert_vertex_and_edge` (always), `insert_hyperedge`, `add_incidence`,
+  `delete_hyperedge` (filtered by `is_connected()`), `remove_incidence` (filtered).
+  `delete_vertex` never offered — connected H has no isolated vertices.
+- `src/isalhg/datasets/synthetic/perturbation_ladder.py`: base drawn via
+  `random_connected_hypergraph`; steps via `random_connected_edit`. Step-0 `extra`
+  carries `acceptance_attempts`.
+- `src/isalhg/datasets/synthetic/correlation_corpus.py`: each item drawn via
+  `random_connected_hypergraph`; `extra` carries `acceptance_attempts`.
+- `docs/article/DATA.md §1`: added "connected ER" paragraph — rejection-sampling,
+  backbone fallback, acceptance-rate reporting requirement, ensemble-change note.
+- `docs/article/theoretical/stability.md §6 T-B0`: already `[x]` (proved at T-TB
+  2026-07-09) — no change needed.
+- `src/isalhg/datasets/hic_atlas.py` LCC restriction: out of scope (T-M4' agent).
+
+**Pre-fix failure verified:** `random_hypergraph` with `n=5, n_edges=1, arity=(2,2)`
+produced a disconnected hypergraph in 10/10 seeds — confirms tests had teeth before
+the fix.
+
+**Acceptance criteria:**
+
+- (a) `correlation_corpus` and `perturbation_ladder` emit only connected items: PASS
+  (`TestConnectivity` classes in both test files; Hypothesis property test over 30/20
+  seeds; all green).
+- (b) ladder `HGED ≤ budget` property still passes under connectivity-preserving edits:
+  PASS (`test_budget_is_upper_bound_for_hged` passes for all ladders).
+- (c) acceptance rate reported in `extra["acceptance_attempts"]`; `DATA.md §1` says
+  "connected ER": PASS.
+- (d) `stability.md §6 T-B0` already `[x]` from T-TB: PASS (no edit needed).
+- (e) HIC loader LCC restriction: out of scope (T-M4').
+
+**Test suite (env isalhg-T-M2c, worktree):**
+
+```
+pytest tests/ -q --tb=no
+643 passed, 5 skipped in 159.29s
+```
+
+**Ruff:** 3 pre-existing errors (isalhg_backend.py:52, viz/instruction_view.py:135,
+tests/unit/core/algorithms/test_registry.py:48) — none in files I modified.
+
+**Mypy:** 20 errors in 6 files (baseline 21 — matched / improved by 1).
+Errors are all pre-existing in canonical.py, isalhg_backend.py.

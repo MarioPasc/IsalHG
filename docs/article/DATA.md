@@ -23,6 +23,20 @@ Requirement: a set of hypergraphs on which a ground-truth structural distance
   (isomorphic) and near-max (unrelated). Candidate generators: perturbation
   ladders (apply k random edge/vertex edits to a seed H, so HGED ≤ k is known
   by construction — gives a *supervised* distance axis for free).
+- **Domain: connected hypergraphs only (T-M2c / D-CONN1).** `d_I` is defined
+  exclusively on connected hypergraphs (`canonical.py` raises
+  `DisconnectedHypergraphError` otherwise). Both generators —
+  `CorrelationCorpusHypergraphs` and `PerturbationLadderHypergraphs` — use
+  **connected Erdős–Rényi** via rejection-sampling
+  (`random_connected_hypergraph`); connectivity-preserving edits
+  (`random_connected_edit`) keep all ladder snapshots connected. **Honest
+  consequence:** conditioning on connectivity changes the ensemble. The density
+  sweep (E2) samples *connected* ER, not ER, and the conditioning bites hardest
+  at low `m/n`. The paper must say "connected ER" and **report the per-corpus
+  acceptance rate** (fraction of unconstrained ER draws that were already
+  connected; stored per item in `extra["acceptance_attempts"]`). The backbone
+  fallback (spanning star + random edges) is logged as `acceptance_attempts ==
+  max_attempts + 1` and counts as a rejection for the rate.
 - Labelled vs unlabelled: run both; labelled exercises the new seed-selection
   step (PROPOSAL §6) and the label-aware distance.
 - **Open:** is a perturbation-ladder (known upper-bound HGED) acceptable as the

@@ -876,6 +876,90 @@ def qin_edit_cost(before: SparseHypergraph, after: SparseHypergraph) -> int:
     )
 
 
+def random_connected_edit(H: SparseHypergraph, rng: random.Random) -> tuple[SparseHypergraph, str]:
+    """Apply one randomly-chosen connectivity-preserving unit edit to ``H``.
+
+    Like :func:`random_edit` but guarantees that the returned hypergraph is
+    connected, given that ``H`` is connected on entry:
+
+    - ``insert_vertex`` is always paired with an immediately following
+      ``insert_hyperedge`` that includes the new vertex and a random existing
+      vertex, so no isolated vertex ever materialises.  The pair is treated as
+      one logical step and named ``"insert_vertex_and_edge"``; its Qin cost is
+      correctly measured by :func:`qin_edit_cost` as the sum of both atomic
+      costs (1 + 1 + arity).
+    - ``insert_hyperedge`` over existing vertices and ``add_incidence`` only add
+      connections and are therefore always connectivity-preserving.
+    - ``delete_hyperedge`` and ``remove_incidence`` are included only when the
+      result is connected (checked via :meth:`SparseHypergraph.is_connected`).
+    - ``delete_vertex`` is never offered: a connected hypergraph with
+      ``n_nodes >= 2`` has no isolated vertices.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph; must be connected and have ``n_nodes >= 1``.
+    rng : random.Random
+        Seeded stdlib RNG.
+
+    Returns
+    -------
+    tuple[SparseHypergraph, str]
+        The perturbed (connected) hypergraph and the name of the applied
+        operation.
+    """
+    candidates: list[tuple[str, SparseHypergraph]] = []
+
+    vlabel = rng.randrange(H.n_vertex_labels)
+    # Paired insert: new vertex + edge connecting it to a random existing vertex.
+    # Always applicable when n_nodes >= 1 and always connectivity-preserving.
+    if H.n_nodes >= 1:
+        existing = rng.randrange(H.n_nodes)
+        v_new = H.n_nodes
+        elabel_new = rng.randrange(H.n_edge_labels)
+        H1 = insert_vertex(H, vlabel)
+        candidates.append(
+            ("insert_vertex_and_edge", insert_hyperedge(H1, [existing, v_new], elabel_new))
+        )
+
+    # insert_hyperedge over existing vertices: only adds connections, always safe.
+    fresh = _sample_new_hyperedge(H, rng)
+    if fresh is not None:
+        members, elabel = fresh
+        candidates.append(("insert_hyperedge", insert_hyperedge(H, members, elabel)))
+
+    # add_incidence: only adds a vertex to an existing edge, always safe.
+    grow = _sample_add_incidence(H, rng)
+    if grow is not None:
+        gv, ge = grow
+        candidates.append(("add_incidence", add_incidence(H, gv, ge)))
+
+    # delete_hyperedge: only when the result remains connected.
+    if H.n_edges >= 1:
+        victim = rng.randrange(H.n_edges)
+        after_del = delete_hyperedge(H, victim)
+        if after_del.is_connected():
+            candidates.append(("delete_hyperedge", after_del))
+
+    # remove_incidence: only when the result remains connected.
+    shrink = _sample_remove_incidence(H, rng)
+    if shrink is not None:
+        sv, se = shrink
+        after_rem = remove_incidence(H, sv, se)
+        if after_rem.is_connected():
+            candidates.append(("remove_incidence", after_rem))
+
+    # The paired insert is always in candidates when n_nodes >= 1, so this
+    # branch is only reachable for n_nodes == 0 (which never occurs in the
+    # article's corpus generators).
+    if not candidates:
+        H1 = insert_vertex(H, 0)
+        candidates.append(("insert_vertex", H1))
+
+    name, result = rng.choice(candidates)
+    return result, name
+
+
 def edit_path(H: SparseHypergraph, t: int, rng: random.Random) -> tuple[SparseHypergraph, int]:
     """Apply ``t`` successive random edits and return the result with its budget.
 

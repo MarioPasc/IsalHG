@@ -66,6 +66,34 @@ class TestRegistry:
         assert "correlation_corpus" in registry.available_datasets()
 
 
+class TestConnectivity:
+    """T-M2c acceptance (a): all corpus items are connected."""
+
+    def test_all_items_connected(self) -> None:
+        """Default corpus (n=4–7, m=2–5, arity=2–3) is fully connected."""
+        ds = CorrelationCorpusHypergraphs(n_items=30, seed=0)
+        for it in ds:
+            assert it.hypergraph.is_connected(), (
+                f"Corpus item {it.item_id} is disconnected (T-M2c violation)"
+            )
+
+    def test_connected_across_seeds(self) -> None:
+        """Connectivity holds across 10 seeds."""
+        for seed in range(10):
+            ds = CorrelationCorpusHypergraphs(n_items=15, seed=seed)
+            for it in ds:
+                assert it.hypergraph.is_connected(), (
+                    f"seed={seed}, item={it.item_id} is disconnected"
+                )
+
+    def test_extra_records_acceptance_attempts(self) -> None:
+        """Each item records how many rejection-sampling draws were needed."""
+        ds = CorrelationCorpusHypergraphs(n_items=10, seed=1)
+        for it in ds:
+            assert "acceptance_attempts" in it.extra
+            assert it.extra["acceptance_attempts"] >= 1
+
+
 class TestExactHGEDOverCorpus:
     def test_matrix_runs(self) -> None:
         np = pytest.importorskip("numpy")

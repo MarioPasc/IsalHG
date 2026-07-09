@@ -24,12 +24,17 @@ from typing import Any
 from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
 from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabulary
-from isalhg.datasets.synthetic._random_hg import random_hypergraph
+from isalhg.datasets.synthetic._random_hg import random_connected_hypergraph
 from isalhg.types import DatasetName, Seed
 
 
 class CorrelationCorpusHypergraphs(HypergraphDataset):
-    """A diverse pool of small random hypergraphs for the exact-HGED study.
+    """A diverse pool of small connected random hypergraphs for the exact-HGED study.
+
+    All items are connected (T-M2c / D-CONN1): the generator rejection-samples
+    via :func:`random_connected_hypergraph`.  The acceptance-attempt count for
+    each item is stored in its ``extra["acceptance_attempts"]`` field so callers
+    can compute and report the conditioned-ER acceptance rate.
 
     Parameters
     ----------
@@ -78,7 +83,7 @@ class CorrelationCorpusHypergraphs(HypergraphDataset):
         for index in range(self._n_items):
             n = rng.randint(self._n_range[0], self._n_range[1])
             m = rng.randint(self._n_edges_range[0], self._n_edges_range[1])
-            H = random_hypergraph(
+            H, attempts = random_connected_hypergraph(
                 n_nodes=n,
                 n_edges=m,
                 arity_range=self._arity_range,
@@ -91,7 +96,12 @@ class CorrelationCorpusHypergraphs(HypergraphDataset):
                     item_id=f"c{index}",
                     hypergraph=H,
                     iso_class=None,
-                    extra={"index": index, "n": H.n_nodes, "m": H.n_edges},
+                    extra={
+                        "index": index,
+                        "n": H.n_nodes,
+                        "m": H.n_edges,
+                        "acceptance_attempts": attempts,
+                    },
                 )
             )
         return items

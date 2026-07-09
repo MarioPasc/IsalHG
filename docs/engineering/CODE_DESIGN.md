@@ -1,7 +1,7 @@
 # IsalHG code design
 
 Lookup document for coding agents. Pairs with `CLAUDE.md` (project mindset),
-`docs/PROPOSAL.md` (validation methodology and scientific scope), and
+`docs/preprint/PROPOSAL.md` (validation methodology and scientific scope), and
 `.claude/rules/coding_rules.md` (generic patterns).
 
 When you are asked to add or modify code in this repo, read **this file
@@ -319,7 +319,7 @@ the code; re-read section 1.
 |---|---|
 | `src/isalhg/core/cdll.py` | Circular doubly-linked list of `NodeId`. |
 | `src/isalhg/core/pointers.py` | `KPointerSet` -- k VM pointers into the CDLL. |
-| `src/isalhg/core/sparse_hypergraph.py` | `SparseHypergraph` -- the in-memory model. Also hosts `permute(H, sigma)` -- free function, stdlib-only, vertex-permutation oracle for the positive iso-pair stream (decision I44 in `docs/PROPOSAL.md`). |
+| `src/isalhg/core/sparse_hypergraph.py` | `SparseHypergraph` -- the in-memory model. Also hosts `permute(H, sigma)` -- free function, stdlib-only, vertex-permutation oracle for the positive iso-pair stream (decision I44 in `docs/preprint/PROPOSAL.md`). |
 | `src/isalhg/core/instructions.py` | `Sigma_HG` tokens, parser, validator. |
 | `src/isalhg/core/string_to_hypergraph.py` | S2H interpreter. |
 | `src/isalhg/core/hypergraph_to_string.py` | H2S greedy encoder. |
@@ -331,11 +331,11 @@ the code; re-read section 1.
 | `src/isalhg/adapters/{hypernetx, xgi, hypergraphx}_adapter.py` | Bridges. |
 | `src/isalhg/iso_backends/base.py` | `IsoBackend` ABC. |
 | `src/isalhg/iso_backends/subprocess_base.py` | `SubprocessIsoBackend`. |
-| `src/isalhg/iso_backends/levi_reduction.py` | Shared Levi bipartite encoder. Emits a 3-class colouring `(v_color = vertex_label_id, e_color = \|Σ_v\| + edge_label_id + sentinel_offset)` so vertex-witness and edge-witness ranges are disjoint -- the standard "lift colours from H to B(H)" trick used by SageMath `IncidenceStructure` and GAP+FinInG. |
+| `src/isalhg/core/levi_reduction.py` | Shared Levi bipartite encoder. Emits the colouring `(v_color = vertex_label_id, e_color = \|Σ_v\| + edge_label_id)` so vertex-witness and edge-witness ranges are disjoint -- the standard "lift colours from H to B(H)" trick used by SageMath `IncidenceStructure` and GAP+FinInG. `color_classes()` is an *ordered partition*: unoccupied colours contribute no cell, so nauty and Traces see position, not colour identity. `color_signature()` (T-TAe) restores absolute label identity and pins the `(\|V\|, \|E\|)` split; every consumer of `color_classes()` must prepend it to the certificate. bliss is exempt -- igraph passes colour *values*. |
 | `src/isalhg/iso_backends/{isalhg_backend, pynauty_levi, traces_levi, bliss_levi}.py` | Concrete backends. |
 | `src/isalhg/iso_backends/registry.py` | Backend registry. |
 | `src/isalhg/datasets/base.py` | `HypergraphDataset` ABC. |
-| `src/isalhg/datasets/schemas.py` | `DatasetItem`, `DatasetMetadata`, `LabelVocabulary` (decision I45 in `docs/PROPOSAL.md`). `LabelVocabulary.fit(items)` is the per-dataset semantic-string → `int` ID builder; lexicographic sort, deterministic across Python runs. |
+| `src/isalhg/datasets/schemas.py` | `DatasetItem`, `DatasetMetadata`, `LabelVocabulary` (decision I45 in `docs/preprint/PROPOSAL.md`). `LabelVocabulary.fit(items)` is the per-dataset semantic-string → `int` ID builder; lexicographic sort, deterministic across Python runs. |
 | `src/isalhg/datasets/synthetic/{exhaustive_small, erdos_renyi, chung_lu, hardness}.py` | Synthetic loaders (Tiers 1-3). |
 | `src/isalhg/datasets/{arb_benson, xgi_loader, hic_atlas}.py` | Real-world loaders (Tiers 4-5). |
 | `src/isalhg/datasets/registry.py` | Dataset registry. |

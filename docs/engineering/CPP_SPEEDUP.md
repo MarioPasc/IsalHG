@@ -3,7 +3,7 @@
 Workstation: i7-13620H, conda env ``isalhg``. Best-of-9 ms, median of
 4 reps each, ``--warmup 3``. Driver: ``scratchpad/cpp_vs_levi.py``. Raw
 JSON: ``scratchpad/bench/nbrdeg_pgo_rep[1-4].json``. Build flags:
-round-8 source + PGO (two-stage flow in ``docs/DEVELOPMENT.md``).
+round-8 source + PGO (two-stage flow in ``docs/engineering/DEVELOPMENT.md``).
 
 Two C++ seed-selectors are exposed:
 
@@ -15,7 +15,7 @@ Two C++ seed-selectors are exposed:
   construction; 500/500 trials on random connected hypergraphs
   (n = 5..14, m = n-1..2n, arity 2..4) preserved the canonical-string
   identity under random vertex permutations (see
-  ``docs/CPP_OPTIMIZATION_LOG.md`` round 9 for the harness).
+  ``docs/engineering/CPP_OPTIMIZATION_LOG.md`` round 9 for the harness).
 
 | Design | IsalHG C++ ``greedy_min`` | ``greedy_single`` | ``greedy_min_nbrdeg`` (PI) | ``greedy_single_nbrdeg`` (PI) | pynauty_levi | bliss_levi | traces_levi |
 |---|---:|---:|---:|---:|---:|---:|---:|
@@ -100,15 +100,15 @@ pynauty / bliss / Traces stay 4–5 orders of magnitude faster on the
 ``fingerprint`` call (0.03–0.43 ms vs 2–42 ms). The PI cascade closes
 the *intra-IsalHG* implementation gap on non-vertex-transitive inputs
 but does not change the algorithmic-ceiling story documented in
-``docs/ALGORITHMS.md`` §3 — the I/R search frame those backends sit
+``docs/engineering/ALGORITHMS.md`` §3 — the I/R search frame those backends sit
 inside is what wins them the order-of-magnitude gap, and closing that
 gap remains the priority Algorithm-R&D track in
-``docs/DEVELOPMENT.md``.
+``docs/engineering/DEVELOPMENT.md``.
 
 ## Headline historical comparison vs pure Python
 
 For the (still applicable) Python ↔ C++ Phase-4 baseline, see
-``docs/CPP_OPTIMIZATION_LOG.md`` round 0 table. All C++ variants in
+``docs/engineering/CPP_OPTIMIZATION_LOG.md`` round 0 table. All C++ variants in
 this table are byte-equal to their Python reference on every cell
 where the Python ref terminates (see ``--- ALL EQ True ---`` smoke
 output in the integration log).

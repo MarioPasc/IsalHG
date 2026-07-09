@@ -9,10 +9,10 @@ count, edge probability, and arity. The STS catalog and every other
 catalog cohort move to the full empirical paper.
 
 **Companion documents.**
-- `docs/DATA.md` §3 — full synthetic-generator narrative (Cohort B).
-- `docs/PROPOSAL.md` Tier 2 — original scaling-sweep specification
+- `docs/preprint/DATA.md` §3 — full synthetic-generator narrative (Cohort B).
+- `docs/preprint/PROPOSAL.md` Tier 2 — original scaling-sweep specification
   (the preprint is a compressed-grid subset).
-- `docs/CODE_DESIGN.md` — module organisation.
+- `docs/engineering/CODE_DESIGN.md` — module organisation.
 
 ---
 
@@ -144,7 +144,7 @@ cohort is reproducible from XGI + a 12-line config.
 
 ### 4.1 Backends
 
-Four backends wired through the `IsoBackend` ABC (`docs/CODE_DESIGN.md`
+Four backends wired through the `IsoBackend` ABC (`docs/engineering/CODE_DESIGN.md`
 §2.1):
 
 - `isalhg` — IsalHG canonical string via `core.canonical` +
@@ -556,7 +556,7 @@ implementing `IsoBackend` + registering, with zero changes elsewhere.
   not DNF on the same instances — the asymmetry is part of the
   characterisation, not a measurement bug.
 - **IsalHG fingerprint runtime explodes with edge count** (open
-  question #1 in `docs/DEVELOPMENT.md`). The preprint sweep's 600 s
+  question #1 in `docs/engineering/DEVELOPMENT.md`). The preprint sweep's 600 s
   per-fingerprint timeout converts this into a DNF at the dense end
   of the grid; the resulting DNF region IS the headline
   characterisation.
@@ -615,7 +615,7 @@ First end-to-end execution of the §3 cohort on Picasso. The sweep
 completed; all 720 cells terminated; the four-way correctness
 invariant held. IsalHG produced **no** wall-clock measurement on any
 cell, confirming the open-question #1 algorithmic ceiling
-(`docs/DEVELOPMENT.md`) on the chosen grid.
+(`docs/engineering/DEVELOPMENT.md`) on the chosen grid.
 
 Raw artefacts: `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/preprint/experiment/`
 (rsync'd from Picasso `/mnt/.../fscratch/isalhg_results/preprint/pipeline/`).
@@ -707,7 +707,7 @@ fingerprints.
 2. **The C++ engine is correctly built and dispatched on Picasso.**
    `_core.cpython-311-x86_64-linux-gnu.so` resolved, `DEFAULT_BACKEND
    = cpp`, Fano completed in 2.31 ms (matches the home-machine table
-   in `docs/CPP_SPEEDUP.md` to within thermal noise). The DNFs are
+   in `docs/engineering/CPP_SPEEDUP.md` to within thermal noise). The DNFs are
    not a build or PATH artefact.
 
 3. **The four-way partition agreement holds where it can be checked.**
@@ -969,7 +969,7 @@ run).
 4. **C++ engine confirmed live, every cell.** Average IsalHG cost
    at `n=8, r=3, c=1.5` (11 edges, well under the home-machine
    benchmark Fano-STS(7)-doily band) is 21.21 ms — within an order
-   of magnitude of the home-machine `docs/CPP_SPEEDUP.md` STS(13)
+   of magnitude of the home-machine `docs/engineering/CPP_SPEEDUP.md` STS(13)
    number (42 ms `greedy_min`), confirming that the C++ extension
    resolved correctly and is doing the work. A Python-backend fallback
    would have been at minimum 100× slower at this scale.

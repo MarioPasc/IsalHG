@@ -1,16 +1,16 @@
 # Handoff — Hypergraph-Native Benchmark Cohort
 
-**Status:** RESOLVED 2026-06-16. Cohort is specified in `docs/DATA.md`
+**Status:** RESOLVED 2026-06-16. Cohort is specified in `docs/preprint/DATA.md`
 (the authoritative source). This handoff stays as the resolution
 narrative — what was investigated, what evidence surfaced, what was
 decided.
 **Owner of next iteration:** none — work moves to implementation
-tickets enumerated in `docs/DATA.md` §5 ("Open gaps and required
+tickets enumerated in `docs/preprint/DATA.md` §5 ("Open gaps and required
 work").
 **Last touched:** 2026-06-16.
-**Parent docs:** `docs/DATA.md` (cohort spec), `docs/PROPOSAL.md`
-(Tier 1-5 + decisions I49/I50), `docs/DEVELOPMENT.md` (open question
-#8, now closed by I49/I50), `docs/CODE_DESIGN.md` §2.2
+**Parent docs:** `docs/preprint/DATA.md` (cohort spec), `docs/preprint/PROPOSAL.md`
+(Tier 1-5 + decisions I49/I50), `docs/engineering/DEVELOPMENT.md` (open question
+#8, now closed by I49/I50), `docs/engineering/CODE_DESIGN.md` §2.2
 (`HypergraphDataset` ABC).
 
 ---
@@ -64,7 +64,7 @@ cohort.
 
 ### 1.3 Why this matters for Tier 5
 
-`docs/PROPOSAL.md` Tier 5 (partition agreement on the 12 HIC datasets
+`docs/preprint/PROPOSAL.md` Tier 5 (partition agreement on the 12 HIC datasets
 from Feng et al. TPAMI 2024) already operates on real hypergraphs. The
 gap is between the empirical Tier 5 setup (no published partition;
 ground truth = unanimous backend verdict) and the principled cohort we
@@ -77,7 +77,7 @@ oracle-independent).
 
 ### 2.1 Three avenues investigated
 
-**Avenue A — Permutation orbit.** Decision I44 (`docs/PROPOSAL.md`,
+**Avenue A — Permutation orbit.** Decision I44 (`docs/preprint/PROPOSAL.md`,
 2026-06-11) gave us `core.sparse_hypergraph.permute(H, σ)` as the
 positive-iso-pair oracle. The σ is the ground-truth bijection,
 verifiable independently by `verify_bijection_certificate`. This
@@ -119,7 +119,7 @@ Phase 3 added two named designs to `tests/conftest.py` and to
 - `gq_2_2_doily` — the symplectic W(2) realisation of GQ(2,2): 15
   points, 15 lines (Payne & Thas §1.2).
 
-Phase 3.5 (queued in `docs/DEVELOPMENT.md`) will add the Feng et al.
+Phase 3.5 (queued in `docs/engineering/DEVELOPMENT.md`) will add the Feng et al.
 TPAMI 2024 Fig. 3 HG WL collision pair and the Zhang et al. ICML 2025
 Fig. 3(a)/(b) k-GWL pairs — sources are PDFs in `docs/`. Feng's figure
 is a raster image (`figs/alg_failed.jpg` per arXiv source); exact
@@ -157,7 +157,7 @@ the baselines, not of IsalHG).
 
 1. **A `CatalogDataset` class** wrapping handpicked, literature-cited
    non-iso hypergraph cohorts. Skeleton:
-   - Subclass `HypergraphDataset` per `docs/CODE_DESIGN.md` §2.2.
+   - Subclass `HypergraphDataset` per `docs/engineering/CODE_DESIGN.md` §2.2.
    - One concrete subclass per literature source (`MathonPhelpsRosaSTS`,
      `ColbournDinitzBIBD`, `PayneThasGQ`, `KaskiOstergardSTS19`).
    - Each item carries a non-trivial `iso_class` proven by the source
@@ -184,7 +184,7 @@ the baselines, not of IsalHG).
      unavoidable-enumeration case.
 
 4. **The HG-CFI (hypergraph Cai-Fürer-Immerman) construction** — open
-   research question #5 in `docs/DEVELOPMENT.md`. This is the
+   research question #5 in `docs/engineering/DEVELOPMENT.md`. This is the
    hypergraph analogue of the standard graph-iso hardness benchmark. It
    is required for Theorem 2 falsification but is not yet built. A
    working HG-CFI would give us a parametric non-iso family that side-
@@ -231,7 +231,7 @@ A concrete deliverable proposal:
   publication that proves non-iso, not "we asked nauty".
 - **Permute-witness for positive pairs.** Avenue A is essentially free
   and removes all oracle dependence from the iso direction. Use it.
-- **Follow `docs/CODE_DESIGN.md` §2.2 ABC contract.** New datasets
+- **Follow `docs/engineering/CODE_DESIGN.md` §2.2 ABC contract.** New datasets
   subclass `HypergraphDataset`, register in `datasets/registry.py`, ship
   unit + integration tests, declare `LabelVocabulary.trivial()` until
   Phase 6 (HIC atlas) needs labelled vocabularies.
@@ -262,7 +262,7 @@ engine**; "we agree with nauty across all four backends on every
 fixture" is the correct correctness statement, and the competitive
 axis is wall-clock + `max_rss` + fingerprint compactness.
 
-`docs/DATA.md` §1 makes this framing explicit and the rest of the
+`docs/preprint/DATA.md` §1 makes this framing explicit and the rest of the
 cohort design follows from it.
 
 ### 4.2 Adopt Kaski-Östergård plaintext STS catalogs as Tier 1
@@ -320,20 +320,20 @@ IsalHG) comparison on a hypergraph iso-recognition corpus.
 
 ### 4.4 What changed in the surrounding docs
 
-- `docs/DATA.md` created as the authoritative cohort spec (Cohorts A
+- `docs/preprint/DATA.md` created as the authoritative cohort spec (Cohorts A
   and B, ten downloadable real-data sources, eleven synthetic
   generators, implementation status table, paper sentence).
-- `docs/PROPOSAL.md` gained decisions I49 (LLM4Hypergraph cohort) and
+- `docs/preprint/PROPOSAL.md` gained decisions I49 (LLM4Hypergraph cohort) and
   I50 (Kaski-Östergård catalog adoption); Tier 1 section augmented with
   Tier 1c sub-cohort and the catalog cross-reference.
-- `docs/DEVELOPMENT.md` open question #8 marked resolved; new
-  "Benchmark cohort spec" pointer to `docs/DATA.md`.
+- `docs/engineering/DEVELOPMENT.md` open question #8 marked resolved; new
+  "Benchmark cohort spec" pointer to `docs/preprint/DATA.md`.
 - This handoff retained as the resolution narrative; will not be
   updated further.
 
 ### 4.5 What carries over to implementation
 
-The next round of work is enumerated in `docs/DATA.md` §5 as nine
+The next round of work is enumerated in `docs/preprint/DATA.md` §5 as nine
 prioritised tickets, the top three of which are:
 
 1. Wire Tier 2 generators (XGI ER + Chung-Lu): 60 lines + YAML +

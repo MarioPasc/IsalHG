@@ -46,14 +46,14 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 
 | Scope | Concern | Open | Closed |
 |---|---|---|---|
-| [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 1 |
+| [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 0 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 1 | 3 |
 | [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 5 (+1 blocked) | 3 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 4 (+1 blocked) | 4 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -129,7 +129,7 @@ canonical-form track (the metric's foundation):
       ├─► T-TAc ✔ WL-pruned variants re-documented + counterexampled (DONE)
       │      └─► T-TAh  remove the unsound wl_colors V-branch pruning (with T-TAg)
       ├─► T-TAf  freeze the canonical form (D-TA2 resolved: unpruned w*_c)
-      └─► T-TAe  Levi colouring loses absolute label identity
+      └─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
 
 experiments:
    T-M5a  correlation / density-sweep / info-content   ← M1b, M2, M4     [needs HGED]
@@ -148,8 +148,18 @@ definition) must land with or before it, and `T-TBa` before any of T-TB is
 written.
 
 **Runnable in parallel right now:** T-TAd + T-TAf + T-TAg (the canonical-form
-landing), T-M0a (fixture correctness — gates the PI's proof review), T-M2c's P3
-decision (theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use
-isolated git worktrees for agents that touch overlapping `core/` files.
+landing), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d
+(competitors). Use isolated git worktrees for agents that touch overlapping
+`core/` files.
+
+**The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
+invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`
+Remark 6.1 / §Empirical. It had not: T-TAa measured the *true* doily via
+`scripts/bench_tie_complete.py`, and only the true doily reproduces its published
+row (61 ms / 1093 ms / 17.8× / `w*_greedy ≠ w*_c`). The proof stands unedited and
+the PI may review it. The fixture is fixed and its GQ(2,2) evidence is now pinned
+by a regression test rather than a bench script. A sibling defect — the "STS(13)"
+fixtures are not Steiner triple systems — is parked as `T-M0c` (naming/citation
+only; the objects are still vertex-transitive, which is all Remark 6.1 needs).
 
 Decisions awaiting the PI live in [`DECISIONS.md`](DECISIONS.md).

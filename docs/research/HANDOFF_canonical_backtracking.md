@@ -3,9 +3,9 @@
 **Status:** open investigation; sibling-port plan drafted.
 **Owner of next iteration:** TBD.
 **Last touched:** 2026-06-14.
-**Parent docs:** `docs/DEVELOPMENT.md` (open question #1, "Algorithm-R&D
-track (priority, pre-Tier 2)"), `docs/CODE_DESIGN.md` §1 (decision
-tree), `docs/PROPOSAL.md` (canonical-completeness conjecture).
+**Parent docs:** `docs/engineering/DEVELOPMENT.md` (open question #1, "Algorithm-R&D
+track (priority, pre-Tier 2)"), `docs/engineering/CODE_DESIGN.md` §1 (decision
+tree), `docs/preprint/PROPOSAL.md` (canonical-completeness conjecture).
 
 ---
 
@@ -34,7 +34,7 @@ purely on these named designs, before counting the enumerated cells.
 
 Three reasons.
 
-**Reason A — Tier 1 acceptance gap.** `docs/PROPOSAL.md` Tier 1
+**Reason A — Tier 1 acceptance gap.** `docs/preprint/PROPOSAL.md` Tier 1
 acceptance criterion 2 demands `canonical(H) = canonical(π(H))` for
 **100 random vertex permutations per instance**. On GQ(2,2) that is
 17,700 seconds (~5 h) for one cell of the Tier 1 sweep. We can run it,
@@ -52,7 +52,7 @@ competitive". The latter is the headline claim PROPOSAL.md commits to.
 backtracking" variant has been on the open-question list since the
 seed proposal (2026-06). `core/canonical_pruned.py` and
 `algorithms/pruned_exhaustive.py` were stub files removed in the
-architectural refactor (recorded in `docs/DEVELOPMENT.md` "Removed in
+architectural refactor (recorded in `docs/engineering/DEVELOPMENT.md` "Removed in
 the architectural refactor" table) precisely because there was no
 specified algorithm to reintroduce. This handoff is the algorithm-
 spec document.
@@ -214,7 +214,7 @@ The next agent needs to produce (in order):
      designs from §1.1; target ≥ 10× improvement on STS(13), ≥ 30× on
      GQ(2,2).
 
-3. **The implementation**, following `docs/CODE_DESIGN.md` §1.4
+3. **The implementation**, following `docs/engineering/CODE_DESIGN.md` §1.4
    structure:
    - Reintroduce `src/isalhg/core/canonical_pruned.py` and
      `src/isalhg/core/algorithms/pruned_exhaustive.py`.
@@ -263,7 +263,7 @@ The next agent needs to produce (in order):
   The latter is friendlier to dataset enumeration but introduces
   partial-state semantics that may be hard to specify precisely.
 - Q4. Confirm Phase 5 ordering: this work is **parallel to Tier 2
-  scaling**, not blocking it (per `docs/DEVELOPMENT.md` "Algorithm-R&D
+  scaling**, not blocking it (per `docs/engineering/DEVELOPMENT.md` "Algorithm-R&D
   track (priority, pre-Tier 2)" section). Phase 5 ships the empirical
   data that informs which pruning dimensions matter most; the
   algorithm work uses that data to guide spec choices.

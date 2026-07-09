@@ -1,8 +1,8 @@
 # ALGORITHMS.md — Algorithmic post-mortem of the preprint sweep
 
 Author: M. Pascual-Gonzalez. Date: 2026-06-23.
-Pair-read with `docs/PREPRINT.md` (sweep scope), `docs/DEVELOPMENT.md`
-(open question #1), and `docs/CODE_DESIGN.md` (where the seven H2S
+Pair-read with `docs/preprint/PREPRINT.md` (sweep scope), `docs/engineering/DEVELOPMENT.md`
+(open question #1), and `docs/engineering/CODE_DESIGN.md` (where the seven H2S
 variants live).
 
 ## 1. Headline
@@ -203,7 +203,7 @@ canonical-string idea competitive". It was designed to *characterise*
 where it wins and loses. The honest answer the data returns is: the
 current implementation has no winning regime. The negative result is
 publishable in its own right (the preprint's framing in §1 of
-`docs/PREPRINT.md` allows for this), but the path forward is not a
+`docs/preprint/PREPRINT.md` allows for this), but the path forward is not a
 larger sweep — it is a different algorithm.
 
 What we want, in priority order, for the full empirical paper:

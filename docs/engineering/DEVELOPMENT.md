@@ -1,8 +1,8 @@
 # Development notes
 
 Living document for IsalHG development. Pair-read with `CLAUDE.md` at the
-repo root, `docs/CODE_DESIGN.md` (architectural lookup), and the seed
-proposal (`docs/isalhg_idea.pdf` + `docs/PROPOSAL.md`).
+repo root, `docs/engineering/CODE_DESIGN.md` (architectural lookup), and the seed
+proposal (`docs/isalhg_idea.pdf` + `docs/preprint/PROPOSAL.md`).
 
 ## C++ core extension
 
@@ -111,7 +111,7 @@ scaffold-only.
 ## Implementation order
 
 Coding agents should fill stubs in the six-phase order specified in
-`docs/CODE_DESIGN.md` Section 7. Each phase closes with a concrete runnable
+`docs/engineering/CODE_DESIGN.md` Section 7. Each phase closes with a concrete runnable
 check that must be reproduced in the closing commit message; no phase opens
 until its predecessor's check passes.
 
@@ -260,8 +260,8 @@ Each step also lands with its unit tests populated and passing under
 7. **Worst-case complexity bound (Theorem 3 procedure)** -- empirical-only
    by decision (C17).
 8. **Isomorphism-pair generation** -- resolved by decisions I44
-   (`docs/PROPOSAL.md`, 2026-06-11), I49 + I50 (2026-06-16), and the
-   cohort spec in `docs/DATA.md`. Positive pairs via stdlib-only
+   (`docs/preprint/PROPOSAL.md`, 2026-06-11), I49 + I50 (2026-06-16), and the
+   cohort spec in `docs/preprint/DATA.md`. Positive pairs via stdlib-only
    `core.sparse_hypergraph.permute(H, σ)`. Cross-class fixtures from
    (a) Kaski-Östergård plaintext STS catalogs `sts13.txt` (2 classes)
    and `sts15.txt` (80 classes) downloaded from
@@ -277,7 +277,7 @@ Each step also lands with its unit tests populated and passing under
    anywhere in the public literature as of 2026-06-16; companion
    paper task C14 stays open.
 9. **Label vocabulary** -- resolved by decision I45
-   (`docs/PROPOSAL.md`, 2026-06-11). Vocabularies are dataset-scoped, fitted
+   (`docs/preprint/PROPOSAL.md`, 2026-06-11). Vocabularies are dataset-scoped, fitted
    once at load by `LabelVocabulary.fit(items)` (lexicographic sort →
    contiguous int IDs), persisted on `DatasetMetadata`. `core/` never sees
    semantic strings; the Levi reduction lifts both color classes onto
@@ -289,7 +289,7 @@ Each step also lands with its unit tests populated and passing under
    `LabelVocabulary.trivial()` returning `(("⊥",), ("⊥",))`. The
    production `fit(items)` path is gated behind a
    `NotImplementedError` until the labelled HIC-atlas loader (Phase 6),
-   matching the actual sequencing in `docs/CODE_DESIGN.md`.
+   matching the actual sequencing in `docs/engineering/CODE_DESIGN.md`.
 
 ## Phase 3.5 follow-up (queued)
 
@@ -301,7 +301,7 @@ Each step also lands with its unit tests populated and passing under
 
 ## Benchmark cohort spec (2026-06-16)
 
-The full data layer is documented in `docs/DATA.md` (authoritative
+The full data layer is documented in `docs/preprint/DATA.md` (authoritative
 source). Summary for navigation only:
 
 - **Cohort A — downloadable real data** (10 sources). Includes the
@@ -318,9 +318,9 @@ source). Summary for navigation only:
   hypergraphs, random regular at threshold, PG(2, q) via Sage,
   large-Aut Sage designs, and the HG-CFI construction (open).
 
-`docs/DATA.md` §4 holds the implementation status table; `docs/DATA.md`
+`docs/preprint/DATA.md` §4 holds the implementation status table; `docs/preprint/DATA.md`
 §5 enumerates nine prioritised tickets for the next round of work.
-`docs/DATA.md` §6 carries the paper sentence that cites the cohort.
+`docs/preprint/DATA.md` §6 carries the paper sentence that cites the cohort.
 
 ## Algorithm-R&D track (priority, pre-Tier 2)
 
@@ -365,7 +365,7 @@ to prune first).
   `test_tier1_orchestrator_partition_agreement` extends to the
   full STS(13)/GQ(2,2) regime.
 
-## Validation tier map (from `docs/PROPOSAL.md`)
+## Validation tier map (from `docs/preprint/PROPOSAL.md`)
 
 | Tier | Datasets (`isalhg.datasets`) | Protocol (`isalhg.protocols`) |
 |---|---|---|

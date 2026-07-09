@@ -303,7 +303,7 @@ runs on the same workstation in the same thermal state:
 
 The factor against pynauty is 67× (Fano), 378× (STS9), 2 391× (STS13),
 2 543× (doily). This is the algorithmic ceiling identified in
-``docs/ALGORITHMS.md`` §3: a multi-seed greedy backtracking encoder
+``docs/engineering/ALGORITHMS.md`` §3: a multi-seed greedy backtracking encoder
 with no individualisation–refinement is structurally bounded by
 ``(j!)^E`` on vertex-transitive designs, and that bound is hit hardest
 on Steiner triple systems and generalised quadrangles. Levi + nauty /
@@ -313,7 +313,7 @@ orbits, and run two decades of engineering ahead on the constants
 requires not a faster encoder but a *different* algorithm — the I/R
 canonical-string variant from Schweitzer & Wiebking (STOC 2019), or
 the PI-deferred pruned-canonical backtracking already listed as the
-priority Algorithm-R&D track in ``docs/DEVELOPMENT.md``.
+priority Algorithm-R&D track in ``docs/engineering/DEVELOPMENT.md``.
 
 ## Summary (round 0 → round 8+PGO)
 
@@ -345,8 +345,8 @@ flagged as out-of-scope for this loop:
   hard-code the V-perm enumeration for j = 2 only (avoids
   ``std::next_permutation`` overhead). Loses generality for arity-k.
 - **Algorithmic.** Implement the PI-deferred pruned-canonical
-  backtracking (open question #1 in ``docs/DEVELOPMENT.md``) or the
-  Schweitzer-Wiebking I/R encoder (``docs/ALGORITHMS.md`` §6). Either
+  backtracking (open question #1 in ``docs/engineering/DEVELOPMENT.md``) or the
+  Schweitzer-Wiebking I/R encoder (``docs/engineering/ALGORITHMS.md`` §6). Either
   changes the asymptotic worst case from ``(j!)^E`` to something
   smaller and would dwarf any constant-factor work.
 
@@ -453,12 +453,12 @@ The factor vs pynauty stays in the 67×–2 500× range from round 8 — the
 algorithmic ceiling (``(j!)^E`` on vertex-transitive designs) is
 unchanged because the seed *set* on these inputs is unchanged. Closing
 that gap still requires the PI-deferred pruned-canonical algorithm or
-the Schweitzer-Wiebking I/R encoder (``docs/ALGORITHMS.md`` §6).
+the Schweitzer-Wiebking I/R encoder (``docs/engineering/ALGORITHMS.md`` §6).
 
 **Where the win actually shows.** For typical non-vertex-transitive
 workloads (random ER hypergraphs at Tier 2 scale, labelled HIC-atlas
 data at Tier 5, the LLM4Hypergraph iso-recognition corpus — see
-``docs/DATA.md``) the 15 % seed-count reduction multiplies through the
+``docs/preprint/DATA.md``) the 15 % seed-count reduction multiplies through the
 per-seed wall-clock.
 
 ### Round 9 demo — concrete PI-advantage fixtures
@@ -509,7 +509,7 @@ the seed-count reduction is 2 → 1.
 The Levi backends remain 4–5 orders of magnitude faster — the PI
 cascade closes the *intra-IsalHG* implementation gap on
 non-vertex-transitive inputs but does not move the algorithmic ceiling
-identified in ``docs/ALGORITHMS.md`` §3.
+identified in ``docs/engineering/ALGORITHMS.md`` §3.
 
 ## Summary (round 0 → round 9)
 

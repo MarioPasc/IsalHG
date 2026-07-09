@@ -7,8 +7,8 @@ and the resolution narrative in `docs/research/HANDOFF_hypergraph_benchmarks.md`
 
 **Scope.** This document is the single source of truth for *what data
 IsalHG runs on, where to get it, what the ground truth is, and which prior
-paper used it.* Code-design decisions live in `docs/CODE_DESIGN.md`;
-validation methodology lives in `docs/PROPOSAL.md`; this file covers the
+paper used it.* Code-design decisions live in `docs/engineering/CODE_DESIGN.md`;
+validation methodology lives in `docs/preprint/PROPOSAL.md`; this file covers the
 data layer end-to-end.
 
 ---

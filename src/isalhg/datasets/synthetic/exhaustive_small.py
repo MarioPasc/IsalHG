@@ -27,16 +27,17 @@ import itertools
 import random
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
 from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
 from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabulary
 from isalhg.datasets.synthetic import designs
-from isalhg.iso_backends.base import IsoBackend
-from isalhg.iso_backends.registry import get_backend
 from isalhg.types import DatasetName, HyperedgeSet, IsoClassId, Seed
+
+if TYPE_CHECKING:
+    from isalhg.iso_backends.base import IsoBackend
 
 
 def _resolve_dedup_backend(name: str) -> IsoBackend:
@@ -46,6 +47,10 @@ def _resolve_dedup_backend(name: str) -> IsoBackend:
     backend whose ``fingerprint`` is deterministic and iso-invariant
     suffices.
     """
+    from isalhg.iso_backends.registry import (
+        get_backend,  # lazy — datasets must not eagerly import iso_backends
+    )
+
     return get_backend(name)
 
 

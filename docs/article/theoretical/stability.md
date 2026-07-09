@@ -385,7 +385,8 @@ criterion). Consequences the applications section must own:
       vocabulary — is therefore **established, not conjectured**, and every claim
       below rests on it. `w*_c` is frozen as the *unpruned* tie-complete lex-min
       (D-TA2); the complete algorithm becomes the package default at T-TAd.
-- [ ] T-B0: make the §2.1 decomposition well-defined. **Mechanism fixed by the PI
+- [x] T-B0: **PROVED (T-TB, 2026-07-09, §2 of `stability/theorem_b_stability.tex`).**
+      make the §2.1 decomposition well-defined. **Mechanism fixed by the PI
       at T-M2c (2026-07-09): the article's domain is the connected hypergraphs,
       `Σ_HG` does not change, and P1 is discharged by a path-normalization lemma —
       not by teaching `w*` to accept disconnected inputs.** The lemma to prove: the
@@ -405,7 +406,7 @@ criterion). Consequences the applications section must own:
       near-maximal-HGED regime, where the bound is slack and the case is handled
       separately. Still owed alongside it: no arity`->k` intermediates
       (reduce-before-extend interleaving).
-- [ ] T-B1: prove the restated Lemma B1 — locality of `w*_c` under tie-set
+- [x] T-B1: **PROVED (T-TB, 2026-07-09, §3 of `stability/theorem_b_stability.tex`).** prove the restated Lemma B1 — locality of `w*_c` under tie-set
       transparency (three conditions: seed membership (i), tie-set stability in
       `N_r[e]` r=3 (ii), argmin-seed preservation (iii)) — in terms of *relative*
       CDLL order. The proof must construct a correspondence between the branching
@@ -417,14 +418,14 @@ criterion). Consequences the applications section must own:
       closing: "a C candidate requires `members == set(tentative_inputs[:arity])`
       and `SparseHypergraph` forbids duplicate member sets, so the C tie set is
       always a singleton") — no C-tie avalanche possible; treat separately.
-- [ ] T-B2: bound the *branching window* — the instruction positions that change
+- [x] T-B2: **PROVED (T-TB, 2026-07-09, §4 of `stability/theorem_b_stability.tex`; explicit constants c_1=3, c_2≤2k+1).** bound the *branching window* — the instruction positions that change
       for a tie-set-transparent edit — to `O(k·Δ)`. The window covers the
       *encoding* of `N_1[e]` (the 1-hop set, O(k·Δ) vertices; the token-width
       constant `c_2`); condition (ii)'s transparency set `N_r[e]` (r=3) is larger
       but does not itself enter the window count. Nail `c_2` (instructions per
       vertex in `N_1[e]`). The Qin-costing remark (direct term O(1) in arity per
       unit HGED) should transfer.
-- [ ] T-B3: characterize when an edit perturbs a tie set at depth `d` (sources
+- [x] T-B3: **ESTABLISHED analytically (T-TB, 2026-07-09, §5 of `stability/theorem_b_stability.tex`; Prop 6.0 criterion; Fano/STS(9) vs STS(13)/GQ(2,2) recovered).** characterize when an edit perturbs a tie set at depth `d` (sources
       3–4) or triggers argmin migration (source 2). For sources 3–4: use Prop 6.0
       — a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act
       transitively on `T(σ_d)`, and a vertex in `N_r[e]` with perturbed `ξ` can
@@ -433,6 +434,8 @@ criterion). Consequences the applications section must own:
       (Fano/STS(9) coherent; STS(13)/GQ(2,2) incoherent) from the analytical
       criterion. Connection to T-B4: random sparse hypergraphs have no ties →
       sources 3–4 vanish; source 2 also vanishes generically → (B-avg) follows.
-- [ ] T-B4 (stretch): the average-case/high-probability unconditional bound
+- [x] T-B4 (stretch): **SKETCH with heuristic probability estimates (T-TB, 2026-07-09, §5 B-avg, Thm 3 of `stability/theorem_b_stability.tex`; flagged as non-proved).** the average-case/high-probability unconditional bound
       (B-avg) over a random hypergraph model.
-- [ ] T-B5: verify constants against measured `s(e)` histograms (Exp E2b).
+- [ ] T-B5: **PENDING T-M5a** — verify constants against measured `s(e)` histograms (Exp E2b).
+      Predictions stated in §6 of `stability/theorem_b_stability.tex` and §4 of this file.
+      Empirical match is a documented pending clause; T-TB closes with this clause recorded.

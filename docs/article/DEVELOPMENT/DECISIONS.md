@@ -46,3 +46,19 @@
   attacks the real cost, automorphism redundancy on vertex-transitive designs.
   T-TAa measured the alternative: `ρ`-refinement buys nothing there, since every
   tied candidate carries the same value under any iso-invariant key.
+- **D-CONN1** — **[resolved 2026-07-09, PI]** The article's domain of discourse.
+  `Σ_HG` provably cannot express disconnection (every `V_{i,j}` has `i ≥ 1`; no
+  token creates an isolated vertex), so the S2H-reachable set *is* the connected
+  hypergraphs, and Theorem A is stated only there (Assumption 1.3).
+  **Decision: restrict the article to connected hypergraphs. The alphabet does not
+  change.** Both glues are rejected — the alphabet extension would reopen Theorem A
+  and invalidate the T-TAa C++ encoder; the sorted-tuple fingerprint would cost the
+  paper its central claim ("a hypergraph is a word") and hold invariants #2/#3 only
+  per component. Consequences: synthetic generators become connectivity-preserving
+  and the paper says *connected* ER (the conditioning changes the ensemble); real
+  corpora are restricted to their largest connected component with per-class
+  retention reported; and the stability proof's transient-disconnection problem is
+  discharged by a **path-normalization lemma**, not by native support — the triangle
+  inequality bounds `d_I` along any path, so an all-connected path of the same Qin
+  cost suffices (insert-before-delete, vertex insertions paired with an incidence).
+  Executed at T-M2c; the lemma is `stability.md` §6 item T-B0.

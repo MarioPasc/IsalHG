@@ -254,12 +254,26 @@ criterion). Consequences the applications section must own:
       to `w*_c`. Default flip decided (D-TA1 resolved 2026-07-09): the
       complete algorithm becomes the package default once the T-TAd C++ port
       makes it fast.
-- [ ] T-B0: make the §2.1 decomposition well-defined — (a) path-normalization
-      lemma regrouping Qin's atomic ops into macro-ops with no empty-shell and
-      no arity->k intermediates (reduce-before-extend interleaving), and (b)
-      resolve the connectivity domain gap: `w*` rejects disconnected inputs
-      (decision B11) but optimal HGED paths pass through disconnected states
-      (ledger T-M2c; candidate fix: component-wise `w*`).
+- [ ] T-B0: make the §2.1 decomposition well-defined. **Mechanism fixed by the PI
+      at T-M2c (2026-07-09): the article's domain is the connected hypergraphs,
+      `Σ_HG` does not change, and P1 is discharged by a path-normalization lemma —
+      not by teaching `w*` to accept disconnected inputs.** The lemma to prove: the
+      triangle inequality bounds `d_I` along *any* edit path, not only an optimal
+      one, so it suffices that **some** path `H → H'` has all-connected
+      intermediates and total Qin cost `≤ c·HGED(H,H')`. Such a path exists with
+      `c = 1`, because Qin's ops are unit-cost and the following two reorderings
+      preserve the op count: (i) **insert before delete** — all insertions and
+      extensions first, reaching `H ∪ H'` under the optimal correspondence `π`,
+      then all reductions and deletions; (ii) **no isolated vertex is ever
+      materialized** — pair each vertex insertion with its first incidence
+      addition, pair each vertex deletion with its last incidence removal, and
+      delete leaf-first. Every intermediate on the first leg then contains the
+      connected spanning `H`; on the second leg, the connected spanning `H'`.
+      *Residual hypothesis to discharge:* `H ∪ H'` is connected, i.e. `π`
+      identifies at least one vertex — this fails only in the degenerate
+      near-maximal-HGED regime, where the bound is slack and the case is handled
+      separately. Still owed alongside it: no arity`->k` intermediates
+      (reduce-before-extend interleaving).
 - [ ] T-B1: prove Lemma B1 (locality) in terms of *relative* CDLL order; resolve
       the global-index-shift risk.
 - [ ] T-B2: bound the reordering cost to `O(k·Δ)` under seed-stability; nail

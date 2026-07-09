@@ -47,7 +47,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | Scope | Concern | Open | Closed |
 |---|---|---|---|
 | [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
-| [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 0 | 2 |
+| [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 1 | 3 |
 | [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
@@ -113,8 +113,9 @@ T-M0 ✔ seed optimization (DONE)
 
 T-M1a ✔ metric_space foundation (DONE)
    ├─► T-M1b ✔ d_I + WL distances (DONE)
+   │      └─► T-M1c  metric-axiom suite + n=0 domain bug + ablation honesty
    ├─► T-M2  ✔ HGED oracle (DONE; T-M2a/T-M2b Qin unification DONE)
-   │      └─► T-M2c  disconnected-input domain gap        [gates T-M5a, T-TB]
+   │      └─► T-M2c  connected-only domain (D-CONN1): generators + LCC   [gates T-M5a]
    ├─► T-M3a..d competitors (nauty-edit / HPD / NetLSD / HyperCOT)
    └─► T-M4   planted-family datasets + scoring primitives
 

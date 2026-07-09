@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 8 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -131,7 +131,7 @@ canonical-form track (the metric's foundation):
              T-TAf ✔ freeze w*_c (orchestrator, DONE 2026-07-09)
           └► T-TAd ✔ flip the package default to w*_c (orchestrator, DONE 2026-07-09)
           └► T-TAg ✔ harden the canonical surface      (DONE 2026-07-09)
-          └► T-TAh  remove the unsound wl_colors pruning (shares h2s.cpp with T-TAg)
+          └► T-TAh ✔ remove the unsound wl_colors pruning (DONE 2026-07-09)
 
 experiments:
    T-M5a  correlation / density-sweep / info-content   ← M1b, M2, M4     [needs HGED]
@@ -142,18 +142,18 @@ theory (parallel):  T-TA ✔ ─► T-TBa restate Lemma B1 over w*_c ─► T-TB
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09, post-flip).** T-TAf (freeze) and T-TAd (default
-flip) landed 2026-07-09: the package computes the frozen `w*_c` by default and
-`d_I` is a metric on isomorphism classes. Remaining on the T-TA chain: T-TAg
-(harden the canonical surface) then T-TAh (remove the unsound `wl_colors`
-pruning; same worker, shared `h2s.cpp` lane). The article-critical path now
-runs through `T-TBa` (restate Lemma B1 over `w*_c`, gating T-TB) and the
-T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
+**Critical path (2026-07-09, T-TA chain complete).** The entire canonical-form
+track closed 2026-07-09 (T-TAf freeze → T-TAd flip → T-TAg hardening → T-TAh
+`wl_colors` removal): the package computes the frozen `w*_c` (variant
+`"canonical"`) by default, `d_I` is a metric on isomorphism classes and is
+guarded against non-canonical algorithms, the search raises instead of
+hanging under a `max_expansions` budget, and the unsound pruning is gone.
+The article-critical path now runs through `T-TBa` (restate Lemma B1 over
+`w*_c`, gating T-TB) and the T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
 
-**Runnable in parallel right now:** T-TAg→T-TAh (one worker, strictly after
-the flip), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d
-(competitors). Use isolated git worktrees for agents that touch overlapping
-`core/` files.
+**Runnable in parallel right now:** T-TBa (theory), T-M2c's P3 decision
+(theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use isolated
+git worktrees for agents that touch overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
 invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`

@@ -9,8 +9,11 @@ the default at the three surfaces, regenerate goldens/caches where `w*`
 changes, and update the docs. Note the goldens *will* change on more than
 tie-degenerate inputs — `w*_greedy ≠ w*_c` on STS(13) and GQ(2,2) (T-TAa
 finding), so any cached design fingerprint is affected.
-**Depends on:** T-TA (proof + Python reference, DONE pending review); T-TAa
-(C++ port, DONE) — which it originally absorbed and now merely follows.
+**Depends on:** T-TA (proof + Python reference, DONE — PI-reviewed 2026-07-09);
+T-TAa (C++ port, DONE) — which it originally absorbed and now merely follows;
+**T-TAf** (the definitional freeze) — which must land **with or before** this task,
+because the flip promotes whichever `w*_c` T-TAf has frozen. Do not start T-TAd
+while T-TAf is open.
 **Delegation:** orchestrator-only — the golden regeneration requires deciding, per
 changed string, whether it moved because `w*_greedy ≠ w*_c` (expected, e.g. STS(13))
 or because something broke. That judgment does not survive an acceptance checklist.

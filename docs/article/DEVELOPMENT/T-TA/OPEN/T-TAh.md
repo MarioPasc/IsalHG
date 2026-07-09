@@ -2,6 +2,11 @@
 **Declared:** 2026-07-09 11:58 CEST (handoff from T-TAc)
 **Status:** OPEN
 **Depends on:** T-TAg (which already touches the C++ encoder for the branch budget — land together)
+**Delegation:** agent — but **do not spawn a fresh worker.** T-TAg and T-TAh edit the
+same file (`core/_native/src/h2s.cpp`), so they can never run in parallel, and a new
+worker would pay a second conda clone and a second LTO/PGO build for nothing.
+Continue T-TAg's worker with `SendMessage`: same worktree, same env, extension
+already built, and the context that produced the budget is still loaded.
 **Why out of scope:** T-TAc's boundary is "docstrings state the correct invariance
 status; no behavioural change to defaults", and it explicitly excludes the C++
 twins. Deleting the parameter changes the public `greedy_h2s` signature and the

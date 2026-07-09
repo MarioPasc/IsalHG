@@ -136,10 +136,28 @@ Scatter/joint-density figure per representation (cf.
 Overlay the predicted envelope. This is the experiment that *couples* theorem to
 data — its success is the empirical proof of Theorem B's Δ-dependence.
 
-**Exp E2b — single-edit sensitivity histogram (tests the avalanche, §3).**
-Directly measure `s(e)=d_I(H,H⊕e)` over many single edits, per density and on
-high-automorphism designs (Fano/STS/GQ). Prediction: unimodal `O(kΔ)` on generic
-sparse; bimodal (rare `O(mk)` avalanche spikes) on symmetric designs.
+**Exp E2b — single-edit sensitivity histogram (tests the avalanche, §3, revised at T-TBa).**
+Directly measure `s(e)=d_I(H,H⊕e)` over many single edits (all Qin edit types),
+per density and on the four design fixtures (Fano, STS(9), STS(13), GQ(2,2)).
+**Revised prediction:** The histogram shape follows three regimes determined by the
+automorphism-coherence of ties (`stability.md` §3, Proposition 6.0):
+- *Generic sparse*: ties absent at every search depth → tie-set transparency holds
+  for almost all edits → **unimodal, O(kΔ) peak, no avalanche tail**.
+- *Coherent-tie symmetric designs (Fano, STS(9))*: `w*_greedy = w*_c` verified
+  (T-TAa); all ties coherent at all depths → coherence is robust to local edits on
+  vertex-transitive designs → **near-unimodal O(kΔ), despite high symmetry**.
+  *(Changed from the earlier "symmetric ⇒ bimodal" prediction; the greedy-based
+  analysis incorrectly placed all vertex-transitive designs in the avalanche regime.)*
+- *Incoherent-tie symmetric designs (STS(13), GQ(2,2))*: `w*_greedy ≠ w*_c`
+  verified (T-TAa); incoherent ties exist at depth > 0 → edits that touch the
+  relevant neighbourhood perturb those tie sets → **heavy-tailed or bimodal
+  histogram** with rare large-`s(e)` spikes. Tail mass ∝ fraction of edits
+  reaching an incoherent tie.
+
+This three-way split is the **falsification target for `stability.md` §3**: if the
+two coherent designs (Fano, STS(9)) do not show near-unimodal histograms — or if
+the two incoherent designs (STS(13), GQ(2,2)) do not show heavier tails than the
+sparse baseline — the Proposition 6.0 coherence characterization is incomplete.
 
 **Exp E3 — perturbation-ladder scaling.** Large hypergraphs, `d_I` vs known
 edit-budget `t`; monotone tracking confirms faithfulness beyond the exact regime.

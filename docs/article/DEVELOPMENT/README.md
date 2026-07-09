@@ -54,7 +54,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 4 (+1 blocked) | 4 |
-| [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
+| [`T-TB`](T-TB/) | Theorem B — stability | 1 | 1 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the scope decision (2026-07-08)
@@ -136,16 +136,17 @@ experiments:
    T-M5b MDS · M5c clustering+dendrogram · M5d kNN · M5e shortest-path
                         ← M1b, M3a–d, M4 (+ M4' for the real anchor)      [HGED-free]
 
-theory (parallel):  T-TA ✔ ─► T-TBa restate Lemma B1 over w*_c ─► T-TB stability
+theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► T-TB stability
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09).** `T-TAd` — the package still defaults to
-`greedy_min_nbrdeg`, which is *presentation-dependent*, so `d_I` is not a metric
-and every downstream number is computed on a string that is not a canonical form.
-Nothing in T-M5 is meaningful until the default flips. `T-TAf` (freeze the
-definition) must land with or before it, and `T-TBa` before any of T-TB is
-written.
+**Critical path (2026-07-09, T-TBa complete).** The canonical-form chain
+(T-TAf → T-TAd → T-TAg → T-TAh) closed and T-TBa closed: `stability.md` §2.2,
+§3, §4, §6 and `correlation.md` Exp E2b are now stated over `w*_c` (tie-set
+transparency condition for Lemma B1; three-source avalanche; coherent/incoherent
+design split; three-regime E2b prediction). The article-critical path now runs
+through T-TB (the stability proof itself, unblocked by T-TBa) and the T-M5
+prerequisites (T-M2c, T-M3a–d, T-M4).
 
 **Runnable in parallel right now:** T-TAd + T-TAf + T-TAg (the canonical-form
 landing), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d

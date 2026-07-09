@@ -149,24 +149,61 @@ Decompose `s(e)` into two contributions to the change in `w*`:
    itself: one `V`/`C` emission plus `O(k)` pointer moves (`P_i`/`N_i`).
    Bounded by `c_1·k` tokens, *independent of graph size*.
 
-2. **Reordering cost.** A single edit perturbs the structural tuples `ξ(v)`
-   (degree-based, `core/structural_tuples.py`) only for vertices in the closed
-   neighbourhood `N[e]` of the edit (edited vertices + their neighbours),
-   `|N[e]| = O(k·Δ)`. If the induced changes do **not** alter the canonical seed
-   nor the *relative* greedy visitation order, the encoding of every unaffected
-   region is preserved and only the `O(k·Δ)` affected vertices are re-emitted:
-   reordering cost `≤ c_2·k·Δ · (token-width per vertex)`.
+2. **Branching-tree stability.** The tie-complete encoder `w*_c` does not follow a
+   fixed visitation order; it maintains a search *tree* of completions and returns
+   the lex-minimum leaf. A single edit perturbs the structural tuples `ξ(v)` for
+   all `v ∈ N[e]` (`core/structural_tuples.py`), where `|N[e]| = O(k·Δ)`. This
+   has two effects on the search tree:
+   - *Local effect*: the instructions that encode the region `N[e]` directly
+     change (O(k) tokens; covered by the direct cost above).
+   - *Tie-set effect*: changing `ξ(v)` for `v ∈ N[e]` can alter the tie set
+     `T(σ)` at states `σ` reached during the branching search — at **any depth**,
+     not only at the root — because `ξ` comparisons drive the key-prefix ordering
+     that determines which V-candidates tie. If `T(σ)` changes at depth `d`,
+     the lex-minimum completion may switch to a different branch and propagate
+     changes through the remaining `|w*_c| - d` positions of the string.
 
-**Lemma B1 (locality of greedy H2S — to prove).** Fix seed `v_0` and the greedy
-order `π`. If an edit `e` leaves `v_0` and the relative order `π` on
-`V ∖ N[e]` unchanged, then `w*(H)` and `w*(H⊕e)` agree outside a set of at most
-`O(k·Δ)` instruction positions. **Risk:** pointer values are CDLL *indices*
-(`CLAUDE.md` invariant 1), so an insertion shifts absolute indices globally; the
-proof must be phrased in terms of *relative* CDLL order, not absolute index, or
-the bound inflates to `O(n)`. This is the crux of the proof and the main open
-technical risk.
+**Lemma B1 (locality of `w*_c` — to prove).** Fix seed `v_0 ∈ S(H)`. Say an
+edit `e` is *tie-set transparent from `(H, v_0)`* if: (i) `v_0` remains a seed
+vertex in `H⊕e`; and (ii) for every encoder state `σ` reachable in the branching
+search of `H` from `v_0`, the key-prefix comparison among all V-candidates is
+unchanged in `H⊕e` at the corresponding state — equivalently, no vertex in
+`N[e]` participates in any tie `T(σ)` of the search. Under these conditions,
+the branching search trees of `H` and `H⊕e` from `v_0` are isomorphic outside
+`N[e]`, and `w*_c(H, v_0)` and `w*_c(H⊕e, v_0)` agree outside at most
+`O(k·Δ)` positions.
 
-**Conditional bound.** Under the hypotheses of Lemma B1 (a *seed-stable* edit),
+**Relationship to the greedy condition.** For the single-trajectory greedy encoder,
+condition (ii) reduces to "the greedy order `π` is unchanged on `V ∖ N[e]`" —
+the only comparison that matters is the one the greedy makes at each step. For
+`w*_c`, every tie at every depth is a comparison point, making the condition
+strictly stronger. Both encoders yield the same O(k·Δ) bound when their
+respective conditions are satisfied.
+
+**Does the lex-min structure help or hurt?** Taking the lex-min over the search tree
+does not make `w*_c` generically more stable than any single greedy trajectory.
+When a tie set `T(σ)` is perturbed at depth `d`, the lex-min can jump
+discontinuously to a different branch; the sensitivity is `Θ(|w*_c| - d)` in the
+worst case, the same order as the greedy's avalanche. The lex-min buys stability
+only when the tie is *automorphism-coherent* in the sense of Proposition 6.0 of
+`theorem_a_completeness.tex`: all branches of a coherent tie return equal
+completions, so the lex-min is indifferent to which branch is chosen and the
+edit does not propagate. On inputs where all reachable ties are coherent (Fano
+plane, STS(9) — empirically verified at T-TAa), no avalanche is possible in
+`w*_c` for any edit that preserves the seed; on inputs with incoherent ties at
+some depth (STS(13), GQ(2,2) — verified), a tie-set perturbation at that depth
+triggers an avalanche in `w*_c` just as in the greedy.
+
+**Proof risk (unchanged).** Pointer values are CDLL *indices* (`CLAUDE.md`
+invariant 1); a vertex insertion shifts absolute indices globally. The proof must
+be phrased in terms of *relative* CDLL order throughout and must construct a
+state correspondence between the branching searches of `H` and `H⊕e` from `v_0`.
+This is the crux of T-B1. The C branch requires separate treatment: by the T-TAa
+analysis, the C tie set is always a singleton (duplicate member sets are
+forbidden by `SparseHypergraph`), so C never produces a tie and never triggers
+an avalanche via the tie-set mechanism.
+
+**Conditional bound.** Under the hypotheses of Lemma B1 (a *tie-set transparent* edit),
 ```
         s(e) ≤ c_1·k + c_2·k·Δ = O(k·Δ).                        (★)
 ```
@@ -184,26 +221,70 @@ only from the reordering term, not from the direct term.
 
 ## 3. The avalanche obstruction (why the bound is conditional)
 
-Bound (★) fails when the edit flips a **tie at the top of the `ξ` order** —
-changing the canonical seed `v_0` or an early greedy choice. Then the greedy
-trajectory diverges from the start and `w*` can be rewritten wholesale:
-`s(e) = O(|w*|) = O(m·k)` worst case.
+Bound (★) fails when the edit changes the tie set `T(σ)` at some reachable state
+`σ` in the branching search — causing the lex-minimum to switch to a different
+branch and rewiring the completion from depth `d(σ)` onwards:
+`s(e) ≤ |w*_c| - d(σ) = O(m·k)` in the worst case, with worst case `d(σ) = 0`
+(seed flip).
 
-**Where avalanches live.** Seed/early-order ties are exactly the
-vertex-transitive / high-automorphism regime — Fano, STS(9), STS(13), GQ(2,2) —
-the same structures where IsalHG's bounded backtracking already explodes
-(`docs/engineering/DEVELOPMENT.md` open Q1, timings 0.78 s → 177 s). So the avalanche regime
-**coincides with the known hard regime**; it is not a new pathology.
+**Three avalanche sources** (by search depth):
+1. **Seed flip** (depth 0): edit changes which vertex achieves max structural
+   tuple → `v_0` changes → the entire `w*_c` is recomputed from a different
+   starting point → `s(e) = O(m·k)`.
+2. **Early tie perturbation** (depth `d` small, `d > 0`): edit shifts `ξ(v)` for
+   some `v ∈ N[e]` that appears in an early tie `T(σ_d)` → the search switches
+   branch early and the remaining string diverges. Wall-clock analogy: the
+   high backtracking cost on STS(13)/GQ(2,2) (T-TAa: 270 ms / 1.09 s vs 34 ms /
+   61 ms greedy) is the search-tree analogue of this effect.
+3. **Deep tie perturbation** (depth `d` arbitrary): edit touches a vertex in
+   `N[e]` that participates in a tie at depth `d` → sensitivity `≤ |w*_c| - d`.
+   These edits are uncommon on sparse inputs (few ties); frequent on dense or
+   symmetric inputs.
 
-**Consequence — the theorem's honest final form.** A two-part statement:
+The earlier formulation of §3 described only source 1 and attributed all
+avalanches to "top-ξ ties" (seed/early-order flips). For the greedy encoder this
+is correct — the greedy commits at depth 0, so only the root-level comparison can
+trigger a wholesale rewrite. For `w*_c`, which revisits tie sets at every depth,
+sources 2 and 3 are distinct avalanche surfaces.
+
+**Where avalanches live — refined by Proposition 6.0 / Remark 6.1.**
+The discriminant is *automorphism-coherence* of ties
+(`theorem_a_completeness.tex`, §6). A tie at state `σ` is coherent if every pair
+of tied candidates `e, e' ∈ T(σ)` is related by an automorphism of `H` that
+fixes `dom(μ)` pointwise. By Proposition 6.0, when all reachable ties are
+coherent, all branches give equal completions; the lex-min is therefore stable —
+an edit that preserves coherence cannot switch the branch. By Remark 6.1, the
+stabiliser of the partial map `μ` at depth `d` is a subgroup of `Aut(H)` that
+SHRINKS as `d` increases; vertex-transitivity buys coherence at the root only.
+
+Empirical verdict (T-TAa, `scripts/bench_tie_complete.py`, i7-13700KF):
+
+| Design | `w*_greedy = w*_c` | Avalanche regime for `w*_c` |
+|---|---|---|
+| Fano plane | True | None — all ties coherent at all depths |
+| STS(9) | True | None — all ties coherent at all depths |
+| STS(13) (cyclic, `{i,i+1,i+3}`) | **False** | Yes — incoherent ties at depth > 0 |
+| GQ(2,2) (doily) | **False** | Yes — incoherent ties at depth > 0 |
+
+All four designs are vertex-transitive. The avalanche regime for `w*_c` is
+therefore **not the vertex-transitive regime as a whole** — it is the subset
+with incoherent ties at some search depth. Proposition 6.0 is the correct
+dividing line; it is machine-verified (T-TAa pinned the two failing designs) and
+is the target for T-B3 to characterize analytically.
+
+**Consequence — the theorem's honest final form (updated conditions):**
 - **(B-worst)** Unconditionally, `d_I(H,H') ≤ (c·m·k)·HGED(H,H')` — a valid but
   weak envelope.
-- **(B-cond)** For *seed-stable* edit paths (no top-`ξ` tie flips),
-  `d_I(H,H') ≤ O(k·Δ)·HGED(H,H')` — the strong bound (★).
-- **(B-avg)** *Target to pursue:* over random/generic hypergraphs, top-`ξ` ties
-  have vanishing probability, so `E[s(e)] = O(k·Δ)` and the strong bound holds
-  with high probability. An average-case / high-probability statement is the
-  most likely *fully unconditional* win and matches the empirical correlation.
+- **(B-cond)** For *tie-set transparent* edit paths (no tie-set perturbation at
+  any search depth), `d_I(H,H') ≤ O(k·Δ)·HGED(H,H')` — the strong bound (★).
+  This replaces the earlier "seed-stable" condition; they coincide at depth 0 but
+  B-cond is strictly stronger at depth > 0.
+- **(B-avg)** *Target to pursue:* over random/generic hypergraphs, ties are rare
+  at every search depth (structural tuples generically separate vertices), so
+  tie-set transparency holds with high probability. Hence `E[s(e)] = O(k·Δ)` and
+  the strong bound holds in expectation. The same argument applies to any
+  hypergraph family whose automorphism group is trivial: no ties means no
+  avalanche, regardless of density.
 
 ---
 
@@ -221,10 +302,17 @@ The strong bound scales as `C(k,Δ) = O(k·Δ)`. Two testable predictions:
    that validates Theorem B empirically** — the theorem is not decorative, its
    Δ-dependence is the falsifiable content.
 
-2. **Avalanche prediction.** On high-automorphism designs, ρ should drop sharply
-   and `s(e)` histograms should be bimodal (most edits `O(kΔ)`, rare edits
-   `O(mk)`). Measuring the single-edit sensitivity histogram directly
-   (`../empirical/correlation.md`, Exp E2b) tests the §3 avalanche story.
+2. **Avalanche prediction (revised at T-TBa).** The `s(e)` histogram shape
+   depends on the automorphism-coherence of ties (§3, Prop 6.0), not on
+   vertex-transitivity alone. Three regimes:
+   - *Generic sparse*: near-unimodal O(kΔ) (ties absent at every depth).
+   - *Coherent-tie symmetric designs (Fano, STS(9))*: near-unimodal O(kΔ)
+     despite high symmetry — all ties coherent, so no avalanche in `w*_c`.
+   - *Incoherent-tie symmetric designs (STS(13), GQ(2,2))*: heavy-tailed or
+     bimodal — incoherent ties at depth > 0 create an avalanche surface.
+   Measuring the histogram on all four designs (Exp E2b) tests this three-way
+   prediction. A bimodal result on Fano or STS(9) would falsify §3's
+   coherence criterion.
 
 If either prediction fails, Theorem B's proof strategy is wrong — that is the
 value of stating it falsifiably.
@@ -260,12 +348,30 @@ criterion). Consequences the applications section must own:
       resolve the connectivity domain gap: `w*` rejects disconnected inputs
       (decision B11) but optimal HGED paths pass through disconnected states
       (ledger T-M2c; candidate fix: component-wise `w*`).
-- [ ] T-B1: prove Lemma B1 (locality) in terms of *relative* CDLL order; resolve
-      the global-index-shift risk.
-- [ ] T-B2: bound the reordering cost to `O(k·Δ)` under seed-stability; nail
-      the token-width factor.
-- [ ] T-B3: characterize the seed-flip (avalanche) condition precisely; tie it
-      to top-`ξ` ties and the automorphism group.
+- [ ] T-B1: prove the restated Lemma B1 — locality of `w*_c` under tie-set
+      transparency — in terms of *relative* CDLL order. The proof must construct
+      a correspondence between the branching search trees of `H` and `H⊕e` from
+      `v_0`, showing they are isomorphic outside `N[e]` when transparency holds.
+      The global-index-shift risk from pointer values (CDLL indices, `CLAUDE.md`
+      invariant 1) requires the argument to work in relative CDLL order
+      throughout. C candidates are a singleton tie set by construction (T-TAa
+      analysis: `SparseHypergraph` forbids duplicate member sets → no C-tie
+      avalanche) and need separate, simpler treatment.
+- [ ] T-B2: bound the *branching window* — the number of instruction positions
+      that change under a tie-set-transparent edit — to `O(k·Δ)`. The token-width
+      factor (instructions per vertex in the affected window; the `c_2` constant
+      in `s(e) ≤ c_1·k + c_2·k·Δ`) must be nailed. The Qin-costing remark in
+      §2.2 (direct term is O(1) in arity per unit HGED) should transfer to the
+      branching-window count as well.
+- [ ] T-B3: characterize when an edit `e` perturbs a tie set at depth `d` —
+      the condition under which tie-set transparency fails and an avalanche occurs.
+      The characterization should use Proposition 6.0 (automorphism-coherent ties,
+      `theorem_a_completeness.tex` §6): a tie at depth `d` is incoherent iff the
+      stabiliser `Aut(H)_{dom(μ_d)}` fails to act transitively on `T(σ_d)`. The
+      empirical classification in §3 (Fano/STS(9) coherent; STS(13)/GQ(2,2)
+      incoherent) is the ground truth the analytical characterization must recover.
+      Connection to T-B4 (average-case): random sparse hypergraphs generically
+      have no ties at any depth → condition holds vacuously → (B-avg) follows.
 - [ ] T-B4 (stretch): the average-case/high-probability unconditional bound
       (B-avg) over a random hypergraph model.
 - [ ] T-B5: verify constants against measured `s(e)` histograms (Exp E2b).

@@ -43,8 +43,11 @@ enum class AlgorithmVariant : std::uint8_t {
 // variant : which algorithm flavour to run.
 //
 // Throws ``DisconnectedHypergraphError`` if H is disconnected.
+// Throws ``CanonicalizationTimeoutError`` when ``max_expansions > 0`` and any
+// per-seed greedy run exceeds that many V-branch (tie-branch) recursions.
 [[nodiscard]] std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
-                                                   AlgorithmVariant variant);
+                                                   AlgorithmVariant variant,
+                                                   int max_expansions = 0);
 
 // Return required_k(H) = max(2, max arity).
 [[nodiscard]] int required_k_compute(const SHG& H);

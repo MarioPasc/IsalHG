@@ -182,9 +182,8 @@ See `docs/engineering/CODE_DESIGN.md` Section 6 for the per-module mandate table
    (max label -> max degree -> lex-max sorted-desc neighbour degrees); the
    historical `argmax_lex (xi_1, xi_2, xi_3)` set (`greedy_min`) is equally
    sound. The package default variant (since T-TAd, D-TA1) is
-   `greedy_min_complete` -- tie-complete branching over that seed set,
-   computing the frozen `w*_c`; the greedy variants remain one-sided
-   heuristics. What breaks the isomorphism-invariance claim is a
+   `"canonical"` -- tie-complete branching over that seed set, computing the
+   frozen `w*_c`; the greedy variants remain one-sided heuristics. What breaks the isomorphism-invariance claim is a
    *non*-iso-invariant seed rule -- e.g. selecting by raw node id
    (`greedy_single*`, a speed heuristic, not an exact iso test).
 5. **`V` over `C` in ties.** Step 2 of the tie-breaking cascade is
@@ -256,10 +255,10 @@ iso-invariant seed set `S(H)` (invariant 4).
 - The converse is **FALSE for the greedy variants** (`greedy_min`,
   `greedy_min_nbrdeg`, `exhaustive`): the residual V-tie-break by raw edge
   id makes `w*` depend on the edge insertion order (pinned n=4
-  counterexample in `tests/unit/core/test_greedy_min_complete.py`).
-- The converse is **proved for `greedy_min_complete`** (tie-complete
-  branching, `tie_branch=True`), whose `w*_c` is a complete isomorphism
-  invariant. Metric-space claims (`d_I`, Theorem B) attach to `w*_c`.
+  counterexample in `tests/unit/core/test_canonical_encoder.py`).
+- The converse is **proved for `"canonical"`** (tie-complete branching,
+  `tie_branch=True`), whose `w*_c` is a complete isomorphism invariant.
+  Metric-space claims (`d_I`, Theorem B) attach to `w*_c`.
 - **`w*_c` is frozen (D-TA2, PI 2026-07-09) as the *unpruned* tie-complete
   lex-min** — the lex-min over the full residual tie set and all
   label-respecting orderings (Python `tie_branch=True`; C++ variant 7).
@@ -270,7 +269,7 @@ iso-invariant seed set `S(H)` (invariant 4).
   `tests/unit/core/test_wstar_c_frozen.py`.
 
 **Isomorphism test.** `iso(H1, H2) := (F(H1) == F(H2))` — exact with
-`greedy_min_complete`; with the greedy variants it is one-sided (equal
+`"canonical"`; with the greedy variants it is one-sided (equal
 fingerprints certify iso) and exact only under edge-order-preserving inputs.
 Comparing bare `w*` instead of `F` is a false positive on labelled inputs.
 

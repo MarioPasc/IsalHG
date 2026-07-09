@@ -26,7 +26,7 @@ from isalhg.core.sparse_hypergraph import SparseHypergraph
 pytestmark = pytest.mark.unit
 
 # (string length, sha256 of the serialized string), computed 2026-07-09 with
-# the unpruned tie-complete search (C++ variant 7 == Python tie_branch=True).
+# the unpruned tie-complete search (C++ variant 7 == algorithm="canonical").
 _PINNED_FIXTURES: dict[str, tuple[int, str]] = {
     "fano_plane": (
         121,
@@ -58,7 +58,7 @@ def test_wstar_c_pinned_on_design_fixtures(
     fixture_name: str, request: pytest.FixtureRequest
 ) -> None:
     H: SparseHypergraph = request.getfixturevalue(fixture_name)
-    w = canonical_string(H, k=3, algorithm="greedy_min_complete")
+    w = canonical_string(H, k=3, algorithm="canonical")
     assert _pin(w) == _PINNED_FIXTURES[fixture_name]
 
 
@@ -67,7 +67,7 @@ def test_wstar_c_pinned_on_cyclic_sts13() -> None:
         n_nodes=13,
         hyperedges=[frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)],
     )
-    w = canonical_string(H, k=3, algorithm="greedy_min_complete")
+    w = canonical_string(H, k=3, algorithm="canonical")
     assert _pin(w) == _PINNED_STS13
 
 
@@ -81,5 +81,5 @@ def test_wstar_c_pinned_on_n4_counterexample() -> None:
             frozenset({1, 2}),
         ],
     )
-    w = canonical_string(H, k=3, algorithm="greedy_min_complete")
+    w = canonical_string(H, k=3, algorithm="canonical")
     assert _pin(w) == _PINNED_CE_N4

@@ -58,4 +58,4 @@ class TestName:
 
     def test_default_name_is_complete(self) -> None:
         # T-TAd default (D-TA1): the tie-complete lex-min ``w*_c``.
-        assert IsalHGBackend().name == "isalhg_greedy_min_complete"
+        assert IsalHGBackend().name == "isalhg_canonical"

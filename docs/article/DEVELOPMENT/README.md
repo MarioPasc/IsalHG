@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 2 | 7 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 8 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -130,7 +130,7 @@ canonical-form track (the metric's foundation):
       └─► the closing chain, STRICTLY SEQUENTIAL — no parallelism available:
              T-TAf ✔ freeze w*_c (orchestrator, DONE 2026-07-09)
           └► T-TAd ✔ flip the package default to w*_c (orchestrator, DONE 2026-07-09)
-          └► T-TAg  harden the canonical surface      (delegable)
+          └► T-TAg ✔ harden the canonical surface      (DONE 2026-07-09)
           └► T-TAh  remove the unsound wl_colors pruning (shares h2s.cpp with T-TAg)
 
 experiments:

@@ -18,7 +18,7 @@ Inherited caveat. Iso-invariance here means invariance under *vertex*
 relabelling. Like every greedy variant, this one resolves residual V-ties by
 raw edge id, so its string still depends on the hyperedge insertion order and
 it is **not** a canonical form on isomorphism classes. Only
-``greedy_min_complete`` is.
+``canonical`` is.
 
 Speedup. On graphs where the max-xi seed set is large (many
 high-symmetry nodes) but breaks up into several WL orbits, this

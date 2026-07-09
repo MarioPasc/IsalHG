@@ -32,4 +32,5 @@ def canonical_string(
     k: int,
     structural_depth: int,
     algorithm_id: int,
+    max_expansions: int = 0,
 ) -> str: ...

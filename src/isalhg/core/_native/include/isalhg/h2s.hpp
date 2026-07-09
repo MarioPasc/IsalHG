@@ -34,12 +34,15 @@ namespace isalhg {
 //
 // Throws ``H2SStuckError`` when the encoder cannot make progress from a
 // non-terminal state.
+// Throws ``CanonicalizationTimeoutError`` when ``max_expansions > 0`` and the
+// number of V-branch recursions (tie-branch entries) exceeds the limit.
 [[nodiscard]] std::string greedy_h2s_str(
     const SHG& H,
     NodeId seed_node,
     int k,
     const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt,
-    bool tie_branch = false);
+    bool tie_branch = false,
+    int max_expansions = 0);
 
 // Variant returning the token vector (for the differential test).
 [[nodiscard]] std::vector<Token> greedy_h2s_tokens(
@@ -47,6 +50,7 @@ namespace isalhg {
     NodeId seed_node,
     int k,
     const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt,
-    bool tie_branch = false);
+    bool tie_branch = false,
+    int max_expansions = 0);
 
 }  // namespace isalhg

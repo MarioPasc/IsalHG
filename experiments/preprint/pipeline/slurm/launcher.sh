@@ -118,7 +118,7 @@ sbatch --parsable \
     --cpus-per-task=1 \
     --ntasks=1 \
     --constraint=${node_constraint} \
-    --export=ALL,CONDA_ENV_NAME=${CONDA_ENV_NAME},REPO_DIR=${REPO_DIR},CONFIG_PATH=${CONFIG_PATH},OUTPUT_ROOT=${OUTPUT_ROOT},TIER=${tier} \
+    --export=ALL,CONDA_ENV_NAME=${CONDA_ENV_NAME},REPO_DIR=${REPO_DIR},CONFIG_PATH=${CONFIG_PATH},OUTPUT_ROOT=${OUTPUT_ROOT},TIER=${tier},ISALHG_ALGORITHM=greedy_min_nbrdeg \
     ${SCRIPT_DIR}/worker.sh
 EOF
 )

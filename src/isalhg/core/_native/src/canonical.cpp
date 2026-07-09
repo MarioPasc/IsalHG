@@ -51,7 +51,7 @@ namespace {
 }  // namespace
 
 std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
-                                     AlgorithmVariant variant) {
+                                     AlgorithmVariant variant, int max_expansions) {
     if (H.n_nodes == 0) return "";
     if (!is_connected(H)) {
         throw DisconnectedHypergraphError(
@@ -125,14 +125,26 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                     const std::size_t i =
                         next_idx.fetch_add(1, std::memory_order_relaxed);
                     if (i >= n_seeds) return;
-                    per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch);
+                    per_seed[i] =
+                        greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch, max_expansions);
                 }
             }));
         }
-        for (auto& f : futures) f.get();
+        // Join ALL futures before rethrowing: the lambdas capture locals by
+        // reference, and leaving tasks running past this function's stack frame
+        // is undefined behaviour (dangling references).
+        std::exception_ptr first_exc;
+        for (auto& f : futures) {
+            try {
+                f.get();
+            } catch (...) {
+                if (!first_exc) first_exc = std::current_exception();
+            }
+        }
+        if (first_exc) std::rethrow_exception(first_exc);
     } else {
         for (std::size_t i = 0; i < n_seeds; ++i) {
-            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch);
+            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch, max_expansions);
         }
     }
 

@@ -40,6 +40,7 @@ struct PyExcCache {
     PyObject* IsalHGError = nullptr;
     PyObject* H2SStuckError = nullptr;
     PyObject* DisconnectedHypergraphError = nullptr;
+    PyObject* CanonicalizationTimeoutError = nullptr;
     PyObject* VocabularyMismatchError = nullptr;
     PyObject* CapacityError = nullptr;
     PyObject* InvalidLabelError = nullptr;
@@ -56,6 +57,7 @@ void init_exception_cache() {
     };
     g_exc.IsalHGError = fetch(errors_mod, "IsalHGError");
     g_exc.DisconnectedHypergraphError = fetch(errors_mod, "DisconnectedHypergraphError");
+    g_exc.CanonicalizationTimeoutError = fetch(errors_mod, "CanonicalizationTimeoutError");
     g_exc.VocabularyMismatchError = fetch(errors_mod, "VocabularyMismatchError");
     g_exc.CapacityError = fetch(errors_mod, "CapacityError");
     g_exc.InvalidLabelError = fetch(errors_mod, "InvalidLabelError");
@@ -78,6 +80,8 @@ void translate_exception(const std::exception_ptr& p) {
         std::rethrow_exception(p);
     } catch (const isalhg::H2SStuckError& e) {
         PyErr_SetString(g_exc.H2SStuckError, e.what());
+    } catch (const isalhg::CanonicalizationTimeoutError& e) {
+        PyErr_SetString(g_exc.CanonicalizationTimeoutError, e.what());
     } catch (const isalhg::DisconnectedHypergraphError& e) {
         PyErr_SetString(g_exc.DisconnectedHypergraphError, e.what());
     } catch (const isalhg::VocabularyMismatchError& e) {
@@ -202,7 +206,8 @@ NB_MODULE(_core, m) {
 
     m.def(
         "canonical_string",
-        [](nb::object py_H, int k, int structural_depth, int algorithm_id) -> std::string {
+        [](nb::object py_H, int k, int structural_depth, int algorithm_id,
+           int max_expansions) -> std::string {
             // Build the SHG view under the GIL (touches Python objects).
             const isalhg::SHG H = shg_from_python(py_H);
             const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
@@ -211,15 +216,18 @@ NB_MODULE(_core, m) {
             std::string result;
             {
                 nb::gil_scoped_release release;
-                result = isalhg::canonical_string_compute(H, k, structural_depth, variant);
+                result = isalhg::canonical_string_compute(
+                    H, k, structural_depth, variant, max_expansions);
             }
             return result;
         },
-        "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a,
+        "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a, "max_expansions"_a = 0,
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
         "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
         "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned,\n"
-        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = greedy_min_complete.");
+        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = canonical.\n"
+        "max_expansions: V-branch (tie-branch) budget per seed; 0 = unlimited.\n"
+        "  Raises CanonicalizationTimeoutError when any seed exceeds the limit.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).

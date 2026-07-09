@@ -554,6 +554,11 @@ void enumerate_label_perms_cb(
 
 struct WorkArena {
     std::vector<Disp> cost_class;
+    // V-branch (tie-branch) expansion budget. ``max_expansions == 0`` means
+    // unlimited. ``expansion_count`` is incremented once per V-branch recursive
+    // call, matching the Python ``_counter[0] += 1`` in ``_encode_from``.
+    int expansion_count = 0;
+    int max_expansions = 0;
 };
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
@@ -744,6 +749,16 @@ struct WorkArena {
         enumerate_label_perms_cb(
             tv.new_inputs.data(), tv.n_new_inputs, H, wl_colors,
             [&](const NodeId* perm, int new_count) {
+                // Budget check before any state mutation: throw is safe here.
+                if (arena.max_expansions > 0) {
+                    ++arena.expansion_count;
+                    if (arena.expansion_count > arena.max_expansions) {
+                        throw CanonicalizationTimeoutError(
+                            "canonical-string branch budget exceeded ("
+                            + std::to_string(arena.max_expansions) + " expansions)");
+                    }
+                }
+
                 std::array<SlotIdx, K_MAX> saved_ptrs{};
                 for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
                 const NodeId saved_next_id = state.next_output_id;
@@ -811,7 +826,7 @@ struct WorkArena {
 
 std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
                                      const std::optional<std::vector<std::int64_t>>& wl_colors,
-                                     bool tie_branch)
+                                     bool tie_branch, int max_expansions)
 {
     if (H.n_nodes == 0) return {};
     if (seed_node < 0 || seed_node >= H.n_nodes) {
@@ -829,6 +844,7 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     std::vector<Token> out;
     WorkArena arena;
     arena.cost_class.reserve(64);
+    arena.max_expansions = max_expansions;  // 0 = unlimited
     const bool ok = encode_from(H, k, state, wl_colors, out, arena, tie_branch);
     if (!ok) {
         throw H2SStuckError("H2S stuck from seed");
@@ -838,9 +854,9 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
 
 std::string greedy_h2s_str(const SHG& H, NodeId seed_node, int k,
                            const std::optional<std::vector<std::int64_t>>& wl_colors,
-                           bool tie_branch)
+                           bool tie_branch, int max_expansions)
 {
-    return serialize(greedy_h2s_tokens(H, seed_node, k, wl_colors, tie_branch));
+    return serialize(greedy_h2s_tokens(H, seed_node, k, wl_colors, tie_branch, max_expansions));
 }
 
 }  // namespace isalhg

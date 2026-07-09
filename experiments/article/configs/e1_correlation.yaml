@@ -1,0 +1,115 @@
+# T-M5a E1 — full correlation study (d_I vs HGED).
+#
+# Runs on Picasso: each cell is one SLURM array task.
+# Array size: python -m experiments.article.runner --config this_file --count
+#
+# Scale: n in {4..9}, n_items=30 per cell, three density bins.
+# Exact-HGED is tractable up to n≈10 on Picasso (A100, parallel).
+#
+# Output: D.npy + meta.json per distance per cell under output_root.
+# Analysis: experiments.article.analysis.correlation.analyze_correlation
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5a/e1_correlation
+
+cells:
+  # ── Low density (sparse regime) ─────────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: low_d_s0
+    dataset_params:
+      n_items: 30
+      n_range: [4, 7]
+      n_edges_range: [2, 3]
+      arity_range: [2, 2]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 43
+    label: low_d_s1
+    dataset_params:
+      n_items: 30
+      n_range: [4, 7]
+      n_edges_range: [2, 3]
+      arity_range: [2, 2]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 44
+    label: low_d_s2
+    dataset_params:
+      n_items: 30
+      n_range: [5, 9]
+      n_edges_range: [2, 4]
+      arity_range: [2, 2]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  # ── Medium density ───────────────────────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: med_d_s0
+    dataset_params:
+      n_items: 30
+      n_range: [4, 7]
+      n_edges_range: [3, 6]
+      arity_range: [2, 3]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 43
+    label: med_d_s1
+    dataset_params:
+      n_items: 30
+      n_range: [4, 7]
+      n_edges_range: [3, 6]
+      arity_range: [2, 3]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 44
+    label: med_d_s2
+    dataset_params:
+      n_items: 30
+      n_range: [5, 9]
+      n_edges_range: [4, 7]
+      arity_range: [2, 3]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  # ── High density (dense regime) ──────────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: hi_d_s0
+    dataset_params:
+      n_items: 30
+      n_range: [4, 6]
+      n_edges_range: [6, 10]
+      arity_range: [2, 4]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 43
+    label: hi_d_s1
+    dataset_params:
+      n_items: 30
+      n_range: [4, 6]
+      n_edges_range: [6, 10]
+      arity_range: [2, 4]
+    distances: [isalhg_levenshtein, exact_hged]
+
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 44
+    label: hi_d_s2
+    dataset_params:
+      n_items: 30
+      n_range: [5, 8]
+      n_edges_range: [8, 14]
+      arity_range: [2, 4]
+    distances: [isalhg_levenshtein, exact_hged]

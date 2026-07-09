@@ -32,3 +32,30 @@ statistics logged at scale for T-TBb; (f) wall-clock + peak RSS per cell reporte
 **Out of scope here:** competitor distances (T-M3a–d; rerun E1 with competitors
 when they land); the applications (T-M5b–e); any `src/` or pipeline changes
 (reopen via task-handoff if the pipeline itself needs fixing at scale).
+
+---
+
+## Submission record (orchestrator, 2026-07-09 ~22:50 CEST)
+
+Steps (1)–(2) executed. Repo code surface rsynced to Picasso
+(`fscratch/repos/IsalHG`), editable install rebuilt (fresh C++ compile), gates
+green on the cluster (frozen `w*_c` pins + ladder arity tests: 17 passed).
+Jobs submitted on `cpu_partition` (the tracked worker's `--partition=batch`
+does not exist on Picasso; also its `~/.conda/envs` PYTHON default is wrong —
+the env lives at `fscratch/conda_envs/isalhg`; submission used a thin wrapper
+at `~/execs/isalhg/t5a_worker.sh` forwarding `--output-root`):
+
+| Config | Job | Cells | Note |
+|---|---|---|---|
+| e1_correlation | 1547131 | 9 | running |
+| e2_density_sweep | 1547132 | 18 | running |
+| e2b_sensitivity | 1547133 | 6 | running |
+| e3_ladder | **1547221** | 6 | v2 — first array 1547134 crashed on the arity bug (cell 4, `k exceeds K_MAX`), cancelled, partials wiped, resubmitted after the arity-gate merge |
+
+Outputs: `fscratch/results/isalhg/T-M5a/<config>/` · logs `~/execs/isalhg/logs/`.
+Retrieval (step 3): `rsync -az picasso:/mnt/home/users/tic_163_uma/mpascual/fscratch/results/isalhg/T-M5a/ /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5a/full/`
+
+Remaining for this task: monitor completion, retrieve, run analysis at full
+scale (step 4), sign off acceptance (a)–(f). Note for (a)/(b): e3's ensemble
+now caps snapshot arity at `arity_range[1]` (post-fix semantics) — the paper
+must describe the ladder as arity-bounded.

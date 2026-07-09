@@ -431,17 +431,15 @@ struct CCandidate {
 // Label-respecting permutations of ``new_inputs``.
 //
 // Mirrors Python ``_label_respecting_perms``: group by label (label classes
-// sorted ascending), then within each group emit all permutations. With
-// ``wl_colors``, prune to permutations that place WL-equivalent vertices
-// within a label class in ascending input-id order.
+// sorted ascending), then within each group emit all permutations.
 // ---------------------------------------------------------------------------
 
 // ``new_inputs`` is bounded by MAX_NEW = K_MAX - 1 = 9, so every working
 // buffer in this section fits on the stack. group_by_label / the odometer
-// loop / wl_orbit_canonical all operate on fixed-size arrays. The
-// callback ``Fn`` receives one assembled permutation per call as a
-// ``(const NodeId*, int)`` pair; the encoder consumes it directly,
-// avoiding the previous ``vector<vector<NodeId>>`` perm-list build-up.
+// loop all operate on fixed-size arrays. The callback ``Fn`` receives one
+// assembled permutation per call as a ``(const NodeId*, int)`` pair; the
+// encoder consumes it directly, avoiding the previous
+// ``vector<vector<NodeId>>`` perm-list build-up.
 
 struct LabelGroupStack {
     std::int16_t label = 0;
@@ -449,33 +447,9 @@ struct LabelGroupStack {
     int n_members = 0;
 };
 
-// WL-orbit canonical filter: within each group, WL-equivalent vertices must
-// appear in ascending node-id order.
-[[nodiscard]] bool wl_orbit_canonical_stack(
-    const std::array<LabelGroupStack, MAX_NEW>& current,
-    int n_groups,
-    const std::vector<std::int64_t>& wl_colors) noexcept
-{
-    for (int g = 0; g < n_groups; ++g) {
-        const auto& grp = current[static_cast<std::size_t>(g)];
-        for (int a = 0; a < grp.n_members; ++a) {
-            const NodeId va = grp.members[static_cast<std::size_t>(a)];
-            const std::int64_t ca = wl_colors[static_cast<std::size_t>(va)];
-            for (int b = a + 1; b < grp.n_members; ++b) {
-                const NodeId vb = grp.members[static_cast<std::size_t>(b)];
-                if (wl_colors[static_cast<std::size_t>(vb)] == ca && vb <= va) {
-                    return false;
-                }
-            }
-        }
-    }
-    return true;
-}
-
 template <typename Fn>
 void enumerate_label_perms_cb(
-    const NodeId* new_inputs, int n_new, const SHG& H,
-    const std::optional<std::vector<std::int64_t>>& wl_colors, Fn&& callback)
+    const NodeId* new_inputs, int n_new, const SHG& H, Fn&& callback)
 {
     // group_by_label, stack-allocated.
     std::array<LabelGroupStack, MAX_NEW> groups{};
@@ -513,9 +487,7 @@ void enumerate_label_perms_cb(
     std::array<NodeId, MAX_NEW> flat{};
 
     while (true) {
-        const bool keep = !wl_colors.has_value()
-            || wl_orbit_canonical_stack(current, n_groups, wl_colors.value());
-        if (keep) {
+        {
             int pos = 0;
             for (int g = 0; g < n_groups; ++g) {
                 const auto& grp = current[static_cast<std::size_t>(g)];
@@ -554,15 +526,18 @@ void enumerate_label_perms_cb(
 
 struct WorkArena {
     std::vector<Disp> cost_class;
+    // V-branch (tie-branch) expansion budget. ``max_expansions == 0`` means
+    // unlimited. ``expansion_count`` is incremented once per V-branch recursive
+    // call, matching the Python ``_counter[0] += 1`` in ``_encode_from``.
+    int expansion_count = 0;
+    int max_expansions = 0;
 };
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
-                               const std::optional<std::vector<std::int64_t>>& wl_colors,
                                std::vector<Token>& out_completion,
                                WorkArena& arena, bool tie_branch);
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
-                               const std::optional<std::vector<std::int64_t>>& wl_colors,
                                std::vector<Token>& out_completion,
                                WorkArena& arena, bool tie_branch)
 {
@@ -703,7 +678,7 @@ struct WorkArena {
         ++state.consumed_cnt;
 
         std::vector<Token> sub_completion;
-        const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena, tie_branch);
+        const bool ok = encode_from(H, k, state, sub_completion, arena, tie_branch);
 
         state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
         --state.consumed_cnt;
@@ -742,8 +717,18 @@ struct WorkArena {
     for (const VCandidate& tv : tied) {
         const EdgeId branch_edge_id = tv.edge_id;
         enumerate_label_perms_cb(
-            tv.new_inputs.data(), tv.n_new_inputs, H, wl_colors,
+            tv.new_inputs.data(), tv.n_new_inputs, H,
             [&](const NodeId* perm, int new_count) {
+                // Budget check before any state mutation: throw is safe here.
+                if (arena.max_expansions > 0) {
+                    ++arena.expansion_count;
+                    if (arena.expansion_count > arena.max_expansions) {
+                        throw CanonicalizationTimeoutError(
+                            "canonical-string branch budget exceeded ("
+                            + std::to_string(arena.max_expansions) + " expansions)");
+                    }
+                }
+
                 std::array<SlotIdx, K_MAX> saved_ptrs{};
                 for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
                 const NodeId saved_next_id = state.next_output_id;
@@ -772,7 +757,7 @@ struct WorkArena {
 
                 sub_completion.clear();
                 const bool ok =
-                    encode_from(H, k, state, wl_colors, sub_completion, arena, tie_branch);
+                    encode_from(H, k, state, sub_completion, arena, tie_branch);
 
                 state.consumed[static_cast<std::size_t>(branch_edge_id)] = 0;
                 --state.consumed_cnt;
@@ -810,8 +795,7 @@ struct WorkArena {
 // ---------------------------------------------------------------------------
 
 std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
-                                     const std::optional<std::vector<std::int64_t>>& wl_colors,
-                                     bool tie_branch)
+                                     bool tie_branch, int max_expansions)
 {
     if (H.n_nodes == 0) return {};
     if (seed_node < 0 || seed_node >= H.n_nodes) {
@@ -829,7 +813,8 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     std::vector<Token> out;
     WorkArena arena;
     arena.cost_class.reserve(64);
-    const bool ok = encode_from(H, k, state, wl_colors, out, arena, tie_branch);
+    arena.max_expansions = max_expansions;  // 0 = unlimited
+    const bool ok = encode_from(H, k, state, out, arena, tie_branch);
     if (!ok) {
         throw H2SStuckError("H2S stuck from seed");
     }
@@ -837,10 +822,9 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
 }
 
 std::string greedy_h2s_str(const SHG& H, NodeId seed_node, int k,
-                           const std::optional<std::vector<std::int64_t>>& wl_colors,
-                           bool tie_branch)
+                           bool tie_branch, int max_expansions)
 {
-    return serialize(greedy_h2s_tokens(H, seed_node, k, wl_colors, tie_branch));
+    return serialize(greedy_h2s_tokens(H, seed_node, k, tie_branch, max_expansions));
 }
 
 }  // namespace isalhg

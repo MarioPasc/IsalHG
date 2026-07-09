@@ -9,7 +9,7 @@ argmin WL colour (admissible, keeps the whole class) and does **not** pass WL
 colours into the V-branch permutation loop. It inherits greedy's raw-edge-id
 V-tie-break, so it is invariant under vertex relabelling but depends on the
 hyperedge insertion order: a speed heuristic, not a canonical form. Only
-``greedy_min_complete`` is.
+``canonical`` is.
 """
 
 from __future__ import annotations

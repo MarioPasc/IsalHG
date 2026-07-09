@@ -18,6 +18,10 @@ struct H2SStuckError : public IsalHGError {
     using IsalHGError::IsalHGError;
 };
 
+struct CanonicalizationTimeoutError : public IsalHGError {
+    using IsalHGError::IsalHGError;
+};
+
 struct DisconnectedHypergraphError : public IsalHGError {
     using IsalHGError::IsalHGError;
 };

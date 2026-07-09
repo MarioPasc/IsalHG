@@ -1,7 +1,9 @@
 # T-TAf — Freeze the canonical form: unpruned `w*_c`, orbit-pruning only (D-TA2)
 **Declared:** 2026-07-09 11:25 CEST (handoff from the T-TAa/T-TAd assessment)
-**Status:** OPEN
+**Status:** DONE (2026-07-09 13:25 CEST, orchestrator)
 **Depends on:** T-TA (proof) — must land **with or before** T-TAd
+**Delegation:** orchestrator-only — this freezes the *definition* of the paper's
+central object; getting it subtly wrong is unrecoverable once tables exist.
 **Why out of scope:** T-TAa's mandate was to port and measure the tie-complete
 encoder; T-TAd's is to flip the default. Neither settles *which* tie-complete
 lex-min is the article's `w*_c`, and that is a definitional decision with a
@@ -35,3 +37,42 @@ counterexample} so any future refinement that changes the value fails loudly.
 **Out of scope here:** implementing orbit pruning (a research subtask — detecting
 the stabiliser during search is the hard part of nauty); the default flip (T-TAd);
 the surface hardening (T-TAg).
+
+---
+
+## Closing note (2026-07-09 13:25 CEST, orchestrator)
+
+Executed directly by the orchestrator in the main tree (delegation:
+orchestrator-only). Acceptance, clause by clause:
+
+1. **D-TA2 recorded** — already resolved in `DECISIONS.md` (PI, 2026-07-09
+   11:38 CEST) with the verbatim call and the reasoning of record; no edit
+   needed.
+2. **Proof doc** — `theorem_a_completeness.tex` §Consequences gains a
+   *Frozen definition (D-TA2)* item: `w*_c` = the unpruned tie-complete
+   lex-min (κ-min over the full `T(σ)` × label-respecting orderings; Python
+   `tie_branch=True` ≡ C++ variant 7); ρ-refinement forks the definition and
+   is not sanctioned; stabiliser-orbit pruning (Prop. `prop:coherent`) is the
+   only value-preserving lever. The C++-port item's "lever remains available"
+   sentence is corrected to say D-TA2 takes ρ off the table even on
+   η-degenerate rigid inputs. Recompiled clean: two `pdflatex` passes exit 0,
+   0 undefined references; PDF regenerated.
+3. **Docs** — `stability.md` §1 gains the frozen-definition paragraph before
+   Corollary A; `CLAUDE.md` §Mathematical Foundation gains the frozen-`w*_c`
+   bullet. Both name orbit pruning as the only sanctioned speedup and point
+   to the pin test.
+4. **Regression pins** — new `tests/unit/core/test_wstar_c_frozen.py` pins
+   `(len, sha256)` of `w*_c` (k=3, `greedy_min_complete`) on the four required
+   inputs: Fano `(121, 9695315f…)`, STS(9) `(227, a6282f85…)`, cyclic STS(13)
+   `(256, 77d9fa1e…)`, n=4 counterexample `(54, ab9393ff…)`.
+
+Closing check (verbatim):
+
+```
+$ pytest tests/unit/core/test_wstar_c_frozen.py -q
+============================== 4 passed in 0.47s ===============================
+$ mypy tests/unit/core/test_wstar_c_frozen.py
+Success: no issues found in 1 source file
+$ ruff check tests/unit/core/test_wstar_c_frozen.py
+All checks passed!
+```

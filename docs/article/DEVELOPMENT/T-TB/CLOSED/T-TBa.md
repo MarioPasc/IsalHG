@@ -71,3 +71,45 @@ the disconnected-path domain gap (T-M2c / T-B0); running E2b (T-M5a).
 - *No code touched.* No tests to run; task touches only `docs/`.
 - *Checks:* pytest not run (docs-only task); ruff/mypy not run (no Python changed).
   Baselines ruff 3 / mypy 21 assumed unchanged.
+
+---
+**Round 2 correction (2026-07-09) — six defects fixed:**
+
+- *A (merge conflict):* `git merge main` on the stale worktree left conflict markers in
+  `stability.md` §6 (T-A/T-B0 items) and `DEVELOPMENT/README.md` (scope table + critical
+  path paragraph). Both resolved: §6 keeps main's T-A ("PROVED AND PI-REVIEWED", `"canonical"`,
+  D-TA2) and main's T-B0 (D-CONN1 insert-before-delete path-normalization mechanism); my updated
+  T-B1/B2/B3 (four-source framing, N_r[e], three conditions) sit on top. README.md scope
+  table: T-TA 0/9, T-TB 1/1. Critical path paragraph merged: T-TA chain + T-TBa both
+  described; "Runnable in parallel" updated to T-TB (now unblocked), T-M2c P3, T-M4', T-M3a-d.
+
+- *B (missing condition iii + argmin migration source):* Lemma B1 (stability.md §2.2 and
+  lemma_b1_restatement.tex §3) now lists three conditions: (i) seed membership, (ii) tie-set
+  stability in N_r[e], (iii) argmin-seed preservation — v_0 remains the κ-minimum seed in H⊕e.
+  Without (iii), the per-seed O(k·Δ) bound does not lift to the global s(e). Argmin migration
+  added as source 2 in the four-source §3 table and §6 avalanche list.
+
+- *C (coherence overstatement):* stability.md §2.2, §3, §4 and lemma_b1_restatement.tex §5
+  now state that coherence (Prop 6.0) suppresses sources 3-4 only (early and deep tie
+  perturbations). Sources 1 (seed-set change) and 2 (argmin migration) remain possible even on
+  fully coherent hypergraphs. The old phrasing "no avalanche for any edit that preserves the
+  seed" is gone.
+
+- *D (wrong radius N[e] vs N_r[e]):* All occurrences of "N[e]" as the transparency condition
+  set changed to "N_r[e] (r=3, structural-tuple depth)". The encoding window remains N_1[e]
+  (1-hop, O(k·Δ) vertices). Distinction stated explicitly in stability.md §2.2 (two-radii
+  paragraph), in Lemma B1 statement, in §3 sources 3-4, and in lemma_b1_restatement.tex
+  Definition 1, Lemma 2, proof sketch, §4 greedy comparison, §6 sources 3-4, §7 T-B2 item.
+
+- *E (evidence imprecision):* "empirically verified at T-TAa" changed to "inferred from
+  Prop 6.0's sufficient direction; verified equality w*_greedy = w*_c" throughout. stability.md
+  §3 table "all ties coherent at all depths" → "All depths (inferred from Prop 6.0 + verified
+  equality)". lemma_b1_restatement.tex §5 stability paragraph and §6 table rows similarly
+  updated. C-singleton claim now quotes the exact T-TAa.md closing note sentence.
+
+- *F (greedy comparison wording):* lemma_b1_restatement.tex §4. "The greedy makes comparisons
+  only at a single depth" and "the only comparison points are the root-level decisions" were
+  wrong (the greedy makes comparisons at every state along its single path). Replaced with:
+  "The greedy makes one comparison per state and commits immediately; the trajectory is a single
+  path, not a tree. A tie at depth d perturbs only the decision at depth d and those downstream
+  on the same path." The radius is correctly stated as N_r[e] (r=3) for both encoders.

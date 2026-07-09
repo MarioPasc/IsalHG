@@ -71,6 +71,7 @@ Scopes are the milestone prefixes: `T-M0` (seed selection), `T-M1`
 **Declared:** <output of the date command>
 **Status:** OPEN
 **Depends on:** T-<id> | —
+**Delegation:** agent | orchestrator-only   (omit if you are unsure — the orchestrator judges)
 **Why out of scope:** <one line — which task you were on and why this is separate>
 **Context to read first:**
 - `path/to/file.py::Function` — the symbol involved
@@ -91,5 +92,9 @@ Scopes are the milestone prefixes: `T-M0` (seed selection), `T-M1`
 - **Keep it lightweight:** a handful of lines. Precision over prose.
 - **One entry per discovery.** If you found three things, write three files.
 - **Status is always `OPEN`** at handoff time, so the file lands in `<SCOPE>/OPEN/`.
+- **`Delegation:`** marks work the `task-orchestrator` must not hand to a subagent:
+  `orchestrator-only` for anything irreversible, definitional, or where deciding
+  what "correct" means *is* the task (golden regeneration, default flips, freezing
+  a definition). Omit the field when unsure; the orchestrator will judge and say so.
 - **A task changes status by moving**, with `git mv`, not by being rewritten in
   place. Only its `Status` line and its closing-check output change.

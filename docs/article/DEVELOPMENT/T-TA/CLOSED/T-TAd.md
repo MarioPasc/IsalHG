@@ -1,6 +1,6 @@
 # T-TAd — Fast complete canonical algorithm (C++), promoted to package default
 **Declared:** 2026-07-09 10:23 CEST (PI directive; resolves D-TA1; supersedes T-TAa)
-**Status:** OPEN — **reduced to the default flip.** The C++ port shipped at
+**Status:** DONE (2026-07-09 13:45 CEST, orchestrator) — was OPEN, **reduced to the default flip.** The C++ port shipped at
 T-TAa (2026-07-09 11:07): `AlgorithmVariant::GreedyMinComplete = 7`, byte-equal
 to the Python reference, Fano 6.41 ms / STS(9) 137 ms / STS(13) 270 ms /
 GQ(2,2) 1.09 s, random n≤12 medians ≤ 0.7 ms. The port's speed gate ("Fano
@@ -9,8 +9,14 @@ the default at the three surfaces, regenerate goldens/caches where `w*`
 changes, and update the docs. Note the goldens *will* change on more than
 tie-degenerate inputs — `w*_greedy ≠ w*_c` on STS(13) and GQ(2,2) (T-TAa
 finding), so any cached design fingerprint is affected.
-**Depends on:** T-TA (proof + Python reference, DONE pending review); T-TAa
-(C++ port, DONE) — which it originally absorbed and now merely follows.
+**Depends on:** T-TA (proof + Python reference, DONE — PI-reviewed 2026-07-09);
+T-TAa (C++ port, DONE) — which it originally absorbed and now merely follows;
+**T-TAf** (the definitional freeze) — which must land **with or before** this task,
+because the flip promotes whichever `w*_c` T-TAf has frozen. Do not start T-TAd
+while T-TAf is open.
+**Delegation:** orchestrator-only — the golden regeneration requires deciding, per
+changed string, whether it moved because `w*_greedy ≠ w*_c` (expected, e.g. STS(13))
+or because something broke. That judgment does not survive an acceptance checklist.
 **Why out of scope:** T-TA's mandate was the theorem; making the complete
 algorithm *fast* and *the default* is an engineering + promotion effort the PI
 authorized on 2026-07-09 after reviewing the T-TA findings.
@@ -81,3 +87,52 @@ pruning key, verify it against the admissible-pruning lemma and record the key
 in the proof doc's §Consequences); the seed-label fingerprint augmentation
 (T-TAb); the WL-pruned variant reconciliation (T-TAc); disconnected-input
 support (T-M2c).
+
+---
+
+## Closing note (2026-07-09 13:45 CEST, orchestrator)
+
+Executed directly by the orchestrator in the main tree, immediately after
+T-TAf landed (the freeze precedes the flip, as required). No pruning key was
+added — the promoted algorithm is the frozen unpruned `w*_c` (D-TA2), so no
+proof-doc addendum beyond T-TAf's is needed.
+
+**The flip.** Default `algorithm` is now `"greedy_min_complete"` at all
+surfaces: `canonical_string` and `canonical_fingerprint`
+(`core/canonical.py`), `IsalHGBackend.__init__` and
+`_DEFAULT_ISALHG_ALGORITHM` (env override `ISALHG_ALGORITHM` preserved —
+pipelines that set it are unaffected), and `IsalHGLevenshtein` (`d_I` now
+computes `w*_c` by default). Registry additions: `isalhg_greedy_min_complete`
+alias registered and added to the lazy-import map (plus the two pre-existing
+missing lazy entries `isalhg_greedy_{min,single}_nbrdeg`, same omission
+class).
+
+**Goldens/caches.** Repo-wide audit found no golden files and no pinned
+default-path strings: every default-path test assertion is relational
+(equality of two computations), so nothing to regenerate. Exactly one pinned
+artifact moved — `test_isalhg_backend.py::test_default_name_is_nbrdeg`
+asserted the default backend *name*; it moved because the default flipped
+(expected), and was rewritten as `test_default_name_is_complete`.
+`tests/property/test_canonical_invariance.py` parametrization extended to
+`greedy_min_complete` (battery item 4).
+
+**Docs.** `stability.md` §1 (default-flip paragraph), `CLAUDE.md` invariant 4
++ §Mathematical Foundation (via T-TAf), `docs/article/CODE_DESIGN.md` §1
+(explicit default statement). `docs/engineering/CODE_DESIGN.md` contains no
+default claim to update.
+
+**Test battery (the Theorem-A completion gate), all green:**
+
+1. Differential + backend equivalence + completeness + invariance:
+   `pytest tests/property/test_{completeness,canonical_invariance,cpp_differential,backend_equivalence}.py --hypothesis-seed=0` → **62 passed** (invariance now × 3 variants).
+2. `pytest tests/unit/core/test_greedy_min_complete.py tests/unit/core/test_wstar_c_frozen.py tests/unit/iso_backends/test_isalhg_backend.py` *without* `-m "not slow"` → **24 passed** (includes the slow design tests).
+3–5. Included above / in the full suite (integration partition-agreement vs
+   pynauty runs through the `"isalhg"` registry name, which now resolves to
+   the complete default).
+6. Full closing check: `pytest tests/unit tests/property tests/integration -m "not slow" --hypothesis-seed=0` → **674 passed, 8 skipped, 7 deselected** (baseline 666 + 4 T-TAf pins + 4 new invariance parametrizations); `ruff` → **Found 3 errors** (= baseline); `mypy` → **21 errors in 6 files** (= baseline).
+7. Wall-clock (`scripts/bench_tie_complete.py`, i7-13700KF): Fano
+   **4.29 ms** (gate ≤ ~50 ms ✓), STS(9) 133 ms, STS(13) 270 ms, GQ(2,2)
+   1.03 s; random connected corpus (30/n, n∈[4,12]) complete medians
+   0.04–0.66 ms, max 43.7 ms. Worst observed branching blow-up vs the greedy
+   default: **20.9×** on STS(9) (η-degenerate, automorphism-rich); corpus
+   medians ≤ 4.9× greedy. Compatible with T-M5a/b corpus scale.

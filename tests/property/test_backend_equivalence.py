@@ -53,24 +53,24 @@ def test_canonical_string_backends_agree_named(
 
 @pytest.mark.slow
 def test_canonical_string_complete_backends_agree_fano() -> None:
-    # greedy_min_complete is excluded from _NATIVE_VARIANTS: the Python
+    # "canonical" (formerly greedy_min_complete) is excluded from _NATIVE_VARIANTS: the Python
     # tie-complete reference costs ~3.4 s on Fano and ~132 s on STS(9).
     H = fano_plane()
-    py = canonical_string(H, algorithm="greedy_min_complete", backend="python")
-    cpp = canonical_string(H, algorithm="greedy_min_complete", backend="cpp")
+    py = canonical_string(H, algorithm="canonical", backend="python")
+    cpp = canonical_string(H, algorithm="canonical", backend="cpp")
     assert py == cpp
 
 
 @settings(max_examples=25, deadline=None)
 @given(small_connected_hypergraph(max_n=5, max_arity=3))
 def test_canonical_string_complete_backends_agree_hypothesis(H: SparseHypergraph) -> None:
-    py = canonical_string(H, algorithm="greedy_min_complete", backend="python")
-    cpp = canonical_string(H, algorithm="greedy_min_complete", backend="cpp")
+    py = canonical_string(H, algorithm="canonical", backend="python")
+    cpp = canonical_string(H, algorithm="canonical", backend="cpp")
     assert py == cpp
 
 
 def test_complete_is_a_native_cpp_variant() -> None:
-    assert "greedy_min_complete" in available_cpp_variants()
+    assert "canonical" in available_cpp_variants()
 
 
 @pytest.mark.slow

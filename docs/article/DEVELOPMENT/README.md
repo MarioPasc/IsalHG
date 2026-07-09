@@ -47,13 +47,13 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | Scope | Concern | Open | Closed |
 |---|---|---|---|
 | [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
-| [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 0 | 2 |
+| [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 1 | 3 |
 | [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 4 (+1 blocked) | 4 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 1 | 1 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -113,23 +113,25 @@ T-M0 ✔ seed optimization (DONE)
 
 T-M1a ✔ metric_space foundation (DONE)
    ├─► T-M1b ✔ d_I + WL distances (DONE)
+   │      └─► T-M1c  metric-axiom suite + n=0 domain bug + ablation honesty
    ├─► T-M2  ✔ HGED oracle (DONE; T-M2a/T-M2b Qin unification DONE)
-   │      └─► T-M2c  disconnected-input domain gap        [gates T-M5a, T-TB]
+   │      └─► T-M2c  connected-only domain (D-CONN1): generators + LCC   [gates T-M5a]
    ├─► T-M3a..d competitors (nauty-edit / HPD / NetLSD / HyperCOT)
    └─► T-M4   planted-family datasets + scoring primitives
 
 T-M4'  HIC atlas loader (independent) ─► real-anchor apps + gates T-DQ3'
 
 canonical-form track (the metric's foundation):
-   T-TA ✔ completeness proof (BLOCKED on PI review only)
+   T-TA ✔ completeness proof — PI-REVIEWED 2026-07-09 (DONE)
       ├─► T-TAa ✔ C++ tie-complete encoder (DONE)
-      │      └─► T-TAd  flip the package default to w*_c   ← THE BLOCKER
-      │             └─► T-TAg  harden the canonical surface
       ├─► T-TAb ✔ seed-label fingerprint (DONE)
       ├─► T-TAc ✔ WL-pruned variants re-documented + counterexampled (DONE)
-      │      └─► T-TAh  remove the unsound wl_colors V-branch pruning (with T-TAg)
-      ├─► T-TAf  freeze the canonical form (D-TA2 resolved: unpruned w*_c)
-      └─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
+      ├─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
+      └─► the closing chain, STRICTLY SEQUENTIAL — no parallelism available:
+             T-TAf ✔ freeze w*_c (orchestrator, DONE 2026-07-09)
+          └► T-TAd ✔ flip the package default to w*_c (orchestrator, DONE 2026-07-09)
+          └► T-TAg ✔ harden the canonical surface      (DONE 2026-07-09)
+          └► T-TAh ✔ remove the unsound wl_colors pruning (DONE 2026-07-09)
 
 experiments:
    T-M5a  correlation / density-sweep / info-content   ← M1b, M2, M4     [needs HGED]
@@ -140,18 +142,21 @@ theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► 
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09, T-TBa complete).** The canonical-form chain
-(T-TAf → T-TAd → T-TAg → T-TAh) closed and T-TBa closed: `stability.md` §2.2,
-§3, §4, §6 and `correlation.md` Exp E2b are now stated over `w*_c` (tie-set
-transparency condition for Lemma B1; three-source avalanche; coherent/incoherent
-design split; three-regime E2b prediction). The article-critical path now runs
-through T-TB (the stability proof itself, unblocked by T-TBa) and the T-M5
-prerequisites (T-M2c, T-M3a–d, T-M4).
+**Critical path (2026-07-09, T-TBa complete).** The entire canonical-form
+track closed 2026-07-09 (T-TAf freeze → T-TAd flip → T-TAg hardening → T-TAh
+`wl_colors` removal): the package computes the frozen `w*_c` (variant
+`"canonical"`) by default, `d_I` is a metric on isomorphism classes and is
+guarded against non-canonical algorithms, the search raises instead of
+hanging under a `max_expansions` budget, and the unsound pruning is gone.
+T-TBa then closed: `stability.md` §2.2, §3, §4, §6 and `correlation.md`
+Exp E2b are restated over `w*_c` (three-condition Lemma B1; four-source
+avalanche; coherent/incoherent design split; three-regime E2b prediction).
+The article-critical path now runs through **T-TB** (the stability proof,
+unblocked by T-TBa) and the T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
 
-**Runnable in parallel right now:** T-TAd + T-TAf + T-TAg (the canonical-form
-landing), T-M2c's P3 decision (theory, no code), T-M4' (HIC loader), T-M3a–d
-(competitors). Use isolated git worktrees for agents that touch overlapping
-`core/` files.
+**Runnable in parallel right now:** T-TB (theory, unblocked), T-M2c's P3
+decision (theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use
+isolated git worktrees for agents that touch overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
 invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`

@@ -24,7 +24,7 @@ a single orbit -- this variant already disagrees with ``exhaustive``
 (``test_pruned_exhaustive_differs_from_exhaustive_on_vertex_transitive``).
 
 Consequently this variant defines no canonical form on isomorphism classes and
-must never feed ``d_I``. Use ``greedy_min_complete`` for any isomorphism or
+must never feed ``d_I``. Use ``canonical`` for any isomorphism or
 metric-space claim. Retained as a speed heuristic and as part of the
 iso-benchmark preprint's measurement apparatus.
 """

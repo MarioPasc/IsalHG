@@ -53,11 +53,12 @@ def small_connected_hypergraph(draw, max_n: int = 5, max_arity: int = 3) -> Spar
     return SparseHypergraph(n_nodes=n, hyperedges=spanning_edges + extra)
 
 
-# Both iso-invariant seed strategies are guarded: the historical xi
+# Both iso-invariant seed strategies are guarded -- the historical xi
 # cascade (``greedy_min``) and the T-M0 neighbour-degree cascade
-# (``greedy_min_nbrdeg``, the default). ``greedy_single*`` is deliberately
+# (``greedy_min_nbrdeg``) -- plus the tie-complete package default
+# (``greedy_min_complete``, T-TAd). ``greedy_single*`` is deliberately
 # excluded -- it selects by raw node id and is not iso-invariant.
-_ISO_INVARIANT_VARIANTS = ["greedy_min", "greedy_min_nbrdeg"]
+_ISO_INVARIANT_VARIANTS = ["greedy_min", "greedy_min_nbrdeg", "canonical"]
 
 
 @pytest.mark.parametrize("algorithm", _ISO_INVARIANT_VARIANTS)

@@ -23,7 +23,7 @@ from isalhg.errors import InvalidLabelError
 
 pytestmark = pytest.mark.unit
 
-_NBRDEG_VARIANTS = ("greedy_min_nbrdeg", "greedy_single_nbrdeg", "greedy_min_complete")
+_NBRDEG_VARIANTS = ("greedy_min_nbrdeg", "greedy_single_nbrdeg", "canonical")
 _XI_VARIANTS = ("greedy_min", "greedy_single")
 
 

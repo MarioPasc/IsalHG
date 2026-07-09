@@ -17,13 +17,13 @@ def greedy_h2s(
     H: SparseHypergraph,
     seed_node: int,
     k: int,
-    wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
 ) -> str: ...
 def greedy_h2s_tokens(
     H: SparseHypergraph,
     seed_node: int,
     k: int,
-    wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
 ) -> list[tuple]: ...
 def max_xi_nodes(H: SparseHypergraph, depth: int = 3) -> list[int]: ...
 def wl_hash(H: SparseHypergraph, max_rounds: int = 64) -> list[int]: ...
@@ -32,4 +32,5 @@ def canonical_string(
     k: int,
     structural_depth: int,
     algorithm_id: int,
+    max_expansions: int = 0,
 ) -> str: ...

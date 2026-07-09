@@ -58,10 +58,10 @@ is a falsifiable prediction the density-sweep experiment tests.
 | `docs/article/theoretical/stability.md` | completeness → metric → **stability** theorem, proof strategy |
 | `docs/article/empirical/correlation.md` | controlled validation: HGED oracle, correlation/density/info-content |
 | `docs/article/empirical/applications.md` | MDS (flagship), clustering, kNN, shortest path |
-| `docs/article/DEVELOPMENT.md` | **the task ledger** — the live list of work |
+| `docs/article/DEVELOPMENT/` | **the task ledger** — one file per task, under `<scope>/{OPEN,IN-PROGRESS,BLOCKED,CLOSED}/`; `README.md` is the hub (index, dependency graph, critical path) |
 
 **Workflow.** Pick up work with the `task-reader` skill on a task in
-`docs/article/DEVELOPMENT.md`. When you find work outside your current task, log
+`docs/article/DEVELOPMENT/`. When you find work outside your current task, log
 it with the `task-handoff` skill rather than scope-creeping.
 
 **Doc split.** `docs/article/` = the new article. `docs/preprint/`
@@ -240,12 +240,29 @@ first** -- most modules port directly with the substitution
 `S2H(H2S(H)) ~ H` for all hypergraphs `H` representable by the chosen `k`.
 
 **Canonical string.**
-`w*(H) := argmin_lex { w in greedy_H2S(H, v_0) : v_0 in argmax_lex xi(v) }`.
-**Conjecture (not yet proved):** `w*(H1) = w*(H2) <=> H1 ~ H2`.
-Required for publication; empirically tested at Tier 5.
+`w*(H) := argmin_lex { w in greedy_H2S(H, v_0) : v_0 in S(H) }` for an
+iso-invariant seed set `S(H)` (invariant 4).
+**Completeness (RESOLVED at T-TA, 2026-07-08; proof in
+`/media/.../ISAL/isalhg/proofs/theorem_a_completeness.{tex,pdf}`):**
+- `w*(H1) = w*(H2) => H1 ~ H2` holds unconditionally for every variant
+  (round-trip soundness) — over the augmented fingerprint
+  `F(H) = (seed vertex label, w*(H))`; the bare string misses the seed
+  vertex label on non-trivial vocabularies. Implemented at T-TAb:
+  `core.canonical.canonical_fingerprint` computes `F`, `IsalHGBackend`
+  serialises it (`b"{label}|{w*}"`, prefix omitted when `|Sigma_V| = 1`),
+  and `d_I` measures the seed-label-prefixed token sequence.
+- The converse is **FALSE for the greedy variants** (`greedy_min`,
+  `greedy_min_nbrdeg`, `exhaustive`): the residual V-tie-break by raw edge
+  id makes `w*` depend on the edge insertion order (pinned n=4
+  counterexample in `tests/unit/core/test_greedy_min_complete.py`).
+- The converse is **proved for `greedy_min_complete`** (tie-complete
+  branching, `tie_branch=True`), whose `w*_c` is a complete isomorphism
+  invariant. Metric-space claims (`d_I`, Theorem B) attach to `w*_c`.
 
-**Isomorphism test.** `iso(H1, H2) := (w*(H1) == w*(H2))`. Pending the
-conjecture above, correct by construction.
+**Isomorphism test.** `iso(H1, H2) := (F(H1) == F(H2))` — exact with
+`greedy_min_complete`; with the greedy variants it is one-sided (equal
+fingerprints certify iso) and exact only under edge-order-preserving inputs.
+Comparing bare `w*` instead of `F` is a false positive on labelled inputs.
 
 ## Scientific Development Protocol
 
@@ -295,9 +312,9 @@ under hypothesis. Report the table even if all green.
 | `test-runner` | haiku | Bash, Read | Run pytest + ruff + mypy in the `isalhg` env; report summary table |
 
 Useful skills:
-- `task-reader` -- pick up a task from `docs/article/DEVELOPMENT.md` and execute
+- `task-reader` -- pick up a task from `docs/article/DEVELOPMENT/` and execute
   it context-first (plan mode, read cited context, flag decisions, verify).
-- `task-handoff` -- park out-of-scope work as a new ledger entry mid-development.
+- `task-handoff` -- park out-of-scope work as a new ledger task mid-development.
 - `picasso-sbatch` -- SLURM scripts for Picasso.
 - `research-rigor` -- audits experimental plans for missing ablations /
   leakage / unjustified parameters.
@@ -322,10 +339,12 @@ Useful skills:
 
 ## Detailed Specifications
 
-Active-article scope (auto-loaded): thesis + the live task ledger.
+Active-article scope (auto-loaded): thesis + the task-ledger hub. Individual task
+files under `docs/article/DEVELOPMENT/<scope>/<status>/` are read on demand by the
+`task-reader` skill, not auto-loaded.
 
 @docs/article/PROPOSAL.md
-@docs/article/DEVELOPMENT.md
+@docs/article/DEVELOPMENT/README.md
 
 Code map (iso-benchmark spec, still authoritative for the code as built):
 

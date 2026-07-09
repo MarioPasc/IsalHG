@@ -129,6 +129,7 @@ class IsalHGLevenshtein(HypergraphDistance):
         structural_depth: int = 3,
         normalize: bool = False,
         backend: Backend | None = None,
+        max_expansions: int | None = None,
     ) -> None:
         if algorithm != CANONICAL_ALGORITHM:
             raise DistanceComputationError(
@@ -143,6 +144,7 @@ class IsalHGLevenshtein(HypergraphDistance):
         self._structural_depth = structural_depth
         self._normalize = normalize
         self._backend = backend
+        self._max_expansions = max_expansions
 
     @property
     def name(self) -> DistanceName:
@@ -155,6 +157,7 @@ class IsalHGLevenshtein(HypergraphDistance):
             structural_depth=self._structural_depth,
             algorithm=self._algorithm,
             backend=self._backend,
+            max_expansions=self._max_expansions,
         )
         tokens: tuple[Symbol, ...] = tuple(parse(w_star))
         if not augment:

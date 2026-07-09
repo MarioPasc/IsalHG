@@ -233,27 +233,23 @@ class TestEdgeOrderInvariance:
 
 
 class TestBudget:
-    """CanonicalEncoder(max_expansions=N).encode() must raise
-    CanonicalizationTimeoutError on eta-degenerate inputs before hanging
-    (hardening (b) from T-TAg).
+    """canonical_string(max_expansions=N) must raise CanonicalizationTimeoutError
+    on high-automorphism inputs before hanging — for both the cpp and python backends.
     """
 
-    def test_budget_raises_on_high_automorphism_design(self) -> None:
-        from isalhg.core.algorithms.canonical import CanonicalEncoder
+    # Cyclic STS(13): vertex-transitive, hits large V tie-sets.
+    _STS13 = [frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)]
+
+    @pytest.mark.parametrize("backend", ["cpp", "python"])
+    def test_budget_raises_on_high_automorphism_design(self, backend: str) -> None:
         from isalhg.errors import CanonicalizationTimeoutError
 
-        # Cyclic STS(13) — vertex-transitive, hits large tie sets.
-        H = SparseHypergraph(
-            n_nodes=13,
-            hyperedges=[frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)],
-        )
-        enc = CanonicalEncoder(k=3, max_expansions=5)
+        H = SparseHypergraph(n_nodes=13, hyperedges=self._STS13)
         with pytest.raises(CanonicalizationTimeoutError, match="budget"):
-            enc.encode(H)
+            canonical_string(H, max_expansions=5, backend=backend)
 
-    def test_unlimited_budget_succeeds(self) -> None:
-        from isalhg.core.algorithms.canonical import CanonicalEncoder
-
+    @pytest.mark.parametrize("backend", ["cpp", "python"])
+    def test_unlimited_budget_succeeds(self, backend: str) -> None:
         H = SparseHypergraph(
             n_nodes=4,
             hyperedges=[
@@ -263,6 +259,15 @@ class TestBudget:
                 frozenset({1, 2}),
             ],
         )
-        enc = CanonicalEncoder(k=3, max_expansions=None)
-        result = enc.encode(H)
+        result = canonical_string(H, max_expansions=None, backend=backend)
         assert len(result) > 0
+
+    def test_budget_raises_via_encoder_python_path(self) -> None:
+        """CanonicalEncoder(max_expansions=N).encode() — legacy direct-encoder path."""
+        from isalhg.core.algorithms.canonical import CanonicalEncoder
+        from isalhg.errors import CanonicalizationTimeoutError
+
+        H = SparseHypergraph(n_nodes=13, hyperedges=self._STS13)
+        enc = CanonicalEncoder(k=3, max_expansions=5)
+        with pytest.raises(CanonicalizationTimeoutError, match="budget"):
+            enc.encode(H)

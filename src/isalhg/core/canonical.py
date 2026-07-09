@@ -132,7 +132,11 @@ def required_k(H: SparseHypergraph) -> int:
 
 
 def _python_canonical_string(
-    H: SparseHypergraph, k: int, structural_depth: int, algorithm: str
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    algorithm: str,
+    max_expansions: int | None = None,
 ) -> str:
     """Pure-Python multi-seed canonical-string for the native variants.
 
@@ -160,7 +164,14 @@ def _python_canonical_string(
         seeds = tuple(s for s in seeds if colours[s] == min_colour)
     tie_branch = algorithm == CANONICAL_ALGORITHM
     candidates = [
-        _python_greedy_h2s(H, seed_node=s, k=k, inplace=tie_branch, tie_branch=tie_branch)
+        _python_greedy_h2s(
+            H,
+            seed_node=s,
+            k=k,
+            inplace=tie_branch,
+            tie_branch=tie_branch,
+            max_expansions=max_expansions,
+        )
         for s in seeds
     ]
     best = min(candidates, key=sequence_sort_key)
@@ -168,14 +179,20 @@ def _python_canonical_string(
 
 
 def _cpp_canonical_string(
-    H: SparseHypergraph, k: int, structural_depth: int, algorithm: str
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    algorithm: str,
+    max_expansions: int | None = None,
 ) -> str:
     """C++-backed canonical-string for the native variants."""
     if not H.is_connected():
         raise DisconnectedHypergraphError(
             f"{algorithm} requires a connected hypergraph (decision B11)"
         )
-    return _core_canonical_string(H, k, structural_depth, _CPP_VARIANT_IDS[algorithm])
+    return _core_canonical_string(
+        H, k, structural_depth, _CPP_VARIANT_IDS[algorithm], max_expansions or 0
+    )
 
 
 _CANONICAL_STRING_BACKENDS: dict[str, object] = {
@@ -191,6 +208,7 @@ def canonical_string(
     structural_depth: int = 3,
     algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
+    max_expansions: int | None = None,
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
 
@@ -241,7 +259,7 @@ def canonical_string(
     effective_k = required_k(H) if k is None else k
     if algorithm in _CPP_VARIANT_IDS:
         impl = resolve(backend, _CANONICAL_STRING_BACKENDS)
-        return impl(H, effective_k, structural_depth, algorithm)
+        return impl(H, effective_k, structural_depth, algorithm, max_expansions)
     # Non-native variants stay on the Python algorithm registry.
     algo = get_algorithm(algorithm, k=effective_k, structural_depth=structural_depth)
     tokens = algo.encode(H)
@@ -304,6 +322,7 @@ def canonical_fingerprint(
     structural_depth: int = 3,
     algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
+    max_expansions: int | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute the augmented fingerprint ``F(H) = (seed label, w*(H))``.
 
@@ -320,6 +339,9 @@ def canonical_fingerprint(
         Connected hypergraph.
     k, structural_depth, algorithm, backend
         Forwarded verbatim to :func:`canonical_string`.
+    max_expansions : int or None, optional
+        V-branch expansion budget per seed run; ``None`` (default) is unlimited.
+        Forwarded verbatim to :func:`canonical_string`.
 
     Returns
     -------
@@ -330,6 +352,8 @@ def canonical_fingerprint(
     ------
     DisconnectedHypergraphError
         If ``H`` is disconnected (decision B11).
+    CanonicalizationTimeoutError
+        If any seed run exceeds ``max_expansions`` (when set).
     """
     w = canonical_string(
         H,
@@ -337,5 +361,6 @@ def canonical_fingerprint(
         structural_depth=structural_depth,
         algorithm=algorithm,
         backend=backend,
+        max_expansions=max_expansions,
     )
     return seed_vertex_label(H, w), w

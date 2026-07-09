@@ -99,6 +99,81 @@ mypy src/isalhg/: 21 errors (baseline 21)
 grep greedy_min_complete src/ --include="*.py": no matches (EXIT:1)
 ```
 
+---
+
+## Defect-fix addendum (2026-07-09 — orchestrator verification round)
+
+The closing note above stated hardening (b)'s budget was "Python only — the
+C++ path needed only a one-line comment update." That was wrong. The C++
+`canonical_string` FFI path (used by `IsalHGBackend`, `IsalHGLevenshtein`,
+and every T-M5 sweep) bypassed the Python budget entirely: it calls
+`_core.canonical_string` → `canonical_string_compute` → `greedy_h2s_tokens`
+directly, without passing `max_expansions` to the C++ layer. Fixed.
+
+**Changes (C++ side).**
+- `errors.hpp`: added `CanonicalizationTimeoutError` C++ struct inheriting
+  `IsalHGError`.
+- `h2s.hpp`: added `int max_expansions = 0` (0 = unlimited) to
+  `greedy_h2s_str` and `greedy_h2s_tokens` declarations.
+- `canonical.hpp`: added `int max_expansions = 0` to
+  `canonical_string_compute` declaration.
+- `h2s.cpp`: added `expansion_count` and `max_expansions` fields to
+  `WorkArena`; budget check placed *before* V-branch state mutations in the
+  `enumerate_label_perms_cb` lambda — throw is safe at that point because
+  no state has been mutated.
+- `canonical.cpp`: threaded `max_expansions` to both `greedy_h2s_tokens`
+  call sites (sequential and parallel). Fixed a pre-existing dangling-
+  reference bug in the parallel seed loop: the original `for (auto& f :
+  futures) f.get()` would leave worker threads running against destroyed
+  locals if any future threw; replaced with join-all-then-rethrow.
+- `bindings.cpp`: loaded `CanonicalizationTimeoutError` into `PyExcCache`,
+  wired translation in `translate_exception`, added `max_expansions: int = 0`
+  to the `canonical_string` nanobind binding.
+- `src/isalhg/core/_core.pyi`: added `max_expansions: int = 0` to the
+  `canonical_string` stub (omitting it caused mypy to count 22 errors
+  instead of the baseline 21 on the `canonical.py:193` call site).
+
+**Changes (Python side).**
+- `canonical.py`: `_cpp_canonical_string` and `canonical_string` accept
+  `max_expansions: int | None = None`; passed as `max_expansions or 0` to
+  the C++ binding.
+- `isalhg_levenshtein.py`: `IsalHGLevenshtein.__init__` accepts and stores
+  `max_expansions`; forwarded through `_symbols → canonical_string`.
+- `test_isalhg_levenshtein.py::TestBudget`: parametrized over
+  `backend in {"cpp", "python"}` — both backends raise
+  `CanonicalizationTimeoutError` with `max_expansions=5` on cyclic STS(13).
+
+**Smoke test (pre-commit).**
+```
+OK: cpp raised CanonicalizationTimeoutError: canonical-string branch budget exceeded (5 expansions)
+OK: python raised CanonicalizationTimeoutError: canonical-string branch budget exceeded (5 expansions)
+OK: unlimited cpp succeeds, len=256
+```
+
+### Re-verified closing checks (post-fix)
+
+```
+pytest tests/unit tests/property tests/integration -q -m "not slow" --hypothesis-seed=0:
+    686 passed, 8 skipped, 7 deselected
+    (4 previously counted slow tests deselected; zero regressions)
+ruff check src/ tests/: 3 errors (baseline 3 — unchanged)
+mypy src/isalhg/: 21 errors in 6 files (baseline 21 — restored after stub fix)
+```
+
+Additional files changed in this round:
+`src/isalhg/core/_native/include/isalhg/errors.hpp`,
+`src/isalhg/core/_native/include/isalhg/h2s.hpp`,
+`src/isalhg/core/_native/include/isalhg/canonical.hpp`,
+`src/isalhg/core/_native/src/h2s.cpp`,
+`src/isalhg/core/_native/src/canonical.cpp`,
+`src/isalhg/core/_native/bindings.cpp`,
+`src/isalhg/core/_core.pyi`,
+`src/isalhg/core/canonical.py`,
+`src/isalhg/metric_space/distances/isalhg_levenshtein.py`,
+`tests/unit/metric_space/test_isalhg_levenshtein.py`.
+
+---
+
 Files changed: `src/isalhg/core/canonical.py`,
 `src/isalhg/core/algorithms/canonical.py` (new),
 `src/isalhg/core/algorithms/greedy_min_complete.py` (deleted),

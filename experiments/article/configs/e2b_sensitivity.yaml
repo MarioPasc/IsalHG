@@ -1,0 +1,82 @@
+# T-M5a E2b — single-edit sensitivity histogram.
+#
+# Tests Proposition 6.0 coherence characterization (stability.md §3):
+#   s(e) = d_I(H, H⊕e) should cluster near O(kΔ) for sparse random HGs.
+#
+# Three density regimes, two seeds each = 6 cells.
+# n_edits_per_h=40 gives 40 * n_items sensitivity samples per cell.
+# Runtime: fast (no HGED oracle needed).
+#
+# Analysis: experiments.article.analysis.sensitivity.analyze_sensitivity
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5a/e2b_sensitivity
+
+cells:
+  # ── Sparse: Δ ≈ 2..3 ─────────────────────────────────────────────────────
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 42
+    label: sparse_s0
+    dataset_params:
+      n_items: 30
+      n_range: [5, 9]
+      n_edges_range: [2, 4]
+      arity_range: [2, 2]
+      n_edits_per_h: 40
+
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 43
+    label: sparse_s1
+    dataset_params:
+      n_items: 30
+      n_range: [5, 9]
+      n_edges_range: [2, 4]
+      arity_range: [2, 2]
+      n_edits_per_h: 40
+
+  # ── Medium: Δ ≈ 4..5 ─────────────────────────────────────────────────────
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 42
+    label: medium_s0
+    dataset_params:
+      n_items: 30
+      n_range: [5, 8]
+      n_edges_range: [5, 9]
+      arity_range: [2, 3]
+      n_edits_per_h: 40
+
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 43
+    label: medium_s1
+    dataset_params:
+      n_items: 30
+      n_range: [5, 8]
+      n_edges_range: [5, 9]
+      arity_range: [2, 3]
+      n_edits_per_h: 40
+
+  # ── Dense: Δ ≈ 6..8 ──────────────────────────────────────────────────────
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 42
+    label: dense_s0
+    dataset_params:
+      n_items: 25
+      n_range: [5, 7]
+      n_edges_range: [9, 14]
+      arity_range: [2, 4]
+      n_edits_per_h: 40
+
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 43
+    label: dense_s1
+    dataset_params:
+      n_items: 25
+      n_range: [5, 7]
+      n_edges_range: [9, 14]
+      arity_range: [2, 4]
+      n_edits_per_h: 40

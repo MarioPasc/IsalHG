@@ -258,6 +258,14 @@ iso-invariant seed set `S(H)` (invariant 4).
 - The converse is **proved for `greedy_min_complete`** (tie-complete
   branching, `tie_branch=True`), whose `w*_c` is a complete isomorphism
   invariant. Metric-space claims (`d_I`, Theorem B) attach to `w*_c`.
+- **`w*_c` is frozen (D-TA2, PI 2026-07-09) as the *unpruned* tie-complete
+  lex-min** — the lex-min over the full residual tie set and all
+  label-respecting orderings (Python `tie_branch=True`; C++ variant 7).
+  Refining the tie set with an iso-invariant key preserves completeness but
+  returns a *different* canonical form, so it is forbidden; the only
+  value-preserving speedup is stabiliser-orbit pruning (proof Prop. 6.0).
+  Pinned on {Fano, STS(9), cyclic STS(13), n=4 counterexample} by
+  `tests/unit/core/test_wstar_c_frozen.py`.
 
 **Isomorphism test.** `iso(H1, H2) := (F(H1) == F(H2))` — exact with
 `greedy_min_complete`; with the greedy variants it is one-sided (equal

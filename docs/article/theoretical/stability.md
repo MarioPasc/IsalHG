@@ -52,6 +52,24 @@ add/remove); NP-hard, exact only at small scale.
     (automorphism-coherent ties) but **differs on STS(13) and GQ(2,2)** — the
     greedy string is not canonical even on vertex-transitive designs.
 
+**Frozen definition of `w*_c` (D-TA2, PI 2026-07-09).** `w*_c` is the
+**unpruned** tie-complete lex-min: the κ-minimum over the *full* residual tie
+set `T(σ)` and all label-respecting orderings, exactly as implemented by the
+Python reference (`tie_branch=True`) and the C++
+`AlgorithmVariant::GreedyMinComplete` (variant 7). Refining `T(σ)` with an
+iso-invariant key ρ (proof Lemma 6.1) preserves *completeness* but returns a
+*different* canonical form — a κ-minimum over a proper subset of `T(σ)` need
+not equal the κ-minimum over `T(σ)` — so ρ-refinement forks the definition and
+is not sanctioned, before or after tables exist. The only value-preserving
+speedup is **stabiliser-orbit pruning** (proof Proposition 6.0: tied branches
+related by an automorphism fixing `dom(μ)` pointwise have equal completions),
+which also attacks the actual cost — automorphism redundancy on
+vertex-transitive designs, where every tied candidate carries the same value
+under *any* iso-invariant key. Regression pins in
+`tests/unit/core/test_wstar_c_frozen.py` fix `w*_c` on {Fano, STS(9), cyclic
+STS(13), the n=4 counterexample}; a refinement that changes the value fails
+loudly.
+
 **Corollary A (Metric).** With Theorem A for `w*_c`, `d_I(H,H') :=
 d_Lev(w*_c(H), w*_c(H'))` is a metric on isomorphism classes (per fixed `k`
 and vocabulary): non-negativity and symmetry from `d_Lev`; identity of

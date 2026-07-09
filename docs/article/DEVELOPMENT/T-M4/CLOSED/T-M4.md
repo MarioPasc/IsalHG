@@ -26,10 +26,17 @@ sklearn indices (called in experiments, not re-wrapped).
 **Closing check output:**
 
 ```
-pytest tests/unit/datasets/test_planted_families.py tests/unit/metric_space/ -x -q
-146 passed in 4.38s
+# T-M4 new test files (54 tests across 4 files):
+pytest tests/unit/datasets/test_planted_families.py \
+       tests/unit/metric_space/test_metrics_{association,information,embedding}.py -v
+54 passed in ~3s
 
-pytest tests/ -q --tb=short
+# Full suite (-m "not slow"):
+pytest tests/ -m "not slow" -q
+739 passed, 8 skipped, 7 deselected in 78.68s
+
+# Full suite (including slow):
+pytest tests/ -q
 745 passed, 8 skipped in 159.29s
 
 ruff check src/ tests/ --output-format=concise
@@ -55,7 +62,9 @@ mypy src/isalhg/
 **Acceptance verified:**
 - AC1 connectivity: all 146 planted-family items pass `is_connected()`.
 - AC2 non-iso within family: fingerprint dedup confirmed by test (isalhg backend).
-- AC3 iso_class = family index: confirmed.
+- AC3 class_label: `extra["class_label"] == family_index` for every item; `iso_class=None`
+  and `has_iso_labels=False` — family members are pairwise NON-isomorphic, so
+  `iso_class` equality would be semantically wrong. T-M5c/d read `extra["class_label"]`.
 - AC4 length: `len(ds) == n_families * members_per_family`.
 - AC5 determinism: same `seed_value` → identical hypergraph sequences.
 - AC6 registry: `get_dataset("planted_families", {})` and `{"members_per_family": 2}` succeed.

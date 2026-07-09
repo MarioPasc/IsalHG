@@ -104,14 +104,11 @@ class TestNonIsomorphismWithinFamily:
         backend = get_backend("isalhg")
         families: dict[int, list[bytes]] = {}
         for item in small_dataset:
-            fam = item.iso_class
-            assert fam is not None
+            fam = item.extra["class_label"]
             fp = backend.fingerprint(item.hypergraph)
             if fam not in families:
                 families[fam] = []
-            assert fp not in families[fam], (
-                f"family {fam}: duplicate iso-class at item {item.item_id!r}"
-            )
+            assert fp not in families[fam], f"family {fam}: iso-duplicate at item {item.item_id!r}"
             families[fam].append(fp)
 
 
@@ -121,18 +118,31 @@ class TestNonIsomorphismWithinFamily:
 
 
 class TestIsoClass:
-    def test_iso_class_is_family_index(self, small_dataset: PlantedFamilyDataset) -> None:
+    def test_iso_class_is_none_for_all_items(self, small_dataset: PlantedFamilyDataset) -> None:
+        # PlantedFamilyDataset uses extra["class_label"] for the family index;
+        # iso_class is None because members within a family are pairwise
+        # NON-isomorphic, so iso_class equality would be semantically wrong.
+        for item in small_dataset:
+            assert item.iso_class is None, (
+                f"item {item.item_id!r}: expected iso_class None, got {item.iso_class}"
+            )
+
+    def test_class_label_is_family_index(self, small_dataset: PlantedFamilyDataset) -> None:
         items = list(small_dataset)
         n_members = 3
         for idx, item in enumerate(items):
             expected_family = idx // n_members
-            assert item.iso_class == expected_family, (
-                f"item {idx}: expected iso_class {expected_family}, got {item.iso_class}"
+            got = item.extra["class_label"]
+            assert got == expected_family, (
+                f"item {idx}: expected class_label {expected_family}, got {got}"
             )
 
-    def test_iso_class_not_none(self, small_dataset: PlantedFamilyDataset) -> None:
+    def test_extra_keys_present(self, small_dataset: PlantedFamilyDataset) -> None:
         for item in small_dataset:
-            assert item.iso_class is not None
+            assert "class_label" in item.extra
+            assert "family_index" in item.extra
+            assert "member_index" in item.extra
+            assert "is_seed" in item.extra
 
 
 # ---------------------------------------------------------------------------
@@ -176,8 +186,10 @@ class TestRegistry:
     def test_registry_lookup_with_members(self) -> None:
         ds = get_dataset("planted_families", {"members_per_family": 2})
         items = list(ds)
-        assert all(item.iso_class is not None for item in items)
+        # Class identity lives in extra["class_label"], not iso_class.
+        assert all(item.iso_class is None for item in items)
+        assert all("class_label" in item.extra for item in items)
 
-    def test_metadata_has_iso_labels(self) -> None:
+    def test_metadata_has_iso_labels_false(self) -> None:
         ds = get_dataset("planted_families", {})
-        assert ds.metadata.has_iso_labels is True
+        assert ds.metadata.has_iso_labels is False

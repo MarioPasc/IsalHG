@@ -235,8 +235,9 @@ class PlantedFamilyDataset(HypergraphDataset):
                     DatasetItem(
                         item_id=item_id,
                         hypergraph=H,
-                        iso_class=fam_idx,
+                        iso_class=None,
                         extra={
+                            "class_label": fam_idx,
                             "family_index": fam_idx,
                             "member_index": member_idx,
                             "is_seed": member_idx == 0,
@@ -254,7 +255,7 @@ class PlantedFamilyDataset(HypergraphDataset):
             n_items=len(self._items),
             arity_range=(2, self._k),
             n_nodes_range=(min(n_nodes_vals), max(n_nodes_vals)),
-            has_iso_labels=True,
+            has_iso_labels=False,
             source=(
                 f"PlantedFamilyDataset(n_families={n_families},"
                 f" members_per_family={self._members_per_family},"

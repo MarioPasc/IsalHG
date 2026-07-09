@@ -245,17 +245,21 @@ via the tie-set mechanism.
 
 **Conditional bound.** Under the hypotheses of Lemma B1 (a *tie-set transparent* edit),
 ```
-        s(e) ≤ c_1·k + c_2·k·Δ = O(k·Δ).                        (★)
+        s(e) ≤ (2k+1)·(1+Δ) = O(k·Δ).                            (★)
 ```
+The bound decomposes as: (2k+1) tokens for the directly edited edge re-encoding
+(one `V`/`C` instruction + ≤2k pointer moves) plus at most `Δ` further affected
+edge encodings in the window (counted **per edge**, each ≤2k+1 tokens). The
+previous formula (`c_2·k·Δ`) double-counted by charging `k` pointer moves **per
+vertex** in `N_1[e]` — corrected here by counting per edge (T-B2 of
+`stability/theorem_b_stability.tex`).
 
-**Remark (why Qin's costing tightens the constant).** Re-encoding an edited
-arity-`a` hyperedge costs Θ(a) tokens in `w*` (one `V`/`C` emission plus its
-pointer moves), and Qin prices the corresponding whole-edge edit at `a+1` —
-the cost model is *commensurate* with the encoding's incidence-mass scaling.
-Per unit of HGED, the direct-cost contribution to `s(e)` is therefore O(1)
-in arity; under a unit whole-edge op it would be O(k). Expectation for the
-proof (flagged, to verify at T-B2): `C(k,Δ)`'s `k`-dependence should come
-only from the reordering term, not from the direct term.
+**Remark (why Qin's costing tightens the constant).** Re-encoding an arity-`a`
+edge costs ≤ 2k+1 tokens in `w*`; Qin prices the corresponding whole-edge edit
+at `a+1`. The ratio (tokens per Qin cost) ≤ 2 at arity `a = k`. Per unit of
+HGED, the direct-cost contribution to `s(e)` is O(1) in arity; `C(k,Δ)`'s
+`k`-dependence is linear (from the `2k+1` token-width factor), not quadratic.
+Verified at T-B2.
 
 ---
 
@@ -418,22 +422,15 @@ criterion). Consequences the applications section must own:
       closing: "a C candidate requires `members == set(tentative_inputs[:arity])`
       and `SparseHypergraph` forbids duplicate member sets, so the C tie set is
       always a singleton") — no C-tie avalanche possible; treat separately.
-- [x] T-B2: **PROVED (T-TB, 2026-07-09, §4 of `stability/theorem_b_stability.tex`; explicit constants c_1=3, c_2≤2k+1).** bound the *branching window* — the instruction positions that change
-      for a tie-set-transparent edit — to `O(k·Δ)`. The window covers the
-      *encoding* of `N_1[e]` (the 1-hop set, O(k·Δ) vertices; the token-width
-      constant `c_2`); condition (ii)'s transparency set `N_r[e]` (r=3) is larger
-      but does not itself enter the window count. Nail `c_2` (instructions per
-      vertex in `N_1[e]`). The Qin-costing remark (direct term O(1) in arity per
-      unit HGED) should transfer.
-- [x] T-B3: **ESTABLISHED analytically (T-TB, 2026-07-09, §5 of `stability/theorem_b_stability.tex`; Prop 6.0 criterion; Fano/STS(9) vs STS(13)/GQ(2,2) recovered).** characterize when an edit perturbs a tie set at depth `d` (sources
-      3–4) or triggers argmin migration (source 2). For sources 3–4: use Prop 6.0
-      — a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act
-      transitively on `T(σ_d)`, and a vertex in `N_r[e]` with perturbed `ξ` can
-      change that tie set. For source 2: characterize when a local encoding change
-      in one seed's window flips the lex-argmin across seeds. Recover the §3 table
-      (Fano/STS(9) coherent; STS(13)/GQ(2,2) incoherent) from the analytical
-      criterion. Connection to T-B4: random sparse hypergraphs have no ties →
-      sources 3–4 vanish; source 2 also vanishes generically → (B-avg) follows.
+- [x] T-B2: **PROVED (T-TB, 2026-07-09, §4 of `stability/theorem_b_stability.tex`; bound (2k+1)(1+Δ), counted per edge).** bound the *branching window* — the instruction positions that change
+      for a tie-set-transparent edit — to `O(k·Δ)`. Window ≤ Δ affected edge
+      encodings (counted per edge, not per vertex), each ≤ 2k+1 tokens (one
+      `V`/`C` + ≤2k pointer moves). Direct re-encoding of the edited edge adds
+      ≤ 2k+1 tokens. Total: `s(e) ≤ (2k+1)(1+Δ) = O(k·Δ)`. The previous
+      per-vertex derivation (c_2·k·Δ) was a double-count corrected in the
+      round-2 revision. Qin-costing remark: direct term O(1) in arity per unit
+      HGED; C(k,Δ)'s k-dependence is linear, not quadratic.
+- [ ] T-B3: **criterion STATED (T-TBa via Prop 6.0); analytical recovery of the design classification PENDING.** Prop 6.0 (from `theorem_a_completeness.tex` §6) gives a criterion: a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act transitively on `T(σ_d)`. §5 of `theorem_b_stability.tex` records this criterion and notes that Fano/STS(9) are observed coherent and STS(13)/GQ(2,2) incoherent (T-TAa empirical measurement), but the derivation that the Prop 6.0 criterion *implies* this classification — from stabiliser structure alone, without the T-TAa empirical string-equality measurement — is not given. The analytical recovery from the stabiliser-transitivity criterion remains open.
 - [x] T-B4 (stretch): **SKETCH with heuristic probability estimates (T-TB, 2026-07-09, §5 B-avg, Thm 3 of `stability/theorem_b_stability.tex`; flagged as non-proved).** the average-case/high-probability unconditional bound
       (B-avg) over a random hypergraph model.
 - [ ] T-B5: **PENDING T-M5a** — verify constants against measured `s(e)` histograms (Exp E2b).

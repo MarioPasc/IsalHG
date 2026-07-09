@@ -193,3 +193,73 @@ class TestRegistry:
     def test_metadata_has_iso_labels_false(self) -> None:
         ds = get_dataset("planted_families", {})
         assert ds.metadata.has_iso_labels is False
+
+
+# ---------------------------------------------------------------------------
+# AC7 — arity gate (round-2 fix)
+#
+# Pre-fix: _build filtered only connectivity and iso-dedup.  add_incidence
+# (one of the six Qin ops chosen by random_edit) grows a hyperedge arity by +1
+# per application; with n_edits large enough, members exceed the dataset's k.
+# The C++ canonical encoder caps at K_MAX=10 and raises IsalHGError when
+# arity > K_MAX (exactly the Picasso job-1547134_4 failure).  Even below K_MAX
+# the hypergraph leaves Σ_HG(k), violating the domain constraint.
+# sparse_hypergraph.py:462 documents that arity filtering is the caller's job.
+# ---------------------------------------------------------------------------
+
+
+class TestArityGate:
+    def test_raw_edit_loop_can_exceed_k(self) -> None:
+        """Pre-fix demonstration: random_edit alone (no gate) produces arity > k.
+
+        This test does NOT call PlantedFamilyDataset; it exercises the underlying
+        edit layer directly to confirm the hazard is real and that the gate inside
+        _build is load-bearing.  The assertion would be vacuously true only if
+        add_incidence were never selected in 300 trials of 12 edits each — the
+        probability of that is (5/6)^3600 ≈ 0, so a failure here signals that
+        random_edit's op-set changed.
+        """
+        import random as _stdlib_random
+
+        from isalhg.core.sparse_hypergraph import random_edit
+
+        k = 3
+        # Arity-3 seed on 3 nodes (all in the edge → connected).
+        seed = SparseHypergraph(3, hyperedges=[frozenset({0, 1, 2})])
+        rng = _stdlib_random.Random(42)
+        violations = 0
+        n_trials = 300
+        for _ in range(n_trials):
+            current = seed
+            for _ in range(12):
+                current, _ = random_edit(current, rng)
+            if current.n_edges > 0 and max(len(e) for e in current.hyperedges()) > k:
+                violations += 1
+        assert violations > 0, (
+            f"Expected arity > k={k} in at least 1 of {n_trials} raw-edit trials "
+            f"(seed=42, n_edits=12); got 0. "
+            f"If random_edit's op set changed, revisit this test."
+        )
+
+    def test_all_members_arity_le_k_after_fix(self) -> None:
+        """After fix: all emitted members have max arity <= k, even at n_edits=12.
+
+        This test would FAIL against the pre-fix _build (before this commit)
+        because without the arity gate, members with arity > k=3 would be accepted
+        by the connectivity + iso-dedup checks alone.
+        """
+        k = 3
+        # 3 nodes, all in the single edge → connected; max arity = k = 3.
+        seed = SparseHypergraph(3, hyperedges=[frozenset({0, 1, 2})])
+        ds = PlantedFamilyDataset(
+            seeds=[seed],
+            members_per_family=5,
+            n_edits=12,
+            k=k,
+            max_retries=500,
+            seed_value=42,
+        )
+        for item in ds:
+            if item.hypergraph.n_edges > 0:
+                max_a = max(len(e) for e in item.hypergraph.hyperedges())
+                assert max_a <= k, f"item {item.item_id!r}: max arity {max_a} > k={k}"

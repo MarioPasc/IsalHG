@@ -37,15 +37,21 @@ class TestIMDBDirGenreLoads:
             f"{len(disconnected)} hypergraphs are not connected after LCC restriction"
         )
 
-    def test_all_items_have_iso_class(self) -> None:
+    def test_all_items_have_none_iso_class(self) -> None:
         ds = HICAtlasDataset(root=HIC_ROOT, hic_name="IMDB-Dir-Genre")
         for item in ds:
-            assert item.iso_class is not None
+            assert item.iso_class is None
+
+    def test_class_label_in_extra_for_all_items(self) -> None:
+        ds = HICAtlasDataset(root=HIC_ROOT, hic_name="IMDB-Dir-Genre")
+        for item in ds:
+            assert "class_label" in item.extra
+            assert isinstance(item.extra["class_label"], int)
 
     def test_metadata_consistent(self) -> None:
         ds = HICAtlasDataset(root=HIC_ROOT, hic_name="IMDB-Dir-Genre")
         md = ds.metadata
-        assert md.has_iso_labels
+        assert not md.has_iso_labels  # genre labels are not iso certs
         assert md.n_items == len(ds)
         assert md.arity_range[0] >= 1
         assert md.arity_range[1] >= md.arity_range[0]

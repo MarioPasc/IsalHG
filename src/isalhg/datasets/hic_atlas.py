@@ -347,11 +347,18 @@ class HICAtlasDataset(HypergraphDataset):
                 min_arity = a if min_arity is None else min(min_arity, a)
                 max_arity = max(max_arity, a)
 
+            # iso_class is intentionally None: HIC class labels are semantic
+            # classification targets (genre, category), not isomorphism-class
+            # certificates.  Two same-class instances are NOT guaranteed to be
+            # isomorphic.  Setting iso_class = label here would corrupt any
+            # pairwise-iso protocol that interprets iso_class as ground-truth
+            # isomorphism equivalence.  The class label lives in extra["class_label"];
+            # T-M5d (kNN) must read it from there.
             items.append(
                 DatasetItem(
                     item_id=f"hic:{self._hic_name}:{idx:06d}",
                     hypergraph=H_lcc,
-                    iso_class=rec.class_label,
+                    iso_class=None,
                     extra={
                         "source_index": idx,
                         "class_label": rec.class_label,
@@ -432,12 +439,15 @@ class HICAtlasDataset(HypergraphDataset):
             n_items=len(self._items),
             arity_range=self._arity_range,
             n_nodes_range=self._n_nodes_range,
-            has_iso_labels=True,
             source=(f"iMoonLab/HIC (Apache-2.0), github.com/iMoonLab/HIC; file: {self._file_path}"),
             citation=(
                 "Feng et al. (2024). HIC: Hypergraph Isomorphism Computation. "
                 "github.com/iMoonLab/HIC"
             ),
+            # has_iso_labels=False because HIC class labels are semantic
+            # classification targets (genre, category), not isomorphism
+            # certificates.  The class label is in DatasetItem.extra["class_label"].
+            has_iso_labels=False,
             label_vocabulary=self._vocabulary,
         )
 

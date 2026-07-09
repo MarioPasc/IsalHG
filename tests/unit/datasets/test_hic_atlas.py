@@ -192,19 +192,28 @@ class TestHICAtlasDataset:
         for item in ds:
             assert item.hypergraph.is_connected(), f"item {item.item_id!r} is not connected"
 
-    def test_iso_class_values(self, hic_root: Path) -> None:
-        ds = HICAtlasDataset(root=hic_root, hic_name="TEST")
-        iso_classes = [item.iso_class for item in ds]
-        assert iso_classes == [0, 0, 1]
-
-    def test_all_items_have_iso_class(self, hic_root: Path) -> None:
+    def test_iso_class_is_none_for_all_items(self, hic_root: Path) -> None:
+        # HIC class labels are semantic classification targets (genre, category),
+        # not isomorphism certificates.  iso_class must be None so pairwise_iso
+        # protocols cannot misinterpret same-class as same-isomorphism-class.
         ds = HICAtlasDataset(root=hic_root, hic_name="TEST")
         for item in ds:
-            assert item.iso_class is not None
+            assert item.iso_class is None, (
+                f"item {item.item_id!r} has iso_class={item.iso_class!r}; "
+                "expected None (HIC labels are classification targets, not iso certs)"
+            )
 
-    def test_metadata_has_iso_labels(self, hic_root: Path) -> None:
+    def test_class_label_in_extra(self, hic_root: Path) -> None:
         ds = HICAtlasDataset(root=hic_root, hic_name="TEST")
-        assert ds.metadata.has_iso_labels
+        items = list(ds)
+        assert items[0].extra["class_label"] == 0
+        assert items[1].extra["class_label"] == 0
+        assert items[2].extra["class_label"] == 1
+
+    def test_metadata_has_iso_labels_false(self, hic_root: Path) -> None:
+        # has_iso_labels=False because iso_class is None for every item.
+        ds = HICAtlasDataset(root=hic_root, hic_name="TEST")
+        assert not ds.metadata.has_iso_labels
 
     def test_metadata_n_items_matches_len(self, hic_root: Path) -> None:
         ds = HICAtlasDataset(root=hic_root, hic_name="TEST")

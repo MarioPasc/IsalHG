@@ -83,3 +83,9 @@ mypy src/isalhg/datasets/hic_atlas.py src/isalhg/datasets/registry.py
 
 **No doc edits needed** (DATA.md §3 is already current; retention-reporting
 requirement satisfied in code and logs).
+
+**Amendment (verification round 1, 2026-07-09):** `iso_class` is `None` and
+`has_iso_labels=False` for all HIC items — HIC class labels are semantic
+classification targets (genre, category), not isomorphism certificates; they
+live exclusively in `DatasetItem.extra["class_label"]`, and T-M5d (kNN) must
+read them from there.

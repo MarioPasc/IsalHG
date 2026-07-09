@@ -1,8 +1,13 @@
 # T-TA — Completeness (Theorem A) for IsalHG
 **Declared:** 2026-07-08 12:20 CEST
-**Status:** BLOCKED — deliverables complete (proof + counterexamples + fix +
-tests, all green); waits on PI review of the proof only (D-TA1 resolved
-2026-07-09 → executed at T-TAd)
+**Status:** DONE — **PI review passed 2026-07-09 13:13 CEST.** The proof
+(`theorem_a_completeness.{tex,pdf}`) is accepted as satisfactory. Theorem A holds
+for `w*_c` (`greedy_min_complete`) over the augmented fingerprint
+`F(H) = (seed label, w*_c(H))`, on connected hypergraphs at fixed `k`, structural
+depth and vocabulary (Assumption 1.3). Corollary A — `d_I` is a metric on
+isomorphism classes — is therefore established, and every downstream metric-space
+claim now rests on a reviewed theorem rather than a conjecture. Unblocks T-TAd,
+T-TAf and T-TBa; D-TA1 and D-TA2 both resolved.
 **Depends on:** —
 **Context to read first:**
 - `docs/article/theoretical/stability.md` §1 — statement + status

@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 4 (+1 blocked) | 4 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 4 | 5 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
@@ -122,15 +122,16 @@ T-M1a ✔ metric_space foundation (DONE)
 T-M4'  HIC atlas loader (independent) ─► real-anchor apps + gates T-DQ3'
 
 canonical-form track (the metric's foundation):
-   T-TA ✔ completeness proof (BLOCKED on PI review only)
+   T-TA ✔ completeness proof — PI-REVIEWED 2026-07-09 (DONE)
       ├─► T-TAa ✔ C++ tie-complete encoder (DONE)
-      │      └─► T-TAd  flip the package default to w*_c   ← THE BLOCKER
-      │             └─► T-TAg  harden the canonical surface
       ├─► T-TAb ✔ seed-label fingerprint (DONE)
       ├─► T-TAc ✔ WL-pruned variants re-documented + counterexampled (DONE)
-      │      └─► T-TAh  remove the unsound wl_colors V-branch pruning (with T-TAg)
-      ├─► T-TAf  freeze the canonical form (D-TA2 resolved: unpruned w*_c)
-      └─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
+      ├─► T-TAe ✔ Levi baselines carry the colour signature (DONE)
+      └─► the closing chain, STRICTLY SEQUENTIAL — no parallelism available:
+             T-TAf  freeze w*_c (orchestrator-only)   ← THE BLOCKER
+          └► T-TAd  flip the package default to w*_c  (orchestrator-only)
+          └► T-TAg  harden the canonical surface      (delegable)
+          └► T-TAh  remove the unsound wl_colors pruning (shares h2s.cpp with T-TAg)
 
 experiments:
    T-M5a  correlation / density-sweep / info-content   ← M1b, M2, M4     [needs HGED]

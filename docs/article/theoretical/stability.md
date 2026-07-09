@@ -248,12 +248,13 @@ criterion). Consequences the applications section must own:
 
 ## 6. Proof-effort checklist (what has to be done)
 
-- [x] T-A: **done pending PI review** (T-TA 2026-07-08): proof for
-      `greedy_min_complete` + counterexamples for the greedy variants +
-      empirical completeness suite. Cor. A and the "metric" claim now attach
-      to `w*_c`. Default flip decided (D-TA1 resolved 2026-07-09): the
-      complete algorithm becomes the package default once the T-TAd C++ port
-      makes it fast.
+- [x] T-A: **PROVED AND PI-REVIEWED** (T-TA, proof 2026-07-08, review passed
+      2026-07-09): proof for `greedy_min_complete` + counterexamples for the greedy
+      variants + empirical completeness suite. Corollary A — `d_I` is a metric on
+      isomorphism classes of connected hypergraphs at fixed `k`, depth and
+      vocabulary — is therefore **established, not conjectured**, and every claim
+      below rests on it. `w*_c` is frozen as the *unpruned* tie-complete lex-min
+      (D-TA2); the complete algorithm becomes the package default at T-TAd.
 - [ ] T-B0: make the §2.1 decomposition well-defined. **Mechanism fixed by the PI
       at T-M2c (2026-07-09): the article's domain is the connected hypergraphs,
       `Σ_HG` does not change, and P1 is discharged by a path-normalization lemma —

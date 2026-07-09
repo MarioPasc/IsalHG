@@ -4,6 +4,10 @@ Canonical small hypergraph examples used across unit, integration, and
 property tests. All fixtures use the trivial label vocabulary (one
 vertex label, one edge label) -- decision I45's
 ``LabelVocabulary(("⊥",), ("⊥",))``.
+
+The named designs are built by ``isalhg.datasets.synthetic.designs``, which
+is the single source of truth for them; ``tests/unit/datasets/test_designs.py``
+asserts their defining incidence axioms.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ from __future__ import annotations
 import pytest
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
+from isalhg.datasets.synthetic import designs
 
 
 @pytest.fixture
@@ -27,51 +32,14 @@ def single_edge_hypergraph() -> SparseHypergraph:
 
 @pytest.fixture
 def fano_plane() -> SparseHypergraph:
-    """Fano plane STS(7), the classical 3-uniform symmetric design.
-
-    Lines of PG(2, 2):
-        {0,1,2}, {0,3,4}, {0,5,6}, {1,3,5}, {1,4,6}, {2,3,6}, {2,4,5}.
-    Each pair of points lies in exactly one line; vertex-transitive
-    automorphism group ``PGL(3, 2)`` of order 168.
-    """
-    lines = [
-        frozenset({0, 1, 2}),
-        frozenset({0, 3, 4}),
-        frozenset({0, 5, 6}),
-        frozenset({1, 3, 5}),
-        frozenset({1, 4, 6}),
-        frozenset({2, 3, 6}),
-        frozenset({2, 4, 5}),
-    ]
-    return SparseHypergraph(n_nodes=7, hyperedges=lines)
+    """Fano plane STS(7), the classical 3-uniform symmetric design."""
+    return designs.fano_plane()
 
 
 @pytest.fixture
 def sts_9() -> SparseHypergraph:
-    """The unique Steiner Triple System STS(9), realised as AG(2, 3).
-
-    9 points arranged as a 3x3 affine plane; 12 blocks (rows, columns,
-    main and anti-diagonal classes).
-    """
-    blocks = [
-        # Rows
-        frozenset({0, 1, 2}),
-        frozenset({3, 4, 5}),
-        frozenset({6, 7, 8}),
-        # Columns
-        frozenset({0, 3, 6}),
-        frozenset({1, 4, 7}),
-        frozenset({2, 5, 8}),
-        # Main diagonals (3 parallel classes)
-        frozenset({0, 4, 8}),
-        frozenset({1, 5, 6}),
-        frozenset({2, 3, 7}),
-        # Anti-diagonals
-        frozenset({0, 5, 7}),
-        frozenset({1, 3, 8}),
-        frozenset({2, 4, 6}),
-    ]
-    return SparseHypergraph(n_nodes=9, hyperedges=blocks)
+    """The unique Steiner Triple System STS(9), realised as AG(2, 3)."""
+    return designs.sts_9()
 
 
 @pytest.fixture
@@ -109,55 +77,46 @@ def non_iso_pair_small() -> tuple[SparseHypergraph, SparseHypergraph]:
     return h1, h2
 
 
-def _cyclic_sts_13(base: tuple[int, int, int]) -> SparseHypergraph:
-    """Build an STS(13) via the cyclic difference-set construction.
-
-    Each block is the rotate ``{(b + i) mod 13 : b in base}`` for
-    ``i in 0..12``. Two STS(13) variants exist up to isomorphism; the
-    full classification is due to Heinlein 2023 (arXiv:2303.01207).
-    """
-    n = 13
-    edges = [frozenset((b + i) % n for b in base) for i in range(n)]
-    return SparseHypergraph(n_nodes=n, hyperedges=edges)
-
-
 @pytest.fixture
 def sts_13_pair() -> tuple[SparseHypergraph, SparseHypergraph]:
-    """The two non-isomorphic STS(13).
+    """A non-isomorphic pair of cyclic triple systems on 13 points.
 
-    First system: cyclic on base ``{0, 1, 4}`` (Bose 1939).
-    Second system: cyclic on base ``{0, 1, 6}`` — a starter inequivalent
-    to ``{0, 1, 4}`` under PGL action on Z/13Z. The complete STS(13)
-    classification (Heinlein 2023) reports exactly two iso-classes; the
-    Phase 3 closing check verifies non-isomorphism empirically against
-    pynauty.
+    Cyclic on the starters ``{0, 1, 4}`` and ``{0, 1, 6}``. Each is a single
+    orbit of 13 blocks, so neither is an STS(13) despite the fixture name --
+    see ``isalhg.datasets.synthetic.designs.cyclic_sts_13``. Non-isomorphism
+    is verified empirically against pynauty by the Phase 3 closing check.
     """
-    return _cyclic_sts_13((0, 1, 4)), _cyclic_sts_13((0, 1, 6))
+    return designs.cyclic_sts_13((0, 1, 4)), designs.cyclic_sts_13((0, 1, 6))
 
 
 @pytest.fixture
 def gq_2_2_doily() -> SparseHypergraph:
-    """Generalised quadrangle GQ(2, 2) — the "doily".
+    """Generalised quadrangle GQ(2, 2) -- the "doily"."""
+    return designs.gq_2_2_doily()
 
-    15 points, 15 lines, automorphism group of order 720. Standard
-    symplectic realisation W(2) over GF(2) (Payne & Thas, *Finite
-    Generalized Quadrangles*, §1.2).
+
+@pytest.fixture
+def qin_fig1_hypergraph() -> SparseHypergraph:
+    """The labelled hypergraph of Qin et al. (ICDE 2023), Fig. 1.
+
+    8 nodes ``u1..u8 -> 0..7``; vertex labels ``0`` = square (u1-u3),
+    ``1`` = triangle (u4, u5), ``2`` = circle (u6-u8); edge labels
+    ``0`` = orange, ``1`` = star/grey. Memberships read off Fig. 1(b)
+    (visually verified 2026-07-08) and consistent with every textual
+    anchor: ``NEI(u4)``/``NEI(u5)`` of Example 1, the ``E2`` deletion
+    cost 4 of p. 248, Example 6's cardinality-sorted re-ranking, and
+    ``HGED(EGO(u4), EGO(u5)) = 6`` of Examples 2/7.
     """
-    edges = [
-        frozenset({0, 1, 2}),
-        frozenset({0, 3, 4}),
-        frozenset({0, 5, 6}),
-        frozenset({1, 3, 7}),
-        frozenset({1, 5, 8}),
-        frozenset({2, 4, 9}),
-        frozenset({2, 6, 10}),
-        frozenset({3, 8, 11}),
-        frozenset({4, 7, 12}),
-        frozenset({5, 10, 13}),
-        frozenset({6, 9, 14}),
-        frozenset({7, 11, 13}),
-        frozenset({8, 12, 14}),
-        frozenset({9, 11, 12}),
-        frozenset({10, 13, 14}),
-    ]
-    return SparseHypergraph(n_nodes=15, hyperedges=edges)
+    return SparseHypergraph(
+        n_nodes=8,
+        hyperedges=[
+            frozenset({0, 1, 3}),  # E1 = {u1, u2, u4}
+            frozenset({3, 5, 6}),  # E2 = {u4, u6, u7}
+            frozenset({1, 2, 4}),  # E3 = {u2, u3, u5}
+            frozenset({3, 4, 6, 7}),  # E4 = {u4, u5, u7, u8}
+        ],
+        n_vertex_labels=3,
+        n_edge_labels=2,
+        vertex_labels=[0, 0, 0, 1, 1, 2, 2, 2],
+        edge_labels=[0, 0, 1, 1],
+    )

@@ -3,6 +3,11 @@
 // Translates ``src/isalhg/core/hypergraph_to_string.py`` (Python) to C++17
 // preserving the exact tie-breaking cascade. The encoder uses inplace
 // mutation with stack-allocated undo records — no per-branch CDLL clone.
+//
+// With ``tie_branch``, the V step additionally branches over every candidate
+// tying on the iso-invariant cascade key-prefix instead of committing to the
+// min-edge-id one; the result no longer depends on edge insertion order and
+// is a complete isomorphism invariant (Theorem A).
 
 #include "isalhg/h2s.hpp"
 
@@ -199,12 +204,27 @@ struct VCandidate {
     return 0;
 }
 
-[[nodiscard]] bool best_v_for_displacement(const SHG& H, const EncoderState& state, int k,
-                                           const std::array<NodeId, K_MAX>& tentative_inputs,
-                                           int tentative_count, VCandidate& out) {
-    bool have = false;
-    VCandidate best{};
+// True iff the two candidates share the iso-invariant cascade key-prefix
+// (i, j, edge_label, sorted_new_labels, eta) -- i.e. everything except the
+// raw edge id. Mirrors the ``key_prefix`` of Python ``_iter_v_candidates``.
+[[nodiscard]] bool v_key_prefix_equal(const VCandidate& a, const VCandidate& b) noexcept {
+    if (a.i_val != b.i_val || a.j_val != b.j_val || a.edge_label != b.edge_label) return false;
+    if (a.n_labels != b.n_labels) return false;
+    for (int n = 0; n < a.n_labels; ++n) {
+        if (a.sorted_new_labels[static_cast<std::size_t>(n)]
+            != b.sorted_new_labels[static_cast<std::size_t>(n)]) {
+            return false;
+        }
+    }
+    return *a.key_eta == *b.key_eta;
+}
 
+// Enumerate every applicable V candidate at this displacement, invoking
+// ``cb(cand)`` on each. Mirrors Python ``_iter_v_candidates``.
+template <typename Fn>
+void for_each_v_candidate(const SHG& H, const EncoderState& state, int k,
+                          const std::array<NodeId, K_MAX>& tentative_inputs,
+                          int tentative_count, Fn&& cb) {
     for (EdgeId e = 0; e < H.n_edges; ++e) {
         if (state.consumed[static_cast<std::size_t>(e)]) continue;
         const auto& members = H.edge_members[static_cast<std::size_t>(e)];
@@ -281,15 +301,42 @@ struct VCandidate {
             cand.new_inputs = cand_new_inputs;
             cand.key_eta = &H.eta(e);
 
-            if (!have || compare_v_keys(cand, best) < 0) {
-                best = cand;  // trivial copy, no heap
-                have = true;
-            }
+            cb(cand);
         }
     }
+}
 
+[[nodiscard]] bool best_v_for_displacement(const SHG& H, const EncoderState& state, int k,
+                                           const std::array<NodeId, K_MAX>& tentative_inputs,
+                                           int tentative_count, VCandidate& out) {
+    bool have = false;
+    VCandidate best{};
+    for_each_v_candidate(H, state, k, tentative_inputs, tentative_count,
+                         [&](const VCandidate& cand) {
+                             if (!have || compare_v_keys(cand, best) < 0) {
+                                 best = cand;  // trivial copy, no heap
+                                 have = true;
+                             }
+                         });
     if (have) out = best;
     return have;
+}
+
+// Every candidate tying with ``winner`` on the iso-invariant key-prefix --
+// the residual tie set the single-branch encoder resolves by min edge id.
+// Mirrors Python ``_tied_v_candidates`` (edge-id ascending; the order does
+// not affect the lex-min completion, only reproducibility of the search).
+void collect_tied_v_candidates(const SHG& H, const EncoderState& state, int k,
+                               const std::array<NodeId, K_MAX>& tentative_inputs,
+                               int tentative_count, const VCandidate& winner,
+                               std::vector<VCandidate>& out) {
+    out.clear();
+    for_each_v_candidate(H, state, k, tentative_inputs, tentative_count,
+                         [&](const VCandidate& cand) {
+                             if (v_key_prefix_equal(cand, winner)) out.push_back(cand);
+                         });
+    std::sort(out.begin(), out.end(),
+              [](const VCandidate& a, const VCandidate& b) { return a.edge_id < b.edge_id; });
 }
 
 // ---------------------------------------------------------------------------
@@ -512,12 +559,12 @@ struct WorkArena {
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
                                const std::optional<std::vector<std::int64_t>>& wl_colors,
                                std::vector<Token>& out_completion,
-                               WorkArena& arena);
+                               WorkArena& arena, bool tie_branch);
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
                                const std::optional<std::vector<std::int64_t>>& wl_colors,
                                std::vector<Token>& out_completion,
-                               WorkArena& arena)
+                               WorkArena& arena, bool tie_branch)
 {
     out_completion.clear();
     const std::int32_t mapped = state.i2o_count();
@@ -536,8 +583,7 @@ struct WorkArena {
     bool best_kind_is_v = false;
     EdgeId best_edge_id = -1;
     std::array<SlotIdx, K_MAX> best_new_slots{};
-    std::array<NodeId, MAX_NEW> best_new_inputs{};  // V only; valid prefix length below
-    int best_new_inputs_n = 0;
+    VCandidate best_v_cand{};  // V only; carries the key-prefix for the tie set
 
     std::vector<Token> tmp_move_block;
     std::array<NodeId, K_MAX> tentative_inputs{};
@@ -603,8 +649,7 @@ struct WorkArena {
                 best_kind_is_v = true;
                 best_edge_id = v_cand.edge_id;
                 best_new_slots = new_slots;
-                best_new_inputs = v_cand.new_inputs;
-                best_new_inputs_n = v_cand.n_new_inputs;
+                best_v_cand = v_cand;
                 have_best = true;
             }
         }
@@ -637,7 +682,6 @@ struct WorkArena {
                 best_kind_is_v = false;
                 best_edge_id = c_cand.edge_id;
                 best_new_slots = new_slots;
-                best_new_inputs_n = 0;
                 have_best = true;
             }
         }
@@ -648,7 +692,10 @@ struct WorkArena {
     if (!have_best) return false;
 
     if (!best_kind_is_v) {
-        // C branch: simple inplace + undo.
+        // C branch: simple inplace + undo. A C candidate requires
+        // members == set(tentative_inputs[:arity]) and SparseHypergraph forbids
+        // duplicate member sets, so the C tie set is always a singleton -- no
+        // edge-id dependence to remove, which is why tie_branch only touches V.
         std::array<SlotIdx, K_MAX> saved_ptrs{};
         for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
         for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
@@ -656,7 +703,7 @@ struct WorkArena {
         ++state.consumed_cnt;
 
         std::vector<Token> sub_completion;
-        const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena);
+        const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena, tie_branch);
 
         state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
         --state.consumed_cnt;
@@ -668,66 +715,85 @@ struct WorkArena {
         return true;
     }
 
-    // V branch: enumerate label-respecting permutations and take the
-    // lex-min sub_completion. ``best_prefix`` is identical across all
-    // permutations of this V emission, so we compare only per-permutation
-    // sub_completion vectors. The enumerator is callback-driven so no
-    // intermediate ``vector<vector<NodeId>>`` perm list is materialised.
+    // V branch: enumerate the tied candidate edges (tie_branch mode only;
+    // otherwise the single min-edge-id winner) and, per candidate, the
+    // label-respecting permutations of its new inputs; take the lex-min
+    // sub_completion. ``best_prefix`` is identical across every branch --
+    // the emitted V[le; i; j; labels] token is a function of the shared
+    // key-prefix -- so comparing bare sub_completion vectors is sound.
+    // The permutation enumerator is callback-driven so no intermediate
+    // ``vector<vector<NodeId>>`` perm list is materialised.
+    std::vector<VCandidate> tied;
+    if (tie_branch) {
+        std::array<NodeId, K_MAX> tent{};
+        for (int idx = 0; idx < k; ++idx) {
+            const NodeId out_v = state.cdll.get_value(best_new_slots[static_cast<std::size_t>(idx)]);
+            tent[static_cast<std::size_t>(idx)] = state.o2i[static_cast<std::size_t>(out_v)];
+        }
+        collect_tied_v_candidates(H, state, k, tent, k, best_v_cand, tied);
+    } else {
+        tied.push_back(best_v_cand);
+    }
+
     bool have_completion = false;
     std::vector<Token> best_sub_completion;
     std::vector<Token> sub_completion;
 
-    enumerate_label_perms_cb(
-        best_new_inputs.data(), best_new_inputs_n, H, wl_colors,
-        [&](const NodeId* perm, int new_count) {
-            std::array<SlotIdx, K_MAX> saved_ptrs{};
-            for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
-            const NodeId saved_next_id = state.next_output_id;
+    for (const VCandidate& tv : tied) {
+        const EdgeId branch_edge_id = tv.edge_id;
+        enumerate_label_perms_cb(
+            tv.new_inputs.data(), tv.n_new_inputs, H, wl_colors,
+            [&](const NodeId* perm, int new_count) {
+                std::array<SlotIdx, K_MAX> saved_ptrs{};
+                for (int idx = 0; idx < K_MAX; ++idx) saved_ptrs[idx] = state.pointers[idx];
+                const NodeId saved_next_id = state.next_output_id;
 
-            for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
+                for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = best_new_slots[idx];
 
-            SlotIdx anchor = state.get_ptr(1);
-            std::array<SlotIdx, K_MAX> recorded_slots{};
-            std::array<NodeId, K_MAX> recorded_inputs{};
-            std::array<NodeId, K_MAX> recorded_outs{};
+                SlotIdx anchor = state.get_ptr(1);
+                std::array<SlotIdx, K_MAX> recorded_slots{};
+                std::array<NodeId, K_MAX> recorded_inputs{};
+                std::array<NodeId, K_MAX> recorded_outs{};
 
-            for (int idx = 0; idx < new_count; ++idx) {
-                const NodeId input_v = perm[idx];
-                const NodeId out_v = state.next_output_id++;
-                const SlotIdx new_slot = state.cdll.insert_after(anchor, out_v);
-                state.i2o[static_cast<std::size_t>(input_v)] = out_v;
-                state.o2i[static_cast<std::size_t>(out_v)] = input_v;
-                recorded_slots[static_cast<std::size_t>(idx)] = new_slot;
-                recorded_inputs[static_cast<std::size_t>(idx)] = input_v;
-                recorded_outs[static_cast<std::size_t>(idx)] = out_v;
-                anchor = new_slot;
-            }
-            state.mapped_count += new_count;
-            state.consumed[static_cast<std::size_t>(best_edge_id)] = 1;
-            ++state.consumed_cnt;
+                for (int idx = 0; idx < new_count; ++idx) {
+                    const NodeId input_v = perm[idx];
+                    const NodeId out_v = state.next_output_id++;
+                    const SlotIdx new_slot = state.cdll.insert_after(anchor, out_v);
+                    state.i2o[static_cast<std::size_t>(input_v)] = out_v;
+                    state.o2i[static_cast<std::size_t>(out_v)] = input_v;
+                    recorded_slots[static_cast<std::size_t>(idx)] = new_slot;
+                    recorded_inputs[static_cast<std::size_t>(idx)] = input_v;
+                    recorded_outs[static_cast<std::size_t>(idx)] = out_v;
+                    anchor = new_slot;
+                }
+                state.mapped_count += new_count;
+                state.consumed[static_cast<std::size_t>(branch_edge_id)] = 1;
+                ++state.consumed_cnt;
 
-            sub_completion.clear();
-            const bool ok = encode_from(H, k, state, wl_colors, sub_completion, arena);
+                sub_completion.clear();
+                const bool ok =
+                    encode_from(H, k, state, wl_colors, sub_completion, arena, tie_branch);
 
-            state.consumed[static_cast<std::size_t>(best_edge_id)] = 0;
-            --state.consumed_cnt;
-            state.mapped_count -= new_count;
-            for (int idx = new_count - 1; idx >= 0; --idx) {
-                state.cdll.remove(recorded_slots[static_cast<std::size_t>(idx)]);
-                state.i2o[static_cast<std::size_t>(
-                    recorded_inputs[static_cast<std::size_t>(idx)])] = -1;
-                state.o2i[static_cast<std::size_t>(
-                    recorded_outs[static_cast<std::size_t>(idx)])] = -1;
-            }
-            state.next_output_id = saved_next_id;
-            for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = saved_ptrs[idx];
+                state.consumed[static_cast<std::size_t>(branch_edge_id)] = 0;
+                --state.consumed_cnt;
+                state.mapped_count -= new_count;
+                for (int idx = new_count - 1; idx >= 0; --idx) {
+                    state.cdll.remove(recorded_slots[static_cast<std::size_t>(idx)]);
+                    state.i2o[static_cast<std::size_t>(
+                        recorded_inputs[static_cast<std::size_t>(idx)])] = -1;
+                    state.o2i[static_cast<std::size_t>(
+                        recorded_outs[static_cast<std::size_t>(idx)])] = -1;
+                }
+                state.next_output_id = saved_next_id;
+                for (int idx = 0; idx < K_MAX; ++idx) state.pointers[idx] = saved_ptrs[idx];
 
-            if (!ok) return;
-            if (!have_completion || sequence_cmp(sub_completion, best_sub_completion) < 0) {
-                best_sub_completion.swap(sub_completion);
-                have_completion = true;
-            }
-        });
+                if (!ok) return;
+                if (!have_completion || sequence_cmp(sub_completion, best_sub_completion) < 0) {
+                    best_sub_completion.swap(sub_completion);
+                    have_completion = true;
+                }
+            });
+    }
 
     if (!have_completion) return false;
     out_completion.clear();
@@ -744,7 +810,8 @@ struct WorkArena {
 // ---------------------------------------------------------------------------
 
 std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
-                                     const std::optional<std::vector<std::int64_t>>& wl_colors)
+                                     const std::optional<std::vector<std::int64_t>>& wl_colors,
+                                     bool tie_branch)
 {
     if (H.n_nodes == 0) return {};
     if (seed_node < 0 || seed_node >= H.n_nodes) {
@@ -762,7 +829,7 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     std::vector<Token> out;
     WorkArena arena;
     arena.cost_class.reserve(64);
-    const bool ok = encode_from(H, k, state, wl_colors, out, arena);
+    const bool ok = encode_from(H, k, state, wl_colors, out, arena, tie_branch);
     if (!ok) {
         throw H2SStuckError("H2S stuck from seed");
     }
@@ -770,9 +837,10 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
 }
 
 std::string greedy_h2s_str(const SHG& H, NodeId seed_node, int k,
-                           const std::optional<std::vector<std::int64_t>>& wl_colors)
+                           const std::optional<std::vector<std::int64_t>>& wl_colors,
+                           bool tie_branch)
 {
-    return serialize(greedy_h2s_tokens(H, seed_node, k, wl_colors));
+    return serialize(greedy_h2s_tokens(H, seed_node, k, wl_colors, tie_branch));
 }
 
 }  // namespace isalhg

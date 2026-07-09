@@ -22,6 +22,19 @@ vocabularies the branching factor at each ``V`` step is ``j!`` (typically
 ``<= 6`` for v1 hypergraphs); displacement and edge selection are not
 branched, so the worst-case complexity is product of ``j!`` over emissions.
 
+The cascade does NOT make the default single-branch encoder a function of
+the abstract hypergraph: distinct edges can tie through the full cascade
+key ``(i, j, edge_label, new_node_labels, eta)``, and the residual tie is
+broken by raw edge id (insertion order). The greedy string is therefore a
+function of the *presentation* (vertex ids + edge insertion order); two
+edge orderings of the same hypergraph can produce different strings
+(counterexample pinned in ``tests/unit/core/test_greedy_min_complete.py``).
+Passing ``tie_branch=True`` to :func:`_python_greedy_h2s` instead recurses
+over *every* cascade-tied candidate and keeps the lex-min completion,
+which removes edge ids from observable behaviour and makes the per-seed
+output isomorphism-equivariant (Theorem A, metric-space article). The
+``greedy_min_complete`` algorithm variant exposes this mode.
+
 Disconnected hypergraphs are rejected by :func:`isalhg.core.canonical.canonical_string`,
 not here.
 """
@@ -29,6 +42,7 @@ not here.
 from __future__ import annotations
 
 from collections import defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass
 from itertools import permutations, product
 from typing import Any
@@ -131,20 +145,19 @@ class _State:
 # ---------------------------------------------------------------------------
 
 
-def _best_v_for_displacement(
+def _iter_v_candidates(
     H: SparseHypergraph,
     k: int,
     tentative_inputs: list[NodeId],
     state: _State,
-) -> tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]] | None:
-    """Return the lex-min V candidate at this displacement, or None.
+) -> Iterator[tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]]]:
+    """Yield every applicable V candidate at this displacement.
 
-    Returns ``(cascade_key, edge_id, i, j, edge_label, new_labels, new_inputs_set)``.
-    The new-input ordering is left to the caller (branching point).
+    Yields ``(key_prefix, edge_id, i, j, edge_label, new_labels,
+    new_inputs_set)`` where ``key_prefix = (i, j, edge_label, new_labels,
+    eta)`` is the iso-invariant part of the cascade key (invariant 5);
+    the edge id is deliberately excluded from it.
     """
-    best: (
-        tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]] | None
-    ) = None
     for edge_id, members, edge_label in H.iter_edges():
         if edge_id in state.consumed_edges:
             continue
@@ -172,18 +185,66 @@ def _best_v_for_displacement(
                 continue
             new_labels = tuple(sorted(H.vertex_label(v) for v in new_inputs))
             edge_eta = eta(H, edge_id)
-            key = (i_val, j_val, edge_label, new_labels, edge_eta, edge_id)
-            if best is None or key < best[0]:
-                best = (
-                    key,
-                    edge_id,
-                    i_val,
-                    j_val,
-                    edge_label,
-                    new_labels,
-                    frozenset(new_inputs),
-                )
+            key_prefix = (i_val, j_val, edge_label, new_labels, edge_eta)
+            yield (
+                key_prefix,
+                edge_id,
+                i_val,
+                j_val,
+                edge_label,
+                new_labels,
+                frozenset(new_inputs),
+            )
+
+
+def _best_v_for_displacement(
+    H: SparseHypergraph,
+    k: int,
+    tentative_inputs: list[NodeId],
+    state: _State,
+) -> tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]] | None:
+    """Return the lex-min V candidate at this displacement, or None.
+
+    Returns ``(cascade_key, edge_id, i, j, edge_label, new_labels, new_inputs_set)``
+    where ``cascade_key = key_prefix + (edge_id,)`` -- the raw edge id is the
+    residual tie-break (NOT iso-invariant; see the module docstring).
+    The new-input ordering is left to the caller (branching point).
+    """
+    best: (
+        tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]] | None
+    ) = None
+    for key_prefix, edge_id, i_val, j_val, edge_label, new_labels, new_inputs in _iter_v_candidates(
+        H, k, tentative_inputs, state
+    ):
+        key = key_prefix + (edge_id,)
+        if best is None or key < best[0]:
+            best = (key, edge_id, i_val, j_val, edge_label, new_labels, new_inputs)
     return best
+
+
+def _tied_v_candidates(
+    H: SparseHypergraph,
+    k: int,
+    tentative_inputs: list[NodeId],
+    state: _State,
+    key_prefix: tuple[Any, ...],
+) -> list[tuple[EdgeId, frozenset[NodeId]]]:
+    """All ``(edge_id, new_inputs_set)`` whose cascade key-prefix equals ``key_prefix``.
+
+    The returned list is the full residual tie set the default encoder
+    resolves by min edge id; the tie-branching mode recurses over every
+    element so the result is independent of edge insertion order.
+    """
+    return sorted(
+        (
+            (edge_id, new_inputs)
+            for kp, edge_id, _, _, _, _, new_inputs in _iter_v_candidates(
+                H, k, tentative_inputs, state
+            )
+            if kp == key_prefix
+        ),
+        key=lambda t: t[0],
+    )
 
 
 def _best_c_for_displacement(
@@ -219,12 +280,18 @@ def _label_respecting_perms(
     """Yield all orderings of ``new_inputs_set`` consistent with the sorted
     label tuple (smaller labels first; within a label class, all permutations).
 
-    When ``wl_colors`` is provided, prune permutations that swap two
-    WL-equivalent vertices within the same label class: in any such
-    swap the resulting completion is isomorphic, so the lex-min is
-    unaffected if we require WL-equivalent vertices to appear in
-    ascending ID order. This collapses the ``j!`` branching factor on
-    inputs whose WL orbit has size > 1.
+    When ``wl_colors`` is provided, orderings that place two WL-equivalent
+    vertices of one label class in descending id order are discarded. **This
+    pruning is unsound: it can discard the lex-min completion.** Its
+    justification would need WL-equivalent vertices to be interchangeable by an
+    automorphism fixing the already-encoded prefix pointwise, which is strictly
+    stronger than sharing a WL colour (WL colour classes are only an upper bound
+    on automorphism orbits, and the stabiliser of the partial map shrinks as the
+    search descends). A five-vertex counterexample is pinned in
+    ``test_wl_colors_pruning_discards_the_lex_min``.
+
+    No registered algorithm passes ``wl_colors``; the parameter is retained only
+    on the public ``greedy_h2s`` signature and its C++ binding.
     """
     by_label: dict[int, list[NodeId]] = defaultdict(list)
     for v in new_inputs_set:
@@ -243,7 +310,13 @@ def _wl_orbit_canonical(
     prod_perm: tuple[tuple[NodeId, ...], ...],
     wl_colors: list[int],
 ) -> bool:
-    """True iff WL-equivalent vertices within each label group appear in ascending ID order."""
+    """True iff WL-equivalent vertices within each label group appear in ascending ID order.
+
+    Raw vertex ids are not transported by an isomorphism, so this is an
+    inadmissible pruning key: the surviving ordering depends on the vertex
+    numbering, not on the hypergraph. Used only by the unsound ``wl_colors``
+    branch of :func:`_label_respecting_perms`.
+    """
     for grp in prod_perm:
         last_id_at_color: dict[int, NodeId] = {}
         for v in grp:
@@ -266,6 +339,7 @@ def _encode_from(
     *,
     inplace: bool = False,
     wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
 ) -> TokenSequence | None:
     """Recursive lex-min completion from ``state``. Returns ``None`` if stuck.
 
@@ -277,8 +351,16 @@ def _encode_from(
         cost. Default ``False`` (clone-on-branch, identical to the
         original behaviour).
     wl_colors : list[int] or None, optional
-        Per-vertex WL hashes for orbit-aware pruning of the V-branch
-        permutation set. ``None`` disables pruning (default).
+        Per-vertex WL hashes for id-ascending pruning of the V-branch
+        permutation set. **Unsound** -- can discard the lex-min completion;
+        see :func:`_label_respecting_perms`. ``None`` disables pruning
+        (default), and no registered algorithm passes it.
+    tie_branch : bool, optional
+        When ``True``, recurse over *every* V candidate tying on the
+        iso-invariant cascade key-prefix instead of committing to the
+        min-edge-id one, and keep the lex-min completion. Removes the
+        edge-insertion-order dependence of the output (module docstring).
+        Default ``False`` (single-branch greedy, historical behaviour).
     """
     if len(state.i2o) == H.n_nodes and len(state.consumed_edges) == H.n_edges:
         return ()
@@ -307,7 +389,7 @@ def _encode_from(
 
         v_cand = _best_v_for_displacement(H, k, tentative_inputs, state)
         if v_cand is not None:
-            (_, edge_id, i_v, j_v, le, new_labels, new_inputs_set) = v_cand
+            (v_key, edge_id, i_v, j_v, le, new_labels, new_inputs_set) = v_cand
             main_tok: Token = TokenV(edge_label=le, i=i_v, j=j_v, new_node_labels=new_labels)
             ek = (
                 len(move_block) + 1,
@@ -317,7 +399,7 @@ def _encode_from(
                 best_emission_key = ek
                 best_kind = "V"
                 best_new_slots = new_slots
-                best_v_info = (edge_id, i_v, j_v, le, new_labels, new_inputs_set)
+                best_v_info = (edge_id, i_v, j_v, le, new_labels, new_inputs_set, v_key[:-1])
                 best_c_info = None
                 best_move_block = move_block
                 best_main_tok = main_tok
@@ -354,7 +436,9 @@ def _encode_from(
             saved_ptrs = tuple(state.pointers)
             state.set_ptrs(best_new_slots)
             state.consumed_edges.add(edge_id_c)
-            sub_completion = _encode_from(H, k, state, inplace=True, wl_colors=wl_colors)
+            sub_completion = _encode_from(
+                H, k, state, inplace=True, wl_colors=wl_colors, tie_branch=tie_branch
+            )
             state.consumed_edges.discard(edge_id_c)
             state.pointers[:] = list(saved_ptrs)
             if sub_completion is None:
@@ -363,18 +447,33 @@ def _encode_from(
         sub_state = state.clone()
         sub_state.set_ptrs(best_new_slots)
         sub_state.consumed_edges.add(edge_id_c)
-        sub_completion = _encode_from(H, k, sub_state, inplace=False, wl_colors=wl_colors)
+        sub_completion = _encode_from(
+            H, k, sub_state, inplace=False, wl_colors=wl_colors, tie_branch=tie_branch
+        )
         if sub_completion is None:
             return None
         return move_prefix + sub_completion
 
-    # V branch: enumerate label-respecting permutations of new_inputs.
+    # V branch: enumerate the tied candidate edges (tie_branch mode only;
+    # otherwise the single min-edge-id winner) and, per candidate, the
+    # label-respecting permutations of its new inputs.
     assert best_v_info is not None
-    edge_id_v, _, _, _, _, new_inputs_set = best_v_info
+    edge_id_v, _, _, _, _, new_inputs_set, v_key_prefix = best_v_info
+
+    if tie_branch:
+        tentative_best = [state.o2i[state.cdll.get_value(s)] for s in best_new_slots]
+        tied = _tied_v_candidates(H, k, tentative_best, state, v_key_prefix)
+    else:
+        tied = [(edge_id_v, new_inputs_set)]
 
     best_completion: TokenSequence | None = None
     best_completion_key: tuple[Any, ...] | None = None
-    for new_input_seq in _label_respecting_perms(new_inputs_set, H, wl_colors=wl_colors):
+    branches = (
+        (edge_id_b, seq_b)
+        for edge_id_b, inputs_b in tied
+        for seq_b in _label_respecting_perms(inputs_b, H, wl_colors=wl_colors)
+    )
+    for edge_id_v, new_input_seq in branches:
         if inplace:
             saved_ptrs = tuple(state.pointers)
             saved_next_id = state.next_output_id
@@ -394,7 +493,9 @@ def _encode_from(
                 new_i_ids.append(input_v)
                 anchor_slot = new_slot
             state.consumed_edges.add(edge_id_v)
-            sub_completion = _encode_from(H, k, state, inplace=True, wl_colors=wl_colors)
+            sub_completion = _encode_from(
+                H, k, state, inplace=True, wl_colors=wl_colors, tie_branch=tie_branch
+            )
             state.consumed_edges.discard(edge_id_v)
             for slot in reversed(new_cdll_slots):
                 state.cdll.remove(slot)
@@ -416,7 +517,9 @@ def _encode_from(
                 sub_state.o2i[out_v] = input_v
                 anchor_slot = new_slot
             sub_state.consumed_edges.add(edge_id_v)
-            sub_completion = _encode_from(H, k, sub_state, inplace=False, wl_colors=wl_colors)
+            sub_completion = _encode_from(
+                H, k, sub_state, inplace=False, wl_colors=wl_colors, tie_branch=tie_branch
+            )
         if sub_completion is None:
             continue
         candidate = list(move_prefix) + list(sub_completion)
@@ -439,10 +542,14 @@ def _python_greedy_h2s(
     k: int,
     inplace: bool = False,
     wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
 ) -> TokenSequence:
     """Pure-Python reference implementation (kept for differential tests).
 
     See :func:`greedy_h2s` for the production C++-backed entry point.
+    ``tie_branch=True`` selects the tie-complete search (module docstring),
+    mirrored bit-for-bit by the C++ twin and exposed as the
+    ``greedy_min_complete`` algorithm variant.
     """
     n = H.n_nodes
     if n == 0:
@@ -462,7 +569,7 @@ def _python_greedy_h2s(
         consumed_edges=set(),
         next_output_id=1,
     )
-    result = _encode_from(H, k, state, inplace=inplace, wl_colors=wl_colors)
+    result = _encode_from(H, k, state, inplace=inplace, wl_colors=wl_colors, tie_branch=tie_branch)
     if result is None:
         raise H2SStuckError(
             f"H2S stuck from seed {seed_node} on hypergraph with {n} nodes, {H.n_edges} edges"
@@ -488,6 +595,7 @@ def _cpp_greedy_h2s(
     k: int,
     inplace: bool = False,  # noqa: ARG001  # accepted for API parity with _python
     wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
 ) -> TokenSequence:
     """C++-backed implementation of :func:`greedy_h2s`.
 
@@ -495,7 +603,7 @@ def _cpp_greedy_h2s(
     serialised result back into Python ``Token`` dataclasses so the
     public return type matches the Python reference.
     """
-    raw = _core_greedy_h2s(H, seed_node, k, wl_colors)
+    raw = _core_greedy_h2s(H, seed_node, k, wl_colors, tie_branch)
     return tuple(_parse_tokens(raw))
 
 
@@ -512,6 +620,7 @@ def greedy_h2s(
     k: int,
     inplace: bool = False,
     wl_colors: list[int] | None = None,
+    tie_branch: bool = False,
     backend: Backend | None = None,
 ) -> TokenSequence:
     """Greedy single-seed H2S encoder.
@@ -529,8 +638,16 @@ def greedy_h2s(
         inplace with stack-allocated undo records; the Python backend
         honours the flag (clone vs undo log) at no observable cost.
     wl_colors : list[int] or None, optional
-        Per-vertex stable WL colours used to prune the V-branch
-        permutation set. Default ``None`` (no pruning).
+        Per-vertex stable WL colours used to prune the V-branch permutation
+        set. **Unsound** -- the pruning key is the raw vertex id, so it can
+        discard the lex-min completion; see :func:`_label_respecting_perms`.
+        Default ``None`` (no pruning). Values must fit in a signed 64-bit
+        integer for the C++ backend, which :func:`wl_hash` does not guarantee.
+    tie_branch : bool, optional
+        When ``True``, branch over every V candidate tying on the
+        iso-invariant cascade key-prefix instead of committing to the
+        min-edge-id one (module docstring). Both backends implement it.
+        Default ``False``.
     backend : {"cpp", "python"}, optional
         Implementation to use. Defaults to ``"cpp"`` (see
         :data:`isalhg.core.backends.DEFAULT_BACKEND`).
@@ -555,7 +672,14 @@ def greedy_h2s(
     if k < 1:
         raise ValueError(f"k must be >= 1, got {k}")
     impl = resolve(backend, _GREEDY_H2S_BACKENDS)
-    return impl(H, seed_node=seed_node, k=k, inplace=inplace, wl_colors=wl_colors)
+    return impl(
+        H,
+        seed_node=seed_node,
+        k=k,
+        inplace=inplace,
+        wl_colors=wl_colors,
+        tie_branch=tie_branch,
+    )
 
 
 def hypergraph_to_string(

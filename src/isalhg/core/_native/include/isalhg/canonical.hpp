@@ -26,6 +26,11 @@ enum class AlgorithmVariant : std::uint8_t {
     // fewer seeds and a strictly faster canonical_string call.
     GreedyMinNbrDeg          = 5,
     GreedySingleNbrDeg       = 6,
+    // T-TAd/T-TAa — neighbour-degree seed set plus tie-complete V branching.
+    // The only variant whose w* is a complete isomorphism invariant: the
+    // others resolve the residual V tie by raw edge id and are therefore
+    // functions of the presentation (edge insertion order).
+    GreedyMinComplete        = 7,
 };
 
 // Compute the canonical Sigma_HG* string for ``H``.

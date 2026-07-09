@@ -9,9 +9,21 @@ set. Both are iso-invariant, so ``w*`` is an isomorphism invariant under
 either. Returns the serialised string form for consumption by
 :class:`isalhg.iso_backends.isalhg_backend.IsalHGBackend`.
 
-Conjecture (Theorem 2 of PROPOSAL.md): ``w*(H1) == w*(H2)`` iff ``H1`` and
-``H2`` are isomorphic. Empirically validated by the Tier 1 protocol;
-theoretical proof deferred to the companion paper.
+Completeness status (T-TA, 2026-07-08): ``w*(H1) == w*(H2)`` implies
+isomorphism for every variant (round-trip soundness). The converse is FALSE
+for the single-branch greedy variants -- their residual V-tie-break by raw
+edge id makes ``w*`` depend on the edge insertion order -- and PROVED for
+``algorithm="greedy_min_complete"`` (tie-complete branching). See the
+Theorem A proof in the ISAL proofs archive and
+``tests/unit/core/test_greedy_min_complete.py``.
+
+The forward direction holds over the *augmented fingerprint*
+``F(H) = (seed vertex label, w*(H))``, not over the bare string: ``V`` tokens
+carry only the labels of the vertices they create and ``C`` tokens carry none,
+so the seed's own label is never emitted. On a non-trivial vertex vocabulary
+two non-isomorphic hypergraphs can therefore share ``w*``. Use
+:func:`canonical_fingerprint` wherever an isomorphism decision is made;
+:func:`canonical_string` alone is complete only when ``|Sigma_V| == 1``.
 
 Disconnected hypergraphs are rejected per decision B11.
 
@@ -52,18 +64,21 @@ There are two extension paths:
 
 from __future__ import annotations
 
+from collections import Counter
+
 from isalhg.core._core import canonical_string as _core_canonical_string
 from isalhg.core.algorithms.registry import get_algorithm
 from isalhg.core.backends import Backend, resolve
 from isalhg.core.hypergraph_to_string import _python_greedy_h2s
 from isalhg.core.hypergraph_wl import _python_wl_hash
-from isalhg.core.instructions import sequence_sort_key, serialize
+from isalhg.core.instructions import TokenV, parse, sequence_sort_key, serialize
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import (
     _python_max_neighbor_degree_nodes,
     _python_max_xi_nodes,
 )
-from isalhg.errors import DisconnectedHypergraphError
+from isalhg.errors import DisconnectedHypergraphError, InvalidLabelError
+from isalhg.types import VertexLabel
 
 # Registry of C++ ``AlgorithmVariant`` ids — see
 # ``src/isalhg/core/_native/include/isalhg/canonical.hpp``. Extend via
@@ -80,6 +95,10 @@ _CPP_VARIANT_IDS: dict[str, int] = {
     # instead of (xi_labelled, vertex_label).
     "greedy_min_nbrdeg": 5,
     "greedy_single_nbrdeg": 6,
+    # T-TAa — neighbour-degree seeds plus tie-complete V branching. The only
+    # variant whose w* is a complete isomorphism invariant (Theorem A); the
+    # rest resolve the residual V tie by raw edge id.
+    "greedy_min_complete": 7,
 }
 
 
@@ -101,14 +120,14 @@ def required_k(H: SparseHypergraph) -> int:
 
 
 # ---------------------------------------------------------------------------
-# Backend-specific implementations of the five native variants.
+# Backend-specific implementations of the native variants.
 # ---------------------------------------------------------------------------
 
 
 def _python_canonical_string(
     H: SparseHypergraph, k: int, structural_depth: int, algorithm: str
 ) -> str:
-    """Pure-Python multi-seed canonical-string for the five native variants.
+    """Pure-Python multi-seed canonical-string for the native variants.
 
     Mirrors the dispatch performed by
     ``canonical_string_compute`` in the C++ implementation but goes
@@ -120,7 +139,7 @@ def _python_canonical_string(
             f"{algorithm} requires a connected hypergraph (decision B11)"
         )
     # Seed selector dispatch — the PI 2026-06-23 variants replace max_xi.
-    if algorithm in ("greedy_min_nbrdeg", "greedy_single_nbrdeg"):
+    if algorithm in ("greedy_min_nbrdeg", "greedy_single_nbrdeg", "greedy_min_complete"):
         seeds = _python_max_neighbor_degree_nodes(H)
     else:
         seeds = _python_max_xi_nodes(H, structural_depth)
@@ -132,7 +151,11 @@ def _python_canonical_string(
         colours = _python_wl_hash(H)
         min_colour = min(colours[s] for s in seeds)
         seeds = tuple(s for s in seeds if colours[s] == min_colour)
-    candidates = [_python_greedy_h2s(H, seed_node=s, k=k) for s in seeds]
+    tie_branch = algorithm == "greedy_min_complete"
+    candidates = [
+        _python_greedy_h2s(H, seed_node=s, k=k, inplace=tie_branch, tie_branch=tie_branch)
+        for s in seeds
+    ]
     best = min(candidates, key=sequence_sort_key)
     return serialize(list(best))
 
@@ -140,7 +163,7 @@ def _python_canonical_string(
 def _cpp_canonical_string(
     H: SparseHypergraph, k: int, structural_depth: int, algorithm: str
 ) -> str:
-    """C++-backed canonical-string for the five native variants."""
+    """C++-backed canonical-string for the native variants."""
     if not H.is_connected():
         raise DisconnectedHypergraphError(
             f"{algorithm} requires a connected hypergraph (decision B11)"
@@ -183,10 +206,8 @@ def canonical_string(
         (T-M0). Pass ``"greedy_min"`` for the historical ``xi``-seeded
         canonical.
     backend : {"cpp", "python"}, optional
-        Implementation to use for the five native variants
-        (``greedy_min``, ``greedy_single``, ``greedy_min_inplace``,
-        ``greedy_min_wl_pruned``, ``greedy_min_inplace_wl_pruned``).
-        Defaults to ``"cpp"`` (see
+        Implementation to use for the native variants (the names in
+        :func:`available_cpp_variants`). Defaults to ``"cpp"`` (see
         :data:`isalhg.core.backends.DEFAULT_BACKEND`). Non-native
         variants (``exhaustive``, ``pruned_exhaustive``, plus any
         user-registered Python algorithm) ignore this flag and use the
@@ -214,3 +235,96 @@ def canonical_string(
     algo = get_algorithm(algorithm, k=effective_k, structural_depth=structural_depth)
     tokens = algo.encode(H)
     return serialize(list(tokens))
+
+
+def seed_vertex_label(H: SparseHypergraph, w: str) -> VertexLabel:
+    """Return the vertex label of the seed from which ``w`` was encoded.
+
+    Every vertex of ``H`` except the seed is created by a ``V`` token, which
+    records its label; the seed pre-exists the first token and its label is
+    never emitted. The seed label is therefore the single element left when the
+    labels emitted by ``w`` are removed from the vertex-label multiset of ``H``.
+
+    This derivation is independent of the seed cascade, so it holds for every
+    registered variant. Under the two production cascades the answer coincides
+    with the label shared by all seeds: the maximum vertex label for the
+    neighbour-degree cascade, the label of the ``argmax_lex xi`` vertices for
+    the ``xi`` cascade.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        The hypergraph ``w`` was computed from.
+    w : str
+        A canonical string of ``H``, as returned by :func:`canonical_string`.
+
+    Returns
+    -------
+    VertexLabel
+        Label of the seed vertex. ``0`` on the empty hypergraph and on any
+        trivial vocabulary (``H.n_vertex_labels == 1``), where it is the only
+        admissible label.
+
+    Raises
+    ------
+    InvalidLabelError
+        If ``w`` emits labels that ``H`` does not carry -- i.e. ``w`` is not a
+        canonical string of ``H``.
+    """
+    if H.n_nodes == 0 or H.n_vertex_labels == 1:
+        return 0
+    remaining: Counter[VertexLabel] = Counter(H.vertex_label(v) for v in H.nodes())
+    for token in parse(w):
+        if isinstance(token, TokenV):
+            for ell in token.new_node_labels:
+                remaining[ell] -= 1
+    survivors = [ell for ell, count in remaining.items() if count > 0]
+    if len(survivors) != 1 or remaining[survivors[0]] != 1:
+        raise InvalidLabelError(
+            f"canonical string emits a vertex-label multiset incompatible with H: {remaining}"
+        )
+    return survivors[0]
+
+
+def canonical_fingerprint(
+    H: SparseHypergraph,
+    *,
+    k: int | None = None,
+    structural_depth: int = 3,
+    algorithm: str = "greedy_min_nbrdeg",
+    backend: Backend | None = None,
+) -> tuple[VertexLabel, str]:
+    """Compute the augmented fingerprint ``F(H) = (seed label, w*(H))``.
+
+    The bare canonical string is not a complete invariant on a non-trivial
+    vertex vocabulary: the seed's label is the one label ``w*`` never emits, so
+    two non-isomorphic hypergraphs differing only in that label share ``w*``.
+    Pairing the string with the seed label restores the forward direction of
+    Theorem A (equal fingerprints imply isomorphism) for every variant, and the
+    biconditional for ``algorithm="greedy_min_complete"``.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Connected hypergraph.
+    k, structural_depth, algorithm, backend
+        Forwarded verbatim to :func:`canonical_string`.
+
+    Returns
+    -------
+    tuple[VertexLabel, str]
+        Seed vertex label and canonical ``Sigma_HG*`` string.
+
+    Raises
+    ------
+    DisconnectedHypergraphError
+        If ``H`` is disconnected (decision B11).
+    """
+    w = canonical_string(
+        H,
+        k=k,
+        structural_depth=structural_depth,
+        algorithm=algorithm,
+        backend=backend,
+    )
+    return seed_vertex_label(H, w), w

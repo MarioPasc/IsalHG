@@ -3,16 +3,21 @@
 Uses ``python-igraph`` (which links against bliss) to canonicalise the Levi
 graph. Imports ``igraph`` lazily inside method bodies so the package remains
 importable without the optional dependency.
+
+Unlike the nauty and Traces backends, this one needs no colour signature:
+igraph hands bliss the per-node colour *values* rather than an ordered
+partition, so absolute label identity survives, and the fingerprint already
+embeds the canonical colour vector and the ``(|V|, |E|)`` split.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from isalhg.core.levi_reduction import LeviGraph, to_levi
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.errors import BackendUnavailableError
 from isalhg.iso_backends.base import IsoBackend
-from isalhg.iso_backends.levi_reduction import LeviGraph, to_levi
 from isalhg.iso_backends.registry import register_backend
 from isalhg.types import BackendName, Fingerprint, NodeId
 

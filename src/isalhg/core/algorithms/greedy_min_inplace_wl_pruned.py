@@ -2,9 +2,14 @@
 
 Composition of the two optimisations in
 :mod:`~isalhg.core.algorithms.greedy_min_inplace` and
-:mod:`~isalhg.core.algorithms.greedy_min_wl_pruned`. Same canonicality
-caveat as the WL-pruned variant -- empirically validated against
-``greedy_min`` by the ``algorithm_benchmark`` protocol.
+:mod:`~isalhg.core.algorithms.greedy_min_wl_pruned`.
+
+Like its non-inplace twin, it filters the max-xi seed set by the iso-invariant
+argmin WL colour (admissible, keeps the whole class) and does **not** pass WL
+colours into the V-branch permutation loop. It inherits greedy's raw-edge-id
+V-tie-break, so it is invariant under vertex relabelling but depends on the
+hyperedge insertion order: a speed heuristic, not a canonical form. Only
+``greedy_min_complete`` is.
 """
 
 from __future__ import annotations
@@ -22,7 +27,7 @@ from isalhg.types import TokenSequence
 
 
 class GreedyMinInplaceWLPruned(H2SAlgorithm):
-    """``greedy_min`` with WL-pruned branching and in-place state mutation."""
+    """``greedy_min`` with a WL-filtered seed set and in-place state mutation."""
 
     def __init__(self, *, k: int, structural_depth: int = DEFAULT_DEPTH) -> None:
         self._k = k

@@ -10,76 +10,26 @@ dispatch routes incorrectly.
 
 from __future__ import annotations
 
-import itertools
-
 import pytest
 from hypothesis import given, settings
 
-from isalhg.core.canonical import canonical_string, required_k
+from isalhg.core.canonical import available_cpp_variants, canonical_string, required_k
 from isalhg.core.hypergraph_to_string import greedy_h2s, hypergraph_to_string
 from isalhg.core.hypergraph_wl import wl_hash, wl_partition
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import max_xi_nodes
+from isalhg.datasets.synthetic.designs import fano_plane, gq_2_2_doily, sts_9
 from tests.property.test_canonical_invariance import small_connected_hypergraph
 
 pytestmark = pytest.mark.property
-
-
-def _fano() -> SparseHypergraph:
-    edges = [
-        [0, 1, 2],
-        [0, 3, 4],
-        [0, 5, 6],
-        [1, 3, 5],
-        [1, 4, 6],
-        [2, 3, 6],
-        [2, 4, 5],
-    ]
-    return SparseHypergraph(n_nodes=7, hyperedges=edges)
-
-
-def _sts9() -> SparseHypergraph:
-    edges = [
-        [0, 1, 2],
-        [3, 4, 5],
-        [6, 7, 8],
-        [0, 3, 6],
-        [1, 4, 7],
-        [2, 5, 8],
-        [0, 4, 8],
-        [1, 5, 6],
-        [2, 3, 7],
-        [0, 5, 7],
-        [1, 3, 8],
-        [2, 4, 6],
-    ]
-    return SparseHypergraph(n_nodes=9, hyperedges=edges)
-
-
-def _doily() -> SparseHypergraph:
-    pairs = list(itertools.combinations(range(1, 7), 2))
-    pid = {p: i for i, p in enumerate(pairs)}
-
-    def _matchings(es: tuple[int, ...]):
-        if not es:
-            yield ()
-            return
-        a = es[0]
-        rest = es[1:]
-        for i, b in enumerate(rest):
-            for tail in _matchings(rest[:i] + rest[i + 1 :]):
-                yield ((a, b),) + tail
-
-    lines = [sorted(pid[tuple(sorted(p))] for p in m) for m in _matchings(tuple(range(1, 7)))]
-    return SparseHypergraph(n_nodes=15, hyperedges=lines)
 
 
 # Fast designs covered with all seven native variants. The doily is too
 # slow in the Python backend (greedy_h2s single-seed ~21 s; multi-seed
 # variants DNF >300 s) so we only check single-seed equivalence on it,
 # under the ``slow`` marker.
-_FAST_NAMED = [("fano", _fano()), ("sts9", _sts9())]
-_SLOW_NAMED = [("doily", _doily())]
+_FAST_NAMED = [("fano", fano_plane()), ("sts9", sts_9())]
+_SLOW_NAMED = [("doily", gq_2_2_doily())]
 _NATIVE_VARIANTS = [
     "greedy_min",
     "greedy_single",
@@ -99,6 +49,28 @@ def test_canonical_string_backends_agree_named(
     py = canonical_string(H, algorithm=algorithm, backend="python")
     cpp = canonical_string(H, algorithm=algorithm, backend="cpp")
     assert py == cpp, f"{name} / {algorithm}: backends disagree"
+
+
+@pytest.mark.slow
+def test_canonical_string_complete_backends_agree_fano() -> None:
+    # greedy_min_complete is excluded from _NATIVE_VARIANTS: the Python
+    # tie-complete reference costs ~3.4 s on Fano and ~132 s on STS(9).
+    H = fano_plane()
+    py = canonical_string(H, algorithm="greedy_min_complete", backend="python")
+    cpp = canonical_string(H, algorithm="greedy_min_complete", backend="cpp")
+    assert py == cpp
+
+
+@settings(max_examples=25, deadline=None)
+@given(small_connected_hypergraph(max_n=5, max_arity=3))
+def test_canonical_string_complete_backends_agree_hypothesis(H: SparseHypergraph) -> None:
+    py = canonical_string(H, algorithm="greedy_min_complete", backend="python")
+    cpp = canonical_string(H, algorithm="greedy_min_complete", backend="cpp")
+    assert py == cpp
+
+
+def test_complete_is_a_native_cpp_variant() -> None:
+    assert "greedy_min_complete" in available_cpp_variants()
 
 
 @pytest.mark.slow
@@ -178,7 +150,7 @@ def test_default_backend_is_cpp() -> None:
 
 
 def test_unknown_backend_raises() -> None:
-    H = _fano()
+    H = fano_plane()
     with pytest.raises(ValueError, match="unknown backend"):
         canonical_string(H, backend="rust")
     with pytest.raises(ValueError, match="unknown backend"):

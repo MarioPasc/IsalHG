@@ -51,16 +51,32 @@ class LabelVocabulary:
         return cls(vertex_symbols=("⊥",), edge_symbols=("⊥",))
 
     @classmethod
-    def fit(cls, items: Iterable[Any]) -> LabelVocabulary:
+    def fit(cls, items: Iterable[tuple[Iterable[str], Iterable[str]]]) -> LabelVocabulary:
         """Collect semantic labels across a corpus and assign contiguous int IDs.
 
-        Lexicographic sort over all observed vertex and edge label strings.
-        Deferred to Phase 6 (labelled HIC atlas loader); raising here
-        keeps the contract named without realising it for Tier 1.
+        Parameters
+        ----------
+        items : Iterable[tuple[Iterable[str], Iterable[str]]]
+            One ``(vertex_label_strings, edge_label_strings)`` pair per corpus
+            item -- the semantic strings observed on that item's vertices and
+            hyperedges, before integer encoding.
+
+        Returns
+        -------
+        LabelVocabulary
+            All observed strings, lexicographically sorted, position = int ID.
+            A side with no observed labels falls back to the trivial
+            single-symbol vocabulary so ``SparseHypergraph``'s ``>= 1``
+            vocabulary-size invariant always holds.
         """
-        raise NotImplementedError(
-            "LabelVocabulary.fit is deferred to Phase 6 (labelled-loader milestone); "
-            "Tier 1 uses LabelVocabulary.trivial() and bypasses this path."
+        vertex_symbols: set[str] = set()
+        edge_symbols: set[str] = set()
+        for v_labels, e_labels in items:
+            vertex_symbols.update(v_labels)
+            edge_symbols.update(e_labels)
+        return cls(
+            vertex_symbols=tuple(sorted(vertex_symbols)) or ("⊥",),
+            edge_symbols=tuple(sorted(edge_symbols)) or ("⊥",),
         )
 
 

@@ -25,6 +25,12 @@ namespace isalhg {
 // wl_colors : optional length-n_nodes array; when present, prunes the
 //   V-branch permutation set to canonical-orbit reps (matches Python
 //   wl_colors=... behaviour in greedy_h2s).
+// tie_branch : when true, recurse over every V candidate tying on the
+//   iso-invariant cascade key-prefix (i, j, edge_label, sorted new labels,
+//   eta) instead of committing to the min-edge-id one, and keep the
+//   lex-min completion. Removes edge ids from observable behaviour, making
+//   the per-seed output isomorphism-equivariant. Mirrors the Python
+//   ``_python_greedy_h2s(tie_branch=True)`` reference bit-for-bit.
 //
 // Throws ``H2SStuckError`` when the encoder cannot make progress from a
 // non-terminal state.
@@ -32,13 +38,15 @@ namespace isalhg {
     const SHG& H,
     NodeId seed_node,
     int k,
-    const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt);
+    const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt,
+    bool tie_branch = false);
 
 // Variant returning the token vector (for the differential test).
 [[nodiscard]] std::vector<Token> greedy_h2s_tokens(
     const SHG& H,
     NodeId seed_node,
     int k,
-    const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt);
+    const std::optional<std::vector<std::int64_t>>& wl_colors = std::nullopt,
+    bool tie_branch = false);
 
 }  // namespace isalhg

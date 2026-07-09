@@ -11,7 +11,7 @@ that registers it; :func:`get_algorithm` imports the module on first
 request.
 
 Mirrors the ``IsoBackend`` registry pattern documented in
-``docs/CODE_DESIGN.md`` Section 3. Restriction: stdlib only.
+``docs/engineering/CODE_DESIGN.md`` Section 3. Restriction: stdlib only.
 """
 
 from __future__ import annotations
@@ -36,6 +36,7 @@ _LAZY_MODULES: dict[str, str] = {
     "greedy_min_wl_pruned": "isalhg.core.algorithms.greedy_min_wl_pruned",
     "greedy_min_inplace_wl_pruned": "isalhg.core.algorithms.greedy_min_inplace_wl_pruned",
     "pruned_exhaustive": "isalhg.core.algorithms.pruned_exhaustive",
+    "greedy_min_complete": "isalhg.core.algorithms.greedy_min_complete",
 }
 
 

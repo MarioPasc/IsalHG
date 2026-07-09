@@ -1,9 +1,11 @@
 """Exhaustive H2S over every node as seed; lex-min over results.
 
 Brute-force baseline: ignores the max-xi seed-selection heuristic and
-runs greedy H2S from every vertex of ``H``. Canonical by construction
-(any seed strategy is a subset of "all seeds"), but the lex-min over
-``n`` greedy runs is expensive on large or symmetric hypergraphs.
+runs greedy H2S from every vertex of ``H``. Seed-exhaustive, but the
+lex-min over ``n`` greedy runs is expensive on large or symmetric
+hypergraphs. Note: each per-seed run is the single-branch greedy, so
+this variant inherits its edge-insertion-order dependence (Theorem A
+counterexample); only ``greedy_min_complete`` branches over tied edges.
 """
 
 from __future__ import annotations

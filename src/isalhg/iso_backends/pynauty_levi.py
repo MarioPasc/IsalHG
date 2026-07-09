@@ -3,6 +3,13 @@
 Uses the ``pynauty`` Python binding to McKay's nauty 2.8 to canonicalise the
 Levi graph and emit its canonical labelling as the fingerprint.
 
+nauty takes the colouring as an ordered partition, which loses absolute label
+identity, and ``pynauty.certificate`` is the canonical *adjacency* alone -- it
+omits the colouring entirely, so two Levi graphs with different colour class
+sizes can share a certificate. Both fingerprint and isomorphism test therefore
+carry ``LeviGraph.color_signature`` alongside nauty's answer; see
+:mod:`isalhg.core.levi_reduction` for why the pair is exact.
+
 Imports ``pynauty`` lazily inside method bodies so the package remains
 importable without the optional dependency.
 """
@@ -11,10 +18,10 @@ from __future__ import annotations
 
 from typing import Any
 
+from isalhg.core.levi_reduction import LeviGraph, to_levi
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.errors import BackendUnavailableError
 from isalhg.iso_backends.base import IsoBackend
-from isalhg.iso_backends.levi_reduction import LeviGraph, to_levi
 from isalhg.iso_backends.registry import register_backend
 from isalhg.types import BackendName, Fingerprint, NodeId
 
@@ -56,9 +63,9 @@ class PynautyLeviBackend(IsoBackend):
         pynauty = _import_pynauty()
         if H.n_nodes == 0:
             return b""
-        g = _to_pynauty(to_levi(H))
-        cert = pynauty.certificate(g)
-        return bytes(cert)
+        levi = to_levi(H)
+        cert = pynauty.certificate(_to_pynauty(levi))
+        return levi.color_signature() + bytes(cert)
 
     def are_isomorphic(self, H1: SparseHypergraph, H2: SparseHypergraph) -> bool:
         if H1.n_vertex_labels != H2.n_vertex_labels:
@@ -70,9 +77,10 @@ class PynautyLeviBackend(IsoBackend):
         pynauty = _import_pynauty()
         if H1.n_nodes == 0:
             return True
-        g1 = _to_pynauty(to_levi(H1))
-        g2 = _to_pynauty(to_levi(H2))
-        return bool(pynauty.isomorphic(g1, g2))
+        levi1, levi2 = to_levi(H1), to_levi(H2)
+        if levi1.color_profile() != levi2.color_profile():
+            return False
+        return bool(pynauty.isomorphic(_to_pynauty(levi1), _to_pynauty(levi2)))
 
     def bijection_certificate(
         self, H1: SparseHypergraph, H2: SparseHypergraph

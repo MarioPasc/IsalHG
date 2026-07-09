@@ -13,7 +13,7 @@ Caveats
 process's high-water mark only. Subprocess-based backends
 (``traces_levi`` -> ``dreadnaut``) therefore under-report peak memory;
 the parent's RSS captures only the Levi serialisation buffer and the
-b6 parsing, not the child solver. ``docs/PREPRINT.md`` §11 + the
+b6 parsing, not the child solver. ``docs/preprint/PREPRINT.md`` §11 + the
 preprint figure caption flag this limitation; a production fix using
 ``psutil`` child-polling is a follow-up.
 

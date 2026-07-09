@@ -53,6 +53,17 @@ class VocabularyMismatchError(IsalHGError):
     """Raised when two hypergraphs declare incompatible label vocabularies."""
 
 
+class HypergraphEditError(IsalHGError):
+    """Raised when a structural edit operation violates a precondition.
+
+    Covers the six unit edit operations on :class:`SparseHypergraph`
+    (vertex/hyperedge insert-delete, incidence add-remove): deleting a
+    non-isolated vertex, removing the last incidence of a hyperedge,
+    referencing an out-of-range operand, or producing a duplicate
+    ``(label, member-set)`` that would silently merge two hyperedges.
+    """
+
+
 # ---------------------------------------------------------------------------
 # adapters/ — external library bridges
 # ---------------------------------------------------------------------------
@@ -140,3 +151,36 @@ class VizBackendUnavailableError(VizError):
 
 class VizBackendNotFoundError(VizError):
     """Raised when a visualisation backend name is not registered."""
+
+
+# ---------------------------------------------------------------------------
+# metric_space/ — hypergraph distances and representations
+# ---------------------------------------------------------------------------
+
+
+class MetricSpaceError(IsalHGError):
+    """Base class for metric-space (hypergraph-distance) failures."""
+
+
+class DistanceUnavailableError(MetricSpaceError):
+    """Raised when a distance name is not registered (or fails to import)."""
+
+
+class DistanceComputationError(MetricSpaceError):
+    """Raised when a distance computation fails for two given hypergraphs."""
+
+
+class HGEDComputationError(MetricSpaceError):
+    """Raised when a hypergraph-edit-distance oracle fails (e.g. solver timeout)."""
+
+
+class RepresentationDependencyMissingError(MetricSpaceError):
+    """Raised when a guarded optional dependency of a distance is not installed.
+
+    Carries a concrete install hint in its message, mirroring
+    :class:`AdapterDependencyMissingError`.
+    """
+
+
+class SubprocessRepresentationError(MetricSpaceError):
+    """Raised when a pinned-environment subprocess distance fails or is unconfigured."""

@@ -8,12 +8,15 @@ each variant, the speedup ratio, and whether the two canonical strings
 coincide.
 
 Honest expectation (see docs/article/theoretical/stability.md §3): the
-design fixtures are vertex-transitive, so both seeders select the *entire*
-vertex orbit and the wall-clock difference reduces to the (small) seed-
-selection cost -- near parity. The seed-*count* win, and hence the fan-out
-speedup, appears only on non-vertex-transitive inputs. The GQ(2,2) fixture
-happens to be asymmetric (a transcription that is not a valid generalised
-quadrangle -- see the T-M0 handoff) and therefore does show a seed drop.
+design fixtures are vertex-transitive, so *every* iso-invariant seed rule
+selects the entire vertex orbit and the wall-clock difference reduces to the
+(small) seed-selection cost -- parity. ``asym_er12`` sits at the other
+extreme, where the degree hierarchy already singles out one vertex under
+both rules. So this fixture set exhibits no seed-count difference at all: a
+win requires an input whose xi-tuples tie where the neighbour-degree lists
+do not, and none is included here. Until T-M0a the GQ(2,2) row appeared to
+show a 10 -> 7 drop; that was an artifact of an invalid transcription of the
+design, not a property of the seed rule.
 
 Run: ``python -m scripts.bench_seed_selection`` (or pass the path directly).
 """
@@ -25,6 +28,7 @@ import random
 from isalhg.core.canonical import canonical_string
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import max_neighbor_degree_nodes, max_xi_nodes
+from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
 from isalhg.metrics.runtime import (
     iqr_wall_clock_s,
     median_wall_clock_s,
@@ -51,52 +55,12 @@ def _asymmetric(n: int = 12, seed: int = 0) -> SparseHypergraph:
 
 
 def _fixtures() -> list[tuple[str, SparseHypergraph]]:
-    fano = _hg(7, [(0, 1, 2), (0, 3, 4), (0, 5, 6), (1, 3, 5), (1, 4, 6), (2, 3, 6), (2, 4, 5)])
-    sts9 = _hg(
-        9,
-        [
-            (0, 1, 2),
-            (3, 4, 5),
-            (6, 7, 8),
-            (0, 3, 6),
-            (1, 4, 7),
-            (2, 5, 8),
-            (0, 4, 8),
-            (1, 5, 6),
-            (2, 3, 7),
-            (0, 5, 7),
-            (1, 3, 8),
-            (2, 4, 6),
-        ],
-    )
-    sts13_a = _hg(13, [tuple((b + i) % 13 for b in (0, 1, 4)) for i in range(13)])
-    sts13_b = _hg(13, [tuple((b + i) % 13 for b in (0, 1, 6)) for i in range(13)])
-    gq22 = _hg(
-        15,
-        [
-            (0, 1, 2),
-            (0, 3, 4),
-            (0, 5, 6),
-            (1, 3, 7),
-            (1, 5, 8),
-            (2, 4, 9),
-            (2, 6, 10),
-            (3, 8, 11),
-            (4, 7, 12),
-            (5, 10, 13),
-            (6, 9, 14),
-            (7, 11, 13),
-            (8, 12, 14),
-            (9, 11, 12),
-            (10, 13, 14),
-        ],
-    )
     return [
-        ("fano_7", fano),
-        ("sts9", sts9),
-        ("sts13_a", sts13_a),
-        ("sts13_b", sts13_b),
-        ("gq22*", gq22),
+        ("fano_7", fano_plane()),
+        ("sts9", sts_9()),
+        ("sts13_a", cyclic_sts_13((0, 1, 4))),
+        ("sts13_b", cyclic_sts_13((0, 1, 6))),
+        ("gq22", gq_2_2_doily()),
         ("asym_er12", _asymmetric()),
     ]
 
@@ -127,10 +91,7 @@ def main() -> None:
             f"{t_min:>8.3f}±{iqr_min:<3.2f} {t_nbr:>8.3f}±{iqr_nbr:<3.2f} "
             f"{speedup:>8.2f} {str(w_eq):>5}"
         )
-    print(
-        f"\n(median of {_REPEATS} runs; '*' = fixture is not the true vertex-transitive "
-        "design, see T-M0 handoff; speedup = t_min / t_nbr.)"
-    )
+    print(f"\n(median of {_REPEATS} runs; speedup = t_min / t_nbr.)")
 
 
 if __name__ == "__main__":

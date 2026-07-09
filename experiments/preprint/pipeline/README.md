@@ -1,6 +1,6 @@
 # Preprint pipeline — Picasso driver
 
-The 720-cell preprint sweep (`docs/PREPRINT.md` §3–§4) runs on Picasso
+The 720-cell preprint sweep (`docs/preprint/PREPRINT.md` §3–§4) runs on Picasso
 as two SLURM array jobs. This directory carries the array entry point,
 the launcher/worker pair, and the analysis that turns the per-cell JSONs
 into Figures 1–3 + Tables 1–2.
@@ -95,7 +95,7 @@ scontrol requeue <jobid>_<arraytask>
 bash experiments/preprint/pipeline/slurm/launcher.sh --tier slow
 ```
 
-## Acceptance criteria (mirror `docs/PREPRINT.md` §7)
+## Acceptance criteria (mirror `docs/preprint/PREPRINT.md` §7)
 
 - 720 JSONs under the output root; `per_cell.csv` reports 720 rows.
 - `correctness.csv` reports four-way partition agreement (pass rate

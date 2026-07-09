@@ -7,6 +7,19 @@ isomorphic hypergraphs map their (max-xi -> WL-min) seed sets onto
 each other under the isomorphism, so the lex-min over the completions
 is iso-invariant.
 
+Why the seed filter is admissible. The key is the WL colour *value*, which is
+iso-invariant and independent of ``PYTHONHASHSEED``, and the filter keeps the
+whole argmin-colour class rather than one representative. No raw vertex id is
+read, so this is an admissible pruning of an iso-invariant seed set -- unlike
+:class:`~isalhg.core.algorithms.pruned_exhaustive.PrunedExhaustive`, which
+keeps the min-id vertex per class and is presentation-dependent.
+
+Inherited caveat. Iso-invariance here means invariance under *vertex*
+relabelling. Like every greedy variant, this one resolves residual V-ties by
+raw edge id, so its string still depends on the hyperedge insertion order and
+it is **not** a canonical form on isomorphism classes. Only
+``greedy_min_complete`` is.
+
 Speedup. On graphs where the max-xi seed set is large (many
 high-symmetry nodes) but breaks up into several WL orbits, this
 variant skips entire orbits whose WL colour is not lex-min. On
@@ -47,7 +60,7 @@ def _wl_filtered_seeds(
 
 
 class GreedyMinWLPruned(H2SAlgorithm):
-    """``greedy_min`` with WL filter on seeds and on V-branch permutations."""
+    """``greedy_min`` with an iso-invariant WL filter on the seed set only."""
 
     def __init__(self, *, k: int, structural_depth: int = DEFAULT_DEPTH) -> None:
         self._k = k

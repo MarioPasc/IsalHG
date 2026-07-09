@@ -1,8 +1,20 @@
 """IsalHG backend.
 
 Wraps the canonical-string algorithm from :mod:`isalhg.core.canonical` behind
-the :class:`IsoBackend` interface. The fingerprint is the canonical string
-itself, UTF-8 encoded.
+the :class:`IsoBackend` interface.
+
+Fingerprint
+-----------
+The fingerprint is the *augmented* fingerprint ``F(H) = (seed label, w*(H))``
+of Theorem A, UTF-8 encoded. ``w*`` never emits the label of its own seed
+vertex, so on a non-trivial vertex vocabulary two non-isomorphic hypergraphs
+can share it -- the labels ``(0, 0)`` and ``(1, 0)`` over a single edge are the
+minimal witness. The seed label separates them.
+
+On a trivial vocabulary (``n_vertex_labels == 1``) the seed label is
+identically ``0`` and is omitted, so the fingerprint is byte-identical to the
+bare canonical string. ``are_isomorphic`` refuses to compare hypergraphs whose
+vocabularies differ, so both sides of a comparison always agree on the format.
 
 Subprocess isolation
 --------------------
@@ -21,11 +33,15 @@ from __future__ import annotations
 import multiprocessing as _mp
 import os
 
-from isalhg.core.canonical import canonical_string, required_k
+from isalhg.core.canonical import canonical_string, required_k, seed_vertex_label
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.iso_backends.base import IsoBackend
 from isalhg.iso_backends.registry import register_backend
 from isalhg.types import BackendName, Fingerprint
+
+# Separates the seed label from the canonical string in a labelled fingerprint.
+# Absent from the ``Sigma_HG`` grammar, so the two components stay recoverable.
+_SEED_LABEL_SEP = "|"
 
 
 class IsalHGBackendCrashError(RuntimeError):
@@ -42,18 +58,18 @@ def _fingerprint_worker(
 ) -> None:
     try:
         s = canonical_string(H, k=k, structural_depth=structural_depth, algorithm=algorithm)
-        queue.put(("ok", s.encode("utf-8")))
+        queue.put(("ok", s))
     except BaseException as exc:  # noqa: BLE001 - report any failure mode
         queue.put(("err", f"{type(exc).__name__}: {exc}"))
 
 
-def _fingerprint_isolated(
+def _canonical_string_isolated(
     H: SparseHypergraph,
     *,
     k: int | None,
     structural_depth: int,
     algorithm: str,
-) -> bytes:
+) -> str:
     # Per-call hard timeout: ISALHG_SUBPROC_TIMEOUT_S (default 600). Enforced
     # here rather than via the protocol's outer signal.alarm because
     # ``Process.join()`` is not always interruptible by SIGALRM, leaving
@@ -91,7 +107,7 @@ def _fingerprint_isolated(
     status, payload = queue.get()
     if status == "err":
         raise RuntimeError(payload)
-    return payload
+    return str(payload)
 
 
 class IsalHGBackend(IsoBackend):
@@ -133,21 +149,26 @@ class IsalHGBackend(IsoBackend):
     def name(self) -> BackendName:
         return f"isalhg_{self._algorithm}"
 
-    def _fingerprint_bytes(self, H: SparseHypergraph, k_eff: int) -> bytes:
+    def _canonical_string(self, H: SparseHypergraph, k_eff: int) -> str:
         if os.environ.get("ISALHG_BACKEND_ISOLATE", "0") == "1":
-            return _fingerprint_isolated(
+            return _canonical_string_isolated(
                 H,
                 k=k_eff,
                 structural_depth=self._structural_depth,
                 algorithm=self._algorithm,
             )
-        s = canonical_string(
+        return canonical_string(
             H,
             k=k_eff,
             structural_depth=self._structural_depth,
             algorithm=self._algorithm,
         )
-        return s.encode("utf-8")
+
+    def _fingerprint_bytes(self, H: SparseHypergraph, k_eff: int) -> bytes:
+        w = self._canonical_string(H, k_eff)
+        if H.n_vertex_labels == 1:
+            return w.encode("utf-8")
+        return f"{seed_vertex_label(H, w)}{_SEED_LABEL_SEP}{w}".encode()
 
     def fingerprint(self, H: SparseHypergraph) -> Fingerprint:
         k_eff = required_k(H) if self._k is None else self._k

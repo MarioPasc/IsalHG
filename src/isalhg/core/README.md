@@ -8,5 +8,5 @@ Restriction: **no non-stdlib imports**. External hypergraph libraries are
 walled off behind :mod:`isalhg.adapters`; iso baselines live in
 :mod:`isalhg.iso_backends`.
 
-See ``docs/CODE_DESIGN.md`` for the per-module mandate and the order in which
+See ``docs/engineering/CODE_DESIGN.md`` for the per-module mandate and the order in which
 modules should be filled in.

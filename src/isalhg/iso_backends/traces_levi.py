@@ -21,17 +21,21 @@ dreadnaut session shape::
     b6              -- emit canonical graph in graph6/sparse6 ASCII form
     q               -- quit
 
-Two hypergraphs are isomorphic iff their ``b6`` lines are byte-equal under
-identical dreadnaut options (mode, getcanon, partition).
+The ``b6`` line is the canonical *graph*; it carries no trace of the ``f=``
+partition, and ``f=`` itself is an ordered partition that has forgotten which
+label id each cell holds. The fingerprint is therefore
+``LeviGraph.color_signature() + b6``; see :mod:`isalhg.core.levi_reduction` for
+why the pair is exact. Two hypergraphs are isomorphic iff those fingerprints
+are byte-equal under identical dreadnaut options (mode, getcanon, partition).
 """
 
 from __future__ import annotations
 
 from typing import ClassVar
 
+from isalhg.core.levi_reduction import to_levi
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.errors import BackendOutputParseError
-from isalhg.iso_backends.levi_reduction import to_levi
 from isalhg.iso_backends.registry import register_backend
 from isalhg.iso_backends.subprocess_base import SubprocessIsoBackend
 from isalhg.types import BackendName, Fingerprint
@@ -45,6 +49,11 @@ class TracesLeviBackend(SubprocessIsoBackend):
     @property
     def name(self) -> BackendName:
         return "traces_levi"
+
+    def fingerprint(self, H: SparseHypergraph) -> Fingerprint:
+        if H.n_nodes == 0:
+            return b""
+        return to_levi(H).color_signature() + super().fingerprint(H)
 
     # ------------------------------------------------------------------
     # Serialisation
@@ -62,12 +71,7 @@ class TracesLeviBackend(SubprocessIsoBackend):
         for v in adjacency:
             adjacency[v].sort()
 
-        # Partition by colour class, sorted by colour ID.
-        colour_classes: dict[int, list[int]] = {}
-        for node, colour in enumerate(levi.colors):
-            colour_classes.setdefault(colour, []).append(node)
-        sorted_classes = [colour_classes[c] for c in sorted(colour_classes.keys())]
-        f_clauses = [_compress_range(sorted(cls)) for cls in sorted_classes]
+        f_clauses = [_compress_range(sorted(cls)) for cls in levi.color_classes()]
         f_directive = "f=[" + " | ".join(f_clauses) + "]"
 
         # g block.

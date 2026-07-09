@@ -3,7 +3,7 @@
 Every backend (IsalHG, nauty-via-Levi, Traces-via-Levi, bliss-via-Levi)
 exposes the same minimal interface so the experiment orchestrator can treat
 them interchangeably. The interface is the same one quoted in
-``docs/PROPOSAL.md`` (Section "Tier 5 architecture -- pluggable IsoBackend").
+``docs/preprint/PROPOSAL.md`` (Section "Tier 5 architecture -- pluggable IsoBackend").
 
 Restriction: only Python stdlib + abc + typing + isalhg.core.
 """

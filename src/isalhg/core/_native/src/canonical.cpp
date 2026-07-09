@@ -62,7 +62,8 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
     // The PI 2026-06-23 variants substitute the seed selector but otherwise
     // reuse greedy_min / greedy_single semantics.
     const bool use_nbr_deg = (variant == AlgorithmVariant::GreedyMinNbrDeg)
-                          || (variant == AlgorithmVariant::GreedySingleNbrDeg);
+                          || (variant == AlgorithmVariant::GreedySingleNbrDeg)
+                          || (variant == AlgorithmVariant::GreedyMinComplete);
     std::vector<NodeId> seeds = use_nbr_deg
         ? max_neighbor_degree_nodes_compute(H)
         : max_xi_nodes_compute(H, structural_depth);
@@ -90,12 +91,16 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
         }
         seeds.swap(filtered);
     }
-    // GreedyMin / GreedyMinInplace / GreedyMinNbrDeg keep all seeds returned
-    // by their selector.
+    // GreedyMin / GreedyMinInplace / GreedyMinNbrDeg / GreedyMinComplete keep
+    // all seeds returned by their selector.
 
-    // None of the five fast variants pass wl_colors into greedy_h2s (see
+    // None of the fast variants pass wl_colors into greedy_h2s (see
     // greedy_min_wl_pruned.py — V-branch pruning is intentionally disabled).
     const std::optional<std::vector<std::int64_t>> wl_for_h2s = std::nullopt;
+
+    // Only GreedyMinComplete branches over the residual V tie set; the
+    // others commit to the min-edge-id candidate.
+    const bool tie_branch = (variant == AlgorithmVariant::GreedyMinComplete);
 
     // Multi-seed parallelism via a persistent thread pool. Each seed
     // runs an independent ``greedy_h2s_tokens`` over a shared read-only
@@ -120,14 +125,14 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                     const std::size_t i =
                         next_idx.fetch_add(1, std::memory_order_relaxed);
                     if (i >= n_seeds) return;
-                    per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s);
+                    per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch);
                 }
             }));
         }
         for (auto& f : futures) f.get();
     } else {
         for (std::size_t i = 0; i < n_seeds; ++i) {
-            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s);
+            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, wl_for_h2s, tie_branch);
         }
     }
 

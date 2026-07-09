@@ -32,6 +32,11 @@ IsoClassId: TypeAlias = int
 # Protocol primitives
 ProtocolName: TypeAlias = str
 
+# Metric-space primitives. ``types`` is imported by stdlib-only ``core`` so no
+# numpy-backed ``DistanceMatrix`` alias lives here; ``metric_space`` modules
+# annotate matrices as ``numpy.typing.NDArray`` locally under ``TYPE_CHECKING``.
+DistanceName: TypeAlias = str
+
 # Reproducibility
 Seed: TypeAlias = int
 

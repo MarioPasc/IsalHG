@@ -35,7 +35,7 @@ Two density parameterisations are supported:
   dataset translates ``c → p`` via ``p = c * n / C(n, r)``.
 
 Exactly one of ``(p, c)`` must be set. ``c`` is the YAML-friendly axis used
-throughout ``docs/PREPRINT.md``; ``p`` is the literal XGI argument.
+throughout ``docs/preprint/PREPRINT.md``; ``p`` is the literal XGI argument.
 
 No iso labels are produced (``has_iso_labels=False``); the
 :class:`FingerprintTimingProtocol` constructs positive iso-pairs at

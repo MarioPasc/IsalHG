@@ -146,14 +146,15 @@ NB_MODULE(_core, m) {
     m.def(
         "greedy_h2s",
         [](nb::object py_H, isalhg::NodeId seed_node, int k,
-           std::optional<std::vector<std::int64_t>> wl_colors) -> std::string {
+           std::optional<std::vector<std::int64_t>> wl_colors, bool tie_branch) -> std::string {
             const isalhg::SHG H = shg_from_python(py_H);
-            return isalhg::greedy_h2s_str(H, seed_node, k, wl_colors);
+            return isalhg::greedy_h2s_str(H, seed_node, k, wl_colors, tie_branch);
         },
-        "H"_a, "seed_node"_a, "k"_a, "wl_colors"_a = nb::none(),
+        "H"_a, "seed_node"_a, "k"_a, "wl_colors"_a = nb::none(), "tie_branch"_a = false,
         "Greedy H2S encoder; returns the canonical-token sequence serialised as a ;-joined "
         "string. ``wl_colors`` (length n_nodes) prunes V-branch label permutations to canonical "
-        "orbit representatives when supplied.");
+        "orbit representatives when supplied. ``tie_branch`` recurses over every V candidate "
+        "tying on the iso-invariant cascade key-prefix and keeps the lex-min completion.");
 
     m.def(
         "required_k",
@@ -217,17 +218,18 @@ NB_MODULE(_core, m) {
         "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a,
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
         "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
-        "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned.");
+        "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned,\n"
+        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = greedy_min_complete.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).
     m.def(
         "greedy_h2s_tokens",
         [](nb::object py_H, isalhg::NodeId seed_node, int k,
-           std::optional<std::vector<std::int64_t>> wl_colors) -> nb::list {
+           std::optional<std::vector<std::int64_t>> wl_colors, bool tie_branch) -> nb::list {
             const isalhg::SHG H = shg_from_python(py_H);
             const std::vector<isalhg::Token> toks =
-                isalhg::greedy_h2s_tokens(H, seed_node, k, wl_colors);
+                isalhg::greedy_h2s_tokens(H, seed_node, k, wl_colors, tie_branch);
             nb::list out;
             for (const isalhg::Token& t : toks) {
                 switch (t.kind) {
@@ -258,5 +260,5 @@ NB_MODULE(_core, m) {
             }
             return out;
         },
-        "H"_a, "seed_node"_a, "k"_a, "wl_colors"_a = nb::none());
+        "H"_a, "seed_node"_a, "k"_a, "wl_colors"_a = nb::none(), "tie_branch"_a = false);
 }

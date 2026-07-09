@@ -18,10 +18,11 @@ Restriction: Python stdlib only.
 
 from __future__ import annotations
 
+import random
 from collections import deque
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 
-from isalhg.errors import InvalidLabelError, VocabularyMismatchError
+from isalhg.errors import HypergraphEditError, InvalidLabelError, VocabularyMismatchError
 from isalhg.types import EdgeId, EdgeLabel, HyperedgeSet, NodeId, VertexLabel
 
 
@@ -387,3 +388,531 @@ def assert_vocab_compatible(H1: SparseHypergraph, H2: SparseHypergraph) -> None:
             f"vocab mismatch: ({H1.n_vertex_labels}, {H1.n_edge_labels})"
             f" vs ({H2.n_vertex_labels}, {H2.n_edge_labels})"
         )
+
+
+def ego_network(H: SparseHypergraph, v: NodeId) -> SparseHypergraph:
+    """Return the ego network ``EGO_H(v)`` of Qin et al. (ICDE 2023), Definition 1.
+
+    ``NEI(v) = {v} ∪ {u : ∃e ∈ E, {u, v} ⊆ e}`` is the closed neighbourhood of
+    ``v``; the ego network is the sub-hypergraph *induced* on ``NEI(v)``,
+    keeping exactly the hyperedges **fully contained** in ``NEI(v)`` (edges
+    partially overlapping the neighbourhood are dropped, not truncated).
+
+    Node IDs are remapped to ``0..|NEI(v)|-1`` preserving ascending original
+    order; vertex/edge labels and both vocabulary sizes are preserved. No two
+    kept edges can collide under the remap because member-sets are unchanged
+    and ``H`` already holds unique ``(label, member-set)`` pairs.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    v : NodeId
+        Ego centre; must satisfy ``0 <= v < H.n_nodes``.
+
+    Returns
+    -------
+    SparseHypergraph
+        The induced ego network of ``v``.
+
+    Raises
+    ------
+    ValueError
+        If ``v`` is out of range.
+    """
+    if not 0 <= v < H.n_nodes:
+        raise ValueError(f"vertex {v} out of range [0, {H.n_nodes})")
+    nei: set[NodeId] = {v}
+    for e in H.incident_edges(v):
+        nei |= H.members(e)
+    keep = sorted(nei)
+    remap = {old: new for new, old in enumerate(keep)}
+    edges: list[HyperedgeSet] = []
+    edge_labels: list[EdgeLabel] = []
+    for _, members, ell in H.iter_edges():
+        if members <= nei:
+            edges.append(frozenset(remap[u] for u in members))
+            edge_labels.append(ell)
+    return SparseHypergraph(
+        n_nodes=len(keep),
+        hyperedges=edges,
+        n_vertex_labels=H.n_vertex_labels,
+        n_edge_labels=H.n_edge_labels,
+        vertex_labels=[H.vertex_label(u) for u in keep],
+        edge_labels=edge_labels,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Structural edit operations (the six unit ops of the HGED, Qin et al. 2023)
+# ---------------------------------------------------------------------------
+#
+# These are pure free functions (like ``permute``): each returns a *new*
+# hypergraph and never mutates its argument. They are the generating set the
+# exact HGED oracle searches over and the perturbation-ladder / planted-family
+# generators sample from. Each is a single **unit-cost** operation, so a chain
+# of ``t`` of them upper-bounds the HGED of the result by ``t`` (Qin et al.
+# 2023 unit-cost specialization; the ladder's known budget).
+#
+# ``delete_vertex`` deletes an **isolated** vertex only: with ``remove_incidence``
+# a separate atomic op, deleting a vertex that still sits in hyperedges is a
+# compound edit, not a unit one. This keeps every op unit-cost. To delete a
+# vertex in the interior, remove its incidences first (each a unit op).
+#
+# The ops preserve neither connectivity nor arity bounds -- ``insert_vertex``
+# yields an isolated vertex, ``insert_hyperedge`` admits any arity. Corpus
+# generators that require connectivity or ``arity <= k`` filter downstream;
+# that constraint is theirs, not the operations'.
+
+
+def _snapshot(
+    H: SparseHypergraph,
+) -> tuple[list[HyperedgeSet], list[EdgeLabel], list[VertexLabel]]:
+    """Return mutable ``(edges, edge_labels, vertex_labels)`` copies in ID order."""
+    edges: list[HyperedgeSet] = []
+    edge_labels: list[EdgeLabel] = []
+    for _, members, ell in H.iter_edges():
+        edges.append(members)
+        edge_labels.append(ell)
+    vertex_labels: list[VertexLabel] = [H.vertex_label(v) for v in range(H.n_nodes)]
+    return edges, edge_labels, vertex_labels
+
+
+def _assemble(
+    H: SparseHypergraph,
+    n_nodes: int,
+    edges: list[HyperedgeSet],
+    edge_labels: list[EdgeLabel],
+    vertex_labels: list[VertexLabel],
+) -> SparseHypergraph:
+    """Build a new hypergraph carrying ``H``'s label-vocabulary sizes."""
+    return SparseHypergraph(
+        n_nodes=n_nodes,
+        hyperedges=edges,
+        n_vertex_labels=H.n_vertex_labels,
+        n_edge_labels=H.n_edge_labels,
+        vertex_labels=vertex_labels,
+        edge_labels=edge_labels,
+    )
+
+
+def insert_vertex(H: SparseHypergraph, label: VertexLabel = 0) -> SparseHypergraph:
+    """Return a copy of ``H`` with one new isolated vertex appended.
+
+    The new vertex gets ID ``H.n_nodes`` and participates in no hyperedge.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    label : VertexLabel, optional
+        Label of the new vertex; must lie in ``[0, H.n_vertex_labels)``.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy with ``n_nodes + 1`` vertices.
+
+    Raises
+    ------
+    InvalidLabelError
+        If ``label`` is outside the vertex vocabulary range.
+    """
+    edges, edge_labels, vertex_labels = _snapshot(H)
+    vertex_labels.append(label)
+    return _assemble(H, H.n_nodes + 1, edges, edge_labels, vertex_labels)
+
+
+def delete_vertex(H: SparseHypergraph, v: NodeId) -> SparseHypergraph:
+    """Return a copy of ``H`` with the isolated vertex ``v`` removed.
+
+    Vertices after ``v`` shift down by one to keep IDs contiguous. Only an
+    isolated vertex (degree 0) may be deleted; remove its incidences first
+    otherwise (each ``remove_incidence`` a unit op).
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    v : NodeId
+        Vertex to delete; must satisfy ``0 <= v < H.n_nodes`` and ``degree(v) == 0``.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy with ``n_nodes - 1`` vertices.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``v`` is out of range or not isolated.
+    """
+    if not 0 <= v < H.n_nodes:
+        raise HypergraphEditError(f"vertex {v} out of range [0, {H.n_nodes})")
+    if H.degree(v) != 0:
+        raise HypergraphEditError(
+            f"vertex {v} is not isolated (degree {H.degree(v)}); "
+            "remove its incidences before deleting it"
+        )
+    edges: list[HyperedgeSet] = []
+    edge_labels: list[EdgeLabel] = []
+    for _, members, ell in H.iter_edges():
+        edges.append(frozenset(u if u < v else u - 1 for u in members))
+        edge_labels.append(ell)
+    vertex_labels = [H.vertex_label(u) for u in range(H.n_nodes) if u != v]
+    return _assemble(H, H.n_nodes - 1, edges, edge_labels, vertex_labels)
+
+
+def insert_hyperedge(
+    H: SparseHypergraph,
+    members: Iterable[NodeId],
+    label: EdgeLabel = 0,
+) -> SparseHypergraph:
+    """Return a copy of ``H`` with a new hyperedge over ``members``.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    members : Iterable[NodeId]
+        Non-empty set of existing vertices spanned by the new hyperedge.
+    label : EdgeLabel, optional
+        Label of the new hyperedge; must lie in ``[0, H.n_edge_labels)``.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy with ``n_edges + 1`` hyperedges.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``members`` is empty, references an out-of-range vertex, the label
+        is out of range, or the ``(label, member-set)`` already exists (which
+        would silently merge two hyperedges, breaking the unit-cost model).
+    """
+    member_set: HyperedgeSet = frozenset(members)
+    if not member_set:
+        raise HypergraphEditError("hyperedge must contain at least one vertex")
+    for u in member_set:
+        if not 0 <= u < H.n_nodes:
+            raise HypergraphEditError(f"vertex {u} out of range [0, {H.n_nodes})")
+    if not 0 <= label < H.n_edge_labels:
+        raise HypergraphEditError(f"edge label {label} out of range [0, {H.n_edge_labels})")
+    if H.has_edge(member_set, label):
+        raise HypergraphEditError(f"hyperedge (label={label}, {set(member_set)}) already exists")
+    edges, edge_labels, vertex_labels = _snapshot(H)
+    edges.append(member_set)
+    edge_labels.append(label)
+    return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
+
+
+def delete_hyperedge(H: SparseHypergraph, e: EdgeId) -> SparseHypergraph:
+    """Return a copy of ``H`` with hyperedge ``e`` removed.
+
+    Edges after ``e`` shift down by one to keep IDs contiguous. Vertices are
+    untouched (a vertex may become isolated).
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    e : EdgeId
+        Hyperedge to delete; must satisfy ``0 <= e < H.n_edges``.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy with ``n_edges - 1`` hyperedges.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``e`` is out of range.
+    """
+    if not 0 <= e < H.n_edges:
+        raise HypergraphEditError(f"edge {e} out of range [0, {H.n_edges})")
+    edges: list[HyperedgeSet] = []
+    edge_labels: list[EdgeLabel] = []
+    for e_id, members, ell in H.iter_edges():
+        if e_id == e:
+            continue
+        edges.append(members)
+        edge_labels.append(ell)
+    _, _, vertex_labels = _snapshot(H)
+    return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
+
+
+def add_incidence(H: SparseHypergraph, v: NodeId, e: EdgeId) -> SparseHypergraph:
+    """Return a copy of ``H`` with vertex ``v`` added to hyperedge ``e``.
+
+    Grows the arity of ``e`` by one.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    v : NodeId
+        Vertex to add; must be in range and not already incident to ``e``.
+    e : EdgeId
+        Hyperedge to grow; must be in range.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy in which ``members(e)`` gains ``v``.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``v`` or ``e`` is out of range, ``v`` is already incident to ``e``,
+        or the grown edge would duplicate an existing ``(label, member-set)``.
+    """
+    if not 0 <= v < H.n_nodes:
+        raise HypergraphEditError(f"vertex {v} out of range [0, {H.n_nodes})")
+    if not 0 <= e < H.n_edges:
+        raise HypergraphEditError(f"edge {e} out of range [0, {H.n_edges})")
+    old = H.members(e)
+    if v in old:
+        raise HypergraphEditError(f"vertex {v} is already incident to edge {e}")
+    label = H.edge_label(e)
+    new_set: HyperedgeSet = old | {v}
+    if H.has_edge(new_set, label):
+        raise HypergraphEditError(
+            f"adding vertex {v} to edge {e} would duplicate an existing hyperedge"
+        )
+    edges, edge_labels, vertex_labels = _snapshot(H)
+    edges[e] = new_set
+    return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
+
+
+def remove_incidence(H: SparseHypergraph, v: NodeId, e: EdgeId) -> SparseHypergraph:
+    """Return a copy of ``H`` with vertex ``v`` removed from hyperedge ``e``.
+
+    Shrinks the arity of ``e`` by one. Removing the *last* incidence is
+    forbidden (a hyperedge must keep ``arity >= 1``); use
+    :func:`delete_hyperedge` for that.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    v : NodeId
+        Vertex to remove; must be incident to ``e``.
+    e : EdgeId
+        Hyperedge to shrink; must be in range with ``arity >= 2``.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy in which ``members(e)`` loses ``v``.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``v`` or ``e`` is out of range, ``v`` is not incident to ``e``, the
+        removal would empty ``e``, or the shrunk edge would duplicate an
+        existing ``(label, member-set)``.
+    """
+    if not 0 <= v < H.n_nodes:
+        raise HypergraphEditError(f"vertex {v} out of range [0, {H.n_nodes})")
+    if not 0 <= e < H.n_edges:
+        raise HypergraphEditError(f"edge {e} out of range [0, {H.n_edges})")
+    old = H.members(e)
+    if v not in old:
+        raise HypergraphEditError(f"vertex {v} is not incident to edge {e}")
+    if len(old) <= 1:
+        raise HypergraphEditError(
+            f"removing the last incidence of edge {e} would empty it; use delete_hyperedge instead"
+        )
+    label = H.edge_label(e)
+    new_set: HyperedgeSet = old - {v}
+    if H.has_edge(new_set, label):
+        raise HypergraphEditError(
+            f"removing vertex {v} from edge {e} would duplicate an existing hyperedge"
+        )
+    edges, edge_labels, vertex_labels = _snapshot(H)
+    edges[e] = new_set
+    return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
+
+
+# ---------------------------------------------------------------------------
+# Random edits and perturbation paths
+# ---------------------------------------------------------------------------
+
+
+def _sample_new_hyperedge(
+    H: SparseHypergraph, rng: random.Random, tries: int = 8
+) -> tuple[HyperedgeSet, EdgeLabel] | None:
+    """Sample a fresh (non-duplicate) hyperedge, or ``None`` if none is found."""
+    n = H.n_nodes
+    if n == 0:
+        return None
+    for _ in range(tries):
+        size = rng.randint(1, n)
+        members: HyperedgeSet = frozenset(rng.sample(range(n), size))
+        label = rng.randrange(H.n_edge_labels)
+        if not H.has_edge(members, label):
+            return members, label
+    return None
+
+
+def _sample_add_incidence(
+    H: SparseHypergraph, rng: random.Random, tries: int = 8
+) -> tuple[NodeId, EdgeId] | None:
+    """Sample a valid ``(vertex, edge)`` for :func:`add_incidence`, or ``None``."""
+    m = H.n_edges
+    if m == 0:
+        return None
+    for _ in range(tries):
+        e = rng.randrange(m)
+        old = H.members(e)
+        outside = [v for v in range(H.n_nodes) if v not in old]
+        if not outside:
+            continue
+        v = rng.choice(outside)
+        if not H.has_edge(old | {v}, H.edge_label(e)):
+            return v, e
+    return None
+
+
+def _sample_remove_incidence(
+    H: SparseHypergraph, rng: random.Random, tries: int = 8
+) -> tuple[NodeId, EdgeId] | None:
+    """Sample a valid ``(vertex, edge)`` for :func:`remove_incidence`, or ``None``."""
+    big = [e for e in range(H.n_edges) if len(H.members(e)) >= 2]
+    if not big:
+        return None
+    for _ in range(tries):
+        e = rng.choice(big)
+        old = H.members(e)
+        v = rng.choice(tuple(old))
+        if not H.has_edge(old - {v}, H.edge_label(e)):
+            return v, e
+    return None
+
+
+def random_edit(H: SparseHypergraph, rng: random.Random) -> tuple[SparseHypergraph, str]:
+    """Apply one uniformly-chosen applicable unit edit to ``H``.
+
+    The operation type is chosen uniformly among those with at least one valid
+    operand under the current state; ``insert_vertex`` is always applicable, so
+    a result is always produced. The chosen operand is pre-validated, so the
+    returned edit never raises.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    rng : random.Random
+        Seeded stdlib RNG; the caller pins and reports the seed.
+
+    Returns
+    -------
+    tuple[SparseHypergraph, str]
+        The perturbed hypergraph and the name of the applied operation.
+    """
+    candidates: list[tuple[str, Callable[[], SparseHypergraph]]] = []
+
+    vlabel = rng.randrange(H.n_vertex_labels)
+    candidates.append(("insert_vertex", lambda: insert_vertex(H, vlabel)))
+
+    isolated = [v for v in range(H.n_nodes) if H.degree(v) == 0]
+    if isolated:
+        dead = rng.choice(isolated)
+        candidates.append(("delete_vertex", lambda: delete_vertex(H, dead)))
+
+    if H.n_edges >= 1:
+        victim = rng.randrange(H.n_edges)
+        candidates.append(("delete_hyperedge", lambda: delete_hyperedge(H, victim)))
+
+    fresh = _sample_new_hyperedge(H, rng)
+    if fresh is not None:
+        members, elabel = fresh
+        candidates.append(("insert_hyperedge", lambda: insert_hyperedge(H, members, elabel)))
+
+    grow = _sample_add_incidence(H, rng)
+    if grow is not None:
+        gv, ge = grow
+        candidates.append(("add_incidence", lambda: add_incidence(H, gv, ge)))
+
+    shrink = _sample_remove_incidence(H, rng)
+    if shrink is not None:
+        sv, se = shrink
+        candidates.append(("remove_incidence", lambda: remove_incidence(H, sv, se)))
+
+    name, make = rng.choice(candidates)
+    return make(), name
+
+
+def qin_edit_cost(before: SparseHypergraph, after: SparseHypergraph) -> int:
+    """Qin-taxonomy cost of one generator edit, from its before/after pair.
+
+    Under the Qin et al. (ICDE 2023) atomic operations — the article's official
+    HGED cost model — a generator op costs ``|Δn| + |Δm| + |Δ total incidences|``:
+    ``insert_vertex``/``delete_vertex``/``add_incidence``/``remove_incidence``
+    cost 1, while ``insert_hyperedge``/``delete_hyperedge`` of an arity-``a``
+    edge cost ``a + 1`` (``a`` incidence ops plus one empty-shell op).
+
+    Exact for a single generator op; for arbitrary pairs it is only a lower
+    bound on their true edit cost (deltas can cancel).
+
+    Parameters
+    ----------
+    before, after : SparseHypergraph
+        The hypergraphs on either side of one generator edit.
+
+    Returns
+    -------
+    int
+        The Qin-taxonomy cost of that edit.
+    """
+    inc_before = sum(len(members) for members in before.hyperedges())
+    inc_after = sum(len(members) for members in after.hyperedges())
+    return (
+        abs(before.n_nodes - after.n_nodes)
+        + abs(before.n_edges - after.n_edges)
+        + abs(inc_before - inc_after)
+    )
+
+
+def edit_path(H: SparseHypergraph, t: int, rng: random.Random) -> tuple[SparseHypergraph, int]:
+    """Apply ``t`` successive random edits and return the result with its budget.
+
+    The returned budget is the **Qin-taxonomy cost** of the applied path —
+    the sum of :func:`qin_edit_cost` over the ``t`` generator ops — and is a
+    known **upper bound** on ``HGED(H, result)`` under the article's official
+    (Qin et al. 2023, empty-shell) cost model: the path realises an actual
+    edit sequence of exactly that total cost, while edits may cancel or
+    compose (the true HGED can be smaller). This is the perturbation ladder's
+    guarantee. Note ``budget >= t``, with equality iff no whole-hyperedge
+    insert/delete of arity ``> 0`` occurred.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    t : int
+        Number of generator edits to apply (``>= 0``).
+    rng : random.Random
+        Seeded stdlib RNG.
+
+    Returns
+    -------
+    tuple[SparseHypergraph, int]
+        The perturbed hypergraph and the Qin-cost budget (its upper-bound HGED).
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``t`` is negative.
+    """
+    if t < 0:
+        raise HypergraphEditError(f"edit budget t must be non-negative, got {t}")
+    current = H
+    budget = 0
+    for _ in range(t):
+        nxt, _ = random_edit(current, rng)
+        budget += qin_edit_cost(current, nxt)
+        current = nxt
+    return current, budget

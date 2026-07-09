@@ -50,7 +50,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 1 | 3 |
 | [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
-| [`T-M4`](T-M4/) | Corpora + scoring primitives | 2 | 0 |
+| [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 1 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |

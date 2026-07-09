@@ -171,24 +171,79 @@ Decompose `s(e)` into two contributions to the change in `w*`:
    itself: one `V`/`C` emission plus `O(k)` pointer moves (`P_i`/`N_i`).
    Bounded by `c_1·k` tokens, *independent of graph size*.
 
-2. **Reordering cost.** A single edit perturbs the structural tuples `ξ(v)`
-   (degree-based, `core/structural_tuples.py`) only for vertices in the closed
-   neighbourhood `N[e]` of the edit (edited vertices + their neighbours),
-   `|N[e]| = O(k·Δ)`. If the induced changes do **not** alter the canonical seed
-   nor the *relative* greedy visitation order, the encoding of every unaffected
-   region is preserved and only the `O(k·Δ)` affected vertices are re-emitted:
-   reordering cost `≤ c_2·k·Δ · (token-width per vertex)`.
+2. **Branching-tree stability.** The tie-complete encoder `w*_c` does not follow a
+   fixed visitation order; it maintains a search *tree* of completions and returns
+   the lex-minimum leaf. Structural tuples `ξ` have depth `r = 3` (CLAUDE.md
+   invariant 8), so a single edit perturbs `ξ(v)` for all vertices `v` in the
+   depth-`r` ball `N_r[e]` around the edit (`core/structural_tuples.py`). This
+   has two effects on the search tree:
+   - *Local effect*: the instructions that encode the directly-affected vertices
+     and edges (those in `N_1[e]`, the 1-hop closed neighbourhood) change:
+     `O(k)` tokens per directly-affected edge. This is the encoding window that
+     the O(k·Δ) bound in (★) applies to (`|N_1[e]| = O(k·Δ)` vertices).
+   - *Tie-set effect*: changing `ξ(v)` for `v ∈ N_r[e]` (the broader depth-`r`
+     ball) can alter the tie set `T(σ)` at states `σ` reached during the
+     branching search — at **any depth**, not only at the root — because `ξ`
+     comparisons drive the key-prefix ordering that determines which V-candidates
+     tie. If `T(σ)` changes at depth `d`, the lex-minimum completion may switch
+     to a different branch and propagate changes through the remaining `|w*_c| - d`
+     positions of the string.
 
-**Lemma B1 (locality of greedy H2S — to prove).** Fix seed `v_0` and the greedy
-order `π`. If an edit `e` leaves `v_0` and the relative order `π` on
-`V ∖ N[e]` unchanged, then `w*(H)` and `w*(H⊕e)` agree outside a set of at most
-`O(k·Δ)` instruction positions. **Risk:** pointer values are CDLL *indices*
-(`CLAUDE.md` invariant 1), so an insertion shifts absolute indices globally; the
-proof must be phrased in terms of *relative* CDLL order, not absolute index, or
-the bound inflates to `O(n)`. This is the crux of the proof and the main open
-technical risk.
+**Lemma B1 (locality of `w*_c` — to prove).** Fix seed `v_0 ∈ S(H)`. Say an
+edit `e` is *tie-set transparent from `(H, v_0)`* if:
+- (i) **seed membership**: `v_0 ∈ S(H⊕e)`;
+- (ii) **tie-set stability**: no vertex in `N_r[e]` (the depth-`r` ball around
+  the edit, r = structural-tuple depth = 3, CLAUDE.md invariant 8) participates
+  in any tie `T(σ)` in the branching search of `H` from `v_0`; and
+- (iii) **argmin-seed preservation**: `v_0` remains the κ-minimum seed in
+  `H⊕e`, i.e. `w*_c(H⊕e, v_0) ≤_κ w*_c(H⊕e, v')` for every `v' ∈ S(H⊕e)`.
 
-**Conditional bound.** Under the hypotheses of Lemma B1 (a *seed-stable* edit),
+Under all three conditions, the branching search trees of `H` and `H⊕e` from
+`v_0` are isomorphic outside the direct encoding of `N_1[e]`, and
+`w*_c(H, v_0)` and `w*_c(H⊕e, v_0)` agree outside at most `O(k·Δ)` positions.
+
+**Two radii.** Condition (ii) uses `N_r[e]` (r = 3) because structural tuples at
+depth 3 can change for vertices up to distance 3 from the edit, shifting
+key-prefix comparisons at any search depth. The O(k·Δ) *bound* in (★) covers
+only the encoding positions for vertices in `N_1[e]` (directly re-encoded after
+the edit); the transparency condition is the broader set `N_r[e]`. Condition (iii)
+is needed because even with conditions (i–ii) satisfied per-seed, a change inside
+one seed's O(k·Δ) encoding window can flip a lex comparison at an early position
+and migrate the κ-argmin to a different seed — and two seeds' encodings are not
+Levenshtein-close (their distance is the seed-migration sensitivity).
+
+**Relationship to the greedy condition.** For the single-trajectory greedy encoder,
+condition (ii) reduces to "the greedy order `π` is unchanged on `V ∖ N_r[e]`"
+and condition (iii) is not applicable (the greedy runs from a fixed `v_0` without
+taking a lex-min over seeds). Both encoders yield the same O(k·Δ) bound when
+their respective conditions are satisfied; `w*_c`'s condition is strictly stronger.
+
+**Does the lex-min structure help or hurt?** Taking the lex-min over the search tree
+does not make `w*_c` generically more stable than any single greedy trajectory.
+When a tie set `T(σ)` is perturbed at depth `d`, the lex-min can jump
+discontinuously to a different branch; the sensitivity is `Θ(|w*_c| - d)` in the
+worst case, the same order as the greedy's avalanche. The lex-min is stable under
+tie-set perturbations only when the perturbed tie is *automorphism-coherent*
+(Proposition 6.0 of `theorem_a_completeness.tex`): all branches of a coherent tie
+return equal completions, so the lex-min is indifferent to which branch is chosen.
+Coherence therefore eliminates the tie-jump avalanche sources (§3 sources 3–4) —
+it does not protect against sources 1–2 (seed-level changes). On Fano/STS(9),
+where `w*_greedy = w*_c` was verified at T-TAa, all-depth coherence is *inferred*
+by Prop 6.0's sufficient direction; the coherence criterion predicts no heavy
+tail in the E2b histogram for those designs (§4), which is the falsification test.
+
+**Proof risk (unchanged).** Pointer values are CDLL *indices* (`CLAUDE.md`
+invariant 1); a vertex insertion shifts absolute indices globally. The proof must
+be phrased in terms of *relative* CDLL order throughout and must construct a
+state correspondence between the branching searches of `H` and `H⊕e` from `v_0`.
+This is the crux of T-B1. The C branch requires separate treatment: from the
+T-TAa closing analysis, "a C candidate requires `members == set(tentative_inputs
+[:arity])` and `SparseHypergraph` forbids duplicate member sets, so the C tie set
+is always a singleton — there is no edge-id dependence to remove" (T-TAa.md,
+closing note). C therefore never produces a tie and never triggers an avalanche
+via the tie-set mechanism.
+
+**Conditional bound.** Under the hypotheses of Lemma B1 (a *tie-set transparent* edit),
 ```
         s(e) ≤ c_1·k + c_2·k·Δ = O(k·Δ).                        (★)
 ```
@@ -206,26 +261,70 @@ only from the reordering term, not from the direct term.
 
 ## 3. The avalanche obstruction (why the bound is conditional)
 
-Bound (★) fails when the edit flips a **tie at the top of the `ξ` order** —
-changing the canonical seed `v_0` or an early greedy choice. Then the greedy
-trajectory diverges from the start and `w*` can be rewritten wholesale:
-`s(e) = O(|w*|) = O(m·k)` worst case.
+Bound (★) fails when any of the three transparency conditions of Lemma B1 is
+violated. The failure modes, grouped by mechanism:
 
-**Where avalanches live.** Seed/early-order ties are exactly the
-vertex-transitive / high-automorphism regime — Fano, STS(9), STS(13), GQ(2,2) —
-the same structures where IsalHG's bounded backtracking already explodes
-(`docs/engineering/DEVELOPMENT.md` open Q1, timings 0.78 s → 177 s). So the avalanche regime
-**coincides with the known hard regime**; it is not a new pathology.
+**Four avalanche sources:**
+1. **Seed set change** (condition i fails): edit changes `S(H)` so `v_0 ∉ S(H⊕e)`
+   → the entire `w*_c` is recomputed from a different starting point →
+   `s(e) = O(m·k)`.
+2. **Argmin migration** (condition iii fails): `S(H) = S(H⊕e)` but the edit
+   shifts the per-seed encoding inside one seed's O(k·Δ) window, flipping a lex
+   comparison early enough that a different seed `v' ∈ S(H⊕e)` becomes the
+   κ-minimum → `s(e) = d_Lev(w*_c(H,v_0), w*_c(H⊕e,v')) = O(m·k)`. This is
+   distinct from source 1: `v_0 ∈ S(H⊕e)` but it is no longer the κ-winner.
+   The original "seed flip" label collapsed sources 1 and 2; for `w*_c` they are
+   separate channels.
+3. **Early tie perturbation** (condition ii fails, depth `d` small): edit shifts
+   `ξ(v)` for some `v ∈ N_r[e]` (r = tuple depth = 3) that participates in an
+   early tie `T(σ_d)` → the search switches branch early and the remaining string
+   diverges. Wall-clock analogy: the high backtracking cost on STS(13)/GQ(2,2)
+   (T-TAa: 270 ms / 1.09 s vs 34 ms / 61 ms greedy) is the search-tree analogue.
+4. **Deep tie perturbation** (condition ii fails, depth `d` arbitrary): same as
+   source 3 at arbitrary `d`; sensitivity `≤ |w*_c| - d`. Uncommon on sparse
+   inputs; frequent on dense or symmetric inputs.
 
-**Consequence — the theorem's honest final form.** A two-part statement:
+For the greedy encoder, sources 3–4 do not exist: the greedy makes one comparison
+per state along its single path and commits without branching, so only sources 1–2
+can trigger a wholesale rewrite. For `w*_c`, all four sources are active.
+
+**Where avalanches live — refined by Proposition 6.0 / Remark 6.1.**
+The discriminant for sources 3–4 is *automorphism-coherence* of ties
+(`theorem_a_completeness.tex`, §6). A tie at state `σ` is coherent if every pair
+of tied candidates `e, e' ∈ T(σ)` is related by an automorphism of `H` that
+fixes `dom(μ)` pointwise. By Proposition 6.0, when all reachable ties are
+coherent, all branches give equal completions; the lex-min is therefore stable
+against tie-set perturbations — sources 3–4 are suppressed. By Remark 6.1, the
+stabiliser of `μ` at depth `d` shrinks as `d` increases; vertex-transitivity
+buys coherence at the root only.
+
+Empirical verdict (T-TAa, `scripts/bench_tie_complete.py`, i7-13700KF):
+
+| Design | `w*_greedy = w*_c` | Coherence | Active sources |
+|---|---|---|---|
+| Fano plane | True | All depths (inferred from Prop 6.0 + verified equality) | 1–2 only |
+| STS(9) | True | All depths (inferred) | 1–2 only |
+| STS(13) cyclic | **False** | Incoherent at depth > 0 | 1–4 |
+| GQ(2,2) doily | **False** | Incoherent at depth > 0 | 1–4 |
+
+All four designs are vertex-transitive. The avalanche regime for `w*_c` is
+**not the vertex-transitive regime as a whole**. The correct dividing line for
+sources 3–4 is Proposition 6.0's coherence criterion, calibrated empirically by
+the T-TAa string-equality measurements and the target for T-B3 to characterize
+analytically. Sources 1–2 can occur on any input, including coherent designs.
+
+**Consequence — the theorem's honest final form:**
 - **(B-worst)** Unconditionally, `d_I(H,H') ≤ (c·m·k)·HGED(H,H')` — a valid but
   weak envelope.
-- **(B-cond)** For *seed-stable* edit paths (no top-`ξ` tie flips),
-  `d_I(H,H') ≤ O(k·Δ)·HGED(H,H')` — the strong bound (★).
-- **(B-avg)** *Target to pursue:* over random/generic hypergraphs, top-`ξ` ties
-  have vanishing probability, so `E[s(e)] = O(k·Δ)` and the strong bound holds
-  with high probability. An average-case / high-probability statement is the
-  most likely *fully unconditional* win and matches the empirical correlation.
+- **(B-cond)** For *tie-set transparent* edit paths (all three Lemma B1 conditions
+  satisfied along every step), `d_I(H,H') ≤ O(k·Δ)·HGED(H,H')` — the strong
+  bound (★). Replacing the earlier "seed-stable" label; the new condition is
+  strictly stronger (conditions i–iii vs. depth-0 only).
+- **(B-avg)** *Target to pursue:* over random/generic hypergraphs, ties are rare
+  at every depth (structural tuples generically separate vertices), so source
+  3–4 probability vanishes; sources 1–2 also vanish generically on local edits
+  that preserve the dominant seed. Hence `E[s(e)] = O(k·Δ)` with high
+  probability.
 
 ---
 
@@ -243,10 +342,19 @@ The strong bound scales as `C(k,Δ) = O(k·Δ)`. Two testable predictions:
    that validates Theorem B empirically** — the theorem is not decorative, its
    Δ-dependence is the falsifiable content.
 
-2. **Avalanche prediction.** On high-automorphism designs, ρ should drop sharply
-   and `s(e)` histograms should be bimodal (most edits `O(kΔ)`, rare edits
-   `O(mk)`). Measuring the single-edit sensitivity histogram directly
-   (`../empirical/correlation.md`, Exp E2b) tests the §3 avalanche story.
+2. **Avalanche prediction (revised at T-TBa).** The `s(e)` histogram shape
+   depends on the automorphism-coherence of ties (§3, Prop 6.0). Sources 1–2
+   can occur on any input; sources 3–4 are suppressed on coherent inputs.
+   - *Generic sparse*: sources 3–4 absent (no ties at any depth); sources 1–2
+     rare on local edits → near-unimodal O(kΔ) peak.
+   - *Coherent-tie symmetric designs (Fano, STS(9))*: sources 3–4 absent
+     (coherence inferred from Prop 6.0 + verified `w*_greedy = w*_c`); sources
+     1–2 possible but rare on small design edits → near-unimodal O(kΔ) despite
+     high symmetry. **Changed from the earlier "symmetric ⇒ bimodal" prediction.**
+   - *Incoherent-tie symmetric designs (STS(13), GQ(2,2))*: all four sources
+     active → heavy-tailed or bimodal.
+   Measuring the histogram on all four designs (Exp E2b) tests this prediction.
+   A heavy tail on Fano or STS(9) would falsify §3's coherence criterion.
 
 If either prediction fails, Theorem B's proof strategy is wrong — that is the
 value of stating it falsifiably.
@@ -297,12 +405,34 @@ criterion). Consequences the applications section must own:
       near-maximal-HGED regime, where the bound is slack and the case is handled
       separately. Still owed alongside it: no arity`->k` intermediates
       (reduce-before-extend interleaving).
-- [ ] T-B1: prove Lemma B1 (locality) in terms of *relative* CDLL order; resolve
-      the global-index-shift risk.
-- [ ] T-B2: bound the reordering cost to `O(k·Δ)` under seed-stability; nail
-      the token-width factor.
-- [ ] T-B3: characterize the seed-flip (avalanche) condition precisely; tie it
-      to top-`ξ` ties and the automorphism group.
+- [ ] T-B1: prove the restated Lemma B1 — locality of `w*_c` under tie-set
+      transparency (three conditions: seed membership (i), tie-set stability in
+      `N_r[e]` r=3 (ii), argmin-seed preservation (iii)) — in terms of *relative*
+      CDLL order. The proof must construct a correspondence between the branching
+      search trees of `H` and `H⊕e` from `v_0`, showing trees are isomorphic
+      outside the encoding of `N_1[e]` when all three conditions hold. The
+      global-index-shift risk from pointer values (CDLL indices, `CLAUDE.md`
+      invariant 1) requires the argument to work in relative CDLL order
+      throughout. C candidates are a singleton tie set by construction (T-TAa.md
+      closing: "a C candidate requires `members == set(tentative_inputs[:arity])`
+      and `SparseHypergraph` forbids duplicate member sets, so the C tie set is
+      always a singleton") — no C-tie avalanche possible; treat separately.
+- [ ] T-B2: bound the *branching window* — the instruction positions that change
+      for a tie-set-transparent edit — to `O(k·Δ)`. The window covers the
+      *encoding* of `N_1[e]` (the 1-hop set, O(k·Δ) vertices; the token-width
+      constant `c_2`); condition (ii)'s transparency set `N_r[e]` (r=3) is larger
+      but does not itself enter the window count. Nail `c_2` (instructions per
+      vertex in `N_1[e]`). The Qin-costing remark (direct term O(1) in arity per
+      unit HGED) should transfer.
+- [ ] T-B3: characterize when an edit perturbs a tie set at depth `d` (sources
+      3–4) or triggers argmin migration (source 2). For sources 3–4: use Prop 6.0
+      — a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act
+      transitively on `T(σ_d)`, and a vertex in `N_r[e]` with perturbed `ξ` can
+      change that tie set. For source 2: characterize when a local encoding change
+      in one seed's window flips the lex-argmin across seeds. Recover the §3 table
+      (Fano/STS(9) coherent; STS(13)/GQ(2,2) incoherent) from the analytical
+      criterion. Connection to T-B4: random sparse hypergraphs have no ties →
+      sources 3–4 vanish; source 2 also vanishes generically → (B-avg) follows.
 - [ ] T-B4 (stretch): the average-case/high-probability unconditional bound
       (B-avg) over a random hypergraph model.
 - [ ] T-B5: verify constants against measured `s(e)` histograms (Exp E2b).

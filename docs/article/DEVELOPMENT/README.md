@@ -54,7 +54,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments | 5 | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — stability | 2 | 0 |
+| [`T-TB`](T-TB/) | Theorem B — stability | 1 | 1 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the scope decision (2026-07-08)
@@ -138,22 +138,25 @@ experiments:
    T-M5b MDS · M5c clustering+dendrogram · M5d kNN · M5e shortest-path
                         ← M1b, M3a–d, M4 (+ M4' for the real anchor)      [HGED-free]
 
-theory (parallel):  T-TA ✔ ─► T-TBa restate Lemma B1 over w*_c ─► T-TB stability
+theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► T-TB stability
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (2026-07-09, T-TA chain complete).** The entire canonical-form
+**Critical path (2026-07-09, T-TBa complete).** The entire canonical-form
 track closed 2026-07-09 (T-TAf freeze → T-TAd flip → T-TAg hardening → T-TAh
 `wl_colors` removal): the package computes the frozen `w*_c` (variant
 `"canonical"`) by default, `d_I` is a metric on isomorphism classes and is
 guarded against non-canonical algorithms, the search raises instead of
 hanging under a `max_expansions` budget, and the unsound pruning is gone.
-The article-critical path now runs through `T-TBa` (restate Lemma B1 over
-`w*_c`, gating T-TB) and the T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
+T-TBa then closed: `stability.md` §2.2, §3, §4, §6 and `correlation.md`
+Exp E2b are restated over `w*_c` (three-condition Lemma B1; four-source
+avalanche; coherent/incoherent design split; three-regime E2b prediction).
+The article-critical path now runs through **T-TB** (the stability proof,
+unblocked by T-TBa) and the T-M5 prerequisites (T-M2c, T-M3a–d, T-M4).
 
-**Runnable in parallel right now:** T-TBa (theory), T-M2c's P3 decision
-(theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use isolated
-git worktrees for agents that touch overlapping `core/` files.
+**Runnable in parallel right now:** T-TB (theory, unblocked), T-M2c's P3
+decision (theory, no code), T-M4' (HIC loader), T-M3a–d (competitors). Use
+isolated git worktrees for agents that touch overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
 invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`

@@ -648,4 +648,65 @@ algorithmic ceiling. The two levers that would are, per regime:
 Both are recorded here as the next Algorithm-R&D levers (the same status the
 round-8 *stop criterion* gave the I/R exit ramp). Round 10 ships the sound
 constant-factor work: a verified ~2× on the article's actual canonical
-algorithm with an unchanged canonical form.
+algorithm with an unchanged canonical form. Round 11 (below) takes on the first
+of the two levers.
+
+## Round 11 — inverted displacement enumeration (the large-``n`` lever)
+
+**Target.** The Round-10 diagnosis showed the per-frame cost is the blind
+cost-class enumeration: for the first emittable cost ``c*`` the frame
+enumerates every ``k_disp``-tuple displacement, ``O(c*^{k_disp})``, and ``c*``
+grows with ``n`` on sparse inputs (the next unconsumed edge is far in the CDLL —
+``c*`` up to 46/58 at n=35/50). This is the ``n=50 → 2.9 s`` cliff, i.e. the
+applications regime (T-M5b–e run ``w*_c`` on larger real hypergraphs).
+
+**The inversion.** A V/C emission of edge ``e`` is *uniquely determined* by the
+edge: since every pointed vertex is mapped and every ``new`` vertex must be
+unmapped, the only admissible V split is ``i = p`` (point **all** ``p`` mapped
+members, create the ``q`` unmapped), and C requires ``q = 0``. So instead of
+enumerating displacements blindly, enumerate **per edge**: for each unconsumed
+edge, place pointers ``1..r`` on ``r`` of its members (``r = p`` for V, ``r =
+arity`` for C) over all ``r!`` bijections and, per pointer, both minimal signed
+displacements reaching its target (forward ``+f`` / backward ``f−N``);
+unassigned pointers stay put. Every displacement so generated is a genuine
+candidate the brute force would also produce, and each is fed to the **same**
+``consider`` comparison — so the winner is identical. Cost drops from
+``O(c*^{k_disp})`` to ``O(sum_e r_e!·2^{r_e})`` per frame, independent of ``c*``.
+Forward distances are ``O(1)`` after one ``O(N)`` CDLL walk builds a position
+rank.
+
+**Hybrid, not replacement.** The brute-force loop is cheaper when ``c*`` is
+small (all design fixtures: ``c* ≤ 6``), so it runs up to a cost cap
+(``INVERSION_COST_CAP = 8``); only frames that find nothing by cost 8 (sparse,
+far next edge) fall back to the inversion. Every design therefore stays on the
+byte-identical, same-speed brute path — no regression — while the sparse frames
+get the ``O(edges)`` search.
+
+**Validation (byte-identical ``w*_c``).** The inverted path is refactored to
+share the exact per-displacement comparison (``consider``), then validated three
+ways: (i) built **inversion-only** (brute disabled) it passes the frozen pins,
+the C++≡Python differential, and the completeness biconditional; (ii)
+inversion-only vs brute-only agree on **84/84** sparse instances (n=12..36, incl.
+``k=6`` mixed-arity encodes); (iii) the shipped hybrid (cap 8) agrees with the
+brute build on the same 84/84. Full suite green.
+
+**Result — canonical ``w*_c`` (non-PGO, i7-13620H).**
+
+| Instance | Round 10 (brute) | Round 11 (hybrid) | speedup |
+|---|---:|---:|---:|
+| medium sparse n=20 |   10.9 ms |   4.5 ms | 2.4× |
+| medium sparse n=35 |   44.1 ms |   6.1 ms | **7.3×** |
+| medium sparse n=50 | ~2900 ms | 317.6 ms | **9.1×** |
+| random corpus n=12 (max) | 34.2 ms | 8.7 ms | 3.9× |
+| Fano / STS(9) / STS(13) / doily | — | unchanged | 1.0× (brute path) |
+
+The design fixtures are within run-to-run noise of Round 10 (they never enter
+the inversion). The win is concentrated exactly where the article needs it: the
+random/real sparse corpus and the larger-``n`` applications regime. Combined
+round-0-baseline → round-11 on the sparse tail, the ``n=50`` fingerprint went
+from unusable (~3 s) to corpus-viable (~0.3 s), still 3–4 orders of magnitude
+behind Levi+nauty but no longer a scaling wall.
+
+The remaining lever is unchanged: **stabiliser-orbit pruning** for the
+automorphism-rich designs and the tie-branch entry count (Round 10, still the
+open Algorithm-R&D item).

@@ -537,6 +537,15 @@ void enumerate_label_perms_cb(
 // recurse over multiple permutations and take the lex-min.
 // ---------------------------------------------------------------------------
 
+// The brute-force displacement loop runs up to this cost before deferring to
+// the inverted enumeration. Chosen above the largest first-emittable cost c*
+// seen on the dense design fixtures (doily peaks at c* = 6) so every design
+// stays on the byte-identical, same-speed brute path; only sparse frames whose
+// next edge is farther than this fall back to the O(edges) inverted search.
+// (Set to -1 to force inversion-only, or a huge value for brute-only, when
+// differentially validating the two paths against each other.)
+constexpr int INVERSION_COST_CAP = 8;
+
 struct WorkArena {
     std::vector<Disp> cost_class;
     // V-branch (tie-branch) expansion budget. ``max_expansions == 0`` means
@@ -549,6 +558,121 @@ struct WorkArena {
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
                                std::vector<Token>& out_completion,
                                WorkArena& arena, bool tie_branch);
+
+// ---------------------------------------------------------------------------
+// Inverted displacement enumeration.
+//
+// The brute-force cost loop enumerates every k_disp-tuple displacement up to
+// the first emittable cost c*, which is O(c*^{k_disp}) per frame and blows up
+// on sparse inputs where c* grows with n (the next unconsumed edge is far in
+// the CDLL). This enumerates only the displacements that can actually yield a
+// candidate, keyed off the edges: a V/C emission of edge e is uniquely
+// determined by placing pointers 1..r on r of e's members (r = #mapped members
+// for V, = arity for C), so for each unconsumed edge we enumerate the r!
+// pointer-to-member bijections and, per pointer, both minimal signed
+// displacements reaching its target (forward +f or backward f-N). Unassigned
+// pointers stay put (cost 0). Every generated displacement is a genuine
+// candidate the brute force would also produce, and each is fed to the same
+// ``consider`` comparison, so the winner is identical — this only skips the
+// fruitless tuples the brute force wastes time on. Cost O(sum_e r_e! * 2^{r_e})
+// per frame, independent of c*.
+template <typename Fn>
+void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, int k_disp,
+                              Fn&& consider) {
+    const int N = state.cdll.size();
+    if (N <= 0) return;
+    const std::size_t cap = static_cast<std::size_t>(state.cdll.capacity());
+
+    // out2slot[output id] = its CDLL slot; rank[slot] = forward position in the
+    // ring. One O(N) walk gives O(1) pointer->member forward distances.
+    std::vector<SlotIdx> out2slot(cap, -1);
+    std::vector<int> rank(cap, -1);
+    {
+        SlotIdx s = state.get_ptr(1);
+        for (int r = 0; r < N; ++r) {
+            out2slot[static_cast<std::size_t>(state.cdll.get_value(s))] = s;
+            rank[static_cast<std::size_t>(s)] = r;
+            s = state.cdll.next_node(s);
+        }
+    }
+
+    std::array<int, K_MAX> prank{};
+    std::array<SlotIdx, K_MAX> base_slots{};  // where unassigned pointers stay
+    for (int i = 0; i < k; ++i) {
+        base_slots[static_cast<std::size_t>(i)] = state.get_ptr(i + 1);
+        if (i < k_disp) {
+            prank[static_cast<std::size_t>(i)] =
+                rank[static_cast<std::size_t>(base_slots[static_cast<std::size_t>(i)])];
+        }
+    }
+
+    for (EdgeId e = 0; e < H.n_edges; ++e) {
+        if (state.consumed[static_cast<std::size_t>(e)]) continue;
+        const auto& members = H.edge_members[static_cast<std::size_t>(e)];
+        const int arity = static_cast<int>(members.size());
+        if (arity > k) continue;
+
+        std::array<SlotIdx, K_MAX> tgt{};
+        int p = 0;
+        int q = 0;
+        bool overflow = false;
+        for (NodeId m : members) {
+            if (state.i2o_has(m)) {
+                if (p >= K_MAX) { overflow = true; break; }
+                tgt[static_cast<std::size_t>(p++)] =
+                    out2slot[static_cast<std::size_t>(state.i2o[static_cast<std::size_t>(m)])];
+            } else {
+                ++q;
+            }
+        }
+        if (overflow) continue;
+
+        // r = number of pointers to place. C: all members mapped (q == 0).
+        // V: point the p mapped members (p>=1, q>=1, p<=k-1, q<=k-1, arity<=k).
+        int r = -1;
+        if (q == 0) {
+            r = arity;
+        } else if (p >= 1 && q >= 1 && p <= k - 1 && q <= k - 1 && p + q <= k) {
+            r = p;
+        }
+        if (r < 1 || r > k_disp) continue;
+
+        std::array<int, K_MAX> perm{};
+        for (int i = 0; i < r; ++i) perm[static_cast<std::size_t>(i)] = i;
+        do {
+            std::array<int, K_MAX> fwd{};
+            std::array<int, K_MAX> nopts{};
+            int combos = 1;
+            for (int i = 0; i < r; ++i) {
+                const SlotIdx t = tgt[static_cast<std::size_t>(perm[static_cast<std::size_t>(i)])];
+                const int tr = rank[static_cast<std::size_t>(t)];
+                const int f = ((tr - prank[static_cast<std::size_t>(i)]) % N + N) % N;
+                fwd[static_cast<std::size_t>(i)] = f;
+                nopts[static_cast<std::size_t>(i)] = (f == 0) ? 1 : 2;
+                combos *= nopts[static_cast<std::size_t>(i)];
+            }
+            for (int cbits = 0; cbits < combos; ++cbits) {
+                Disp disp{};
+                disp.k_used = k_disp;
+                std::array<SlotIdx, K_MAX> new_slots = base_slots;
+                int rem = cbits;
+                int cost = 0;
+                for (int i = 0; i < r; ++i) {
+                    const int f = fwd[static_cast<std::size_t>(i)];
+                    const int opt = rem % nopts[static_cast<std::size_t>(i)];
+                    rem /= nopts[static_cast<std::size_t>(i)];
+                    const int d = (f == 0) ? 0 : (opt == 0 ? f : f - N);
+                    disp.d[static_cast<std::size_t>(i)] = d;
+                    cost += d < 0 ? -d : d;
+                    new_slots[static_cast<std::size_t>(i)] =
+                        tgt[static_cast<std::size_t>(perm[static_cast<std::size_t>(i)])];
+                }
+                disp.cost = cost;
+                consider(disp, new_slots);
+            }
+        } while (std::next_permutation(perm.begin(), perm.begin() + r));
+    }
+}
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
                                std::vector<Token>& out_completion,
@@ -586,22 +710,15 @@ struct WorkArena {
 
     std::vector<Disp>& cost_class = arena.cost_class;
 
-    for (int cost = 0; cost <= max_cost; ++cost) {
-        // Cost classes higher than the current best's cost yield strictly
-        // longer emissions; safe to stop.
-        if (have_best && cost + 1 > best_total_len) break;
-
-        enum_cost_class(k_disp, radius, cost, cost_class);
-        if (cost_class.empty()) continue;
-
-    for (const Disp& disp : cost_class) {
-
-        // Compute new_slots and tentative_inputs.
-        std::array<SlotIdx, K_MAX> new_slots{};
-        for (int idx = 0; idx < k; ++idx) {
-            new_slots[static_cast<std::size_t>(idx)] = displaced_slot(
-                state.cdll, state.get_ptr(idx + 1), disp.d[static_cast<std::size_t>(idx)]);
-        }
+    // Evaluate one displacement: derive tentative_inputs from ``new_slots``,
+    // build its move-block, and fold its best V and C candidates into the
+    // running best by the (total_len, move-block, main-token) shortlex key.
+    // ``new_slots`` is supplied by the caller — the brute-force loop walks the
+    // CDLL to compute it; the inverted enumerator already knows the target
+    // slots and passes them directly. Both feed the identical comparison, so
+    // the winner is the same regardless of which path produced the displacement.
+    const auto consider = [&](const Disp& disp,
+                              const std::array<SlotIdx, K_MAX>& new_slots) {
         tentative_count = k;
         for (int idx = 0; idx < k; ++idx) {
             const NodeId out_v = state.cdll.get_value(new_slots[static_cast<std::size_t>(idx)]);
@@ -680,9 +797,38 @@ struct WorkArena {
                 have_best = true;
             }
         }
-    }
-    // End of cost-class loop body.
+    };
+
+    // Hybrid displacement search. The brute-force cost loop is cheap and exact
+    // when the first emittable cost c* is small (dense inputs, every design
+    // fixture: c* <= 6), so run it up to a cost cap. If it finds nothing
+    // (sparse input whose next edge is many CDLL steps away, c* large), fall
+    // back to the inverted enumeration, which jumps straight to the candidate
+    // displacements in O(edges) regardless of c*. Both feed ``consider``, so
+    // the winner is identical; the cap only chooses which enumeration is
+    // cheaper for this frame. ``INVERSION_COST_CAP < 0`` forces inversion-only
+    // (used to differentially validate the inverted path against the brute one).
+    const int brute_cap = std::min(max_cost, INVERSION_COST_CAP);
+    for (int cost = 0; cost <= brute_cap; ++cost) {
+        // Cost classes higher than the current best's cost yield strictly
+        // longer emissions; safe to stop.
+        if (have_best && cost + 1 > best_total_len) break;
+
+        enum_cost_class(k_disp, radius, cost, cost_class);
+        if (cost_class.empty()) continue;
+
+        for (const Disp& disp : cost_class) {
+            std::array<SlotIdx, K_MAX> new_slots{};
+            for (int idx = 0; idx < k; ++idx) {
+                new_slots[static_cast<std::size_t>(idx)] = displaced_slot(
+                    state.cdll, state.get_ptr(idx + 1), disp.d[static_cast<std::size_t>(idx)]);
+            }
+            consider(disp, new_slots);
+        }
     }  // for cost
+    if (!have_best && max_cost > brute_cap) {
+        emit_inverted_candidates(H, state, k, k_disp, consider);
+    }
 
     if (!have_best) return false;
 

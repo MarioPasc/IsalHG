@@ -47,10 +47,15 @@ std::vector<std::int32_t> xi_counts(const SHG& H, NodeId v, int depth) {
 }
 
 void SHG::finalise(int depth) {
-    // 1. Build vertex_edges from edge_members.
+    // 1. Build vertex_edges from edge_members; record the max arity.
     vertex_edges.assign(static_cast<std::size_t>(n_nodes), {});
+    max_arity = 0;
     for (EdgeId e = 0; e < n_edges; ++e) {
-        for (NodeId v : edge_members[static_cast<std::size_t>(e)]) {
+        const auto& members = edge_members[static_cast<std::size_t>(e)];
+        if (static_cast<std::int32_t>(members.size()) > max_arity) {
+            max_arity = static_cast<std::int32_t>(members.size());
+        }
+        for (NodeId v : members) {
             vertex_edges[static_cast<std::size_t>(v)].push_back(e);
         }
     }

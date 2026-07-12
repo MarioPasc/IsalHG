@@ -24,6 +24,10 @@ struct SHG {
     std::int32_t n_edges = 0;
     std::int32_t n_vertex_labels = 1;
     std::int32_t n_edge_labels = 1;
+    // max arity over all edges (>= 2 by construction; 0 if edgeless). Set by
+    // finalise(). Pointers beyond this index can never satisfy a V/C emission,
+    // so the displacement search only varies the first min(k, max_arity) ones.
+    std::int32_t max_arity = 0;
 
     // Per-vertex label.
     std::vector<VertexLabel> vertex_labels;          // size n_nodes

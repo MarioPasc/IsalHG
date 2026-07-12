@@ -527,3 +527,125 @@ so the round-9 numbers also confirm the round-8 + PGO work was not
 lost. Net round 0 → round 9 speedup ranges from 4.5× (Fano, smallest
 design — implementation overhead dominates) to 9.7× (doily, parallel
 fan-out fully saturated).
+
+## Round 10 — optimising the *canonical-complete* variant (the article target)
+
+**Context — a different algorithm.** Rounds 0–9 optimised the **greedy**
+encoder (``greedy_min`` / ``greedy_min_nbrdeg``, C++ variants 0/5). The
+metric-space article (`docs/article/PROPOSAL.md`) does **not** use greedy: it
+pivoted to the **tie-complete canonical algorithm** (``"canonical"``, C++
+variant 7, computing the frozen ``w*_c``; T-TAd/T-TAf), the only variant whose
+string is a complete isomorphism invariant and therefore the only one on which
+``d_I`` is well-defined. That variant branches over the residual V-tie set ×
+label-respecting permutations and is 15–20× slower than greedy on the design
+fixtures. Rounds 0–9 barely touched it. This round optimises it directly.
+
+Machine: i7-13620H, conda env ``isalhg``, **non-PGO** dev build (both baseline
+and optimised measured non-PGO on the same thermal state, so the ratios are
+sound). Baseline = the round-9 source at HEAD of this branch; optimised = the
+three changes below. Correctness gate re-run after every change (see *Verification*).
+
+**Where the time goes — two regimes (measured with per-call counters).**
+The tie-complete search has two distinct cost regimes, and they need different
+levers:
+
+| Input | encode_from entries | displacements | max move cost c\* | bound by |
+|---|---:|---:|---:|---|
+| GQ(2,2) doily | 447 585 | 36.3 M | 6 | **branching** (automorphism-rich ties) |
+| STS(9) | 33 345 | 2.48 M | — | branching |
+| random n=12 (tail) | ~300 | 0.2 M | — | displacement enumeration |
+| random sparse n=35 | 7 937 | 8.2 M | **46** | **per-frame displacement** |
+| random sparse n=50 | 39 719 | 72.4 M | **58** | per-frame displacement |
+
+Both regimes are ultimately **displacement-bound**: every recursion frame
+enumerates all pointer-displacement tuples up to the first emittable cost
+``c*``, and ``c*`` grows with ``n`` on sparse inputs (the next unconsumed edge
+can be far in the CDLL). The doily is *also* branching-bound (447 k frames).
+
+**The three changes (all output-preserving — ``w*_c`` is byte-identical).**
+
+1. **Incidence-restricted candidate scan.** Both the V and C candidate scans
+   iterated all ``E`` edges per displacement. But any candidate requires
+   ``tentative_inputs[0]`` (pointer 1's landed vertex) to be a member of the
+   edge, so only edges in ``SHG::vertex_edges[t0]`` can qualify — the candidate
+   set is identical. For the doily this is 3 incident edges vs 15 total.
+2. **Drop the per-cost-class sort.** ``enum_cost_class`` sorted each class. The
+   caller picks the winner by an order-independent ``(total_len, move-block,
+   main-token)`` comparison, and the move-block token sequence is injective in
+   the displacement, so no two displacements tie — the winner is identical for
+   any enumeration order. The sort was pure overhead.
+3. **Displacement search only varies ``min(k, max_arity)`` pointers.** No V/C
+   candidate ever reads ``tentative_inputs`` beyond ``max_arity − 1`` (the scan
+   prefix is bounded by ``min(k, arity) ≤ max_arity``), so moving a pointer
+   beyond ``max_arity`` is strictly cost-dominated and never wins. The
+   enumeration therefore varies only the first ``k_disp = min(k, max_arity)``
+   coordinates. A no-op when ``k = max_arity`` (uniform-arity corpora), but the
+   ``d_I`` corpus path encodes **every** hypergraph with the corpus-wide
+   ``k = max(required_k(H))`` (`isalhg_levenshtein.py::_resolve_corpus_k`), so a
+   graph inside an arity-5 corpus previously enumerated 5-tuples where 2 suffice.
+   Verified ``w*_c`` is invariant to ``k`` for ``k ≥ max_arity`` on 600/600
+   random instances.
+
+**Result — canonical variant ``w*_c`` (best-of-4 reps, ``scripts/bench_tie_complete.py``).**
+
+| Design | baseline (r9 src) | round 10 | speedup |
+|---|---:|---:|---:|
+| Fano STS(7)    |    9.20 ms |    5.22 ms | 1.76× |
+| STS(9) AG(2,3) |  199.57 ms |  106.44 ms | 1.87× |
+| STS(13) cyclic |  401.16 ms |  210.30 ms | 1.91× |
+| GQ(2,2) doily  | 1621.03 ms |  743.03 ms | **2.18×** |
+
+Random corpus tail (max over 30 connected instances/n) also improves: n=11
+19.16 → 10.71 ms, n=12 61.50 → 34.23 ms (~1.8×). The greedy variants share the
+``encode_from`` code path and get the same ~2× for free (doily greedy 80.9 →
+46.2 ms). All four ``test_wstar_c_frozen`` pins hold; the differential suite
+(C++ ≡ Python tie-complete on random hypergraphs), the completeness
+biconditional vs pynauty, and invariance are green (98 focused + 699 full-suite
+tests passed).
+
+**Verification.** `pytest tests/unit tests/property tests/integration -m "not
+slow" --hypothesis-seed=0` → **699 passed, 13 skipped** (T-TAd baseline 674);
+`tests/unit/core/test_wstar_c_frozen.py` → 4/4; k-invariance 600/600; ruff
+unchanged from baseline.
+
+**Round 10 vs the Levi competitors — the honest easy→hard picture**
+(``scripts/bench_canonical_vs_competitors.py``, best-of-7,
+``isalhg_canonical``; Traces skipped — no ``dreadnaut`` on PATH).
+
+| Instance | IsalHG ``w*_c`` | pynauty_levi | bliss_levi |
+|---|---:|---:|---:|
+| easy n=6  sparse  |   0.09 ms | 0.02 ms | 0.04 ms |
+| easy n=10 sparse  |   0.51 ms | 0.03 ms | 0.05 ms |
+| medium n=20 sparse |  10.9 ms | 0.06 ms | 0.10 ms |
+| medium n=35 sparse |  44.1 ms | 0.08 ms | 0.13 ms |
+| medium n=50 sparse | ~2.9 s  | 0.15 ms | 0.24 ms |
+| hard Fano STS(7)  |   5.9 ms | 0.02 ms | 0.05 ms |
+| hard STS(9)       | 104.9 ms | 0.06 ms | 0.17 ms |
+| hard cyclic STS(13) | 205.8 ms | 0.06 ms | 0.14 ms |
+| hard GQ(2,2) doily | 727.6 ms | 0.04 ms | 0.08 ms |
+
+The Levi + nauty/bliss backends stay 2–4 orders of magnitude faster. Round 10
+closes the *intra-IsalHG* implementation gap by ~2× but does **not** move the
+algorithmic ceiling. The two levers that would are, per regime:
+
+- **Large-``n`` per-frame cost (the ``n=50`` cliff — the applications regime,
+  T-M5b–e).** The blow-up is the ``O(c*^{k_disp})`` blind cost-class
+  enumeration with ``c*`` up to ``O(n)``. The fix is to **invert** the search:
+  for each unconsumed edge with mapped members, compute the minimal-cost
+  displacement that emits it directly (a tiny ``≤ (k−1)``-pointer assignment
+  problem), and take the shortlex-min over edges — ``O(edges)`` per frame
+  instead of ``O(c*^{k_disp})``. Value-preserving in principle, but reproducing
+  the exact shortlex move-block tie-break bit-for-bit is delicate against the
+  frozen ``w*_c``; deferred to a dedicated task with extended differential
+  coverage rather than rushed here.
+- **Branching on automorphism-rich designs (Fano/STS/doily).** 447 k frames on
+  the doily is the ``(j!)^E`` tie fan-out. The only value-preserving lever
+  (T-TAf, Prop. 6.0) is **stabiliser-orbit pruning** — explore one branch per
+  orbit of the prefix-fixing automorphism group. Detecting that group during
+  search is the hard part of nauty; it is a research subtask, not a constant
+  factor.
+
+Both are recorded here as the next Algorithm-R&D levers (the same status the
+round-8 *stop criterion* gave the I/R exit ramp). Round 10 ships the sound
+constant-factor work: a verified ~2× on the article's actual canonical
+algorithm with an unchanged canonical form.

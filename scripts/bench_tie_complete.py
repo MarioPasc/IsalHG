@@ -21,7 +21,7 @@ from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
 
 GREEDY = "greedy_min_nbrdeg"
-COMPLETE = "greedy_min_complete"
+COMPLETE = "canonical"
 
 
 def _random_hypergraph(rng: random.Random, n: int, max_arity: int = 4) -> SparseHypergraph:

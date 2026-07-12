@@ -115,7 +115,10 @@ void enum_cost_class(int k, int radius, int cost, std::vector<Disp>& out) {
     if (radius <= 0) return;
     std::array<int, K_MAX> buf{};
     enum_cost_class_recursive(k, cost, radius, buf, 0, k, out);
-    std::sort(out.begin(), out.end());
+    // No sort: the caller selects the winning displacement by an order-
+    // independent (total_len, move-block, main-token) comparison, and the
+    // move-block token sequence is injective in the displacement, so no two
+    // displacements tie. The winner is identical for any enumeration order.
 }
 
 // ---------------------------------------------------------------------------
@@ -225,7 +228,13 @@ template <typename Fn>
 void for_each_v_candidate(const SHG& H, const EncoderState& state, int k,
                           const std::array<NodeId, K_MAX>& tentative_inputs,
                           int tentative_count, Fn&& cb) {
-    for (EdgeId e = 0; e < H.n_edges; ++e) {
+    // Any V candidate requires ``tentative_inputs[0]`` to be a member of the
+    // edge (``longest_prefix >= 1`` starts at index 0), so only edges incident
+    // to that vertex can qualify. Iterate its incidence list (sorted ascending
+    // by edge id) instead of all edges — the candidate set is identical.
+    if (tentative_count < 1) return;
+    const NodeId t0 = tentative_inputs[0];
+    for (EdgeId e : H.vertex_edges[static_cast<std::size_t>(t0)]) {
         if (state.consumed[static_cast<std::size_t>(e)]) continue;
         const auto& members = H.edge_members[static_cast<std::size_t>(e)];
         const int arity = static_cast<int>(members.size());
@@ -372,7 +381,11 @@ struct CCandidate {
     bool have = false;
     CCandidate best{};
 
-    for (EdgeId e = 0; e < H.n_edges; ++e) {
+    // A C candidate requires ``members == set(tentative_inputs[:arity])``, so
+    // ``tentative_inputs[0]`` must be a member: restrict to its incidence list.
+    if (tentative_count < 1) return false;
+    const NodeId t0 = tentative_inputs[0];
+    for (EdgeId e : H.vertex_edges[static_cast<std::size_t>(t0)]) {
         if (state.consumed[static_cast<std::size_t>(e)]) continue;
         const auto& members = H.edge_members[static_cast<std::size_t>(e)];
         const int arity = static_cast<int>(members.size());
@@ -549,7 +562,14 @@ struct WorkArena {
     }
 
     const int radius = std::max(0, mapped);
-    const int max_cost = k * radius;
+    // Pointers beyond ``max_arity`` never land on a slot any V/C candidate
+    // reads (the scan prefix length is bounded by min(k, arity) <= max_arity),
+    // so moving them is strictly cost-dominated: the displacement search only
+    // varies the first ``k_disp`` pointers. When k <= max_arity this is a no-op;
+    // when k > max_arity (e.g. a graph inside a mixed-arity corpus encoded with
+    // the corpus-wide k) it shrinks the per-frame displacement space.
+    const int k_disp = std::min(k, std::max(1, static_cast<int>(H.max_arity)));
+    const int max_cost = k_disp * radius;
 
     // Track the best emission found across displacements.
     bool have_best = false;
@@ -571,7 +591,7 @@ struct WorkArena {
         // longer emissions; safe to stop.
         if (have_best && cost + 1 > best_total_len) break;
 
-        enum_cost_class(k, radius, cost, cost_class);
+        enum_cost_class(k_disp, radius, cost, cost_class);
         if (cost_class.empty()) continue;
 
     for (const Disp& disp : cost_class) {

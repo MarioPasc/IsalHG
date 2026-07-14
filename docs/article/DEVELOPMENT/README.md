@@ -54,7 +54,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments | 5 | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — stability | 1 | 2 |
+| [`T-TB`](T-TB/) | Theorem B — stability | 0 | 3 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the scope decision (2026-07-08)
@@ -140,7 +140,7 @@ experiments:
                         ← M1b, M3a–d, M4 (+ M4' for the real anchor)      [HGED-free]
 
 theory (parallel):  T-TA ✔ ─► T-TBa ✔ restate Lemma B1 over w*_c ─► T-TB ✔ stability (conditional)
-                                                                        └─► T-TBb  pointer-run amortization + analytical T-B3 + rigorous B-avg
+                                                                        └─► T-TBb ✔ pointer-run amortization + analytical T-B3 + B-avg status (DONE 2026-07-14)
 last:               T-M6 isomorphisms/ reparent (optional)
 ```
 
@@ -155,14 +155,22 @@ five hypotheses: tie-set transparency (i)–(iii) *plus* layout-locality
 (iv)–(v) for the pointer-run terms `R(e)`/`T_span(e)`, which are **not**
 bounded by (k,Δ) in adversarial layouts (the CDLL-index hazard, vindicated).
 B-avg is an honest sketch. The Δ-linear falsifiable prediction stands for
-T-M5a, which should also log per-edit run statistics. Remaining theory is
-consolidated in **T-TBb** (generic (iv)–(v) amortization, analytical T-B3,
-rigorous B-avg, W-token check); it sharpens the paper's claims but does not
-block experiments. The article-critical path now runs through the T-M5
-prerequisites (T-M3a–d, T-M4). T-M2c closed 2026-07-09 (connected generators).
+T-M5a, which should also log per-edit run statistics. **T-TBb closed
+2026-07-14**: generic layout-locality **refuted** — (v) by the
+orphaned-introducer family (`R(e) = Θ(n)` at bounded degree, Qin cost 1),
+average (iv) by the crossing-averaging identity `E[T_span] ≤ M(H)/n` with the
+probe showing `M/n` grows in `n`; analytical T-B3 resolved with the STS(9)
+obstruction (Prop 6.0 strictly sufficient — Fano equality *proved*, STS(9)
+criterion-incoherent at depth 3 yet robustly greedy-equal); B-avg demoted to
+empirical (constant-density ξ-collision obstruction); W-token proviso
+discharged (`tests/unit/core/test_no_w_tokens.py`). T-M5a must log `M(H)`,
+`R(e)`, `T_span(e)`, and first-incoherent depth. Proof doc:
+`/media/.../proofs/stability/pointer_run_amortization.tex`. The
+article-critical path runs through the T-M5 prerequisites (T-M3a–d, T-M4).
+T-M2c closed 2026-07-09 (connected generators).
 
 **Runnable in parallel right now:** T-M5a (all hard deps closed 2026-07-09:
-T-M1b, T-M2, T-M2c, T-M4), T-TBb (theory), T-M3a–d (competitors). Use isolated
+T-M1b, T-M2, T-M2c, T-M4), T-M3a–d (competitors). Use isolated
 git worktrees for agents that touch overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the

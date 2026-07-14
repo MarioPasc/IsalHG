@@ -242,8 +242,18 @@ edit adds ±1 token to every later pointer run spanning the edited slot
 CDLL distance (`R(e)`). Neither term is bounded by any function of `(k,Δ)` in
 the worst case, so the O(kΔ) locality is **conditional on layout-locality**
 (conditions (iv)–(v), `theorem_b_stability.tex` Def. layout); the hazard this
-paragraph originally flagged is real, and its generic (average-case) resolution
-is ledger task T-TBb. The C branch requires separate treatment: from the
+paragraph originally flagged is real. **Resolved at T-TBb (2026-07-14,
+`pointer_run_amortization.tex`):** (v) is *refuted* — the orphaned-introducer
+mechanism (an incidence edit re-homes a vertex's introduction point; the
+orphaned introducer pays the CDLL distance between the sites) gives
+bounded-degree tie-free families with `R(e) = Θ(n)` at Qin cost 1 under
+(i)–(iii), and the same mechanism makes `E[R]` grow with `n` for uniform
+incidence edits. (iv) *on average* reduces exactly to amortized movement via
+the crossing-averaging identity `E_u[T_span(e_u)] ≤ M(H)/n` (`M(H)` = total
+pointer movement of `w*_c`), and the probe (`scripts/probe_pointer_runs.py`)
+shows `M(H)/n` grows with `n` at fixed density — so average-case (iv) also
+fails generically; the drift is polynomial, additive, and directly measurable
+per instance. The C branch requires separate treatment: from the
 T-TAa closing analysis, "a C candidate requires `members == set(tentative_inputs
 [:arity])` and `SparseHypergraph` forbids duplicate member sets, so the C tie set
 is always a singleton — there is no edge-id dependence to remove" (T-TAa.md,
@@ -318,18 +328,29 @@ buys coherence at the root only.
 
 Empirical verdict (T-TAa, `scripts/bench_tie_complete.py`, i7-13700KF):
 
-| Design | `w*_greedy = w*_c` | Coherence | Active sources |
+| Design | `w*_greedy = w*_c` | First incoherent edge tie (T-TBb exact audit) | Sources 3–4 exposure |
 |---|---|---|---|
-| Fano plane | True | All depths (inferred from Prop 6.0 + verified equality) | 1–2 only |
-| STS(9) | True | All depths (inferred) | 1–2 only |
-| STS(13) cyclic | **False** | Incoherent at depth > 0 | 1–4 |
-| GQ(2,2) doily | **False** | Incoherent at depth > 0 | 1–4 |
+| Fano plane | True | none over the full orbit-pruned tree | Absent — **proved** via Prop 6.0 |
+| STS(9) | True | **depth 3** (branch completions genuinely diverge) | **Exposed** despite equality |
+| STS(13) cyclic | **False** | depth 2 (hand-proved: trivial pointwise block stabiliser) | Active |
+| GQ(2,2) doily | **False** | depth 6 | Active |
 
 All four designs are vertex-transitive. The avalanche regime for `w*_c` is
-**not the vertex-transitive regime as a whole**. The correct dividing line for
-sources 3–4 is Proposition 6.0's coherence criterion, calibrated empirically by
-the T-TAa string-equality measurements and the target for T-B3 to characterize
-analytically. Sources 1–2 can occur on any input, including coherent designs.
+**not the vertex-transitive regime as a whole**, and — corrected at T-TBb
+(2026-07-14, `pointer_run_amortization.tex` §T-B3 +
+`scripts/tb3_coherence_criterion.py`) — **not the string-equality regime
+either**: the earlier "coherence inferred from Prop 6.0 + verified equality"
+entries for Fano/STS(9) affirmed the consequent, and the exact orbit-pruned
+criterion audit refutes the STS(9) one (incoherent tie at depth 3 with
+divergent branch completions, yet per-seed greedy/complete equality holds on
+0/72 shuffled (presentation, seed) pairs — mechanism open, not stabiliser
+coherence). Prop 6.0 is strictly sufficient: criterion-coherence *proves*
+equality (Fano); criterion-incoherence marks avalanche *exposure* (an edit can
+switch the lex-min to a genuinely different completion) but does not decide
+equality. Additionally, *ordering-level* ties (label-respecting orderings of a
+V emission's new inputs) are a fifth avalanche channel with the same exposure
+criterion — invisible to greedy-vs-complete (both branch over orderings), and
+present even on Fano (depth 3). Sources 1–2 can occur on any input.
 
 **Consequence — the theorem's honest final form:**
 - **(B-worst)** Unconditionally, `d_I(H,H') ≤ (c·m·k)·HGED(H,H')` — a valid but
@@ -451,18 +472,41 @@ criterion). Consequences the applications section must own:
       "≤2k+1 tokens per edge" premise). Qin-costing remark: structural cost is
       one token per affected edge per unit Qin cost (ratio ≤ 1, uniform in
       arity); all `k`-dependence lives in the layout-locality run budget.
-- [ ] T-B3: **criterion STATED (T-TBa via Prop 6.0); analytical recovery of the design classification PENDING.** Prop 6.0 (from `theorem_a_completeness.tex` §6) gives a criterion: a tie at depth `d` is incoherent iff `Aut(H)_{dom(μ_d)}` fails to act transitively on `T(σ_d)`. §5 of `theorem_b_stability.tex` records this criterion and notes that Fano/STS(9) are observed coherent and STS(13)/GQ(2,2) incoherent (T-TAa empirical measurement), but the derivation that the Prop 6.0 criterion *implies* this classification — from stabiliser structure alone, without the T-TAa empirical string-equality measurement — is not given. The analytical recovery from the stabiliser-transitivity criterion remains open.
-- [ ] T-B4 (stretch): **SKETCH ONLY — not proved** (T-TB, 2026-07-09, §5 B-avg,
-      Thm 3 of `stability/theorem_b_stability.tex`). The average-case bound
-      (B-avg) over a random hypergraph model. A rigorous version must also show
-      layout-locality (iv)–(v) holds w.h.p. (an amortization claim about the
-      κ-lex-min encoder, not a consequence of tie scarcity) → T-TBb.
+- [x] T-B3: **RESOLVED WITH DOCUMENTED OBSTRUCTION (T-TBb, 2026-07-14,
+      `pointer_run_amortization.tex` §T-B3).** Depth-2 classification proved by
+      hand for all four designs (Fano: axis-elation group transitive; STS(9):
+      axis-shear group transitive; cyclic-13: trivial pointwise block
+      stabiliser ⇒ incoherent; GQ(2,2): order-8 pointwise line stabiliser
+      transitive). Exact orbit-pruned audit over the full search trees
+      (`scripts/tb3_coherence_criterion.py`, no truncation): Fano
+      criterion-coherent everywhere ⇒ its equality is *proved* from Prop 6.0;
+      cyclic-13/GQ(2,2) incoherent at depths 2/6 (consistent with divergence).
+      **Obstruction:** STS(9) is criterion-incoherent at depth 3 with genuinely
+      divergent branch completions, yet per-seed greedy/complete equality holds
+      robustly (0/72 shuffled pairs) — Prop 6.0 is strictly sufficient and the
+      classification is not criterion-decidable; incoherence = avalanche
+      *exposure*, not divergence.
+- [x] T-B4 (stretch): **DEMOTED TO EMPIRICAL (T-TBb, 2026-07-14).** The B-avg
+      sketch's premise 1 ("generically distinct ξ") is *false* at constant
+      density (positive Galton–Watson type-collision probability ⇒ Θ(n²)
+      depth-3 ξ-collisions); (v) fails on natural incidence-edit ensembles and
+      average (iv) fails generically (probe: `M/n` grows with `n`). Honest
+      replacement: `E[s(e)] ≤ (1+Δ) + E[R + T_span] + P[tie exposure]·O(mk)`,
+      every term instrumented in T-M5a. See `pointer_run_amortization.tex`
+      §B-avg.
 - [ ] T-B5: **PENDING T-M5a** — verify constants against measured `s(e)` histograms (Exp E2b).
       Predictions stated in §6 of `stability/theorem_b_stability.tex` and §4 of this file.
       T-M5a should additionally log `R(e)`/`T_span(e)` per edit to separate
       layout drift from avalanche effects. Empirical match is a documented
       pending clause; T-TB closed with this clause recorded.
-- [ ] T-TBb (filed 2026-07-09, post-audit): pointer-run amortization — prove or
-      refute generic layout-locality (iv)–(v); analytical T-B3 recovery; rigorous
-      B-avg; verify the encoder emits no `W` tokens (length-lemma proviso). See
-      `DEVELOPMENT/T-TB/OPEN/T-TBb.md`.
+- [x] T-TBb (filed 2026-07-09; **DONE 2026-07-14**): pointer-run amortization —
+      all four deliverables closed in
+      `/media/.../proofs/stability/pointer_run_amortization.tex`:
+      (1) generic (iv)–(v) **refuted** (orphaned-introducer family `R(e)=Θ(n)`;
+      crossing-averaging identity `E[T_span] ≤ M(H)/n` with `M/n` measured
+      growing in `n`; worst-case crossing peak left as a stated conjecture);
+      (2) analytical T-B3 resolved with the STS(9) obstruction documented;
+      (3) B-avg demoted to empirical with the ξ-collision obstruction proved
+      at constant density; (4) `W`-token proviso discharged and pinned
+      (`tests/unit/core/test_no_w_tokens.py`). T-M5a instrumentation spec
+      extended: log `M(H)`, `R(e)`, `T_span(e)`, and first-incoherent depth.

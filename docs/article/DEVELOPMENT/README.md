@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 0 | 2 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — stability | 0 | 3 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 

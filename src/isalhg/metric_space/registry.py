@@ -36,6 +36,7 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "bipartite_hged": "isalhg.metric_space.distances.hged",
     "qin_hged": "isalhg.metric_space.distances.qin_hged",
     "nauty_levi_edit": "isalhg.metric_space.representations.nauty_levi_edit",
+    "netlsd_l2": "isalhg.metric_space.representations.netlsd",
 }
 
 

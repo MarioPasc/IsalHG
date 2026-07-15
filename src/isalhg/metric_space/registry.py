@@ -38,6 +38,7 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "nauty_levi_edit": "isalhg.metric_space.representations.nauty_levi_edit",
     "netlsd_l2": "isalhg.metric_space.representations.netlsd",
     "hpd_jsd": "isalhg.metric_space.representations.hpd",
+    "hypercot": "isalhg.metric_space.representations.hypercot",
 }
 
 

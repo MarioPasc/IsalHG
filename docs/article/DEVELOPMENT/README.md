@@ -49,7 +49,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 0 | 4 |
-| [`T-M3`](T-M3/) | Competing representations | 3 | 1 |
+| [`T-M3`](T-M3/) | Competing representations | 0 | 4 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 0 | 2 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
@@ -116,7 +116,7 @@ T-M1a ✔ metric_space foundation (DONE)
    │      └─► T-M1c  metric-axiom suite + n=0 domain bug + ablation honesty
    ├─► T-M2  ✔ HGED oracle (DONE; T-M2a/T-M2b Qin unification DONE)
    │      └─► T-M2c ✔ connected-only domain (D-CONN1): generators + LCC (DONE 2026-07-09)
-   ├─► T-M3a..d competitors (nauty-edit / HPD / NetLSD / HyperCOT)
+   ├─► T-M3a..d ✔ competitors (nauty-edit / HPD / NetLSD / HyperCOT) (DONE 2026-07-15)
    └─► T-M4 ✔ planted-family datasets + scoring primitives (DONE 2026-07-09)
 
 T-M4' ✔ HIC atlas loader (DONE 2026-07-09) ─► real-anchor apps + gates T-DQ3'
@@ -170,8 +170,10 @@ article-critical path runs through the T-M5 prerequisites (T-M3a–d, T-M4).
 T-M2c closed 2026-07-09 (connected generators).
 
 **Runnable in parallel right now:** T-M5a (all hard deps closed 2026-07-09:
-T-M1b, T-M2, T-M2c, T-M4), T-M3a–d (competitors). Use isolated
-git worktrees for agents that touch overlapping `core/` files.
+T-M1b, T-M2, T-M2c, T-M4), T-TBb (theory). The competitors T-M3a–d all closed
+2026-07-15 (nauty-edit / HPD / NetLSD / HyperCOT); T-M5b–e can now run against
+the full competitor set. Use isolated git worktrees for agents that touch
+overlapping `core/` files.
 
 **The proof review is no longer gated (2026-07-09, T-M0a).** T-M0a suspected the
 invalid `gq_2_2_doily` fixture had contaminated `theorem_a_completeness.tex`

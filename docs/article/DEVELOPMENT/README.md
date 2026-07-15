@@ -49,7 +49,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — the ground-truth structural distance | 0 | 4 |
-| [`T-M3`](T-M3/) | Competing representations | 4 | 0 |
+| [`T-M3`](T-M3/) | Competing representations | 3 | 1 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 0 | 2 |
 | [`T-M5`](T-M5/) | The experiments | 5 | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |

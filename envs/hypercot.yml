@@ -1,0 +1,37 @@
+# Pinned conda environment for the HyperCOT competitor baseline.
+#
+# HyperCOT (Chowdhury et al., JACT 2024) requires hypernetx==1.2 and
+# POT==0.8.0, both incompatible with the main isalhg environment
+# (which carries hypernetx>=2).  This env is kept separate and
+# invoked only via subprocess from SubprocessRepresentation.
+#
+# Build
+# -----
+#   conda env create -f envs/hypercot.yml
+#   git clone https://github.com/samirchowdhury/HyperCOT /tmp/HyperCOT
+#   ~/.conda/envs/isalhg-hypercot/bin/pip install -e /tmp/HyperCOT
+#
+# Requires network access; the isalhg CI skips the end-to-end tests
+# (pytest.mark.slow) when the env is absent.
+#
+# Pin rationale
+# -------------
+# hypernetx==1.2 : the last version before the 2.x API break; HyperCOT
+#                  uses the v1 Hypergraph({edge: nodes}) constructor.
+# POT==0.8.0     : HyperCOT's co-optimal transport solver depends on
+#                  ot.emd / ot.sinkhorn from this release.
+
+name: isalhg-hypercot
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - hypernetx==1.2
+    - POT==0.8.0
+    - numpy
+    # HyperCOT itself must be installed manually after env creation
+    # (no PyPI release; install from the cloned repo):
+    #   pip install -e /tmp/HyperCOT

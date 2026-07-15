@@ -3,6 +3,13 @@
 **Status:** DRAFT (scoping session 2026-07-08). Companion to
 `docs/article/PROPOSAL.md`.
 
+> **Running the competitors?** This file is the *why these four* design
+> rationale. For *how to invoke* them (registry names, the uniform
+> `HypergraphDistance` interface, per-competitor setup incl. the pinned
+> HyperCOT env, corpus building, and a runnable end-to-end example) see
+> **`COMPETITORS_USAGE.md`**. All four (`nauty_levi_edit`, `hpd_jsd`,
+> `netlsd_l2`, `hypercot`) landed on `main` 2026-07-15 (ledger scope T-M3).
+
 The paper no longer compares *isomorphism-test wall-clock*. It compares the
 **geometry each representation induces on hypergraph space**. A competitor is
 now any map

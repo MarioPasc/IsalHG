@@ -202,8 +202,11 @@ class TestHICSmoke:
 
         from isalhg.datasets.hic_atlas import HICAtlasDataset
 
-        ds = HICAtlasDataset(root=_HIC_ROOT, hic_name="RHG-10")
-        items = list(ds)[:4]
+        try:
+            ds = HICAtlasDataset(root=_HIC_ROOT, hic_name="RHG-10")
+            items = list(ds)[:4]
+        except FileNotFoundError as exc:
+            pytest.skip(f"RHG-10 data file missing: {exc}")
         if not items:
             pytest.skip("RHG-10 dataset yielded no items")
 

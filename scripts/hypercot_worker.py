@@ -4,25 +4,56 @@ Upstream repository
 -------------------
 URL:         https://github.com/samirchowdhury/HyperCOT
 Licence:     MIT
-Commit hash: <populate after build: git -C /path/to/HyperCOT rev-parse HEAD>
-Pinned deps: hypernetx==1.2  POT==0.8.0
+Commit hash: f190266  (HEAD when isalhg-hypercot was built)
+Pinned deps: hypernetx==1.2  POT==0.8.0  numpy==1.23.5  scipy==1.9.3
+
+Version-constraint rationale
+----------------------------
+* **scipy==1.9.3** — POT 0.8.0 calls
+  ``scipy.optimize.linesearch.scalar_search_armijo``, which was removed in
+  scipy 1.10.  Any newer scipy version breaks the import.
+* **numpy==1.23.5** (< 1.24) — ``hypercot.get_omega`` uses integer array
+  indexing that raises ``IndexError`` under NumPy 1.24+ strict integer
+  enforcement.
 
 HyperCOT functions called
 -------------------------
-``hypercot.hypercot_distance(H1, H2)`` where ``H1``, ``H2`` are
-:class:`hypernetx.Hypergraph` objects (HyperNetX v1.2 API).
+All from ``hypercot.py`` (two flat files; no setup.py — both copied to
+site-packages):
 
-.. note::
-    Verify the exact function name against the upstream source when the
-    ``isalhg-hypercot`` env is first built (network access required).
-    If the function is named differently (e.g. ``hypercot.distance`` or a
-    class-based API), update only this file and re-run the end-to-end tests.
+Per hypergraph ``h``:
+
+* ``hypercot.get_hgraph_dual(h)`` → dual ``d``
+* ``hypercot.convert_to_line_graph(h.incidence_dict)`` → line-graph ``l``
+* ``hypercot.get_v(h.incidence_dict, d.incidence_dict)``
+  → weight vector ``v``, length = number of hyperedges
+* ``hypercot.get_omega(h, d, l, 'jaccard_index')``
+  → coupling matrix ``omega``, shape ``(n_nodes, n_edges)``
+  (``weight_type='jaccard_index'`` matches ``run_simulated.ipynb``)
+
+Per pair ``(h_i, h_j)``:
+
+* ``cot.cot_numpy(omega_i, omega_j, v1=v_i, v2=v_j, niter=100,
+                  log=True, verbose=False)``
+  → 4-tuple ``(Ts, Tv, cost_scalar, log_dict)``
+  ``out[2]`` is the scalar COOT cost (≡ ``out[3]['cost'][-1]``).
+  ``niter=100`` matches the paper notebook.
+
+Naming convention required by ``get_omega``
+--------------------------------------------
+Nodes **must** be strings ``"0"``.."``str(n-1)``"; edges **must** be integers
+``0``..``m-1``.  Build each HyperNetX 1.2 hypergraph as::
+
+    hnx.Hypergraph(
+        {edge_int: [str(v) for v in members]
+         for edge_int, members in enumerate(edge_members)}
+    )
 
 Authorship boundary
 -------------------
 The ONLY code authored by the IsalHG project is the serialise/deserialise
-glue (``load_corpus`` and ``write_matrix``).  HyperCOT itself is imported
-unmodified.
+glue (``load_corpus``, ``_precompute``, ``compute_matrix``, ``write_matrix``).
+``hypercot`` and ``cot`` run unmodified.
 
 Invocation
 ----------
@@ -31,7 +62,7 @@ Invocation
     ~/.conda/envs/isalhg-hypercot/bin/python \\
         scripts/hypercot_worker.py <input_json> <output_json>
 
-Input schema  (see :func:`isalhg.metric_space.representations.subprocess_base._serialise_corpus`)::
+Input schema (``isalhg.metric_space.representations.subprocess_base._serialise_corpus``)::
 
     {
         "corpus": [
@@ -50,7 +81,7 @@ Output schema::
 
     {"matrix": [[<float>, ...], ...]}
 
-The output matrix is (N x N), symmetric, zero-diagonal.
+The matrix is (N x N), symmetric, zero-diagonal.
 """
 
 from __future__ import annotations
@@ -60,17 +91,19 @@ import sys
 
 
 def load_corpus(path: str) -> list:
-    """Load and convert serialised corpus to HyperNetX 1.2 hypergraphs.
+    """Load corpus JSON and return HyperNetX 1.2 Hypergraph objects.
+
+    Applies the naming convention required by ``hypercot.get_omega``:
+    nodes become strings ``"0"``.."``str(n-1)``", edges become integers.
 
     Parameters
     ----------
     path : str
-        Path to the JSON input file.
+        Path to the input JSON file.
 
     Returns
     -------
     list of hypernetx.Hypergraph
-        One hypergraph per item in the corpus.
     """
     import hypernetx as hnx  # v1.2 — pinned in isalhg-hypercot
 
@@ -79,47 +112,84 @@ def load_corpus(path: str) -> list:
 
     corpus = []
     for item in data["corpus"]:
-        # HyperNetX 1.2 Hypergraph: dict mapping edge_id -> iterable of nodes.
-        edges = {i: members for i, members in enumerate(item["edge_members"])}
-        H = hnx.Hypergraph(edges)
-        corpus.append(H)
+        # Nodes as str, edges as int — required by get_omega's adjacency logic.
+        edges = {
+            edge_int: [str(v) for v in members]
+            for edge_int, members in enumerate(item["edge_members"])
+        }
+        corpus.append(hnx.Hypergraph(edges))
     return corpus
 
 
+def _precompute(h: object) -> tuple:
+    """Compute ``(omega, v)`` for a single HyperNetX 1.2 hypergraph.
+
+    Parameters
+    ----------
+    h : hypernetx.Hypergraph
+
+    Returns
+    -------
+    omega : numpy.ndarray, shape (n_nodes, n_edges)
+    v : numpy.ndarray, shape (n_edges,)
+    """
+    import hypercot as hc  # copied to site-packages from HyperCOT repo
+
+    d = hc.get_hgraph_dual(h)
+    line_graph = hc.convert_to_line_graph(h.incidence_dict)
+    v = hc.get_v(h.incidence_dict, d.incidence_dict)
+    omega = hc.get_omega(h, d, line_graph, "jaccard_index")
+    return omega, v
+
+
 def compute_matrix(corpus: list) -> list[list[float]]:
-    """Compute the pairwise HyperCOT distance matrix.
+    """Compute the pairwise COOT distance matrix over the corpus.
+
+    Pre-computes ``(omega, v)`` once per hypergraph, then fills the upper
+    triangle of the symmetric N×N matrix via ``cot.cot_numpy``.
 
     Parameters
     ----------
     corpus : list of hypernetx.Hypergraph
-        The hypergraphs to compare.
 
     Returns
     -------
     list of list of float
-        Dense symmetric (N x N) distance matrix.
+        Dense symmetric (N x N) distance matrix; diagonal entries are 0.
     """
-    import hypercot  # installed from samirchowdhury/HyperCOT
+    import cot as cot_mod  # copied to site-packages from HyperCOT repo
 
     n = len(corpus)
+    precomputed = [_precompute(h) for h in corpus]
+
     matrix: list[list[float]] = [[0.0] * n for _ in range(n)]
     for i in range(n):
+        omega_i, v_i = precomputed[i]
         for j in range(i + 1, n):
-            d = float(hypercot.hypercot_distance(corpus[i], corpus[j]))
+            omega_j, v_j = precomputed[j]
+            # out = (Ts, Tv, cost_scalar, log_dict); out[2] is the COOT cost.
+            out = cot_mod.cot_numpy(
+                omega_i,
+                omega_j,
+                v1=v_i,
+                v2=v_j,
+                niter=100,
+                log=True,
+                verbose=False,
+            )
+            d = float(out[2])
             matrix[i][j] = d
             matrix[j][i] = d
     return matrix
 
 
 def write_matrix(matrix: list[list[float]], path: str) -> None:
-    """Write the distance matrix to a JSON output file.
+    """Write the distance matrix as JSON.
 
     Parameters
     ----------
     matrix : list of list of float
-        Dense (N x N) distance matrix.
     path : str
-        Destination file path.
     """
     with open(path, "w") as f:
         json.dump({"matrix": matrix}, f)

@@ -24,9 +24,9 @@ next, and each maps to an empirical validation in `../empirical/`.
                                         (falsifiable; tested in ../empirical/correlation.md)
 ```
 
-- **Theorem A** — ported from IsalGraph Theorem 1, but for IsalHG it is still
-  the **open completeness conjecture** (`CLAUDE.md` §Mathematical Foundation).
-  The metric property is *contingent* on it. See `stability.md` §1.
+- **Theorem A** — **proved for `w*_c`** (T-TA, PI-reviewed 2026-07-09; false for
+  the greedy variants). The metric property (Corollary A) is established, not
+  contingent. See `stability.md` §1.
 - **Corollary A** — direct port of IsalGraph Corollary 1 (metric on iso-classes)
   once Theorem A holds. See `stability.md` §1.
 - **Theorem B** — the contribution IsalGraph did **not** make. IsalGraph stated
@@ -39,6 +39,10 @@ next, and each maps to an empirical validation in `../empirical/`.
 - `stability.md` — the core: completeness/metric foundation (§1), the stability
   theorem and its proof strategy (§2), the avalanche/seed-flip obstruction (§3),
   and the theory↔empirics bridge via C(k,Δ) (§4). This is the document to iterate.
+- `stability_reformulations.md` — post-T-TBb analysis (2026-07-17): what Theorem B
+  is worth if the bound never improves, the proxy-question resolution, and the
+  reformulation space (displacement-token transcoding → T-TBc, entropy-coded
+  bits → T-M4a, block-move distance, structure-first tour). Non-normative.
 
 ## Mapping to PROPOSAL points
 

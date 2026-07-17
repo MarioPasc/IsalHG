@@ -62,3 +62,20 @@
   inequality bounds `d_I` along any path, so an all-connected path of the same Qin
   cost suffices (insert-before-delete, vertex insertions paired with an incidence).
   Executed at T-M2c; the lemma is `stability.md` §6 item T-B0.
+- **D-ART1** — **[proposed 2026-07-17, pending PI]** The article's headline claim.
+  **Recommendation: lead with the metric geometry, not the stability bound.**
+  Thesis becomes "`(w*_c, d_Lev)` is a complete, computable metric whose induced
+  geometry (intrinsic dimension, Euclidean distortion, structural faithfulness) we
+  characterize and validate"; Theorem B is repositioned from "★ core novelty" to
+  the *faithfulness engine* — a regime-characterized bound with two named,
+  measurable deviation mechanisms (drift, avalanche) and a per-edit error budget,
+  still the sibling delta (IsalGraph gave no bound), no longer the sole
+  load-bearing claim. *Rationale:* T-TBb proved the clean Lipschitz bound is
+  conditional on five hypotheses, two of which fail generically (run-locality (v)
+  by the orphaned introducer; average span-boundedness (iv) asymptotically), so
+  leading with it aims peer review at the paper's weakest point, while the
+  empirically-validated geometry (T-M5) is the real strength and matches the fixed
+  decisions (raw Levenshtein over instruction strings, `w*_c`). *Scope of the
+  decision:* framing only — the distance default stays **raw** `d_I`; displacement
+  transcoding promotion is a separate, evidence-gated decision (T-TBc). Full
+  argument in `theoretical/stability_reformulations.md` §7; executed at T-TBd.

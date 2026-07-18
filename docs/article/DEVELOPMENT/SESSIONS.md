@@ -28,34 +28,37 @@ optional small task to fill a freed slot; never blocks the session.
 
 | ✓ | Session | Goal | Task structure | Gates |
 |---|---|---|---|---|
-| ☐ | **S1** — Baseline & foundations | Clean committed baseline; connected domain; corpora + primitives exist | `[O]` commit v3 rescope + branch decision + PI email → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler) | dirty tree is expected at start — committing it IS the first action |
+| ☐ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
 | ☐ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
 | ☐ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☐ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
-| ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; PI decisions executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` PI checkpoint (T-TBc unblock/retire; T-M0c execute) | PI answer on D-ART2; HPC batch finished |
+| ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
 | ☐ | **S6** — Optional & stretch | Only if wanted after everything article-critical is closed | { T-M4a ∥ T-TBe } (either or none) → T-M6 | S1–S5 done; explicit human opt-in |
 
 ---
 
 ## S1 — Baseline & foundations
 
+*Re-scoped 2026-07-18 18:23 CEST: D-ART2 is **PI-ratified** and the v3 rescope
+is committed and pushed (`5e6b73e`), so the former commit and PI-approval
+steps are gone. S1 starts on a clean tree; the only decision to surface is the
+branch question.*
+
 **Sequence.**
-1. `[O]` **Commit the v3 rescope** sitting uncommitted on
-   `perf/canonical-complete-orbit-pruning` (docs + skills; conventional
-   `docs(article):` message). The standard preflight requires a clean tree —
-   this commit is how you get one.
-2. `[O]` **Branch decision (surface to the human, do not decide):** continue
-   sessions on `perf/canonical-complete-orbit-pruning` or merge it to `main`
-   first. The branch carries in-flight orbit-pruning C++ perf work; the human
-   knows its state, you do not.
-3. `[O]` **PI email reminder (human sends):** the D-ART2 ratification package
-   (`DECISIONS.md`, points a–e) plus the T-M0c naming decision (option (a)
-   rename vs (b) promote to true STS(13)). Sessions S1–S4 do not depend on the
-   answer; S5 does.
-4. `[O]` **T-TBf** — reconcile the unmerged T-TBb closure (cherry-pick
-   `e6b0af7`, `a362657` if separate, the `T-TAi` file if it exists). Marked
-   orchestrator-only; do it with no workers running.
-5. **Fan out (3 workers):** T-M1c ∥ T-M2c ∥ T-M4.
+1. `[O]` **Branch decision (surface to the human, do not decide):** sessions
+   currently sit on `perf/canonical-complete-orbit-pruning`, which carries
+   in-flight orbit-pruning C++ perf work. Merge to `main` first, or continue
+   here? Record the answer in the notes and run the preflight baselines on
+   whichever tree the human picks.
+2. `[O]` **T-TBf** — reconcile the unmerged T-TBb closure (cherry-pick
+   `e6b0af7`, `a362657` if separate, the `T-TAi` file if it exists). Verified
+   still pending on this branch at the re-scope: `T-TBb.md` sits in
+   `T-TB/OPEN/`, and `scripts/probe_pointer_runs.py`,
+   `scripts/tb3_coherence_criterion.py`,
+   `tests/unit/core/test_no_w_tokens.py` are absent. Orchestrator-only; do it
+   with no workers running, and re-run the suite after the cherry-pick before
+   fanning out.
+3. **Fan out (3 workers):** T-M1c ∥ T-M2c ∥ T-M4.
    - **T-M1c** — metric-axiom property suite; fixes the `n=0` identity bug.
      Lane: `core/canonical.py`, `metric_space/distances/isalhg_levenshtein.py`,
      `tests/property/`, `iso_backends/isalhg_backend.py` (guard only).
@@ -69,15 +72,27 @@ optional small task to fill a freed slot; never blocks the session.
      (new).
    - **(filler) T-M0b** — 2-line Python-path perf fix in
      `core/structural_tuples.py`; slot it if a worker returns early.
+4. **Stretch refill (judgment call):** with the commit/PI steps gone this
+   session is lighter. If a worker merges green with session time left, pull
+   **S2 wave-1** tasks (T-M3a, T-M3b, T-M3c) into freed slots — they depend
+   only on T-M1a (CLOSED) and conflict with no S1 lane; among themselves their
+   collision file is `metric_space/registry.py` (trivial, merge is yours).
+   Record any pull-forward in the notes so S2's orchestrator knows what
+   remains.
+5. **Human reminder (one line, non-blocking):** the only outstanding PI input
+   is **T-M0c** (rename the cyclic-13 fixtures vs promote them to true
+   STS(13)s — option (b) regenerates pinned `w*` values). Ask when convenient;
+   S5 executes the answer.
 6. **Lane watch-points:** T-M2c and T-M4 both live under `datasets/` — T-M2c
    edits existing generators, T-M4 adds a new module + registry entry; keep
    `datasets/registry.py` out of T-M2c's lane. T-M1c and T-M2c both touch
    `core/` but different files (`canonical.py` vs `sparse_hypergraph.py`).
 
-**Exit criteria.** Full suite + ruff + mypy at (or better than) preflight
-baselines on the merged tree; ladder/corpus generators emit only connected
-hypergraphs; a planted-family corpus with verified non-isomorphic within-family
-members exists; the metric-axiom suite is green over `w*_c`.
+**Exit criteria.** T-TBf artifacts present and `T-TBb.md` reads CLOSED; full
+suite + ruff + mypy at (or better than) preflight baselines on the merged
+tree; ladder/corpus generators emit only connected hypergraphs; a
+planted-family corpus with verified non-isomorphic within-family members
+exists; the metric-axiom suite is green over `w*_c`.
 
 **Orchestrator notes (append-only).**
 
@@ -172,15 +187,15 @@ matrix filled (A4).
 
 **Sequence.**
 1. `[O]` **T-M5a part 2** — harvest the Picasso E1' results; produce the
-   ours-only ρ + scatter figure and the bits/Wilcoxon table; close T-M5a.
-   **PI-gated:** if D-ART2 came back modified (e.g. MI reinstated, sweep
-   requested), rescope before running — do not produce v2 artifacts silently.
-2. `[O]` **PI checkpoint** — execute the answers now on file:
-   - T-TBc: unblock (run as ablation on the sanctioned axes) or retire to
-     follow-up; move the file accordingly.
-   - T-M0c: execute option (a) rename or (b) promote (note (b) regenerates
-     pinned `w*` values — orchestrator-only if chosen).
-   - Any other D-ART2 deltas → update `PROPOSAL.md`/ledger, file handoffs.
+   ours-only ρ + scatter figure and the bits/Wilcoxon table; close T-M5a. The
+   spec is final (D-ART2 ratified as packaged): no MI, no sweep, no competitor
+   rows.
+2. `[O]` **Closure sweep** —
+   - T-M0c: execute the PI's answer, option (a) rename or (b) promote (note
+     (b) regenerates pinned `w*` values — orchestrator-only if chosen). If no
+     answer is on file yet, surface it; do not default.
+   - T-TBc stays parked (D-ART2 point (d), ratified) — no action unless the
+     PI reopens it.
 3. Final ledger sweep: statuses, scope counts, dependency graph in
    `README.md` reflect reality; every closed task carries its closing check.
 

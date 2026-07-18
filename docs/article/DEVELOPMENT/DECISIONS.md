@@ -101,9 +101,10 @@
   confirmation of the demotion of Theorem B from headline to capstone.
   **Superseded by D-ART2 (2026-07-18), which goes further** — the pending-PI
   item folds into D-ART2's ratification.
-- **D-ART2** — **[author-adopted 2026-07-18 17:56 CEST (Mario), executed in
-  docs; PI ratification pending]** The v3 rescope: **retire HGED-faithfulness
-  as a pillar; the article is characterize → exploit.**
+- **D-ART2** — **[author-adopted 2026-07-18 17:56 CEST (Mario); PI-RATIFIED
+  2026-07-18 18:23 CEST — points (a)–(e) approved as packaged, recorded from
+  Mario's confirmation; docs pushed at `5e6b73e`]** The v3 rescope: **retire
+  HGED-faithfulness as a pillar; the article is characterize → exploit.**
   *Diagnosis:* D-ART1 demoted Theorem B from headline to "capstone" but kept
   the whole HGED-validation layer (correlation study E1 with competitor rows +
   MI, density sweep E2 testing the `C(k,Δ)` Δ-prediction, HGED head-to-head as
@@ -153,7 +154,10 @@
   `DATA.md`, `RELATED_WORK.md`, `CODE_DESIGN.md`, `H2S_S2H.md` (intro),
   repo `CLAUDE.md` (thesis + context map); ledger updates per
   `DEVELOPMENT/README.md`.
-  **Pending PI (ratification points, explicit):** (a) retiring the HGED
+  **Ratification points (all approved 2026-07-18):** (a) retiring the HGED
   head-to-head + density sweep; (b) dropping MI (PI-requested statistic);
   (c) the one-figure-only HGED footprint; (d) parking T-TBc (PI's own
-  displacement idea — kept filed, not deleted); (e) NetLSD promotion.
+  displacement idea — kept filed, not deleted; now parked for follow-up work
+  unless the PI reopens it); (e) NetLSD promotion. **The only PI input still
+  outstanding is T-M0c** (rename the cyclic-13 fixtures vs promote them to
+  true STS(13)s) — a separate decision, never part of this package.

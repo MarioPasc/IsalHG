@@ -250,7 +250,7 @@ record and for follow-up work.
 - OQ-E [resolved, v3]. Applications = the four of §3; six-application sprawl
   cut. Medoid folds into A2; interpolation beyond A4's decoded intermediates
   is future work.
-- OQ-F [resolved, v3]. Mutual information `I(HGED; d)` is dropped along with
-  the HGED head-to-head axis (it existed to compare competitors on that axis).
-  The §5 figure reports ρ only. Flagged for PI ratification in
-  `DEVELOPMENT/DECISIONS.md`.
+- OQ-F [resolved, v3; PI-ratified 2026-07-18]. Mutual information `I(HGED; d)`
+  is dropped along with the HGED head-to-head axis (it existed to compare
+  competitors on that axis). The §5 figure reports ρ only. Decision record:
+  `DEVELOPMENT/DECISIONS.md` (D-ART2).

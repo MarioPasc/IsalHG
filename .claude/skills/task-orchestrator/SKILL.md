@@ -54,10 +54,11 @@ it isn't.
 4. Read `docs/article/DEVELOPMENT/README.md` — the hub gives the dependency graph
    and the **critical path**. Read `DECISIONS.md`: a pending decision is yours to
    surface to the human, never to resolve on an agent's behalf. **Scope era:**
-   since D-ART2 (2026-07-18, v3 rescope — characterize → exploit; PI
-   ratification pending) the authoritative scope is `docs/article/PROPOSAL.md`
-   v3 + D-ART2; when an older task's prose disagrees, D-ART2 wins — surface the
-   conflict, do not let a worker implement v2 wording.
+   since D-ART2 (2026-07-18, v3 rescope — characterize → exploit;
+   **PI-ratified** same day) the authoritative scope is
+   `docs/article/PROPOSAL.md` v3 + D-ART2; when an older task's prose
+   disagrees, D-ART2 wins — surface the conflict, do not let a worker
+   implement v2 wording.
 5. Read `docs/article/DEVELOPMENT/SESSIONS.md` — the human-approved session
    plan. If the current session row names your tasks, its ∥ (parallel) / →
    (sequential) structure overrides your own slot-filling; deviate only with a
@@ -84,10 +85,10 @@ it isn't.
    silently, and do not quietly reroute to off-path work as though the queue were
    healthy.
 
-   As of 2026-07-18 the case in point is `T-TBc`, filed in `T-TB/BLOCKED/`
-   pending the PI's D-ART2 ratification (`DECISIONS.md`, point d). It is off
-   the critical path, so it must never stall a session; if a schedule seems to
-   want it, say so and move on.
+   As of 2026-07-18 the case in point is `T-TBc`, filed in `T-TB/BLOCKED/` —
+   parked for follow-up work under PI-ratified D-ART2 point (d)
+   (`DECISIONS.md`). It is off the critical path and nothing unblocks it short
+   of the PI reopening it; if a schedule seems to want it, say so and move on.
 3. Read each candidate's `**Delegation:**` field.
    - `orchestrator-only` → never spawn an agent. You do it yourself, alone.
    - `agent` → delegable.

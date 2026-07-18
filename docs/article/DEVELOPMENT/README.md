@@ -163,8 +163,8 @@ git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"
-pillar. **D-ART2 (2026-07-18, author-adopted, PI ratification pending —
-`DECISIONS.md`) retired that pillar**: the article is *characterize → exploit*
+pillar. **D-ART2 (2026-07-18, PI-RATIFIED same day — `DECISIONS.md`) retired
+that pillar**: the article is *characterize → exploit*
 (foundation → compactness → geometry → usefulness → discussion), HGED appears
 only in the closing discussion (envelope + impossibility + one ours-only
 figure), E2b/E3 were recast as HGED-free geometry profiles (T-M5g), NetLSD was

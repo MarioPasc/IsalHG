@@ -111,7 +111,7 @@ longer runs); the implementation remains in the tree.
   both axes; Pearson r optional in caption) and the scatter/joint-density
   plot. **Ours only** — no competitor head-to-head (that axis is retired with
   the proxy framing), no density sweep, no MI (dropped with the head-to-head;
-  PROPOSAL OQ-F, flagged for PI).
+  PROPOSAL OQ-F, PI-ratified).
 - Placement and interpretation: inside the closing discussion (PROPOSAL §5),
   *after* the envelope and impossibility statements — offered as
   characterization ("this is the measured footprint of the relation on a small

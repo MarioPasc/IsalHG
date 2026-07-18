@@ -23,9 +23,9 @@ document: §1 (the proxy-question resolution) and §6 (the completeness–stabil
 frontier) are now **directly load-bearing** — they source the discussion's
 impossibility prose (PROPOSAL §5); §7's framing is historical context; and
 T-TBc's measurement vehicle (the v2-scale correlation study) no longer exists,
-so the transcoding ablation is parked pending PI review
-(`DEVELOPMENT/DECISIONS.md`). T-M4a stays optional — the article's bits
-subsection uses the fixed-width estimator.
+so the transcoding ablation is parked for follow-up work (D-ART2 point (d),
+PI-ratified 2026-07-18; `DEVELOPMENT/DECISIONS.md`). T-M4a stays optional —
+the article's bits subsection uses the fixed-width estimator.
 
 ---
 

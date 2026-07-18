@@ -271,3 +271,143 @@ class TestBudget:
         enc = CanonicalEncoder(k=3, max_expansions=5)
         with pytest.raises(CanonicalizationTimeoutError, match="budget"):
             enc.encode(H)
+
+
+# ---------------------------------------------------------------------------
+# (a) Degenerate-domain guard (T-M1c)
+# ---------------------------------------------------------------------------
+
+
+class TestDegenerateDomain:
+    """The empty hypergraph (n=0) must be excluded from the d_I domain.
+
+    ``w*(∅) = ""`` and ``w*(•) = ""``, so without a guard ``d_I(∅, •) = 0``
+    on a non-isomorphic pair -- identity of indiscernibles fails.  The fix:
+    raise ``DegenerateHypergraphError`` for ``n = 0`` inputs and return False
+    for ``are_isomorphic(∅, •)``.
+    """
+
+    @staticmethod
+    def _empty() -> SparseHypergraph:
+        return SparseHypergraph(n_nodes=0, hyperedges=[])
+
+    @staticmethod
+    def _single_vertex() -> SparseHypergraph:
+        return SparseHypergraph(n_nodes=1, hyperedges=[])
+
+    def test_pairwise_raises_on_empty_left(self) -> None:
+        from isalhg.errors import DegenerateHypergraphError
+
+        with pytest.raises(DegenerateHypergraphError):
+            IsalHGLevenshtein().pairwise(self._empty(), self._single_vertex())
+
+    def test_pairwise_raises_on_empty_right(self) -> None:
+        from isalhg.errors import DegenerateHypergraphError
+
+        with pytest.raises(DegenerateHypergraphError):
+            IsalHGLevenshtein().pairwise(self._single_vertex(), self._empty())
+
+    def test_are_isomorphic_empty_vs_single_is_false(self) -> None:
+        from isalhg.iso_backends.isalhg_backend import IsalHGBackend
+
+        assert not IsalHGBackend().are_isomorphic(self._empty(), self._single_vertex())
+
+    def test_are_isomorphic_empty_vs_empty_is_true(self) -> None:
+        from isalhg.iso_backends.isalhg_backend import IsalHGBackend
+
+        assert IsalHGBackend().are_isomorphic(self._empty(), self._empty())
+
+    def test_canonical_string_raises_on_empty(self) -> None:
+        from isalhg.errors import DegenerateHypergraphError
+
+        with pytest.raises(DegenerateHypergraphError):
+            canonical_string(self._empty())
+
+
+# ---------------------------------------------------------------------------
+# (c) Pinned witness: normalize=True violates triangle inequality (T-M1c)
+# ---------------------------------------------------------------------------
+
+
+class TestNormalizedNonMetric:
+    """Pinned witness: rapidfuzz normalized_distance is NOT a metric.
+
+    Marzal & Vidal (IEEE TPAMI 15(9), 1993) prove that the naive
+    length-normalized edit distance NED(s,t) = edit(s,t) / max(|s|,|t|)
+    violates the triangle inequality.
+
+    Witness token sequences (private-use characters as stand-ins for tokens):
+        s1 = (A, B)       — length 2
+        s2 = (A, B, C)    — length 3  (s1 with one token appended)
+        s3 = (B, C)       — length 2  (last two tokens of s2)
+
+    Distances (edit = Levenshtein on character strings):
+        NED(s1, s2) = 1 / max(2,3) = 1/3
+        NED(s2, s3) = 1 / max(3,2) = 1/3
+        NED(s1, s3) = 2 / max(2,2) = 1
+
+    Triangle inequality violated: NED(s1, s3) = 1 > 1/3 + 1/3 = 2/3.
+
+    Since IsalHGLevenshtein(normalize=True) routes through rapidfuzz's
+    ``Levenshtein.normalized_distance`` on the same encoded token sequences,
+    the same violation applies to any three hypergraphs whose canonical string
+    encodings reproduce this length pattern.
+    """
+
+    # Private-use code points (>= U+0100), identical to those _encode() uses.
+    _S1 = "Āā"
+    _S2 = "ĀāĂ"
+    _S3 = "āĂ"
+
+    def test_triangle_violation_at_token_level(self) -> None:
+        """rapidfuzz.normalized_distance directly violates triangle inequality."""
+        from rapidfuzz.distance import Levenshtein
+
+        d12 = Levenshtein.normalized_distance(self._S1, self._S2)
+        d23 = Levenshtein.normalized_distance(self._S2, self._S3)
+        d13 = Levenshtein.normalized_distance(self._S1, self._S3)
+
+        assert abs(d12 - 1 / 3) < 1e-9, f"d12={d12}"
+        assert abs(d23 - 1 / 3) < 1e-9, f"d23={d23}"
+        assert abs(d13 - 1.0) < 1e-9, f"d13={d13}"
+        # Triangle inequality violated: d(s1, s3) > d(s1, s2) + d(s2, s3)
+        assert d13 > d12 + d23
+
+    def test_normalize_true_uses_same_kernel(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """IsalHGLevenshtein(normalize=True) routes through the same non-metric kernel.
+
+        Monkeypatches _symbols to inject the witness sequences, then checks
+        that pairwise() reproduces the triangle-inequality violation.
+        """
+        import isalhg.metric_space.distances.isalhg_levenshtein as mod
+
+        # Dummy hypergraphs — structure doesn't matter once _symbols is patched.
+        H1 = SparseHypergraph(n_nodes=2, hyperedges=[frozenset({0, 1})])
+        H2 = SparseHypergraph(n_nodes=3, hyperedges=[frozenset({0, 1}), frozenset({1, 2})])
+        H3 = SparseHypergraph(n_nodes=2, hyperedges=[frozenset({0, 1})])
+
+        # Map each hypergraph id to its injected token sequence.
+        _sequences: dict[int, tuple[str, ...]] = {
+            id(H1): tuple(self._S1),
+            id(H2): tuple(self._S2),
+            id(H3): tuple(self._S3),
+        }
+
+        def _patched_symbols(
+            self_inner: object,
+            H: SparseHypergraph,
+            k: int,
+            *,
+            augment: bool,
+        ) -> tuple[str, ...]:
+            return _sequences[id(H)]
+
+        monkeypatch.setattr(mod.IsalHGLevenshtein, "_symbols", _patched_symbols)
+        d = mod.IsalHGLevenshtein(normalize=True)
+
+        d12 = d.pairwise(H1, H2)
+        d23 = d.pairwise(H2, H3)
+        d13 = d.pairwise(H1, H3)
+
+        # Same violation as at the token level.
+        assert d13 > d12 + d23

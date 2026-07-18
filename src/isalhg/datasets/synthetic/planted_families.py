@@ -199,6 +199,16 @@ class PlantedFamilyDataset(HypergraphDataset):
                     current: SparseHypergraph = seed_motif
                     for _ in range(self._n_edits):
                         current, _ = random_edit(current, rng)
+                    # Empty hypergraph (n=0) is vacuously connected but outside the
+                    # d_I domain (DegenerateHypergraphError from fingerprint); skip.
+                    if current.n_nodes == 0:
+                        logger.debug(
+                            "family %d member %d attempt %d empty (n=0); retrying",
+                            fam_idx,
+                            needed,
+                            attempt,
+                        )
+                        continue
                     if not current.is_connected():
                         logger.debug(
                             "family %d member %d attempt %d disconnected; retrying",

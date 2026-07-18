@@ -77,7 +77,7 @@ from isalhg.core.structural_tuples import (
     _python_max_neighbor_degree_nodes,
     _python_max_xi_nodes,
 )
-from isalhg.errors import DisconnectedHypergraphError, InvalidLabelError
+from isalhg.errors import DegenerateHypergraphError, DisconnectedHypergraphError, InvalidLabelError
 from isalhg.types import VertexLabel
 
 # The registered name of the canonical algorithm — the only variant whose
@@ -249,13 +249,22 @@ def canonical_string(
 
     Raises
     ------
+    DegenerateHypergraphError
+        If ``H`` is the empty hypergraph (``n = 0``). The empty canonical
+        string is identical to the one emitted by the single-vertex hypergraph,
+        which breaks identity of indiscernibles for ``d_I``.  Restrict
+        inputs to ``n ≥ 1``.
     DisconnectedHypergraphError
         If ``H`` is disconnected (decision B11).
     ValueError
         If ``backend`` is unknown.
     """
     if H.n_nodes == 0:
-        return ""
+        raise DegenerateHypergraphError(
+            "canonical_string requires n ≥ 1; the empty hypergraph (n=0) produces "
+            "the empty string --- identical to the single-vertex case --- which "
+            "breaks identity of indiscernibles for d_I. Restrict your corpus to n ≥ 1."
+        )
     effective_k = required_k(H) if k is None else k
     if algorithm in _CPP_VARIANT_IDS:
         impl = resolve(backend, _CANONICAL_STRING_BACKENDS)

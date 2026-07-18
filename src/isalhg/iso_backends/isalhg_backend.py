@@ -35,6 +35,7 @@ import os
 
 from isalhg.core.canonical import canonical_string, required_k, seed_vertex_label
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.errors import DegenerateHypergraphError
 from isalhg.iso_backends.base import IsoBackend
 from isalhg.iso_backends.registry import register_backend
 from isalhg.types import BackendName, Fingerprint
@@ -174,10 +175,19 @@ class IsalHGBackend(IsoBackend):
         return f"{seed_vertex_label(H, w)}{_SEED_LABEL_SEP}{w}".encode()
 
     def fingerprint(self, H: SparseHypergraph) -> Fingerprint:
+        if H.n_nodes == 0:
+            raise DegenerateHypergraphError(
+                "fingerprint requires n ≥ 1; the empty hypergraph is outside the d_I domain."
+            )
         k_eff = required_k(H) if self._k is None else self._k
         return self._fingerprint_bytes(H, k_eff)
 
     def are_isomorphic(self, H1: SparseHypergraph, H2: SparseHypergraph) -> bool:
+        # Empty hypergraph (n=0) guard: ∅ ≅ ∅; ∅ ≇ any non-empty hypergraph.
+        # canonical_string raises on n=0 (DegenerateHypergraphError), so this
+        # check must come before _fingerprint_bytes.
+        if H1.n_nodes == 0 or H2.n_nodes == 0:
+            return H1.n_nodes == H2.n_nodes
         if H1.n_vertex_labels != H2.n_vertex_labels:
             return False
         if H1.n_edge_labels != H2.n_edge_labels:

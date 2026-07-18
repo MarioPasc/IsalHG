@@ -1,6 +1,6 @@
 # T-M1c — Metric-axiom property suite for `d_I`, degenerate-domain guard, ablation honesty
 **Declared:** 2026-07-09 12:46 CEST (handoff from the "is it a metric space?" audit)
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** T-TAd (so `d_I` computes `w*_c`); authorable earlier by passing
 `algorithm="greedy_min_complete"` explicitly
 **Why out of scope:** T-M1b's acceptance was "`d_I = 0` on isomorphic pairs, `> 0`
@@ -68,3 +68,41 @@ uniformly discrete (`d ≥ 1` between distinct classes), hence every Cauchy sequ
 is eventually constant. Do not state it as a result; it would be read as padding.
 The only word "complete" earns is Theorem A's — `w*_c` is a **complete invariant**.
 All geometric content is in Theorem B.
+
+---
+
+## Closing check — 2026-07-18
+
+**Branch:** `perf/canonical-complete-orbit-pruning`
+**Worktree:** `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-a39b2a9aec8a4f0f3`
+**Env:** `isalhg-T-M1c`
+
+### Changes
+
+- `src/isalhg/errors.py` — `DegenerateHypergraphError` added after `DisconnectedHypergraphError`
+- `src/isalhg/core/canonical.py` — raises `DegenerateHypergraphError` on `n_nodes == 0` (replaces silent `return ""`)
+- `src/isalhg/iso_backends/isalhg_backend.py` — n=0 guards in `fingerprint()` and `are_isomorphic()`
+- `src/isalhg/metric_space/distances/isalhg_levenshtein.py` — docstring updated: index family `{d_I^{k,h,Σ}}`, `normalize=True` is a dissimilarity (Marzal & Vidal 1993), cost-matrix precondition
+- `src/isalhg/datasets/synthetic/planted_families.py` — n=0 guard in `_build()` before fingerprint call
+- `tests/property/test_di_metric_axioms.py` — NEW: full metric-axiom property suite (non-negativity, symmetry, triangle inequality, identity of indiscernibles; labelled + unlabelled; teeth check proving test fails without `("seed", ℓ)` prefix; `k`-pinning convention test)
+- `tests/unit/metric_space/test_isalhg_levenshtein.py` — `TestDegenerateDomain` + `TestNormalizedNonMetric` (pinned triangle-violation witness `("Āā","ĀāĂ","āĂ")` with NLD 1/3,1/3,1.0)
+- `tests/unit/iso_backends/test_isalhg_labelled_fingerprint.py` — `test_empty_hypergraph_fingerprint_raises` replaces old `test_empty_hypergraph_fingerprint_is_empty`
+- `docs/article/theoretical/stability.md` — Index family remark added to §1 (domain restriction n≥1, normalized ablation note, Marzal & Vidal 1993 citation)
+
+### Acceptance checks
+
+- `are_isomorphic(∅, •)` is `False` (n=0 guard in `are_isomorphic`) ✓
+- `d_I(∅, •)` raises `DegenerateHypergraphError` (propagated via `fingerprint`) ✓
+- Hypothesis axiom suite passes over `w*_c`, labelled and unlabelled ✓
+- Teeth check confirms suite FAILS when seed-label prefix is monkeypatched away ✓
+- Pinned triple witnesses `normalize=True` triangle violation ✓
+- `normalize=True` docstring says "dissimilarity, not a metric" ✓
+- `{d_I^{k,h,Σ}}` index family documented in `IsalHGLevenshtein` docstring + `stability.md §1` ✓
+
+### Test results
+
+```
+893 passed, 18 skipped, 13 deselected   (+16 vs baseline of 877)
+ruff check src/ tests/ : 3 errors (pre-existing; no new violations)
+mypy src/isalhg/       : 21 errors in 7 files (pre-existing baseline matched)
+```

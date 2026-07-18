@@ -76,5 +76,15 @@ def test_trivial_vocabulary_fingerprint_is_the_bare_canonical_string() -> None:
     )
 
 
-def test_empty_hypergraph_fingerprint_is_empty() -> None:
-    assert IsalHGBackend().fingerprint(SparseHypergraph(n_nodes=0, hyperedges=[])) == b""
+def test_empty_hypergraph_fingerprint_raises() -> None:
+    """fingerprint(∅) must raise DegenerateHypergraphError, not return b''.
+
+    Before T-M1c the fingerprint of the empty hypergraph was b'' — identical
+    to the single-vertex hypergraph — so are_isomorphic(∅, •) returned True
+    and d_I(∅, •) = 0 on a non-isomorphic pair (identity of indiscernibles
+    violated).  The fix restricts the domain to n ≥ 1.
+    """
+    from isalhg.errors import DegenerateHypergraphError
+
+    with pytest.raises(DegenerateHypergraphError):
+        IsalHGBackend().fingerprint(SparseHypergraph(n_nodes=0, hyperedges=[]))

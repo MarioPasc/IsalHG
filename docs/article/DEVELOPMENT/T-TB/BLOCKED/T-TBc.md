@@ -1,7 +1,16 @@
 # T-TBc — Displacement-token transcoding of `w*_c`: discharge run-locality, drop the n-factor
 **Declared:** 2026-07-17 19:56 CEST
-**Status:** OPEN
-**Depends on:** T-TB (CLOSED), T-TBb (closed at commit `e6b0af7`, **unmerged** into `perf/canonical-complete-orbit-pruning` — reconcile first)
+**Status:** BLOCKED (D-ART2, 2026-07-18 17:56 CEST — pending PI)
+**Depends on:** T-TB (CLOSED), T-TBb (closed at commit `e6b0af7`, **unmerged** into `perf/canonical-complete-orbit-pruning` — reconcile first, T-TBf), D-ART2 ratification
+**Blocked note (2026-07-18):** D-ART2 retired the v2-scale correlation study
+that was this ablation's measurement vehicle (`ρ(HGED, d_I')` vs `ρ(HGED, d_I)`
+on the pinned T-M5a corpus). The remaining in-article vehicle is the small E1'
+mini-corpus — probably too small to resolve the question. Since the
+displacement idea is the PI's own (email 2026-07-17), the task is **parked,
+not deleted**: it unblocks if the PI either sanctions running the ablation on
+the mini-corpus + task-metric axes (does `d_I'` change `D̂`/ARI/accuracy?) or
+defers it to the follow-up paper. See D-ART2 ratification point (d) in
+`../../DECISIONS.md`.
 **Why out of scope:** Found during the 2026-07-17 stability-value discussion (PI email on arithmetic-coded displacements); the current session is chat/documentation, not proof or code work.
 **Context to read first:**
 - `docs/article/theoretical/stability_reformulations.md` §4 — the full analysis this task executes

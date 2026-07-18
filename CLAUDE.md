@@ -26,38 +26,55 @@ IsalHG has produced **two papers**:
    `docs/engineering/{CODE_DESIGN,DEVELOPMENT,ALGORITHMS}.md`. The C++ core is
    competitive but does not beat mature graph-iso engines on speed.
 2. **Metric-space journal article (ACTIVE, target *Information Sciences*).** The
-   pivot: the canonical string `w*(H)` embeds every hypergraph into the discrete
-   metric space `(Σ_HG*, d_Lev)`; because `w*` is isomorphism-invariant,
-   `d_I(H,H') = Levenshtein(w*(H), w*(H'))` is an iso-invariant hypergraph
-   distance. The paper proves a **stability theorem** relating `d_I` to hypergraph
-   edit distance and exploits it in classical applications (MDS, k-medoids,
-   dendrograms, kNN, shortest path). This scope supersedes the *paper* framing of
-   the preprint but **does not remove** the iso-detection code, which is its
-   foundation.
+   pivot: the canonical string `w*_c(H)` embeds every connected hypergraph into
+   the discrete metric space `(Σ_HG*, d_Lev)`; because `w*_c` is a complete
+   isomorphism invariant (Theorem A), `d_I(H,H') = Levenshtein(w*_c(H),
+   w*_c(H'))` is a metric on isomorphism classes. The paper **characterizes the
+   geometry** of that space and **exploits it** in classical applications (MDS,
+   k-medoids, dendrograms, kNN, shortest path) against competing
+   representations; the relation to hypergraph edit distance is a closing
+   *discussion* (envelope + impossibility + one figure), **not** a proxy claim.
+   This scope supersedes the *paper* framing of the preprint but **does not
+   remove** the iso-detection code, which is its foundation.
 
 Full seed proposal: `docs/isalhg_idea.pdf`. The active-article scope is the
 context map below.
 
 ## Active scope — metric-space article (2026-07)
 
-**Thesis.** IsalHG induces a structure-faithful metric on hypergraph space via
-edit distance on canonical strings; a stability bound `d_I ≤ C(k,Δ)·HGED`
-(provable, unlike the sibling's empirical-only claim) explains why the induced
-geometry drives standard unsupervised/supervised pipelines, and its `Δ`-dependence
-is a falsifiable prediction the density-sweep experiment tests.
+**Thesis (v3 rescope, 2026-07-18 — characterize → exploit).** *A hypergraph is
+a word.* The complete canonical string `w*_c` embeds connected hypergraphs into
+the metric space `(Σ_HG*, d_Lev)` — Theorem A (completeness) ⇒ `d_I` is a
+metric on isomorphism classes, the **foundation**. The article
+**characterizes the geometry** of that space (non-Euclidean mass `ν`, intrinsic
+dimension `D̂`, distortion, concentration + hubness, local sensitivity + ladder
+response) and **exploits it**: each application (MDS, k-medoids + dendrogram,
+kNN, shortest path) is licensed by a measured invariant (**no orphan
+geometry**) and scored on task metrics vs competitors. The relation to HGED is
+a closing **discussion** — length lemma + unconditional envelope as
+propositions, the impossibility of a bi-Lipschitz proxy (drift/avalanche
+mechanisms), one ours-only correlation figure — **not** a pillar; the v2
+"faithfulness capstone" (Theorem B as bound, density sweep, HGED head-to-head,
+MI) is retired. The siblings are under review, so the paper is self-contained.
+Narrative order: **foundation → compactness → geometry → usefulness →
+discussion**. The whole `docs/article/` base is written to read as the
+article, not as a task log.
 
 **Context map (the hub — read the file relevant to your task).**
 
 | Doc | Holds |
 |---|---|
-| `docs/article/PROPOSAL.md` | thesis, central experiment, applications, open questions |
-| `docs/article/DATA.md` | corpora: exact-HGED correlation corpus + planted-family applications corpus |
-| `docs/article/COMPETITORS.md` | the four competing representations + the fairness framing |
+| `docs/article/PROPOSAL.md` | premise + thesis + narrative spine (§0), the two pivots, geometry/applications/discussion scope, open questions |
+| `docs/article/DATA.md` | corpora: planted families (primary), HIC real anchor (gated), ladder corpora, exact-HGED mini-corpus |
+| `docs/article/COMPETITORS.md` | the five competitors + contrast, the v3 comparison axes (task metrics, geometry, capability matrix) |
 | `docs/article/CODE_DESIGN.md` | the `src/isalhg` refactor + `metric_space/` additions for this article |
 | `docs/article/RELATED_WORK.md` | verified bibliography (theory + competitors, with code URLs) |
-| `docs/article/theoretical/stability.md` | completeness → metric → **stability** theorem, proof strategy |
-| `docs/article/empirical/correlation.md` | controlled validation: HGED oracle, correlation/density/info-content |
-| `docs/article/empirical/applications.md` | MDS (flagship), clustering, kNN, shortest path |
+| `docs/article/H2S_S2H.md` | self-contained S2H/H2S algorithm spec (the methods section source) |
+| `docs/article/theoretical/geometry.md` | **the characterization** — the six measured invariants + the no-orphan-geometry rule |
+| `docs/article/theoretical/stability.md` | **foundation** (§1 Thm A + Cor A) + the HGED-relation analysis record (§2–4) behind the discussion |
+| `docs/article/theoretical/stability_reformulations.md` | proxy-question resolution (§1) + completeness–stability frontier (§6) — the discussion's impossibility prose |
+| `docs/article/empirical/applications.md` | **the body** — G1/G2 geometry profiles + A1–A4 applications, task metrics, competitor applicability |
+| `docs/article/empirical/correlation.md` | **discussion evidence** — HGED definition + oracle, the E1' figure, information content (bits) |
 | `docs/article/DEVELOPMENT/` | **the task ledger** — one file per task, under `<scope>/{OPEN,IN-PROGRESS,BLOCKED,CLOSED}/`; `README.md` is the hub (index, dependency graph, critical path) |
 
 **Workflow.** Pick up work with the `task-reader` skill on a task in
@@ -68,6 +85,18 @@ it with the `task-handoff` skill rather than scope-creeping.
 (`PROPOSAL/DATA/PREPRINT.md`) = the iso-benchmark preprint's methodology.
 `docs/engineering/` (`CODE_DESIGN/DEVELOPMENT/ALGORITHMS/CPP_*.md`) = the current
 code's spec — still authoritative for the code as built.
+
+**Reasoning vs. tasks (keep them disentangled).** Inside `docs/article/`, the
+reasoning docs (`PROPOSAL.md`, `theoretical/*`, `empirical/*`) *are the article*:
+the premise, the foundation, and the scientific reasoning behind every claim —
+written as prose, citing scientific objects (Theorem A/B, `w*_c`, the geometry).
+`docs/article/DEVELOPMENT/` is the *engineering ledger*: how to implement, test,
+execute, and optimise those claims — tasks, decisions (`D-*`), statuses,
+acceptance checks, provenance to commits/tests. **Process artifacts — task ids
+(`T-*`), decision codes (`D-*`), timestamps, "executed/adopted", "orchestrator"
+— live in `DEVELOPMENT/`, not in the reasoning prose.** A reasoning doc states
+*what is true and why*; the ledger tracks *the work that backs it* and points
+back to the reasoning section it serves.
 
 ## Scientific Mindset
 

@@ -47,7 +47,12 @@ From then on, invoke Python only as `~/.conda/envs/isalhg-$TASK/bin/python`.
 3. **Attack the task's premise.** The task was written by someone who could not
    see the code you are now reading. If a premise is false, stop, prove it with a
    measurement or a counterexample, and report it. A refuted premise is a
-   successful outcome, not a failure to deliver.
+   successful outcome, not a failure to deliver. One standing premise check: the
+   article scope is v3 (D-ART2 in `docs/article/DEVELOPMENT/DECISIONS.md` —
+   characterize → exploit; HGED only via the E1' figure and ladder budgets). If
+   your task's wording presumes the v2 scope (HGED correlation study, density
+   sweep, MI, Theorem-B "capstone"), treat that as a possibly-false premise and
+   check it against `PROPOSAL.md` v3 before implementing.
 4. **Give your tests teeth.** For any regression test you add, demonstrate that it
    *fails* against the pre-fix behaviour (restore it in-process, monkeypatch it, or
    pin the old value). A test never observed failing proves nothing.

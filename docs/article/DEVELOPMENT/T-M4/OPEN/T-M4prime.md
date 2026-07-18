@@ -3,7 +3,7 @@
 **Status:** OPEN
 **Depends on:** — (independent dataset loader)
 **Context to read first:**
-- `docs/article/DATA.md` §3 — the real-anchor role + scaling caveat
+- `docs/article/DATA.md` §2 — the real-anchor role + declared fallback
 - `src/isalhg/datasets/hic_atlas.py` — the current stub (all methods `NotImplementedError`)
 - `src/isalhg/datasets/synthetic/exhaustive_small.py` — the `HypergraphDataset` ABC + registry pattern
 - `.claude/rules/coding_rules.md` — always

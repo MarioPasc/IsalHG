@@ -14,6 +14,19 @@ move, `scripts/probe_pointer_runs.py`, `scripts/tb3_coherence_criterion.py`,
 `perf/canonical-complete-orbit-pruning`; on this branch `T-TBb.md` still reads
 OPEN. Reconcile before the next orchestrator run.
 
+**v3 supersession note (2026-07-18).** The §7 way-forward below was the D-ART1
+reposition (geometry headline, Theorem B demoted to *capstone*). The v3 rescope
+(PROPOSAL §1, pivot 2) goes further: the HGED-faithfulness layer is retired as
+a pillar altogether — no density sweep, no HGED head-to-head, one ours-only
+correlation figure inside the closing discussion. Consequences for this
+document: §1 (the proxy-question resolution) and §6 (the completeness–stability
+frontier) are now **directly load-bearing** — they source the discussion's
+impossibility prose (PROPOSAL §5); §7's framing is historical context; and
+T-TBc's measurement vehicle (the v2-scale correlation study) no longer exists,
+so the transcoding ablation is parked pending PI review
+(`DEVELOPMENT/DECISIONS.md`). T-M4a stays optional — the article's bits
+subsection uses the fixed-width estimator.
+
 ---
 
 ## 1. What Theorem B can and cannot be (the "proxy" question)

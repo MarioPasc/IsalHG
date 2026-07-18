@@ -4,6 +4,9 @@
 **Depends on:** T-TBb (conjecture stated; probe data exists)
 **Delegation:** agent
 **Stretch / non-blocking.** Does not gate any experiment; strengthens the raw-metric drift story only partially.
+**Note (D-ART2, 2026-07-18):** demoted further — with the conditional-bound
+program out of the article, this serves follow-up work only. Work it after
+every article-critical task, or not at all.
 **Why out of scope:** Surfaced in the 2026-07-17 way-forward analysis; it is the one remaining clean theoretical question about the raw metric's pointer-run drift, but the article does not depend on it.
 **Context to read first:**
 - `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/proofs/stability/pointer_run_amortization.tex` — `conjecture:peak` (statement + Rosenkrantz–Stearns–Lewis rationale) and §Measured (probe: `max_u X(u) ≈ Δ` on random instances)

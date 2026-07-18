@@ -1,16 +1,33 @@
-# T-M5f — Geometric characterization of `(w*_c, d_Lev)`: the article's headline object
-**Declared:** 2026-07-17 20:30 CEST
+# T-M5f — Geometric characterization of `(w*_c, d_Lev)`: the static invariants
+**Declared:** 2026-07-17 20:30 CEST · **extended** 2026-07-18 17:56 CEST (D-ART2)
 **Status:** OPEN
-**Depends on:** T-M1b (`d_I`), T-M2/T-M4 (`metric_space/metrics/embedding.py` classical-MDS solve); feeds T-M5b (MDS flagship)
+**Depends on:** T-M1b (`d_I`), T-M4 (`metric_space/metrics/` home); feeds T-M5b (MDS flagship) and T-M5d (kNN precondition)
 **Delegation:** agent
-**Why out of scope:** Surfaced in the 2026-07-17 way-forward analysis; the stated main strength of the paper is the metric's geometry, which is currently only gestured at (`stability.md` §5, PROPOSAL §5) and must become a first-class, measured contribution rather than a by-product of the MDS application.
+**Why out of scope:** Surfaced in the 2026-07-17 way-forward analysis; promoted by D-ART2 to the article's characterization leg (characterize → exploit).
 **Context to read first:**
-- `docs/article/theoretical/stability_reformulations.md` §7.3 — the characterization spec this task realizes
-- `docs/article/theoretical/stability.md` §5 ("non-Euclidean geometry and MDS") — the thin section to develop
-- `docs/article/PROPOSAL.md` §5 ("MDS intrinsic-dimension selection") — the PI's CV-MDS estimator, negative-eigenvalue floor, Mardia ratios
+- `docs/article/theoretical/geometry.md` — the six invariants + the no-orphan-geometry rule (the spec this task realizes; the two *dynamic* invariants are T-M5g's)
+- `docs/article/PROPOSAL.md` §2 — the invariant→consumer table
 - `docs/article/DEVELOPMENT/T-M5/OPEN/T-M5b.md` — the flagship MDS run that consumes this spec
-- `docs/article/RELATED_WORK.md` §Implementation dependencies — `scipy.linalg.eigh` classical-MDS solve
+- `docs/article/RELATED_WORK.md` §Geometry diagnostics — Radovanović et al. 2010 (hubness)
+- `docs/article/CODE_DESIGN.md` §2 tree (`metrics/{embedding,geometry}.py`) — where the helpers land
 - `.claude/rules/coding_rules.md` — always
-**Description:** Develop the geometry of `(w*_c, d_Lev)` as a first-class object. (a) **Theory** (textbook, no new theorem): finite discrete metric; generic non-Euclideanness (Schoenberg — double-centred Gram `B` has negative eigenvalues); Bourgain `O(log n)` `L2` embedding always available; JL for approximate dimension reduction. (b) **Measurement spec for T-M5b**: eigenvalue spectrum of `B`, negative-eigenvalue mass ratio `Σλ⁻/Σ|λ|`, cross-validated intrinsic dimension `D̂` (PI's estimator), stress-vs-dimension curve, Euclidean distortion, pairwise-distance concentration — with `D̂` reported as a standalone result. HGED-free, so it runs at application scale, not the exact-oracle ceiling.
-**Acceptance:** `stability.md` §5 expanded into a full geometric-characterization section; T-M5b's measurement list extended with the invariants above; a `metric_space/metrics/` geometry-report helper (eigen-spectrum + negative-mass ratio + distortion) specced and unit-tested (pinned spectra on a small fixture; PSD vs non-PSD corpus flagged correctly).
-**Out of scope here:** the reposition doc surgery (T-TBd); running the MDS experiment end-to-end (T-M5b owns the run); any HGED call (geometry self-validates); changes to `w*_c` or the distance.
+**Note (2026-07-17):** the theory half is drafted as
+`theoretical/geometry.md`; refine it only if the measurement forces it.
+**Description:** Implement and spec the **static** geometric invariants. (a)
+`metric_space/metrics/embedding.py`: classical-MDS solve (double-centre → eig),
+eigenvalue spectrum, negative-eigenvalue mass `ν = Σλ⁻/Σ|λ|`, PSD flag,
+stress-1, Shepard data, CV-reconstruction-error harness input (`D̂` selection
+runs in experiments). (b) `metric_space/metrics/geometry.py`: concentration
+stats (pairwise histogram summary, diameter/median ratio, length-difference
+floor) and **hubness** (`k`-occurrence `N_k` skewness). (c) The **per-corpus
+geometry table** spec consumed by T-M5b's runner: one row per (corpus,
+representation) with `ν`, PSD, `D̂`, stress@`D̂`, concentration, hubness — the
+paper's characterization table, also the competitor-geometry axis.
+**Acceptance:** `theoretical/geometry.md` consistent with the measured
+invariants (refined if the measurement surfaces gaps); helpers unit-tested
+(pinned spectra on a small fixture; PSD vs non-PSD corpus flagged correctly;
+hubness skewness against a hand-computed value); the geometry-table spec
+recorded in T-M5b before its run.
+**Out of scope here:** the dynamic profiles (sensitivity/ladder — T-M5g);
+running MDS end-to-end (T-M5b owns the run); any HGED call; changes to `w*_c`
+or the distance.

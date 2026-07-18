@@ -1,6 +1,18 @@
 # Stability of the IsalHG hypergraph metric
 
-**Status:** DRAFT (scoping 2026-07-08). Core theoretical document. Iterate here.
+**Status:** ACTIVE (v3 rescope 2026-07-18). This document holds the paper's
+**foundation** (§1 completeness → metric — Theorem A + Corollary A, the only
+formal theorem/corollary pair the article states) and the **HGED-relation
+analysis** (§2–§4) that the closing discussion compresses. Since the v3 rescope
+(PROPOSAL §1, pivot 2) Theorem B is **not** a pillar: the article states only
+the length lemma and the unconditional envelope as short propositions, argues
+the impossibility of a bi-Lipschitz proxy in prose (with the drift/avalanche
+mechanisms named and measured), and shows one exact-HGED correlation figure
+(ours only). Everything else in §2–§4 — the conditional bound B-cond, its five
+hypotheses, the coherence classification — is the *internal analysis record*
+backing that discussion and potential follow-up work, not article claims. The
+geometry characterization lives in `geometry.md`; the old §5 here is a
+cross-reference.
 
 Notation. `H` a hypergraph; `w*(H)` its canonical H2S string over `Σ_HG`;
 `d_I(H,H') := d_Lev(w*(H), w*(H'))` the induced hypergraph dissimilarity (raw
@@ -91,17 +103,29 @@ metric claim.
 
 ---
 
-## 2. Theorem B (Stability) — the core contribution
+## 2. Theorem B (Stability) — the faithfulness capstone
+
+*Since the v3 rescope Theorem B is **discussion material, not a pillar**. The
+clean bound is conditional (five hypotheses, two failing generically), so what
+the article keeps is the subset that is unconditionally true or honestly
+negative: the length lemma, the envelope (B-worst), and the two named, measured
+deviation mechanisms (drift, avalanche) that explain why no clean Lipschitz
+bound exists — which in turn justifies validating usefulness directly on task
+metrics (the paper's own program, PROPOSAL §5). The conditional analysis below
+(§2.1–§3) is retained as the record that grounds those mechanisms and as the
+starting point for any follow-up paper. Value inventory:
+`stability_reformulations.md` §2.*
 
 **Target statement.** There is an explicit constant `C(k,Δ)` such that for all
 hypergraphs `H, H'`
 ```
         d_I(H, H') ≤ C(k, Δ) · HGED(H, H').                     (Lipschitz / upper bound)
 ```
-i.e. structurally close hypergraphs have close canonical strings. This is the
-*continuity* direction — the one that makes MDS, clustering, and kNN on `d_I`
-well-behaved. IsalGraph asserted this empirically; we prove it (fully, or in the
-conditional/average-case form of §3).
+i.e. structurally close hypergraphs have close canonical strings. This was the
+**v2 target statement**. The analysis below establishes it only under five
+hypotheses, two of which fail generically (§3); the v3 article therefore states
+the unconditional envelope instead and treats (★) as the mechanism map behind
+the discussion's drift/avalanche prose — not as a claimed bound.
 
 **Why the upper bound is the useful side.** A lower bound
 `d_I ≥ (1/C')·HGED` would say "far strings ⇒ far structure" (discriminativity);
@@ -346,40 +370,44 @@ analytically. Sources 1–2 can occur on any input, including coherent designs.
 
 ---
 
-## 4. Theory ↔ empirics bridge (answers "does the theorem correlate with the experiments?")
+## 4. Theory ↔ empirics bridge (v3: what is still measured, and where)
 
-The strong bound scales as `C(k,Δ) = O(k·Δ)`. Two testable predictions:
+The strong bound scales as `C(k,Δ) = O(k·Δ)`. Its two predictions now have
+different fates:
 
-1. **Density prediction.** Correlation `ρ(d_I, HGED)` should *decrease as Δ
-   (density) increases*, because a looser Lipschitz constant admits more slack
-   between `d_I` and `HGED`. **The IsalGraph data already exhibits this**:
-   Spearman ρ = 0.934 at mean-degree 3.07 (IAM LOW) → 0.682 (IAM HIGH, 4.56) →
-   0.349 (AIDS, 10.70). The IsalHG controlled experiment
-   (`../empirical/correlation.md`, Exp E2) sweeps density at fixed `n` and checks
-   that the ρ-decay tracks the predicted `1/C(k,Δ)`. **This is the experiment
-   that validates Theorem B empirically** — the theorem is not decorative, its
-   Δ-dependence is the falsifiable content.
+1. **Density prediction — out of the article (v3).** A looser Lipschitz
+   constant admits more slack, so `ρ(d_I, HGED)` should decrease as Δ grows;
+   the sibling's data trend matches (Spearman ρ = 0.934 at mean-degree 3.07 →
+   0.682 at 4.56 → 0.349 at 10.70). With the HGED-validation layer demoted,
+   the controlled density sweep is **not run for the article**; the prediction
+   is recorded here as follow-up material. The article's single correlation
+   figure (PROPOSAL §5) reports one small corpus, ours only, no sweep.
 
-2. **Avalanche prediction (revised at T-TBa).** The `s(e)` histogram shape
-   depends on the automorphism-coherence of ties (§3, Prop 6.0). Sources 1–2
-   can occur on any input; sources 3–4 are suppressed on coherent inputs.
-   - *Generic sparse*: sources 3–4 absent (no ties at any depth); sources 1–2
-     rare on local edits → near-unimodal O(kΔ) peak.
-   - *Coherent-tie symmetric designs (Fano, STS(9))*: sources 3–4 absent
-     (coherence inferred from Prop 6.0 + verified `w*_greedy = w*_c`); sources
-     1–2 possible but rare on small design edits → near-unimodal O(kΔ) despite
-     high symmetry. **Changed from the earlier "symmetric ⇒ bimodal" prediction.**
+2. **Sensitivity prediction — measured, in the geometry pillar.** The `s(e)`
+   histogram shape depends on the automorphism-coherence of ties (§3,
+   Prop 6.0). Sources 1–2 can occur on any input; sources 3–4 are suppressed
+   on coherent inputs:
+   - *Generic sparse*: near-unimodal O(kΔ) peak (no ties at any depth;
+     sources 1–2 rare on local edits).
+   - *Coherent-tie symmetric designs (Fano, STS(9))*: near-unimodal despite
+     high symmetry (coherence inferred from Prop 6.0 + verified
+     `w*_greedy = w*_c`).
    - *Incoherent-tie symmetric designs (STS(13), GQ(2,2))*: all four sources
      active → heavy-tailed or bimodal.
-   Measuring the histogram on all four designs (Exp E2b) tests this prediction.
-   A heavy tail on Fano or STS(9) would falsify §3's coherence criterion.
-
-If either prediction fails, Theorem B's proof strategy is wrong — that is the
-value of stating it falsifiably.
+   This is measured by the **local sensitivity profile** (`geometry.md` §6) —
+   a geometry measurement consumed by the contrast baseline and the
+   discussion's mechanism prose, no longer an HGED-validation experiment. A
+   heavy tail on Fano or STS(9) would falsify §3's coherence criterion; the
+   falsifiability survives the rescope intact.
 
 ---
 
-## 5. Downstream: non-Euclidean geometry and MDS (feeds `../empirical/applications.md`)
+## 5. Downstream: non-Euclidean geometry and MDS (moved to `geometry.md`)
+
+*The geometry pillar lives in `geometry.md`; the paragraphs below are retained as
+the seed and cross-reference. `geometry.md` §2/§4 develop the non-Euclidean
+curvature `ν`, the intrinsic-dimension estimator, and the Bourgain/Khot–Naor
+distortion brackets in full.*
 
 `d_I` is an edit-distance metric; edit metrics are generically **non-Euclidean**
 (the double-centred Gram matrix `B` has negative eigenvalues; Schoenberg
@@ -457,11 +485,11 @@ criterion). Consequences the applications section must own:
       (B-avg) over a random hypergraph model. A rigorous version must also show
       layout-locality (iv)–(v) holds w.h.p. (an amortization claim about the
       κ-lex-min encoder, not a consequence of tie scarcity) → T-TBb.
-- [ ] T-B5: **PENDING T-M5a** — verify constants against measured `s(e)` histograms (Exp E2b).
-      Predictions stated in §6 of `stability/theorem_b_stability.tex` and §4 of this file.
-      T-M5a should additionally log `R(e)`/`T_span(e)` per edit to separate
-      layout drift from avalanche effects. Empirical match is a documented
-      pending clause; T-TB closed with this clause recorded.
+- [ ] T-B5 (rescoped, v3): the `s(e)` histograms are now the geometry pillar's
+      local sensitivity profile (`geometry.md` §6); logging `R(e)`/`T_span(e)`
+      per edit separates layout drift from avalanche and feeds the discussion's
+      mechanism prose. Verifying the (★) *constants* against the histograms is
+      follow-up work, no longer an article deliverable.
 - [ ] T-TBb (filed 2026-07-09, post-audit): pointer-run amortization — prove or
       refute generic layout-locality (iv)–(v); analytical T-B3 recovery; rigorous
       B-avg; verify the encoder emits no `W` tokens (length-lemma proviso). See

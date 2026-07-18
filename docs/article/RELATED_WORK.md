@@ -1,9 +1,11 @@
 # Related work — verified bibliography
 
-**Status:** DRAFT (scoping 2026-07-08, from literature-search sweep). Verified
-citations only. Grouped by the role each plays in the IsalHG argument. Cited
-from `theoretical/stability.md`, `empirical/correlation.md`,
-`empirical/applications.md`.
+**Status:** ACTIVE (v3 rescope 2026-07-18; verified citations only, from the
+2026-07-08 literature-search sweep). Grouped by the role each plays in the
+IsalHG argument. Cited from `theoretical/{geometry,stability}.md`,
+`empirical/{applications,correlation}.md`. Geometry-pillar citations
+(Schoenberg, Bourgain, Khot–Naor, Torgerson, Mardia, Radovanović) are listed
+in `theoretical/geometry.md` §9.
 
 ## HGED definition (adopt, do not reinvent)
 
@@ -19,7 +21,12 @@ from `theoretical/stability.md`, `empirical/correlation.md`,
   — Alternative (line-graph) hypergraph distance. Cite to situate HGED among
   competing hypergraph-distance definitions.
 
-## Stability theorem — proof scaffold and the one-sided-bound justification
+## HGED-relation discussion — impossibility scaffold (v3 role)
+
+*(v2 role: proof scaffold for Theorem B. v3 role: these citations ground the
+closing discussion — why no bi-Lipschitz proxy exists for complete
+canonical-form invariants, and where our drift/avalanche mechanisms sit in the
+literature. See PROPOSAL §5.)*
 
 - **Chuang & Jegelka.** "Tree Mover's Distance: Bridging Graph Metrics and
   Stability of GNNs." *NeurIPS* 2022. arXiv:2210.01906. — **The proof template.**
@@ -70,6 +77,14 @@ from `theoretical/stability.md`, `empirical/correlation.md`,
   334:821–852, 2006. DOI:10.1007/s00208-005-0745-0. — **String edit distance
   needs `(log d)^{1/2−o(1)}` L1 distortion** → classical MDS on `D_I` will show
   non-trivial distortion; the caveat to report per corpus (`stability.md` §5).
+
+## Geometry diagnostics (geometry pillar, G1)
+
+- **Radovanović, Nanopoulos, Ivanović.** "Hubs in Space: Popular Nearest
+  Neighbors in High-Dimensional Data." *JMLR* 11:2487–2531, 2010.
+  (jmlr.org/papers/v11/radovanovic10a.html) — Hubness (`k`-occurrence
+  skewness) as the standard diagnostic for nearest-neighbour reliability in
+  high-dimensional metric data; the G1 precondition report for kNN (A3).
 
 ## Distance-matrix → classification/clustering pipeline (applications §A2–A3)
 

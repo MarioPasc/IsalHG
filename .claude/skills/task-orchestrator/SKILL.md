@@ -53,7 +53,17 @@ it isn't.
    ```
 4. Read `docs/article/DEVELOPMENT/README.md` — the hub gives the dependency graph
    and the **critical path**. Read `DECISIONS.md`: a pending decision is yours to
-   surface to the human, never to resolve on an agent's behalf.
+   surface to the human, never to resolve on an agent's behalf. **Scope era:**
+   since D-ART2 (2026-07-18, v3 rescope — characterize → exploit; PI
+   ratification pending) the authoritative scope is `docs/article/PROPOSAL.md`
+   v3 + D-ART2; when an older task's prose disagrees, D-ART2 wins — surface the
+   conflict, do not let a worker implement v2 wording.
+5. Read `docs/article/DEVELOPMENT/SESSIONS.md` — the human-approved session
+   plan. If the current session row names your tasks, its ∥ (parallel) / →
+   (sequential) structure overrides your own slot-filling; deviate only with a
+   stated reason. At session end, append your notes to that session's
+   "Orchestrator notes" block and tick the row's checkbox. `SESSIONS.md` is
+   yours to edit; workers must never touch it.
 
 ## 2. Build the schedule
 
@@ -74,9 +84,10 @@ it isn't.
    silently, and do not quietly reroute to off-path work as though the queue were
    healthy.
 
-   As of 2026-07-09 this is exactly the situation: `T-TA` sits in `BLOCKED/`
-   awaiting the PI's review of the completeness proof, and `T-TAd`, `T-TAf` and
-   `T-TBa` — the whole canonical-form critical path — depend on it.
+   As of 2026-07-18 the case in point is `T-TBc`, filed in `T-TB/BLOCKED/`
+   pending the PI's D-ART2 ratification (`DECISIONS.md`, point d). It is off
+   the critical path, so it must never stall a session; if a schedule seems to
+   want it, say so and move on.
 3. Read each candidate's `**Delegation:**` field.
    - `orchestrator-only` → never spawn an agent. You do it yourself, alone.
    - `agent` → delegable.
@@ -89,9 +100,15 @@ it isn't.
    symbol it names (`grep -rl`). Two tasks conflict — and must be serialized — if
    - their predicted file sets intersect; or
    - both touch `src/isalhg/core/_native/` (C++); or
-   - both touch a shared doc: `CLAUDE.md`, `docs/article/theoretical/stability.md`,
-     `docs/article/DEVELOPMENT/README.md`, `DECISIONS.md`.
-   Shared *prose*, not shared source, is where agents actually collide.
+   - both touch a shared doc: `CLAUDE.md`, `docs/article/PROPOSAL.md`,
+     `docs/article/theoretical/stability.md`,
+     `docs/article/theoretical/geometry.md`,
+     `docs/article/DEVELOPMENT/README.md`, `DECISIONS.md`. (`SESSIONS.md` is
+     orchestrator-only and belongs to no worker's lane, ever.)
+   Shared *prose*, not shared source, is where agents actually collide. Two
+   registries are recurring collision files when competitor/dataset tasks run
+   in parallel: `metric_space/registry.py` and `datasets/registry.py` — both
+   sides may add entries; the merge is trivial but must be yours.
 5. Order by the hub's critical path. Fill up to 3 slots with mutually
    non-conflicting, delegable, dependency-satisfied tasks.
 6. **Show the frontier once, then go quiet.** Before the first launch, print one
@@ -119,8 +136,9 @@ worktree, and use only `~/.conda/envs/isalhg-<TASK>/bin/python`. Never touch the
 shared `isalhg` env or the main checkout.
 
 You own these files: <lane>.
-You must not edit: <the other agents' lanes, plus CLAUDE.md, stability.md,
-DEVELOPMENT/README.md, DECISIONS.md unless your task names them>.
+You must not edit: <the other agents' lanes, plus CLAUDE.md, PROPOSAL.md,
+stability.md, geometry.md, DEVELOPMENT/README.md, DECISIONS.md unless your task
+names them — and DEVELOPMENT/SESSIONS.md never>.
 
 Implement, test, and maintain yourself within the scope of the task. If something
 about the task's basis is wrong — a premise contradicted by the code, the docs, or

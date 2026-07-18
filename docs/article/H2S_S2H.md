@@ -16,9 +16,10 @@ the canonical string `w*_c(H)` produced by H2S is a **complete isomorphism
 invariant** (Theorem A), so the induced string metric
 `d_I(H,H') = d_Lev(w*_c(H), w*_c(H'))` is a genuine, iso-invariant distance on
 hypergraph isomorphism classes. Everything the article does downstream — the
-stability bound `d_I ≤ C(k,Δ)·HGED` (Theorem B), MDS, medoids, clustering, kNN,
-shortest paths — is a function of that distance and therefore of these two
-algorithms. §9 makes the alignment explicit.
+geometric characterization (intrinsic dimension, non-Euclideanness,
+concentration, sensitivity), MDS, k-medoids, dendrograms, kNN, shortest paths,
+and the closing HGED-relation discussion — is a function of that distance and
+therefore of these two algorithms. §9 makes the alignment explicit.
 
 ---
 

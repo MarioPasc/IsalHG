@@ -7,6 +7,8 @@
 - `.claude/rules/coding_rules.md` — always
 **Description:** k-medoids (PAM) + agglomerative dendrogram on `D_I` and
 competitors; silhouette/Dunn/DB + ARI/NMI vs planted labels; cophenetic
-correlation. Report metrics vs density (ties back to Theorem B). **No HGED.**
+correlation; medoid-representative reported inline as the PAM `k=1`
+degenerate. Report metrics vs corpus density (descriptive; the Theorem-B
+Δ-validation is retired at D-ART2). **No HGED.**
 **Acceptance:** reproduces `applications.md` §A2 criteria; figures render.
 **Out of scope here:** MDS/kNN/path; new `src/` code.

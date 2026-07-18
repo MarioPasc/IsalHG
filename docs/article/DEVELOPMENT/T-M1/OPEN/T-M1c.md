@@ -16,7 +16,7 @@ degenerate end.
 - `tests/property/_labelled_oracle.py::brute_force_iso` — the exhaustive `n!` oracle (pynauty is NOT a valid labelled oracle, see T-TAe)
 - `tests/property/test_hged_metric.py` — the pattern to mirror (self-0, symmetry, triangle, permutation invariance)
 - Marzal, A. & Vidal, E. *Computation of normalized edit distance and applications*. IEEE TPAMI 15(9), 1993 — the naive length-normalized edit distance is **not** a metric; theirs is
-- `docs/article/PROPOSAL.md` §OQ4 — raw Levenshtein is primary, normalization is an ablation
+- `docs/article/PROPOSAL.md` §6 OQ-D — raw Levenshtein is primary, normalization is an ablation
 - `.claude/rules/coding_rules.md` — always
 **Description:** Four items, one of which is a defect.
 
@@ -67,4 +67,5 @@ ablation, not the primary distance); the stability bound (T-TB).
 uniformly discrete (`d ≥ 1` between distinct classes), hence every Cauchy sequence
 is eventually constant. Do not state it as a result; it would be read as padding.
 The only word "complete" earns is Theorem A's — `w*_c` is a **complete invariant**.
-All geometric content is in Theorem B.
+All geometric content is in the geometry pillar (`theoretical/geometry.md`),
+not in a completeness statement.

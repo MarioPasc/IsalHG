@@ -56,7 +56,18 @@ task's scope and status.
    - `docs/article/DEVELOPMENT/DECISIONS.md` — a pending decision may be yours to
      surface, never to silently resolve;
    - the `docs/article/` scope docs the task touches (`PROPOSAL.md`,
-     `CODE_DESIGN.md`, and the relevant `theoretical/` or `empirical/` breakdown).
+     `CODE_DESIGN.md`, and the relevant `theoretical/` or `empirical/`
+     breakdown — for geometry/measurement tasks that includes
+     `theoretical/geometry.md`, the invariant→consumer spec).
+
+   **Scope era check (v3, D-ART2 2026-07-18).** The article is
+   *characterize → exploit*: geometry characterized, applications licensed by
+   it, HGED entering only through the E1' discussion figure and Qin ladder
+   budgets. Tasks or docs written before the rescope may carry v2 wording
+   (correlation study with competitor rows, density sweep, MI, Theorem-B
+   "capstone"). Where a task's prose and `PROPOSAL.md` v3 / D-ART2 disagree,
+   the latter win — surface the conflict instead of following stale
+   instructions.
 5. **Think step by step and reason explicitly.** State tensor/shape/type flow,
    invariants, and complexity where relevant. Verify the task's premises against
    the code and the scope docs before building on them (scientific-challenge

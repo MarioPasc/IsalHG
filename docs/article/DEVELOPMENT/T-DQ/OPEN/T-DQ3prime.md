@@ -6,7 +6,7 @@
 `w*` wall-clock is the *only* gate on running MDS/clustering/kNN at real scale,
 so this one measurement decides how large the application corpora can be.
 **Context to read first:**
-- `docs/article/DATA.md` §3 (DQ3') — why this decides the real anchor
+- `docs/article/DATA.md` §2 + §6 (DQ3') — why this decides the real anchor (declared fallback recorded there)
 - `src/isalhg/datasets/hic_atlas.py` — the (stubbed) loader
 - `src/isalhg/core/canonical.py` — the `w*` entry point to time
 - `.claude/rules/coding_rules.md` — always

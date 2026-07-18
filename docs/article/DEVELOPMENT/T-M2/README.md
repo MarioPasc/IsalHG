@@ -1,13 +1,15 @@
-# Scope T-M2 — HGED, the ground-truth structural distance
+# Scope T-M2 — HGED, the structural edit distance (rescoped role at D-ART2)
 
-Hypergraph edit distance is the right-hand side of Theorem B and the ground truth
-of the Layer-1 correlation study: without it there is nothing to correlate `d_I`
-against and no head-to-head axis versus the competing representations. No public
-HGED solver exists, so this scope builds one — an LSAP branch-and-bound oracle
-(`exact_hged`) plus a faithful re-implementation of the paper's own HGED-BFS
-(`qin_hged`) that anchors fidelity on its published Example 2 — under the single
-official cost model, Qin et al. (ICDE 2023) Definition 3 verbatim, where deleting
-an arity-`a` hyperedge costs `a + 1`. It also owns the corpora HGED is computed
-on (perturbation ladder, correlation corpus) and the domain gap that HGED exposes:
-optimal edit paths pass through disconnected hypergraphs, on which `d_I` is not
-defined.
+Hypergraph edit distance's v3 role is twofold and modest: the exact oracle
+(`exact_hged`, with the fidelity twin `qin_hged`) produces the article's single
+discussion figure E1' (ours-only ρ on a small connected mini-corpus), and the
+Qin cost model (ICDE 2023, Definition 3 verbatim — deleting an arity-`a`
+hyperedge costs `a + 1`) prices the perturbation-ladder budgets that the
+HGED-free body relies on (`HGED ≤ budget` by construction; G2 ladder response,
+A4 scoring). The v2 role — ground truth of a load-bearing correlation study
+and head-to-head axis vs competitors — is retired (D-ART2). No public HGED
+solver exists, so both solvers here are bespoke; both are property-tested to
+agree. This scope also owned the domain gap HGED exposed (optimal edit paths
+pass through disconnected hypergraphs, on which `d_I` is undefined) — resolved
+by D-CONN1: connected domain, connectivity-preserving generators (T-M2c), and
+the path-normalization lemma handed to the stability record.

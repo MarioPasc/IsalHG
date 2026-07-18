@@ -3,7 +3,8 @@
 **Rewritten:** 2026-07-09 12:46 CEST — P1/P2/P3 resolved by the PI; scope narrowed
 from "blocking theoretical fork" to "generator engineering + one lemma handed to T-TB"
 **Status:** OPEN
-**Depends on:** — (gates T-M5a E1/E3; hands a lemma to T-TB)
+**Depends on:** — (gates T-M5a's E1' mini-corpus and the T-M5g/T-M5e ladder
+corpora; the lemma hand-off to T-TB is done — `stability.md` §6 T-B0)
 **Why out of scope:** found while assessing HGED completeness for Theorem B at
 T-M2b close; fixing it touches corpus generators and the dataset loaders, not the
 HGED metric itself.
@@ -31,9 +32,12 @@ so the proof exists nowhere else.
 This is the whole engineering content of the task now. Two honest consequences that
 **must be stated in the paper**, not silently absorbed:
 - Conditioning a random generator on connectivity **changes the ensemble**. The
-  density sweep (E2) then samples *connected* Erdős–Rényi, not ER, and the
-  conditioning bites hardest exactly where it matters, at low `m/n`. Write
-  "connected ER" and report the acceptance rate.
+  corpora then sample *connected* ensembles (connected ER, connected planted
+  families), and the conditioning bites hardest exactly where it matters, at
+  low `m/n`. Write "connected" in every corpus description and report the
+  acceptance rate. (v2 said this about the density sweep E2; E2 is retired at
+  D-ART2, but the ensemble consequence applies to every v3 generator — the
+  mini-corpus, the planted families, the ladders.)
 - Rejecting disconnecting edits biases the perturbation ladder's edit distribution
   and confines it to a submanifold. The `HGED ≤ budget` guarantee **survives** (a
   valid Qin edit sequence of exactly that cost still exists), but the sampling
@@ -81,7 +85,7 @@ handled separately. Recorded as `stability.md` §6, item **T-B0**.
 - `src/isalhg/datasets/hic_atlas.py` — where the LCC restriction lands (with T-M4')
 - `docs/article/theoretical/stability.md` §2.1, §6 (T-B0) — the decomposition and the lemma this task hands it
 - `docs/article/empirical/correlation.md` §Experiments (E1/E3) — the runs that raise today
-- `docs/article/DATA.md` §1, §3 — the corpora whose ensembles this changes
+- `docs/article/DATA.md` §1, §3–§4 — the corpora whose ensembles this changes (v3 numbering)
 - `.claude/rules/coding_rules.md` — always
 
 `d_I = d_Lev(w*, w*)` is only defined on connected hypergraphs (decision B11). The
@@ -114,13 +118,14 @@ disconnect, and `insert_vertex` is only ever applied paired with an incidence;
 (T-M4') restricts each instance to its largest connected component. Do **not**
 touch `Σ_HG`, `canonical.py`, or the C++ encoder.
 **Acceptance:** (a) `correlation_corpus` and `perturbation_ladder` emit only
-connected items under Hypothesis, and an E1/E3 dry-run no longer raises; (b) the
-ladder's `HGED ≤ budget` property test still passes under connectivity-preserving
-edits; (c) the acceptance rate / backbone bias of the connected generator is
-measured and reported, and `DATA.md` §1 says "connected ER"; (d) `stability.md` §6
-item T-B0 records the path-normalization lemma above as P1's discharge, with the
-`H ∪ H'` connectivity hypothesis flagged; (e) if T-M4' has landed, the HIC loader
-reports per-class LCC retention.
+connected items under Hypothesis, and an E1'/ladder dry-run no longer raises;
+(b) the ladder's `HGED ≤ budget` property test still passes under
+connectivity-preserving edits; (c) the acceptance rate / backbone bias of the
+connected generator is measured and reported, and `DATA.md` (§1, §4) says
+"connected"; (d) `stability.md` §6 item T-B0 records the path-normalization
+lemma above as P1's discharge, with the `H ∪ H'` connectivity hypothesis
+flagged; (e) if T-M4' has landed, the HIC loader reports per-class LCC
+retention.
 **Out of scope here:** proving the normalization lemma (T-TB / T-B0); the stability
 bound itself (T-TB); the HGED oracles (unaffected — they are defined on
 disconnected inputs already); the degenerate `n = 0` vs single-vertex collision

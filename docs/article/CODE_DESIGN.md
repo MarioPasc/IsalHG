@@ -1,11 +1,13 @@
 # IsalHG code design — metric-space article extension
 
-**Status:** DRAFT (scoping 2026-07-08). Design document for the `src/isalhg`
-refactor + additions required by the metric-space article (`PROPOSAL.md`,
-`theoretical/`, `empirical/`, `COMPETITORS.md`, `DATA.md`). Pairs with the
-repo-level `docs/engineering/CODE_DESIGN.md` (the iso-benchmark code map, still authoritative
-for the code as built). **This document does not remove iso-detection code; it
-extends the package and separates the two concerns.**
+**Status:** ACTIVE (v3 rescope 2026-07-18; structure unchanged from the
+2026-07-08 design — the rescope changes *which studies run*, §9, not where code
+goes). Design document for the `src/isalhg` refactor + additions required by
+the metric-space article (`PROPOSAL.md`, `theoretical/`, `empirical/`,
+`COMPETITORS.md`, `DATA.md`). Pairs with the repo-level
+`docs/engineering/CODE_DESIGN.md` (the iso-benchmark code map, still
+authoritative for the code as built). **This document does not remove
+iso-detection code; it extends the package and separates the two concerns.**
 
 Grounded on a full survey of the *actual* tree (2026-07-08), not the aspirational
 map — see "Current state" below.
@@ -111,9 +113,10 @@ src/isalhg/
       netlsd.py               optional spectral (pip netlsd)
       subprocess_base.py      SubprocessRepresentation (pinned-env competitors, mirrors iso subprocess_base)
     metrics/          stateless scoring primitives (OUR non-standard ones)
-      association.py          Spearman/Pearson r + mutual information between two distance matrices
+      association.py          Spearman/Pearson between two distance matrices (E1'; MI retired with the v2 head-to-head axis)
       information.py          fixed-width-code bits, compression ratio (Wilcoxon input vector)
-      embedding.py            classical-MDS solve (double-center→eig), stress, PSD / neg-eigenvalue check
+      embedding.py            classical-MDS solve (double-center→eig), stress, PSD / neg-eigenvalue mass ν
+      geometry.py             concentration stats (diameter/median ratio, length-difference floor), hubness (k-occurrence skewness)
 ```
 
 **Note on `isomorphisms/` (Option A vs B).** Moving the existing iso packages
@@ -266,7 +269,7 @@ New under `datasets/synthetic/` (subclass `HypergraphDataset`, register in
   perturbations; family id = class label. Serves A1/A2/A3
   (`empirical/applications.md`). **Enforce non-isomorphism** within family
   (dedup via lazy `metric_space`/`iso` check) — the corpus survey's
-  `permute()`-copies shortcut is invalid (`DATA.md` §2). Class members must be
+  `permute()`-copies shortcut is invalid (`DATA.md` §1). Class members must be
   distinct iso-classes.
 - `perturbation_ladder.py` — `edit_path(H, t)` chains (Exp E3); yields
   known-upper-bound HGED = `t`.
@@ -301,16 +304,20 @@ deps guarded inside method bodies, registries drive lazy import by name.
 
 ## 9. The `src/` ↔ `experiments/` boundary (honours constraint 3)
 
-| Future task | `src/` provides (library) | `experiments/` does (execution + stats) |
+| Study (v3) | `src/` provides (library) | `experiments/` does (execution + stats) |
 |---|---|---|
-| Correlation study (E1) | `HypergraphDistance.matrix`, `metrics.association` (r, MI) | run over corpus, per-competitor scatter, significance, figures |
-| Density sweep (E2, tests Thm B) | same + `datasets` sweep | vary Δ, fit ρ-vs-Δ, overlay `C(k,Δ)` envelope |
-| Single-edit sensitivity (E2b) | `sparse_hypergraph` edits, `d_I` | histogram `s(e)`, bimodality test on designs |
-| Information content | `metrics.information` (bits, ratio) | Wilcoxon signed-rank, OLS β, figure |
-| MDS (A1, flagship) | `metrics.embedding` (classical solve, stress, PSD) | SMACOF, **CV dimension selection**, Mardia ratios, Shepard, figures |
+| Geometry profiles (G1) | `metrics.geometry` (concentration, hubness) | per-corpus geometry table (with `ν`, `D̂` from A1), figures |
+| Sensitivity + ladder (G2) | `sparse_hypergraph` edits + `qin_edit_cost`, `d_I` | `s(e)` histograms (ours **and** nauty contrast), ladder-response curves |
+| MDS (A1, flagship) | `metrics.embedding` (classical solve, stress, PSD, ν) | SMACOF, **CV dimension selection**, Mardia ratios, Shepard, figures |
 | Clustering / dendrogram (A2) | distance matrices | k-medoids (PAM), linkage, silhouette/Dunn/DB/ARI (sklearn/scipy directly) |
-| kNN classification (A3) | distance matrices | kNN CV, accuracy/F1/AUC |
-| Shortest path (A4) | distance matrices | path search over intermediate pool, plots |
+| kNN classification (A3) | distance matrices | kNN CV, accuracy/F1/AUC, interpreted against the G1 profile |
+| Shortest path (A4) | distance matrices + ladder corpora + S2H decode | path search over pool + distractors; recovery/monotonicity scores; decoded-intermediates figure |
+| Discussion figure (E1') | `HypergraphDistance.matrix`, `ExactHGED`, `metrics.association` (ρ) | one mini-corpus scatter + ρ (ours only; no sweep, no competitor rows) |
+| Information content | `metrics.information` (bits, ratio) | Wilcoxon signed-rank, OLS β, figure |
+
+*(v2 studies retired at the 2026-07-18 rescope: the full correlation study E1
+with competitor rows + MI, and the density sweep E2. Their library surface —
+`ExactHGED`, `association` — survives for E1'.)*
 
 Standard indices (silhouette, ARI, cophenetic, accuracy) are called from
 `sklearn`/`scipy` **in experiments** — not re-wrapped in `src/` (reuse rule).
@@ -362,13 +369,13 @@ touching `core/canonical` or seeds re-runs `tests/property/`.
   the paper with far less churn; B is cosmetic symmetry, sequenced last (M6).
 - OD2. `levi_reduction` new home: `core/levi_reduction.py` (recommended) vs a new
   shared `reductions/` package. (A move is required either way, §4.3.)
-- OD3. HyperCOT integration: dedicated pinned conda env via subprocess
-  (recommended) vs vendoring + dependency-pinning gymnastics vs dropping it to
-  an optional appendix baseline.
-- OD4. Do we implement `ExactHGED` ourselves (A*/ILP over the six edit ops) or
-  wrap an existing GED solver on the Levi graph (e.g. `networkx`
-  `graph_edit_distance`, then argue the Levi-lift preserves HGED)? The latter is
-  less code but needs a correctness argument.
+- OD3. **[resolved, v3]** HyperCOT: dedicated pinned conda env via subprocess;
+  run on the small/mid corpora only, its scale limit stated in every table
+  (`COMPETITORS.md` §2).
+- OD4. **[resolved 2026-07-08; shipped]** `ExactHGED` is our own solver over
+  Qin's ops (no public HGED solver exists); the Levi-lift route was rejected
+  for its unproven equality with HGED. In v3 the oracle serves only the E1'
+  mini-corpus.
 - OD5. Whether `metric_space/metrics/embedding.py` should host the classical-MDS
   *solve* at all, or push even that into `experiments` (stricter reading of
   constraint 3). Recommendation: keep the deterministic solve + stress as a

@@ -76,6 +76,20 @@ G2 ladder-response measurement and the A4 endpoints/intermediates pool
 (plus same-corpus distractors). No oracle calls — the budget is known by
 construction. Built over both §1 seeds and §2 instances (post-gate).
 
+**Connected-domain implementation (D-CONN1, T-M2c — executed 2026-07-09).**
+`d_I` is defined exclusively on connected hypergraphs (`canonical.py` raises
+`DisconnectedHypergraphError` otherwise). The generators enforce this at
+construction: `CorrelationCorpusHypergraphs` (§4) and
+`PerturbationLadderHypergraphs` sample **connected Erdős–Rényi** via
+rejection sampling (`random_connected_hypergraph`), and
+connectivity-preserving edits (`random_connected_edit`) keep every ladder
+snapshot connected. Honest consequence: conditioning on connectivity changes
+the ensemble — the paper says "connected ER" and **reports the per-corpus
+acceptance rate** (fraction of unconstrained ER draws already connected;
+stored per item in `extra["acceptance_attempts"]`). The backbone fallback
+(spanning star + random edges) is logged as `acceptance_attempts ==
+max_attempts + 1` and counts as a rejection for the rate.
+
 ## 4. The exact-HGED mini-corpus (serves E1' only)
 
 One small **connected** corpus on which the exact oracle (`exact_hged`, HPC

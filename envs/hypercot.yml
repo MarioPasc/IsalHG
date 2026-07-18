@@ -1,0 +1,60 @@
+# Pinned conda environment for the HyperCOT competitor baseline.
+#
+# HyperCOT (Chowdhury et al., JACT 2024) requires hypernetx==1.2 and
+# POT==0.8.0, both incompatible with the main isalhg environment
+# (which carries hypernetx>=2).  This env is kept separate and
+# invoked only via subprocess from SubprocessRepresentation.
+#
+# Build (requires network; verified 2026-07-15)
+# ----------------------------------------------
+#   conda create -y -n isalhg-hypercot python=3.10
+#   ~/.conda/envs/isalhg-hypercot/bin/pip install \
+#       numpy==1.23.5 scipy==1.9.3 POT==0.8.0 hypernetx==1.2 \
+#       networkx==2.8.8 "pandas<2.1" celluloid decorator igraph \
+#       scikit-learn matplotlib plotly
+#   git clone https://github.com/samirchowdhury/HyperCOT /tmp/HyperCOT
+#   # HyperCOT has NO setup.py — copy the two module files directly:
+#   cp /tmp/HyperCOT/cot.py /tmp/HyperCOT/hypercot.py \
+#       $(~/.conda/envs/isalhg-hypercot/bin/python \
+#         -c "import site; print(site.getsitepackages()[0])")/
+#
+# The isalhg CI skips the end-to-end tests (pytest.mark.slow) when the
+# env is absent; guard-path unit tests always run.
+#
+# Pin rationale
+# -------------
+# hypernetx==1.2  : last version before the 2.x API break; HyperCOT uses
+#                   the v1 Hypergraph({edge_int: [str_nodes]}) constructor.
+# POT==0.8.0      : HyperCOT's cot.cot_numpy depends on ot.emd / ot.sinkhorn
+#                   from this release.
+# scipy==1.9.3    : POT 0.8.0 calls scipy.optimize.linesearch.scalar_search_armijo,
+#                   removed in scipy 1.10; any newer scipy breaks the import.
+# numpy==1.23.5   : hypercot.get_omega uses integer array indexing incompatible
+#   (< 1.24)        with NumPy 1.24+ strict integer enforcement.
+# networkx==2.8.8 : HyperNetX 1.2 requires networkx<3; 2.8.8 is the last
+#                   2.x release with adjacency_matrix returning a matrix.
+
+name: isalhg-hypercot
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - numpy==1.23.5
+    - scipy==1.9.3
+    - POT==0.8.0
+    - hypernetx==1.2
+    - networkx==2.8.8
+    - "pandas<2.1"
+    - celluloid
+    - decorator
+    - igraph
+    - scikit-learn
+    - matplotlib
+    - plotly
+    # HyperCOT has no PyPI release and no setup.py.
+    # After creating this env, copy its two module files manually:
+    #   git clone https://github.com/samirchowdhury/HyperCOT /tmp/HyperCOT
+    #   cp /tmp/HyperCOT/cot.py /tmp/HyperCOT/hypercot.py <site-packages>/

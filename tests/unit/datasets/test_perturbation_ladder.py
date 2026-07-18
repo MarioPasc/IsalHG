@@ -5,6 +5,8 @@ known distance ``HGED(base, snapshot_t) <= t`` from its base. The tests check
 determinism, the item/metadata contract, the registry wiring, and -- the
 load-bearing property -- that the exact oracle honours every ladder budget
 (``ExactHGED(base, snapshot_t) <= t``, T-M2 acceptance).
+
+T-M2c additions: connectivity checks (acceptance criteria a/b).
 """
 
 from __future__ import annotations
@@ -37,7 +39,12 @@ class TestStructure:
     def test_extra_records_budget_and_op(self) -> None:
         ds = PerturbationLadderHypergraphs(n_ladders=1, max_t=4, seed=3)
         items = list(ds)
-        assert items[0].extra == {"ladder": 0, "step": 0, "budget_from_base": 0, "op": "base"}
+        base_extra = items[0].extra
+        assert base_extra["ladder"] == 0
+        assert base_extra["step"] == 0
+        assert base_extra["budget_from_base"] == 0
+        assert base_extra["op"] == "base"
+        assert "acceptance_attempts" in base_extra
         previous_budget = 0
         for step, it in enumerate(items):
             assert it.extra["step"] == step
@@ -66,6 +73,102 @@ class TestStructure:
         base_a = next(iter(ds)).hypergraph
         base_b = next(iter(other)).hypergraph
         assert base_a != base_b
+
+
+class TestArityBound:
+    """T-M2c amendment: ladder snapshots must not exceed arity_range[1].
+
+    Pre-fix (before max_arity filter): add_incidence and insert_hyperedge were
+    uncapped, so a base-arity-4 edge could reach arity 6+ after a single step
+    (observed at seed=0, item=L0_t1) and arity 14+ over 10 steps (Picasso
+    crash job 1547134_4: arity_range=[2,4], max_t=10, IsalHGError k>K_MAX).
+    """
+
+    def test_pre_fix_arity_overflow_is_observable(self) -> None:
+        """Documents the bug: random_connected_edit without max_arity can exceed arity."""
+        import random
+
+        from isalhg.core.sparse_hypergraph import _sample_new_hyperedge
+        from isalhg.datasets.synthetic._random_hg import random_connected_hypergraph
+
+        rng = random.Random(0)
+        H, _ = random_connected_hypergraph(n_nodes=6, n_edges=4, arity_range=(2, 4), rng=rng)
+        # Without max_arity, insert_hyperedge can create edges up to n_nodes arity.
+        # Confirm _sample_new_hyperedge would produce arity > 4 given a large-enough n.
+        found_oversized = False
+        for _ in range(200):
+            fresh = _sample_new_hyperedge(H, rng)
+            if fresh is not None and len(fresh[0]) > 4:
+                found_oversized = True
+                break
+        assert found_oversized, (
+            "Expected _sample_new_hyperedge to produce arity > 4 on a 6-node base"
+        )
+
+    def test_all_snapshots_within_arity_range(self) -> None:
+        """All ladder snapshots respect arity_range[1] after the fix."""
+        ds = PerturbationLadderHypergraphs(
+            n_nodes=6, n_edges=4, n_ladders=5, max_t=10, arity_range=(2, 4), seed=0
+        )
+        for it in ds:
+            H = it.hypergraph
+            for members in H.hyperedges():
+                assert len(members) <= 4, f"item={it.item_id}: arity {len(members)} > 4"
+
+    def test_arity_bound_across_seeds(self) -> None:
+        """Arity bound holds across multiple seeds and long ladders."""
+        for seed in range(10):
+            ds = PerturbationLadderHypergraphs(
+                n_nodes=8, n_edges=6, n_ladders=3, max_t=10, arity_range=(2, 4), seed=seed
+            )
+            for it in ds:
+                H = it.hypergraph
+                for members in H.hyperedges():
+                    assert len(members) <= 4, (
+                        f"seed={seed}, item={it.item_id}: arity {len(members)} > 4"
+                    )
+
+
+class TestConnectivity:
+    """T-M2c acceptance (a): all ladder snapshots are connected.
+
+    Pre-fix regression: the raw ``random_hypergraph`` + ``random_edit``
+    pipeline could produce disconnected snapshots — ``insert_vertex`` always
+    materialises an isolated vertex, and ``delete_hyperedge`` can disconnect.
+    The test below first shows the pre-fix behaviour is observable, then
+    verifies the new pipeline is always connected.
+    """
+
+    def test_raw_random_hypergraph_can_be_disconnected(self) -> None:
+        """Pre-fix: raw random_hypergraph produces disconnected outputs."""
+        import random
+
+        from isalhg.datasets.synthetic._random_hg import random_hypergraph
+
+        rng = random.Random(0)
+        # n=5, 1 edge of arity 2: at most 2 out of 5 nodes covered → disconnected
+        H = random_hypergraph(n_nodes=5, n_edges=1, arity_range=(2, 2), rng=rng)
+        assert not H.is_connected(), (
+            "This test documents the pre-fix behaviour: raw random_hypergraph "
+            "with insufficient edges produces disconnected hypergraphs."
+        )
+
+    def test_all_items_connected(self) -> None:
+        """T-M2c acceptance (a): all snapshots in the ladder are connected."""
+        ds = PerturbationLadderHypergraphs(n_ladders=5, max_t=8, seed=0)
+        for it in ds:
+            assert it.hypergraph.is_connected(), (
+                f"Ladder snapshot {it.item_id} is disconnected (T-M2c violation)"
+            )
+
+    def test_connected_across_seeds(self) -> None:
+        """Connectivity holds across multiple seeds (sampling coverage)."""
+        for seed in range(10):
+            ds = PerturbationLadderHypergraphs(n_ladders=3, max_t=6, seed=seed)
+            for it in ds:
+                assert it.hypergraph.is_connected(), (
+                    f"seed={seed}, item={it.item_id} is disconnected"
+                )
 
 
 class TestRegistry:

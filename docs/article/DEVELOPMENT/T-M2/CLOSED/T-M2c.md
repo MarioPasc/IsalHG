@@ -2,7 +2,7 @@
 **Declared:** 2026-07-08 23:25 CEST (handoff from T-M2b)
 **Rewritten:** 2026-07-09 12:46 CEST — P1/P2/P3 resolved by the PI; scope narrowed
 from "blocking theoretical fork" to "generator engineering + one lemma handed to T-TB"
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** — (gates T-M5a's E1' mini-corpus and the T-M5g/T-M5e ladder
 corpora; the lemma hand-off to T-TB is done — `stability.md` §6 T-B0)
 **Why out of scope:** found while assessing HGED completeness for Theorem B at
@@ -130,3 +130,132 @@ retention.
 bound itself (T-TB); the HGED oracles (unaffected — they are defined on
 disconnected inputs already); the degenerate `n = 0` vs single-vertex collision
 (T-M1c).
+
+---
+
+## Closing check — 2026-07-09 (worktree agent-abdc04243e869e750)
+
+**Implementation summary:**
+
+- `src/isalhg/datasets/synthetic/_random_hg.py`: added `_backbone_connected_hypergraph`
+  and `random_connected_hypergraph(*, ..., max_attempts=200) -> tuple[SparseHypergraph, int]`.
+  Returns `(H, n_attempts)`; `n_attempts == max_attempts + 1` signals backbone fallback.
+  Single-vertex case handled directly (trivially connected).
+- `src/isalhg/core/sparse_hypergraph.py`: added `random_connected_edit(H, rng) -> tuple[SparseHypergraph, str]`.
+  Candidates: `insert_vertex_and_edge` (always), `insert_hyperedge`, `add_incidence`,
+  `delete_hyperedge` (filtered by `is_connected()`), `remove_incidence` (filtered).
+  `delete_vertex` never offered — connected H has no isolated vertices.
+- `src/isalhg/datasets/synthetic/perturbation_ladder.py`: base drawn via
+  `random_connected_hypergraph`; steps via `random_connected_edit`. Step-0 `extra`
+  carries `acceptance_attempts`.
+- `src/isalhg/datasets/synthetic/correlation_corpus.py`: each item drawn via
+  `random_connected_hypergraph`; `extra` carries `acceptance_attempts`.
+- `docs/article/DATA.md §1`: added "connected ER" paragraph — rejection-sampling,
+  backbone fallback, acceptance-rate reporting requirement, ensemble-change note.
+- `docs/article/theoretical/stability.md §6 T-B0`: already `[x]` (proved at T-TB
+  2026-07-09) — no change needed.
+- `src/isalhg/datasets/hic_atlas.py` LCC restriction: out of scope (T-M4' agent).
+
+**Pre-fix failure verified:** `random_hypergraph` with `n=5, n_edges=1, arity=(2,2)`
+produced a disconnected hypergraph in 10/10 seeds — confirms tests had teeth before
+the fix.
+
+**Acceptance criteria:**
+
+- (a) `correlation_corpus` and `perturbation_ladder` emit only connected items: PASS
+  (`TestConnectivity` classes in both test files; Hypothesis property test over 30/20
+  seeds; all green).
+- (b) ladder `HGED ≤ budget` property still passes under connectivity-preserving edits:
+  PASS (`test_budget_is_upper_bound_for_hged` passes for all ladders).
+- (c) acceptance rate reported in `extra["acceptance_attempts"]`; `DATA.md §1` says
+  "connected ER": PASS.
+- (d) `stability.md §6 T-B0` already `[x]` from T-TB: PASS (no edit needed).
+- (e) HIC loader LCC restriction: out of scope (T-M4').
+
+**Test suite (env isalhg-T-M2c, worktree):**
+
+```
+pytest tests/ -q --tb=no
+643 passed, 5 skipped in 159.29s
+```
+
+**Ruff:** 3 pre-existing errors (isalhg_backend.py:52, viz/instruction_view.py:135,
+tests/unit/core/algorithms/test_registry.py:48) — none in files I modified.
+
+**Mypy:** 20 errors in 6 files (baseline 21 — matched / improved by 1).
+Errors are all pre-existing in canonical.py, isalhg_backend.py.
+
+---
+
+## Orchestrator post-merge verification (2026-07-09)
+
+Independent re-run in the worker's env: full triple suite **693 passed / 8
+skipped** (worker's quoted 643/5 was a subset run); merged-main gate **812
+passed / 8 skipped**, ruff 3 / mypy 20 = preflight baselines. Literal E1/E3
+dry-run (30 correlation-corpus items + 5 ladders × 9 snapshots = 75 items):
+`canonical_fingerprint` and `d_I` raised nothing.
+
+Measured acceptance rates (clause c, seed 0, default parameters):
+- `correlation_corpus`: **0.020** (30 items / 1472 draws) — the low-`m/n`
+  conditioning bite anticipated by the PI resolution; rejection sampling costs
+  ~50× oversampling here. T-M5a must report this per corpus cell.
+- `perturbation_ladder` bases: **0.294** (5 bases / 17 draws).
+
+Observed `d_I = 0` between adjacent corpus items: legitimate (corpus items are
+not deduplicated; by Theorem A completeness `d_I = 0` ⇔ isomorphic, and such
+pairs contribute valid (HGED=0, d_I=0) points to E1).
+
+---
+
+## Amendment — arity-bound defect (2026-07-09, coordinator round 2)
+
+**Defect found at full scale (Picasso job 1547134_4):** `random_connected_edit`
+filtered for connectivity but not for the alphabet's arity domain. Both
+`_sample_new_hyperedge` (samples `size = rng.randint(1, n_nodes)`) and
+`add_incidence` (grows an edge by 1 per call) are unbounded. With
+`arity_range=[2,4], max_t=10`, a base-arity-4 edge could reach arity 14 in
+10 steps, pushing past the C++ encoder's `K_MAX` and raising `IsalHGError`.
+The local smoke used `max_t=6, base arity 3 → max 9` — exactly one step under
+the cliff.
+
+**Root cause verified:** `_sample_new_hyperedge` with `n_nodes=6` produces
+arity 6 > 4 on the very first step at seed=0 — observable even without running
+10 steps. Both `insert_hyperedge` and `add_incidence` candidates needed gating.
+
+**Fix:** Added `max_arity: int | None = None` to `random_connected_edit`
+(consistent with the connectivity filter pattern documented at
+`sparse_hypergraph.py:462`). When set:
+- `insert_hyperedge` candidate excluded if `len(members) > max_arity`.
+- `add_incidence` candidate excluded if `len(H.members(ge)) + 1 > max_arity`.
+- `insert_vertex_and_edge` always creates arity-2 edges — safe for any
+  `max_arity >= 2`.
+`PerturbationLadderHypergraphs._build` passes `max_arity=self._arity_range[1]`.
+
+**HGED ≤ budget guarantee:** unaffected. Budget records `sum(qin_edit_cost(H_{t-1}, H_t))`
+for the *actual* applied edits; those edits form a valid HGED path regardless
+of which candidates were rejected. Same argument as the connectivity rejection.
+Noted in the class docstring.
+
+**`correlation_corpus` safe:** confirmed. It calls `random_connected_hypergraph`
+(no edits), which respects `arity_range` from the base generator. No arity-growing
+operations are applied to corpus items.
+
+**Test with teeth:** `test_perturbation_ladder_arity_bounded` (Hypothesis,
+`arity_range=(2,4), max_t=10`) fails against the pre-fix code at seed=0,
+item=L0_t1 (arity 6 > 4) and passes post-fix. Unit class `TestArityBound`
+in `test_perturbation_ladder.py` documents the pre-fix overflow and validates
+the bound across seeds and long ladders.
+
+**Post-amendment checks (env isalhg-T-M2c):**
+
+```
+pytest tests/unit tests/property tests/integration -m "not slow" --hypothesis-seed=0 -q
+697 passed, 8 skipped, 7 deselected in 76.71s
+
+ruff check src/ tests/
+Found 3 errors  (all pre-existing: isalhg_backend.py:52, viz/instruction_view.py:135,
+                 tests/unit/core/algorithms/test_registry.py:48 — none in amended files)
+
+mypy src/isalhg/
+Found 20 errors in 6 files  (baseline 21 — matched/improved)
+```

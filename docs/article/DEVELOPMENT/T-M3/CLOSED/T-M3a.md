@@ -1,6 +1,6 @@
 # T-M3a — `NautyLeviEditDistance` (contrast baseline)
 **Declared:** 2026-07-08 13:40 CEST (split from T-M3)
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** T-M1a
 **Context to read first:**
 - `docs/article/COMPETITORS.md` §2–§3 — the *contrast* role (iso-only, no navigable geometry)
@@ -12,6 +12,37 @@ A4 (shortest path). Register in `metric_space/registry.py`.
 **Acceptance:** `matrix()` runs on the correlation corpus; distance 0 on
 isomorphic pairs; guarded `pynauty` import raises `RepresentationDependencyMissingError`.
 **Out of scope here:** the head-to-head study (T-M5a).
+
+---
+
+---
+
+**Closed by ledger-worker (2026-07-15).** Implemented
+`src/isalhg/metric_space/representations/nauty_levi_edit.py` and
+`tests/unit/metric_space/test_nauty_levi_edit.py`.
+
+Decision T-TAe resolved: `color_signature()` bytes are kept **inside** the
+edit distance (not stripped). Rationale: stripping collapses non-isomorphic
+hypergraphs of equal `(|V|, |E|)` to distance 0 on unlabelled corpora,
+contradicting `PynautyLeviBackend.fingerprint` and breaking the metric;
+the prefix contributes ≤ 20 bytes — a bounded systematic shift the paper
+acknowledges in the contrast narrative. Recorded in module docstring.
+
+Closing check output:
+
+```
+pytest tests/unit/metric_space/test_nauty_levi_edit.py -v
+15 passed, 1 skipped (HIC data absent on this machine)
+
+pytest tests/unit/ -q
+683 passed, 6 skipped in 7.97s
+
+ruff check src/ tests/
+3 errors (all pre-existing, none in new files)
+
+mypy src/isalhg/ --ignore-missing-imports
+20 errors in 6 files (all pre-existing, none in new files)
+```
 
 ---
 

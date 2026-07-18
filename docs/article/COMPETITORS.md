@@ -3,6 +3,14 @@
 **Status:** ACTIVE (v3 rescope 2026-07-18). Companion to
 `docs/article/PROPOSAL.md`.
 
+> **Running the competitors?** This file is the *why these* design
+> rationale. For *how to invoke* them (registry names, the uniform
+> `HypergraphDistance` interface, per-competitor setup incl. the pinned
+> HyperCOT env, corpus building, and a runnable end-to-end example) see
+> **`COMPETITORS_USAGE.md`**. All four T-M3 implementations
+> (`nauty_levi_edit`, `hpd_jsd`, `netlsd_l2`, `hypercot`) landed on `main`
+> 2026-07-15 (ledger scope T-M3).
+
 The paper compares the **geometry each representation induces on hypergraph
 space** and what that geometry lets you do. A competitor is any map
 

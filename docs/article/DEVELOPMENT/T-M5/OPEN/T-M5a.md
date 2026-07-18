@@ -26,3 +26,13 @@ criteria; the E1' figure and the bits table render; mini-corpus size pinned by
 an oracle wall-clock probe (DQ1', logged in DATA.md).
 **Out of scope here:** the applications (T-M5b–e); the G2 profiles (T-M5g);
 new `src/` code (`task-handoff` it); any competitor HGED computation.
+
+---
+**Reconciliation note (S1 merge, 2026-07-18).** The v2 contents of this task
+were executed and closed on the pre-rescope `main` (commits `6d92271` +
+`c680588`: the `experiments/article/` Layer-1 pipeline — correlation, density
+sweep, E2b/E3 — with the Picasso submission recorded in T-M5a', jobs
+1547131/32/33). That closure is **superseded by this rescope**: the v2
+closure record was dropped from `CLOSED/` at the reconciliation merge and
+T-M5a' is parked under `BLOCKED/` (D-ART2). The v2 pipeline code remains in
+`experiments/article/` and should be cannibalized for the E1' + bits runner.

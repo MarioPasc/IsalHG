@@ -25,11 +25,11 @@ import random
 from collections.abc import Iterator
 from typing import Any
 
-from isalhg.core.sparse_hypergraph import SparseHypergraph, qin_edit_cost, random_edit
+from isalhg.core.sparse_hypergraph import SparseHypergraph, qin_edit_cost, random_connected_edit
 from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
 from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabulary
-from isalhg.datasets.synthetic._random_hg import random_hypergraph
+from isalhg.datasets.synthetic._random_hg import random_connected_hypergraph
 from isalhg.types import DatasetName, Seed
 
 # Distinct prime strides keep each ladder's PRNG stream independent of the
@@ -38,7 +38,19 @@ _LADDER_STRIDE = 1_000_003
 
 
 class PerturbationLadderHypergraphs(HypergraphDataset):
-    """Ladders of unit-edit snapshots off random base hypergraphs.
+    """Ladders of unit-edit snapshots off connected random base hypergraphs.
+
+    All bases and snapshots are connected (T-M2c / D-CONN1) and have maximum
+    hyperedge arity ``<= arity_range[1]``.  The base is drawn via
+    rejection-sampling (:func:`random_connected_hypergraph`) and each step
+    applies a connectivity-preserving, arity-bounded edit
+    (:func:`random_connected_edit` with ``max_arity=arity_range[1]``).
+    This keeps every snapshot inside ``Sigma_HG(k)`` where ``k = arity_range[1]``
+    and prevents the ``k exceeds K_MAX`` error in the C++ canonical encoder.
+    The ``HGED <= budget`` guarantee is unaffected: budget records the actual
+    Qin costs of the applied edits, forming a valid HGED path regardless of
+    which candidate edits were rejected.  The acceptance-attempt count for each
+    base is stored in the step-0 item's ``extra`` field.
 
     Parameters
     ----------
@@ -88,7 +100,7 @@ class PerturbationLadderHypergraphs(HypergraphDataset):
         items: list[DatasetItem] = []
         for ladder in range(self._n_ladders):
             rng = random.Random(self._seed + ladder * _LADDER_STRIDE)
-            base = random_hypergraph(
+            base, attempts = random_connected_hypergraph(
                 n_nodes=self._n_nodes,
                 n_edges=self._n_edges,
                 arity_range=self._arity_range,
@@ -102,12 +114,18 @@ class PerturbationLadderHypergraphs(HypergraphDataset):
                     item_id=f"L{ladder}_t0",
                     hypergraph=current,
                     iso_class=None,
-                    extra={"ladder": ladder, "step": 0, "budget_from_base": 0, "op": "base"},
+                    extra={
+                        "ladder": ladder,
+                        "step": 0,
+                        "budget_from_base": 0,
+                        "op": "base",
+                        "acceptance_attempts": attempts,
+                    },
                 )
             )
             budget = 0
             for step in range(1, self._max_t + 1):
-                nxt, op = random_edit(current, rng)
+                nxt, op = random_connected_edit(current, rng, max_arity=self._arity_range[1])
                 budget += qin_edit_cost(current, nxt)
                 current = nxt
                 items.append(

@@ -55,13 +55,13 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 |---|---|---|---|
 | [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
-| [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 1 | 3 |
-| [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 4 | 0 |
-| [`T-M4`](T-M4/) | Corpora + scoring primitives | 3 | 0 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 7 | 0 |
+| [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
+| [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 4 |
+| [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 7 (+1 blocked) | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 0 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 4 (+1 blocked) | 3 |
+| [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
+| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 3 (+1 blocked) | 4 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)
@@ -117,49 +117,54 @@ T-M0 ✔ seed optimization (DONE)
 T-M1a ✔ metric_space foundation (DONE)
    ├─► T-M1b ✔ d_I + WL distances (DONE)
    │      └─► T-M1c  metric-axiom suite + n=0 domain bug + ablation honesty
-   ├─► T-M2  ✔ HGED oracle (DONE)
-   │      └─► T-M2c  connected-only domain (D-CONN1): generators + LCC
-   │                 [gates T-M5a E1' + the T-M5g/e ladder corpora]
-   ├─► T-M3a..d competitors (nauty-edit / HPD / NetLSD / HyperCOT)
-   └─► T-M4   planted families (geometry-sweep-parameterized) + scoring
-              primitives (association, information, embedding, geometry)
+   ├─► T-M2  ✔ HGED oracle (DONE; T-M2a/T-M2b Qin unification DONE)
+   │      └─► T-M2c ✔ connected-only domain (D-CONN1): generators + LCC
+   │                 (DONE 2026-07-09) [gates T-M5a E1' + T-M5g/e ladders — satisfied]
+   ├─► T-M3a..d ✔ competitors (nauty-edit / HPD / NetLSD / HyperCOT) (DONE 2026-07-15)
+   └─► T-M4 ✔ planted families + scoring primitives (DONE 2026-07-09; v3 deltas —
+              geometry-sweep params + `geometry.py` helpers — owned by T-M5f)
 
-T-M4'  HIC atlas loader (independent) ─► real anchor + gates T-DQ3'
+T-M4' ✔ HIC atlas loader (DONE 2026-07-09) ─► real anchor + gates T-DQ3'
 
 canonical-form track (the metric's foundation): T-TA ✔ complete (9/9 closed)
 
 the body (HGED-free, characterize → exploit):
-   T-M5f  static geometry: helpers + per-corpus table spec   ← M1b, M4
-   T-M5g  sensitivity + ladder profiles (incl. nauty contrast) ← M1b, M2c, M3a, M4
-   T-M5b  MDS flagship + geometry table  ← M1b, M3a–d, M4, M5f (+ M4' real)
+   T-M5f  static geometry: helpers + per-corpus table spec   ← M1b ✔, M4 ✔
+   T-M5g  sensitivity + ladder profiles (incl. nauty contrast) ← M1b ✔, M2c ✔, M3a ✔, M4 ✔
+   T-M5b  MDS flagship + geometry table  ← M1b ✔, M3a–d ✔, M4 ✔, M5f (+ M4' ✔ real)
    T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← same
-   T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c, M3a, M5g
+   T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g
 
 discussion evidence (small, last):
-   T-M5a  E1' figure (exact HGED, ours only) + bits  ← M1b, M2 ✔, M2c, M4
+   T-M5a  E1' figure (exact HGED, ours only) + bits  ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
+          [v2 pipeline executed + closed pre-rescope (`experiments/article/`,
+           2026-07-09); that closure is superseded at D-ART2 — see the rescope
+           note in T-M5a; T-M5a' (full-scale v2 harvest) parked in BLOCKED/]
 
 theory record (article-facing work done; remainder is housekeeping/stretch):
    T-TB ✔ closed (conditional analysis = the discussion's source)
-   T-TBb closure unmerged ─► T-TBf reconcile [housekeeping]
+   T-TBb ✔ closure merged at the S1 reconciliation (T-TBf, 2026-07-18)
    T-TBc BLOCKED (parked at D-ART2, pending PI — transcoding ablation)
    T-TBe stretch (crossing peak; follow-up only) · T-TBg doc disentangle
 
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, 2026-07-18).** The canonical-form track is closed and the
-theory record needs no article-side work. The path to a submittable body runs:
-**T-M4 (planted families + primitives) → T-M5f/T-M5g (the characterization) →
-T-M5b–e (the applications)**, with **T-M2c** gating the ladder corpora and the
-E1' mini-corpus, **T-M3a–d** supplying the competitor matrices, and
-**T-M4' + T-DQ3'** deciding the real anchor's reach (declared fallback in
-`DATA.md` §2). T-M5a (discussion evidence) runs last and small. T-M1c hardens
-the metric-axiom foundation and should land before the paper's methods section
-is drafted.
+**Critical path (v3, updated at the 2026-07-18 S1 reconciliation merge).** The
+canonical-form track is closed and the theory record needs no article-side
+work. T-M2c, T-M3a–d, T-M4, and T-M4' all closed pre-rescope (2026-07-09/15)
+on the then-main line and were adopted at the reconciliation merge; their v3
+deltas (geometry-sweep parameterization, `geometry.py` helpers, NetLSD's
+promoted acceptance) are owned by T-M5f and the S2-verification pass. The path
+to a submittable body now runs: **T-M5f/T-M5g (the characterization) →
+T-M5b–e (the applications)**, with **T-DQ3'** deciding the real anchor's
+reach (declared fallback in `DATA.md` §2). T-M5a (discussion evidence) runs
+last and small. T-M1c hardens the metric-axiom foundation and should land
+before the paper's methods section is drafted.
 
-**Runnable in parallel right now:** T-M2c, T-M3a–d, T-M4, T-M4' (all
-independent of each other), plus T-TBf (housekeeping) and T-M1c. Use isolated
-git worktrees for agents that touch overlapping `core/` files.
+**Runnable in parallel right now:** T-M1c, T-M5f, T-M5g, T-TBg (+ T-M0b
+filler); T-DQ3' is orchestrator-only and unblocked (T-M4' closed). Use
+isolated git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

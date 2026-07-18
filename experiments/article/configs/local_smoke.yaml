@@ -1,0 +1,108 @@
+# T-M5a local smoke config.
+#
+# Validates the full pipeline end-to-end at reduced scale:
+# - Tiny corpora (n_items ≤ 10, n ≤ 7) → completes in < 2 min on any laptop.
+# - Covers all four cell types: d_matrix, sensitivity, ladder, info_content.
+# - Produces actual figures and correlation numbers in output_root.
+#
+# Run:
+#   python -m experiments.article.runner \
+#       --config experiments/article/configs/local_smoke.yaml \
+#       --output-root /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5a/smoke/
+#
+# Seeds are printed by the runner; pin 42 for reproducibility.
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5a/smoke
+
+cells:
+  # ── E1: correlation (d_I vs HGED) ───────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: e1
+    dataset_params:
+      n_items: 12
+      n_range: [4, 6]
+      n_edges_range: [2, 4]
+      arity_range: [2, 3]
+    distances:
+      - isalhg_levenshtein
+      - exact_hged
+    distance_params:
+      isalhg_levenshtein: {}
+      exact_hged: {}
+
+  # ── E2: density sweep — low density ─────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: e2_low_density
+    dataset_params:
+      n_items: 10
+      n_range: [4, 5]
+      n_edges_range: [2, 3]
+      arity_range: [2, 2]
+    distances:
+      - isalhg_levenshtein
+      - exact_hged
+
+  # ── E2: density sweep — medium density ──────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: e2_med_density
+    dataset_params:
+      n_items: 10
+      n_range: [5, 7]
+      n_edges_range: [4, 7]
+      arity_range: [2, 3]
+    distances:
+      - isalhg_levenshtein
+      - exact_hged
+
+  # ── E2: density sweep — high density ────────────────────────────────────
+  - type: d_matrix
+    dataset: correlation_corpus
+    seed: 42
+    label: e2_high_density
+    dataset_params:
+      n_items: 8
+      n_range: [5, 7]
+      n_edges_range: [6, 10]
+      arity_range: [2, 4]
+    distances:
+      - isalhg_levenshtein
+      - exact_hged
+
+  # ── E2b: single-edit sensitivity ────────────────────────────────────────
+  - type: sensitivity
+    dataset: correlation_corpus
+    seed: 42
+    label: e2b
+    dataset_params:
+      n_items: 10
+      n_range: [4, 6]
+      n_edges_range: [2, 4]
+      n_edits_per_h: 15
+
+  # ── E3: perturbation ladder ──────────────────────────────────────────────
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 42
+    label: e3
+    dataset_params:
+      n_nodes: 6
+      n_edges: 4
+      arity_range: [2, 3]
+      max_t: 6
+      n_ladders: 4
+
+  # ── Info-content ─────────────────────────────────────────────────────────
+  - type: info_content
+    dataset: correlation_corpus
+    seed: 42
+    label: info_content
+    dataset_params:
+      n_items: 12
+      n_range: [4, 6]
+      n_edges_range: [2, 4]

@@ -28,7 +28,7 @@ optional small task to fill a freed slot; never blocks the session.
 
 | ✓ | Session | Goal | Task structure | Gates |
 |---|---|---|---|---|
-| ☐ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
+| ☑ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
 | ☐ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
 | ☐ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☐ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
@@ -96,7 +96,60 @@ exists; the metric-axiom suite is green over `w*_c`.
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **Session run 2026-07-18 ~18:30–22:00 CEST (Fable orchestrator). S1 CLOSED —
+  all five exit criteria met.** Chronology and decisions below.
+- *Branch decision (human):* commit the 8 uncommitted D-ART2 ratification doc
+  edits (`b0908b0`), then **merge to `main`** and run S1 there. `main`
+  fast-forwarded to the perf-branch tip.
+- *Premise refuted, plan rewritten (human-approved):* `origin/main` carried
+  ~28 executed commits (2026-07-09→07-15) the local v3-rescope line never saw:
+  **T-M2c, T-M4, T-M4' , T-M3a–d implemented + CLOSED**, the T-TBb closure +
+  T-TAi filing, and a **v2-scope T-M5a closure** with Picasso jobs
+  1547131/32/33 submitted. SESSIONS.md's S1/S2 fan-out premise (redo T-M2c/
+  T-M4, build competitors) was false. Human chose the **full reconciliation
+  merge** (`65314ec`). Resolution policy: v3 prose wins every doc conflict;
+  executed CLOSED statuses adopted; T-M5a stays OPEN in its v3 rescoped form
+  (v2 closure record dropped, supersession note appended); **T-M5a' → BLOCKED**
+  (parked at D-ART2); v3-delta notes appended to CLOSED T-M3c (promoted
+  acceptance → S2 verification) and T-M4 (geometry-sweep params +
+  `geometry.py` → owned by T-M5f); D-CONN1 generator facts grafted into
+  `DATA.md` §3.
+- *T-TBf:* closed via the merge rather than cherry-pick (`5f17dae`); all
+  acceptance clauses re-verified (T-TBb in CLOSED/, both probe scripts + no-W
+  test present, T-TAi on the ledger).
+- *Fan-out (shrunk):* T-M1c ∥ T-M0b only. First launch died on the session
+  usage limit (reset 20:50 CEST); relaunched 21:08, both DONE.
+- *T-M0b merged (`0f96b2c`):* `_neighbour_degree_key` consumes the prebuilt
+  adj (8→1 `primal_graph` builds on Fano); +2 call-count regression tests.
+- *T-M1c merged (`e583732`):* `DegenerateHypergraphError` on n=0 (the
+  identity-of-indiscernibles fix — `are_isomorphic(∅,•)` now `False`,
+  `fingerprint(∅)` raises); metric-axiom Hypothesis suite over `w*_c`
+  (labelled + unlabelled, vs `brute_force_iso`, with the seed-prefix teeth
+  check); pinned `normalize=True` triangle-violation witness; index family
+  `{d_I^{k,h,Σ}}` documented in `IsalHGLevenshtein` + `stability.md` §1.
+  +16 tests.
+- *Orchestrator verification of adopted work (PASS):* `canonical_string`
+  raises `DisconnectedHypergraphError` on a disconnected input;
+  `correlation_corpus` 30/30 and `perturbation_ladder` 30/30 connected;
+  `planted_families` 12/12 connected, 4 families, labels present, **0
+  isomorphic within-family pairs** (exact fingerprints, all 12 pairs).
+- *Baselines at S1 close (merged `main`):* **895 passed, 18 skipped, 13
+  deselected; ruff 3; mypy 21 in 7 files** (preflight was 685/8/7 + same
+  ruff/mypy; growth = merged + new tests, zero failures, zero drift).
+- **⚠ Hazard for the next orchestrator:** both agent worktrees were cut from
+  the **stale `origin/main` tip (`3551a04`)**, not from local `main` — worker
+  doc edits were v2-based and needed three-way care at merge (README table,
+  T-M1c ledger file). At every launch, check `git merge-base main HEAD` in
+  the new worktree before letting a worker touch shared prose.
+- *S2 impact:* wave-1 **and** wave-2 code already exists (T-M3a–d, T-M4'
+  CLOSED). S2 collapses to: the competitor verification pass (five `D_rep`
+  `matrix()` runs on a small corpus, iso pairs → 0; incl. T-M3c's promoted
+  acceptance) + `[O]` T-DQ3'. `COMPETITORS_USAGE.md` (merged) documents
+  invocation; HyperCOT needs its pinned env rebuilt/checked.
+- *Pending human (non-blocking):* T-M0c — rename cyclic-13 fixtures (a) vs
+  promote to true STS(13) (b; regenerates pinned `w*`); S5 executes the
+  answer. `main` is **not pushed** (not asked); push is a fast-forward of
+  `origin/main`.
 
 ---
 

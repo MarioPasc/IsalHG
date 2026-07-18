@@ -20,9 +20,10 @@ Citations
 ---------
 - Fano plane PG(2, 2): Beth, Jungnickel & Lenz, *Design Theory*, 1999.
 - STS(9) as AG(2, 3): Hall, *Combinatorial Theory*, 1986.
-- STS(13) classification (exactly two iso-classes): Heinlein 2023,
-  arXiv:2303.01207. It does *not* certify ``cyclic_sts_13``, which is a
-  single-orbit partial system -- see that function.
+- True Steiner triple systems (orders 3-15, incl. both STS(13) iso-classes):
+  vendored catalog in :mod:`isalhg.datasets.synthetic.sts_catalog` (Kaski &
+  Ostergard, Math. Comp. 73, 2004). ``cyclic_triple_orbit_13`` below is a
+  single-orbit *partial* system, not an STS -- see that function.
 - GQ(2, 2) as the duad-syntheme geometry of ``S_6``: Sylvester 1861; Payne &
   Thas, *Finite Generalized Quadrangles*, §1.2 (the symplectic W(2) model is
   isomorphic to it).
@@ -83,15 +84,16 @@ def sts_9() -> SparseHypergraph:
     return SparseHypergraph(n_nodes=9, hyperedges=blocks)
 
 
-def cyclic_sts_13(base: tuple[int, int, int]) -> SparseHypergraph:
-    """One cyclic orbit of triples on ``Z/13Z``.
+def cyclic_triple_orbit_13(base: tuple[int, int, int]) -> SparseHypergraph:
+    """One cyclic orbit of triples on ``Z/13Z`` -- a *partial* triple system.
 
-    Despite the name -- kept because every caller and the archived empirical
-    results use it -- this is **not** a Steiner triple system. A single starter
-    block generates 13 blocks covering 39 of the 78 point-pairs; STS(13) needs
-    26 blocks from two starters (e.g. ``(0, 1, 4)`` together with ``(0, 2, 7)``).
-    What callers actually rely on is that the result is 3-uniform, 3-regular and
-    vertex-transitive under the rotation action, all of which hold.
+    Renamed from ``cyclic_sts_13`` at T-M0c: this is **not** a Steiner triple
+    system. A single starter block generates 13 blocks covering 39 of the 78
+    point-pairs; a true STS(13) has 26 blocks (take one from
+    :func:`isalhg.datasets.synthetic.sts_catalog.steiner_triple_system`).
+    What callers rely on is that the result is 3-uniform, 3-regular and
+    vertex-transitive under the rotation action, all of which hold -- a cheap
+    hard instance where the ~40x more expensive true STS(13) is not needed.
 
     Parameters
     ----------

@@ -1,6 +1,6 @@
 # T-M0c — the "STS(13)" fixtures are not Steiner triple systems
 **Declared:** 2026-07-09 12:12 CEST (handoff from T-M0a)
-**Status:** OPEN
+**Status:** DONE (2026-07-18, orchestrator — PI answer: option (b), extended to a full STS catalog)
 **Depends on:** T-M0a (introduced the shared builder these fixtures now call)
 **Why out of scope:** T-M0a's boundary is the GQ(2,2) fixture. This is the same
 class of defect on a different design, found because T-M0a's new axiom test
@@ -34,3 +34,47 @@ pin. Whichever is chosen, `tests/unit/datasets/test_designs.py` asserts the
 Steiner property iff the object claims it, and the proof's Remark + §Empirical
 use the object's true name.
 **Out of scope here:** the GQ(2,2) fixture (T-M0a, closed); T-TAd's default flip.
+
+---
+**Closing note (orchestrator, 2026-07-18).** PI answer: **(b) promote — seek
+true STS(13), plus STS(15), 3, 7, 9** from
+`https://pottonen.kapsi.fi/sts19/sts{n}.txt`. Executed as (b) + (a) combined:
+true Steiner systems added from the authoritative catalog; the partial cyclic
+objects kept under truthful names (they remain the cheap fast-test hard pair
+and the anchor of published measurements).
+
+What landed:
+- **Vendored catalog** `src/isalhg/datasets/data/sts/sts{3,7,9,13,15}.txt`
+  (verbatim; provenance + sha256s in the sibling `README.md`) + loader
+  `datasets/synthetic/sts_catalog.py` (`steiner_triple_system(n, index)`,
+  `sts_count`, registered dataset `"sts_catalog"`, 85 items with
+  `iso_class = item_id`).
+- **Verification at vendoring** (pynauty over Levi, probe 2026-07-18): every
+  listed system satisfies the Steiner axioms; iso-classes per order exactly
+  **1/1/1/2/80** (matches the classification); catalog STS(7) ≅ in-repo Fano,
+  catalog STS(9) ≅ in-repo `sts_9`.
+- **Renames (truthful naming, option (a) side):** builder `cyclic_sts_13` →
+  `cyclic_triple_orbit_13`; item ids `sts_13_cyclic_01{4,6}` /
+  `sts13_cyclic_01{4,6}` → `cyclic_triple_13_01{4,6}`; conftest fixture
+  `sts_13_pair` → `cyclic_triple_13_pair`; test names, variables, bench
+  labels, and script docstrings de-misnomered across 13 files. The Heinlein
+  citation's certifying role is replaced by the Kaski–Östergård catalog.
+- **New pins:** `w*_c` (k=3, `algorithm="canonical"`) on the two true
+  STS(13)s, `@pytest.mark.slow` (**~44 s each**, measured): lengths 472/472,
+  sha256 `4e5e682d…` / `bd872631…` — **distinct**, so `w*_c` separates the
+  two STS(13) isomorphism classes. The historical (0,1,3) pin is untouched
+  (same object, same value, truthful test name) — **no D-TA2 event**.
+- **New fixture** `sts_13_true_pair` (conftest) for slow tests.
+- `w*_c` wall-clock on STS(15)#1 exceeds 240 s (probe timeout) — STS(15)
+  stays catalog-only; no canonicalizing tests. Relevant to the T-DQ3'-style
+  scale gates.
+
+Acceptance clause-by-clause: `test_designs.py` asserts the Steiner property
+iff the object claims it (catalog tests assert it; the renamed partial-orbit
+tests assert 39/78 coverage) ✔; fixtures/ids renamed ✔; true STS(13)s with
+regenerated pins present ✔. **Pending (PI-owned):** the proof
+`theorem_a_completeness.tex` names the (0,1,3) partial object
+"$\mathrm{STS}(13)$" at 6 spots (lines ≈634–5, 718, 723–4, 745, 766) — the
+measurements there are valid for that object; only the name needs the
+`C_{13}(0,1,3)` correction. Closing checks: targeted 116 passed; slow pins
+2 passed in 89 s; full fast suite + ruff + mypy at baseline (see commit).

@@ -1,6 +1,6 @@
 """Evaluate the Prop-6.0 coherence criterion over the w*_c search (T-TBb, D2).
 
-Analytical T-B3 asks whether the Fano/STS(9)-coherent vs STS(13)/GQ(2,2)-
+Analytical T-B3 asks whether the Fano/STS(9)-coherent vs cyclic-13/GQ(2,2)-
 incoherent classification follows from the stabiliser-transitivity criterion
 of ``theorem_a_completeness.tex`` Proposition 6.0 alone, with no appeal to the
 T-TAa string-equality measurements. This script computes the criterion
@@ -409,7 +409,7 @@ def main() -> None:
     cases: list[tuple[str, SparseHypergraph, int]] = [
         ("Fano plane", designs.fano_plane(), 3),
         ("STS(9)", designs.sts_9(), 3),
-        ("cyclic-13 {0,1,4}", designs.cyclic_sts_13((0, 1, 4)), 3),
+        ("cyclic-13 {0,1,4}", designs.cyclic_triple_orbit_13((0, 1, 4)), 3),
         ("GQ(2,2) doily", designs.gq_2_2_doily(), 3),
     ]
     for name, H, k in cases:

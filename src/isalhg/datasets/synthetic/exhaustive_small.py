@@ -85,30 +85,31 @@ def _sts_9() -> _NamedDesign:
     return _named("sts_9_ag23", designs.sts_9(), "AG(2, 3) Steiner triple system")
 
 
-def _sts_13_pair_a() -> _NamedDesign:
+def _cyclic_triple_13_a() -> _NamedDesign:
     """One cyclic orbit of triples on Z/13Z from the starter {0, 1, 4}.
 
-    Not an STS(13) despite the item id: a single starter covers 39 of the 78
-    point-pairs. Kept as-is because callers use it only as a 3-uniform,
-    vertex-transitive hard instance and as one half of a non-isomorphic pair.
+    A *partial* triple system (39 of the 78 point-pairs covered), not an
+    STS(13); true STS(13)s live in ``isalhg.datasets.synthetic.sts_catalog``.
+    Callers use it as a cheap 3-uniform, vertex-transitive hard instance and
+    as one half of a non-isomorphic pair.
     """
     return _named(
-        "sts_13_cyclic_014",
-        designs.cyclic_sts_13((0, 1, 4)),
+        "cyclic_triple_13_014",
+        designs.cyclic_triple_orbit_13((0, 1, 4)),
         "Bose 1939; cyclic triple orbit from {0,1,4} mod 13",
     )
 
 
-def _sts_13_pair_b() -> _NamedDesign:
+def _cyclic_triple_13_b() -> _NamedDesign:
     """The companion cyclic orbit from the starter {0, 1, 6}.
 
-    Non-isomorphic to :func:`_sts_13_pair_a`; the Phase 3 closing check
+    Non-isomorphic to :func:`_cyclic_triple_13_a`; the Phase 3 closing check
     verifies this empirically via the IsalHG and pynauty backends. See that
     function on why neither is a Steiner triple system.
     """
     return _named(
-        "sts_13_cyclic_016",
-        designs.cyclic_sts_13((0, 1, 6)),
+        "cyclic_triple_13_016",
+        designs.cyclic_triple_orbit_13((0, 1, 6)),
         "cyclic triple orbit from {0,1,6} mod 13",
     )
 
@@ -137,7 +138,7 @@ def _large_named_designs() -> tuple[_NamedDesign, ...]:
     gated behind ``include_large_designs=True`` and Tier 1 unit tests do not
     pay the cost; the Phase-4 closing check explicitly opts in.
     """
-    return (_sts_13_pair_a(), _sts_13_pair_b(), _gq_2_2_doily())
+    return (_cyclic_triple_13_a(), _cyclic_triple_13_b(), _gq_2_2_doily())
 
 
 # ---------------------------------------------------------------------------

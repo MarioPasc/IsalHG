@@ -38,10 +38,18 @@ _PINNED_FIXTURES: dict[str, tuple[int, str]] = {
     ),
 }
 
-_PINNED_STS13 = (
+_PINNED_C13_013 = (
     256,
     "77d9fa1e4e99d500c3bed2debf32d6da773b1721c7e3ea26f5a734ac0ec89bec",
 )
+
+# True STS(13) pins (T-M0c, 2026-07-18): catalog systems 1 and 2 of
+# datasets/data/sts/sts13.txt, ~44 s each -> slow marker. Distinct hashes =
+# w*_c separates the two STS(13) isomorphism classes.
+_PINNED_STS13_TRUE = {
+    1: (472, "4e5e682d86de95fe7526bce05c74519856270e3eb8e907e99437b3efb53f0cc6"),
+    2: (472, "bd872631a5a5a17256c411159c1a10f40d5d8ef63ef0893ab2fcbbd7a5467eca"),
+}
 
 _PINNED_CE_N4 = (
     54,
@@ -62,13 +70,25 @@ def test_wstar_c_pinned_on_design_fixtures(
     assert _pin(w) == _PINNED_FIXTURES[fixture_name]
 
 
-def test_wstar_c_pinned_on_cyclic_sts13() -> None:
+def test_wstar_c_pinned_on_cyclic_triple_orbit_13() -> None:
+    # The (0,1,3) cyclic partial triple system (13 blocks; historically
+    # mis-called "STS(13)" until T-M0c). Same object, same pin value.
     H = SparseHypergraph(
         n_nodes=13,
         hyperedges=[frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)],
     )
     w = canonical_string(H, k=3, algorithm="canonical")
-    assert _pin(w) == _PINNED_STS13
+    assert _pin(w) == _PINNED_C13_013
+
+
+@pytest.mark.slow
+@pytest.mark.parametrize("catalog_index", sorted(_PINNED_STS13_TRUE))
+def test_wstar_c_pinned_on_true_sts13(catalog_index: int) -> None:
+    from isalhg.datasets.synthetic.sts_catalog import steiner_triple_system
+
+    H = steiner_triple_system(13, catalog_index - 1)
+    w = canonical_string(H, k=3, algorithm="canonical")
+    assert _pin(w) == _PINNED_STS13_TRUE[catalog_index]
 
 
 def test_wstar_c_pinned_on_n4_counterexample() -> None:

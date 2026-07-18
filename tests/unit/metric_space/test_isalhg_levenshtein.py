@@ -1,7 +1,7 @@
 """Unit tests for :class:`isalhg.metric_space.distances.isalhg_levenshtein`.
 
 ``d_I`` must be 0 on isomorphic pairs (``w*`` is iso-invariant) and > 0 on
-non-isomorphic pairs, including the hard same-parameter STS(13) pair.
+non-isomorphic pairs, including the hard same-parameter cyclic C13 pair.
 """
 
 from __future__ import annotations
@@ -46,11 +46,11 @@ class TestPairwise:
         h1, h2 = non_iso_pair_small
         assert IsalHGLevenshtein().pairwise(h1, h2) > 0.0
 
-    def test_distinguishes_two_sts13(
-        self, sts_13_pair: tuple[SparseHypergraph, SparseHypergraph]
+    def test_distinguishes_cyclic_triple_13_pair(
+        self, cyclic_triple_13_pair: tuple[SparseHypergraph, SparseHypergraph]
     ) -> None:
         # Same parameters, genuinely non-isomorphic — the hard case for w*.
-        a, b = sts_13_pair
+        a, b = cyclic_triple_13_pair
         assert IsalHGLevenshtein().pairwise(a, b) > 0.0
 
     def test_symmetry(self, non_iso_pair_small: tuple[SparseHypergraph, SparseHypergraph]) -> None:
@@ -237,14 +237,14 @@ class TestBudget:
     on high-automorphism inputs before hanging — for both the cpp and python backends.
     """
 
-    # Cyclic STS(13): vertex-transitive, hits large V tie-sets.
-    _STS13 = [frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)]
+    # Cyclic triple orbit C13(0,1,3): vertex-transitive, hits large V tie-sets.
+    _C13 = [frozenset({i, (i + 1) % 13, (i + 3) % 13}) for i in range(13)]
 
     @pytest.mark.parametrize("backend", ["cpp", "python"])
     def test_budget_raises_on_high_automorphism_design(self, backend: str) -> None:
         from isalhg.errors import CanonicalizationTimeoutError
 
-        H = SparseHypergraph(n_nodes=13, hyperedges=self._STS13)
+        H = SparseHypergraph(n_nodes=13, hyperedges=self._C13)
         with pytest.raises(CanonicalizationTimeoutError, match="budget"):
             canonical_string(H, max_expansions=5, backend=backend)
 
@@ -267,7 +267,7 @@ class TestBudget:
         from isalhg.core.algorithms.canonical import CanonicalEncoder
         from isalhg.errors import CanonicalizationTimeoutError
 
-        H = SparseHypergraph(n_nodes=13, hyperedges=self._STS13)
+        H = SparseHypergraph(n_nodes=13, hyperedges=self._C13)
         enc = CanonicalEncoder(k=3, max_expansions=5)
         with pytest.raises(CanonicalizationTimeoutError, match="budget"):
             enc.encode(H)

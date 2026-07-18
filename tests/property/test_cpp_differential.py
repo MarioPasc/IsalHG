@@ -25,7 +25,12 @@ from isalhg.core.canonical import required_k
 from isalhg.core.hypergraph_to_string import _python_greedy_h2s, greedy_h2s
 from isalhg.core.instructions import serialize
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
+from isalhg.datasets.synthetic.designs import (
+    cyclic_triple_orbit_13,
+    fano_plane,
+    gq_2_2_doily,
+    sts_9,
+)
 from tests.property.test_canonical_invariance import small_connected_hypergraph
 
 pytestmark = pytest.mark.property
@@ -33,7 +38,7 @@ pytestmark = pytest.mark.property
 _NAMED_FIXTURES = [
     ("fano", fano_plane()),
     ("sts9", sts_9()),
-    ("sts13", cyclic_sts_13((0, 1, 3))),
+    ("c13_013", cyclic_triple_orbit_13((0, 1, 3))),
     ("doily", gq_2_2_doily()),
 ]
 

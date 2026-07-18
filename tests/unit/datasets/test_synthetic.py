@@ -136,8 +136,8 @@ class TestEnumeration:
         assert names == {
             "fano_plane_sts7",
             "sts_9_ag23",
-            "sts_13_cyclic_014",
-            "sts_13_cyclic_016",
+            "cyclic_triple_13_014",
+            "cyclic_triple_13_016",
             "gq_2_2_doily",
         }
 

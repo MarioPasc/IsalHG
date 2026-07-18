@@ -23,7 +23,7 @@ from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
 from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabulary
 from isalhg.datasets.synthetic.designs import (
-    cyclic_sts_13,
+    cyclic_triple_orbit_13,
     fano_plane,
     gq_2_2_doily,
     sts_9,
@@ -33,8 +33,8 @@ from isalhg.types import DatasetName, Seed
 _FIXTURES: tuple[tuple[str, SparseHypergraph], ...] = (
     ("fano_sts7", fano_plane()),
     ("sts9", sts_9()),
-    ("sts13_cyclic_014", cyclic_sts_13((0, 1, 4))),
-    ("sts13_cyclic_016", cyclic_sts_13((0, 1, 6))),
+    ("cyclic_triple_13_014", cyclic_triple_orbit_13((0, 1, 4))),
+    ("cyclic_triple_13_016", cyclic_triple_orbit_13((0, 1, 6))),
     ("gq_2_2_doily", gq_2_2_doily()),
 )
 

@@ -57,12 +57,12 @@ def test_no_w_tokens_small_fixtures(
 def test_no_w_tokens_design_fixtures(
     fano_plane: SparseHypergraph,
     sts_9: SparseHypergraph,
-    sts_13_pair: tuple[SparseHypergraph, SparseHypergraph],
+    cyclic_triple_13_pair: tuple[SparseHypergraph, SparseHypergraph],
     gq_2_2_doily: SparseHypergraph,
 ) -> None:
     """Tie-degenerate designs, C++ backend only (w*_c is expensive here)."""
-    sts13_a, sts13_b = sts_13_pair
-    for H in (fano_plane, sts_9, sts13_a, sts13_b, gq_2_2_doily):
+    c13_a, c13_b = cyclic_triple_13_pair
+    for H in (fano_plane, sts_9, c13_a, c13_b, gq_2_2_doily):
         _assert_no_w(canonical_string(H, backend="cpp"))
 
 

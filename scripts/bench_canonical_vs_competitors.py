@@ -10,7 +10,7 @@ Tiers
 -----
 easy   : small sparse random hypergraphs (n<=10, arity<=3)
 medium : larger sparse random hypergraphs (n in {20,35,50}, arity<=3)
-hard   : the vertex-transitive design fixtures (Fano, STS(9), cyclic STS(13),
+hard   : the vertex-transitive design fixtures (Fano, STS(9), cyclic C13,
          GQ(2,2) doily) -- IsalHG's structural worst case.
 
 Run: ``python scripts/bench_canonical_vs_competitors.py [--reps N] [--seed S]``
@@ -24,7 +24,7 @@ import time
 from collections.abc import Callable
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
+from isalhg.datasets.synthetic.designs import cyclic_triple_orbit_13, fano_plane, gq_2_2_doily, sts_9
 from isalhg.iso_backends.registry import get_backend
 
 CANONICAL = "isalhg_canonical"
@@ -109,7 +109,7 @@ def main() -> None:
     for label, H in (
         ("hard fano STS(7)", fano_plane()),
         ("hard STS(9)", sts_9()),
-        ("hard cyclic STS(13)", cyclic_sts_13((0, 1, 3))),
+        ("hard cyclic triple orbit C13", cyclic_triple_orbit_13((0, 1, 3))),
         ("hard GQ(2,2) doily", gq_2_2_doily()),
     ):
         _row(label, H, backends, args.reps)

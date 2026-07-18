@@ -16,7 +16,7 @@ import pytest
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import max_neighbor_degree_nodes, max_xi_nodes
 from isalhg.datasets.synthetic.designs import (
-    cyclic_sts_13,
+    cyclic_triple_orbit_13,
     fano_plane,
     gq_2_2_doily,
     sts_9,
@@ -60,7 +60,7 @@ def test_steiner_triple_system_axioms(builder, n: int, m: int) -> None:
 
 @pytest.mark.parametrize("base", [(0, 1, 3), (0, 1, 4), (0, 1, 6)])
 def test_cyclic_13_is_a_vertex_transitive_partial_triple_system(base) -> None:
-    H = cyclic_sts_13(base)
+    H = cyclic_triple_orbit_13(base)
     assert (H.n_nodes, H.n_edges) == (13, 13)
     assert all(len(members) == 3 for _, members, _ in H.iter_edges())
     assert {H.degree(v) for v in H.nodes()} == {3}
@@ -79,7 +79,7 @@ def test_cyclic_13_is_not_a_steiner_triple_system_known_limitation(base) -> None
     starts failing, the builder became a real STS and the callers' names,
     citations and iso-class expectations must be revisited.
     """
-    coverage = _pair_coverage(cyclic_sts_13(base))
+    coverage = _pair_coverage(cyclic_triple_orbit_13(base))
     assert len(coverage) == 39 < 13 * 12 // 2
 
 

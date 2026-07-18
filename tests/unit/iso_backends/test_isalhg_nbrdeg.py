@@ -7,7 +7,7 @@ Covers acceptance criteria (a) iso-invariance on the design fixtures and
 random small hypergraphs lives in
 ``tests/property/test_canonical_invariance.py`` (parametrized over the same
 variant); this file pins the design-theoretic instances the property test
-never samples (Fano, STS(9), STS(13), GQ(2,2)).
+never samples (Fano, STS(9), cyclic C13, GQ(2,2)).
 """
 
 from __future__ import annotations
@@ -47,10 +47,10 @@ def test_nbrdeg_fingerprint_invariant_on_designs(
     assert backend.fingerprint(H) == backend.fingerprint(H2)
 
 
-def test_nbrdeg_separates_non_iso_sts13(
-    sts_13_pair: tuple[SparseHypergraph, SparseHypergraph],
+def test_nbrdeg_separates_non_iso_cyclic_13(
+    cyclic_triple_13_pair: tuple[SparseHypergraph, SparseHypergraph],
 ) -> None:
-    h1, h2 = sts_13_pair
+    h1, h2 = cyclic_triple_13_pair
     backend = IsalHGBackend(algorithm=_NBRDEG)
     assert backend.fingerprint(h1) != backend.fingerprint(h2)
 
@@ -69,7 +69,7 @@ def test_nbrdeg_iso_and_non_iso_pairs(
 def test_nbrdeg_partition_matches_pynauty(
     fano_plane: SparseHypergraph,
     sts_9: SparseHypergraph,
-    sts_13_pair: tuple[SparseHypergraph, SparseHypergraph],
+    cyclic_triple_13_pair: tuple[SparseHypergraph, SparseHypergraph],
 ) -> None:
     """Criterion (b): the nbrdeg backend and pynauty induce the SAME
     iso-partition on a corpus of designs, their relabellings, and a
@@ -77,18 +77,18 @@ def test_nbrdeg_partition_matches_pynauty(
     pytest.importorskip("pynauty")
     from isalhg.iso_backends.pynauty_levi import PynautyLeviBackend
 
-    sts13_a, sts13_b = sts_13_pair
+    c13_a, c13_b = cyclic_triple_13_pair
     corpus: list[SparseHypergraph] = [
         fano_plane,
         permute(fano_plane, _reverse(7)),
         sts_9,
         permute(sts_9, _reverse(9)),
-        sts13_a,
-        sts13_b,
+        c13_a,
+        c13_b,
     ]
     isalhg = IsalHGBackend(algorithm=_NBRDEG)
     pyn = PynautyLeviBackend()
-    # Expected: {fano, fano'} | {sts9, sts9'} | {sts13_a} | {sts13_b}.
+    # Expected: {fano, fano'} | {sts9, sts9'} | {c13_a} | {c13_b}.
     expected = frozenset({frozenset({0, 1}), frozenset({2, 3}), frozenset({4}), frozenset({5})})
     part_isalhg = _partition(isalhg, corpus)
     assert part_isalhg == expected

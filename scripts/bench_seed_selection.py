@@ -2,7 +2,7 @@
 
 Compares ``canonical_string`` under ``greedy_min`` (historical xi seed set)
 and ``greedy_min_nbrdeg`` (the T-M0 default) on the design fixtures
-(Fano / STS(9) / two STS(13) / GQ(2,2)) plus one asymmetric sample. Reports,
+(Fano / STS(9) / two cyclic C13 orbits / GQ(2,2)) plus one asymmetric sample. Reports,
 per instance, the two seed-set sizes, the median wall-clock (with IQR) of
 each variant, the speedup ratio, and whether the two canonical strings
 coincide.
@@ -28,7 +28,7 @@ import random
 from isalhg.core.canonical import canonical_string
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import max_neighbor_degree_nodes, max_xi_nodes
-from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
+from isalhg.datasets.synthetic.designs import cyclic_triple_orbit_13, fano_plane, gq_2_2_doily, sts_9
 from isalhg.metrics.runtime import (
     iqr_wall_clock_s,
     median_wall_clock_s,
@@ -58,8 +58,8 @@ def _fixtures() -> list[tuple[str, SparseHypergraph]]:
     return [
         ("fano_7", fano_plane()),
         ("sts9", sts_9()),
-        ("sts13_a", cyclic_sts_13((0, 1, 4))),
-        ("sts13_b", cyclic_sts_13((0, 1, 6))),
+        ("c13_014", cyclic_triple_orbit_13((0, 1, 4))),
+        ("c13_016", cyclic_triple_orbit_13((0, 1, 6))),
         ("gq22", gq_2_2_doily()),
         ("asym_er12", _asymmetric()),
     ]

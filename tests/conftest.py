@@ -78,15 +78,32 @@ def non_iso_pair_small() -> tuple[SparseHypergraph, SparseHypergraph]:
 
 
 @pytest.fixture
-def sts_13_pair() -> tuple[SparseHypergraph, SparseHypergraph]:
-    """A non-isomorphic pair of cyclic triple systems on 13 points.
+def cyclic_triple_13_pair() -> tuple[SparseHypergraph, SparseHypergraph]:
+    """A non-isomorphic pair of cyclic *partial* triple systems on 13 points.
 
-    Cyclic on the starters ``{0, 1, 4}`` and ``{0, 1, 6}``. Each is a single
-    orbit of 13 blocks, so neither is an STS(13) despite the fixture name --
-    see ``isalhg.datasets.synthetic.designs.cyclic_sts_13``. Non-isomorphism
-    is verified empirically against pynauty by the Phase 3 closing check.
+    Cyclic on the starters ``{0, 1, 4}`` and ``{0, 1, 6}``; each is a single
+    orbit of 13 blocks (not an STS(13) -- see
+    ``isalhg.datasets.synthetic.designs.cyclic_triple_orbit_13``). The cheap
+    hard-negative pair for fast tests; for the true STS(13) pair use
+    ``sts_13_true_pair`` (slow: ~44 s per ``w*_c``). Non-isomorphism is
+    verified empirically against pynauty by the Phase 3 closing check.
     """
-    return designs.cyclic_sts_13((0, 1, 4)), designs.cyclic_sts_13((0, 1, 6))
+    return designs.cyclic_triple_orbit_13((0, 1, 4)), designs.cyclic_triple_orbit_13((0, 1, 6))
+
+
+@pytest.fixture
+def sts_13_true_pair() -> tuple[SparseHypergraph, SparseHypergraph]:
+    """The two genuine STS(13) isomorphism classes (T-M0c).
+
+    Catalog systems 1 and 2 of ``isalhg/datasets/data/sts/sts13.txt``
+    (Kaski-Ostergard enumeration): 13 points, 26 blocks each, pairwise
+    non-isomorphic (pynauty-verified at vendoring). ``w*_c`` costs ~44 s per
+    member -- canonicalizing tests using this fixture must carry the ``slow``
+    marker.
+    """
+    from isalhg.datasets.synthetic.sts_catalog import steiner_triple_system
+
+    return steiner_triple_system(13, 0), steiner_triple_system(13, 1)
 
 
 @pytest.fixture

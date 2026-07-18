@@ -40,9 +40,12 @@ random Qin-op edits per member, enforced non-isomorphic within family). Yields:
 
 This is **new code** (`datasets/synthetic/planted_families.py`) — no library
 provides the non-isomorphic-within-family constraint. Seeds: the design
-fixtures already shipped (Fano n=7, STS(9) n=9, STS(13) n=13, GQ(2,2) n=15)
-plus SageMath PG(2,q) small designs. All generated hypergraphs **connected**
-(the article's domain; generator-level guarantee).
+fixtures already shipped (Fano n=7, STS(9) n=9, the cyclic C13 orbits n=13,
+GQ(2,2) n=15) plus the vendored **Steiner-triple-system catalog** (T-M0c,
+2026-07-18: all iso-classes for orders 3–15 — 1/1/1/2/80 systems,
+`datasets/synthetic/sts_catalog.py`, dataset `"sts_catalog"`) and SageMath
+PG(2,q) small designs. All generated hypergraphs **connected** (the article's
+domain; generator-level guarantee).
 
 A 2026-07-08 cohort survey found no existing corpus with all three of:
 whole-hypergraph class label, ≥2 instances/class, sizes within our wall-clock

@@ -244,9 +244,12 @@ matrix filled (A4).
    spec is final (D-ART2 ratified as packaged): no MI, no sweep, no competitor
    rows.
 2. `[O]` **Closure sweep** —
-   - T-M0c: execute the PI's answer, option (a) rename or (b) promote (note
-     (b) regenerates pinned `w*` values — orchestrator-only if chosen). If no
-     answer is on file yet, surface it; do not default.
+   - T-M0c: **executed early, 2026-07-18** (PI answered (b) right after S1
+     closed): true STS catalog vendored (orders 3–15, Pottonen/Kaski–
+     Östergård), cyclic partial systems truthfully renamed, true-STS(13)
+     `w*_c` pins added under `slow` (~44 s each; distinct hashes). Closing
+     note in `T-M0/CLOSED/T-M0c.md`. Remaining S5 item: the proof-side
+     naming fix (6 spots in `theorem_a_completeness.tex`) — PI-owned.
    - T-TBc stays parked (D-ART2 point (d), ratified) — no action unless the
      PI reopens it.
 3. Final ledger sweep: statuses, scope counts, dependency graph in

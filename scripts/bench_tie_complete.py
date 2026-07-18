@@ -18,7 +18,7 @@ from collections.abc import Callable
 
 from isalhg.core.canonical import canonical_string, required_k
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.datasets.synthetic.designs import cyclic_sts_13, fano_plane, gq_2_2_doily, sts_9
+from isalhg.datasets.synthetic.designs import cyclic_triple_orbit_13, fano_plane, gq_2_2_doily, sts_9
 
 GREEDY = "greedy_min_nbrdeg"
 COMPLETE = "canonical"
@@ -44,7 +44,7 @@ def _bench_designs(with_python: bool, python_reference_max_n: int) -> None:
     designs = [
         ("fano", fano_plane()),
         ("sts9", sts_9()),
-        ("sts13", cyclic_sts_13((0, 1, 3))),
+        ("c13_013", cyclic_triple_orbit_13((0, 1, 3))),
         ("gq22_doily", gq_2_2_doily()),
     ]
     header = f"{'design':<12}{'greedy(C++)':>14}{'complete(C++)':>16}{'ratio':>9}{'w*_g==w*_c':>13}"

@@ -24,8 +24,8 @@ def test_item_ids_are_unique_and_named() -> None:
     expected = {
         "fano_sts7",
         "sts9",
-        "sts13_cyclic_014",
-        "sts13_cyclic_016",
+        "cyclic_triple_13_014",
+        "cyclic_triple_13_016",
         "gq_2_2_doily",
     }
     assert set(ids) == expected

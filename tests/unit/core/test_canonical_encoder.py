@@ -112,7 +112,7 @@ def test_complete_on_designs_invariant_under_reorder(
     assert canonical_string(reordered, k=k, algorithm="canonical") == w_ref
 
 
-def test_complete_differs_from_greedy_on_sts13() -> None:
+def test_complete_differs_from_greedy_on_cyclic_13() -> None:
     """The coherent-tie regime is not universal on designs.
 
     Fano and STS(9) satisfy ``w*_greedy == w*_complete``: every tie reached

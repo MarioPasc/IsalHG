@@ -96,6 +96,24 @@ one-sided heuristic: equal strings still certify isomorphism, and it is exact
 on edge-order-preserving pipelines and on automorphism-coherent-tie inputs
 like the design fixtures — Fano verified `w*_greedy = w*_c`).
 
+**Index family.** The metric `d_I` depends on the pointer count `k` (which
+caps the maximum supported arity), the structural-tuple depth `h` (depth of
+the `xi`/`eta` tuples, default 3), and the vertex and edge vocabulary sizes
+(the label universe `Σ_V × Σ_E`).  The correct name is the *family*
+`{d_I^{k,h,Σ}}`: values from different `(k, h, Σ)` triples lie in
+incomparable metric spaces and must not be mixed in one distance matrix or
+MDS embedding.  `IsalHGLevenshtein` enforces a shared `k` within each
+comparison (pair maximum in `pairwise`, corpus maximum in `matrix`, or a
+user-supplied fixed `k`); the paper must state `(k, h, vocabulary)` once when
+introducing `d_I` and use the same triple throughout.  Domain restriction:
+`d_I` is defined only for `n ≥ 1`; the empty hypergraph is excluded because
+`w*_c(∅) = ""` is indistinguishable from `w*_c(•)` (the single vertex),
+breaking identity of indiscernibles (`DegenerateHypergraphError` in code,
+T-M1c).  The normalized ablation `edit/max_len` is a *dissimilarity*, not a
+metric: it violates the triangle inequality (Marzal & Vidal, IEEE TPAMI
+15(9), 1993; pinned witness triple in
+`tests/unit/metric_space/test_isalhg_levenshtein.py::TestNormalizedNonMetric`).
+
 **Greedy `d_Lev` caveat.** On the greedy variants `d_Lev` is not even
 well-defined on isomorphism classes (presentation-dependent); per fixed
 presentation it is at best a pseudometric. The paper must not use it for the

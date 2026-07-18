@@ -100,6 +100,31 @@ def _encode(sequences: Sequence[tuple[Symbol, ...]]) -> list[str]:
 class IsalHGLevenshtein(HypergraphDistance):
     """Levenshtein distance between canonical H2S strings ``w*`` (``d_I``).
 
+    **Index family.**  ``w*_c`` depends on the pointer count ``k`` (Critical
+    Invariant #7), the structural-tuple depth ``h`` (invariant #8), and the
+    vertex/edge vocabulary sizes.  The induced metric is therefore a *family*
+    ``{d_I^{k,h,V,E}}``: values computed with different ``(k, h)`` tuples
+    belong to incomparable metric spaces and must not be mixed in one distance
+    matrix.  This class pins all three via its constructor parameters and
+    enforces a shared ``k`` within each comparison (:meth:`pairwise` uses the
+    pair maximum, :meth:`matrix` uses the corpus maximum, unless a fixed ``k``
+    is passed).
+
+    **``normalize=True`` is a dissimilarity, not a metric.**  The naive
+    length-normalized edit distance ``edit(s,t) / max(|s|,|t|)`` violates the
+    triangle inequality (Marzal & Vidal, IEEE TPAMI 15(9), 1993; see the pinned
+    witness triple in ``tests/unit/metric_space/test_isalhg_levenshtein.py``).
+    Use ``normalize=False`` (the default) for all metric-space claims.  The
+    metric-preserving normalization of Marzal & Vidal is a distinct formula and
+    is not implemented here; ``normalize=True`` is provided as an ablation axis
+    only.
+
+    **Token-aware substitution costs.**  The deferred token-aware cost matrix
+    (T-M1b decision D3) replaces the unit-cost Levenshtein kernel.  If a
+    custom cost matrix is introduced, it must itself be a metric (zero diagonal,
+    symmetric, triangle inequality) for ``d_I`` to remain a metric; violating
+    this precondition silently breaks the metric axioms.
+
     Parameters
     ----------
     k : int or None, optional
@@ -113,10 +138,12 @@ class IsalHGLevenshtein(HypergraphDistance):
         other name raises :class:`isalhg.errors.DistanceComputationError`
         at construction time.
     structural_depth : int, optional
-        Structural-tuple depth passed to :func:`canonical_string`. Defaults to 3.
+        Structural-tuple depth ``h`` passed to :func:`canonical_string`.
+        Defaults to 3.
     normalize : bool, optional
-        If ``True``, use length-normalized edit distance in ``[0, 1]`` (ablation).
-        Defaults to ``False`` (raw distance, primary).
+        If ``True``, use length-normalized edit distance ``edit/max_len``
+        in ``[0, 1]`` (ablation dissimilarity -- **not a metric**; see above).
+        Defaults to ``False`` (raw distance, primary metric).
     backend : {"cpp", "python"} or None, optional
         Canonical-string implementation. ``None`` uses the package default.
     """

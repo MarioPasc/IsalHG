@@ -49,6 +49,17 @@ class DisconnectedHypergraphError(IsalHGError):
     """Raised when an operation requires a connected hypergraph (decision B11)."""
 
 
+class DegenerateHypergraphError(IsalHGError):
+    """Raised when an operation requires ``n ≥ 1`` and receives the empty hypergraph.
+
+    The metric ``d_I`` is defined on isomorphism classes of hypergraphs with at
+    least one vertex.  The empty hypergraph (``n = 0``) produces the empty
+    canonical string --- identical to the single-vertex case --- so including it
+    would break the identity-of-indiscernibles axiom.  Restrict the domain to
+    ``n ≥ 1`` and raise here instead.
+    """
+
+
 class VocabularyMismatchError(IsalHGError):
     """Raised when two hypergraphs declare incompatible label vocabularies."""
 

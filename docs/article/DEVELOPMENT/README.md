@@ -61,7 +61,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 7 (+1 blocked) | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 3 (+1 blocked) | 4 |
+| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 2 (+1 blocked) | 5 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)

@@ -167,9 +167,16 @@ def max_xi_nodes(
 # ---------------------------------------------------------------------------
 
 
-def _neighbour_degree_key(H: SparseHypergraph, v: NodeId) -> tuple[int, ...]:
-    """Descending-sorted list of primal-graph degrees of ``v``'s neighbours."""
-    adj = H.primal_graph()
+def _neighbour_degree_key(adj: dict[NodeId, set[NodeId]], v: NodeId) -> tuple[int, ...]:
+    """Descending-sorted list of primal-graph degrees of ``v``'s neighbours.
+
+    Parameters
+    ----------
+    adj : dict[NodeId, set[NodeId]]
+        Pre-built primal-graph adjacency (caller's responsibility to build once).
+    v : NodeId
+        Target node.
+    """
     return tuple(sorted((len(adj[u]) for u in adj[v]), reverse=True))
 
 
@@ -190,7 +197,7 @@ def _python_max_neighbor_degree_nodes(
     survivors = [v for v in survivors if len(adj[v]) == max_deg]
 
     # Step 3 — lex-max sorted-desc neighbour-degree list.
-    keys = {v: _neighbour_degree_key(H, v) for v in survivors}
+    keys = {v: _neighbour_degree_key(adj, v) for v in survivors}
     best_key = max(keys.values())
     return tuple(v for v in survivors if keys[v] == best_key)
 

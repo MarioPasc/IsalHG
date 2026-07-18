@@ -53,7 +53,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 
 | Scope | Concern | Open | Closed |
 |---|---|---|---|
-| [`T-M0`](T-M0/) | Seed selection for `w*` | 2 | 2 |
+| [`T-M0`](T-M0/) | Seed selection for `w*` | 1 | 3 |
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 1 | 2 |
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 4 |

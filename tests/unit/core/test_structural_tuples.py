@@ -2,10 +2,17 @@
 
 from __future__ import annotations
 
+from unittest.mock import patch
+
 import pytest
 
 from isalhg.core.sparse_hypergraph import SparseHypergraph
-from isalhg.core.structural_tuples import eta, max_xi_nodes, xi
+from isalhg.core.structural_tuples import (
+    _python_max_neighbor_degree_nodes,
+    eta,
+    max_xi_nodes,
+    xi,
+)
 
 pytestmark = pytest.mark.unit
 
@@ -53,3 +60,57 @@ class TestMaxXi:
             hyperedges=[frozenset({0, 1}), frozenset({1, 2})],
         )
         assert max_xi_nodes(H) == (1,)
+
+
+class TestNeighbourDegreeKeyCallCount:
+    """Regression guard: primal_graph() is built exactly once per seeder call.
+
+    Before the T-M0b fix, _neighbour_degree_key called H.primal_graph()
+    internally for every survivor node, giving (1 + |survivors|) total builds.
+    The Fano plane is vertex-transitive so all 7 nodes survive step 2, making
+    the old cost 8 builds vs 1 after the fix.  This test fails against the old
+    _neighbour_degree_key body (restore ``adj = H.primal_graph()`` inside it to
+    reproduce the failure).
+
+    SparseHypergraph uses __slots__, so instance-level patching is not
+    supported.  We patch the class method instead (class-level patch is
+    equivalent for a single-threaded unit test).
+    """
+
+    def test_primal_graph_built_once_fano(self, fano_plane: SparseHypergraph) -> None:
+        _real = SparseHypergraph.primal_graph
+        call_count: list[int] = [0]
+
+        def _counting(self):  # type: ignore[no-untyped-def]
+            call_count[0] += 1
+            return _real(self)
+
+        with patch.object(SparseHypergraph, "primal_graph", _counting):
+            _python_max_neighbor_degree_nodes(fano_plane)
+
+        assert call_count[0] == 1, (
+            f"primal_graph() called {call_count[0]} times; expected 1. "
+            "Restoring 'adj = H.primal_graph()' inside _neighbour_degree_key "
+            "reproduces this failure on the 7-survivor Fano plane (old cost: 8)."
+        )
+
+    def test_primal_graph_built_once_path(self) -> None:
+        H = SparseHypergraph(
+            n_nodes=4,
+            hyperedges=[
+                frozenset({0, 1}),
+                frozenset({1, 2}),
+                frozenset({2, 3}),
+            ],
+        )
+        _real = SparseHypergraph.primal_graph
+        call_count: list[int] = [0]
+
+        def _counting(self):  # type: ignore[no-untyped-def]
+            call_count[0] += 1
+            return _real(self)
+
+        with patch.object(SparseHypergraph, "primal_graph", _counting):
+            _python_max_neighbor_degree_nodes(H)
+
+        assert call_count[0] == 1

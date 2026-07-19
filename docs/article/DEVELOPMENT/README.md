@@ -63,6 +63,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 2 (+1 blocked) | 5 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
+| [`T-OPT`](T-OPT/) | C++ encoder optimisations (runtime k + speedups) | 0 | 1 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)
 

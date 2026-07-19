@@ -598,12 +598,11 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
 
     std::array<int, K_MAX> prank{};
     std::array<SlotIdx, K_MAX> base_slots{};  // where unassigned pointers stay
-    for (int i = 0; i < k; ++i) {
+    // Only the first k_disp pointer slots participate in any displacement.
+    for (int i = 0; i < k_disp; ++i) {
         base_slots[static_cast<std::size_t>(i)] = state.get_ptr(i + 1);
-        if (i < k_disp) {
-            prank[static_cast<std::size_t>(i)] =
-                rank[static_cast<std::size_t>(base_slots[static_cast<std::size_t>(i)])];
-        }
+        prank[static_cast<std::size_t>(i)] =
+            rank[static_cast<std::size_t>(base_slots[static_cast<std::size_t>(i)])];
     }
 
     for (EdgeId e = 0; e < H.n_edges; ++e) {
@@ -692,7 +691,12 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
     // varies the first ``k_disp`` pointers. When k <= max_arity this is a no-op;
     // when k > max_arity (e.g. a graph inside a mixed-arity corpus encoded with
     // the corpus-wide k) it shrinks the per-frame displacement space.
-    const int k_disp = std::min(k, std::max(1, static_cast<int>(H.max_arity)));
+    // Capped at K_MAX so that all fixed-size array accesses (indexed by k_disp)
+    // stay in bounds even when max_arity > K_MAX (those instances raise before
+    // reaching this point via the greedy_h2s_tokens check; the cap is a safety
+    // guard only).
+    const int k_disp =
+        std::min({k, std::max(1, static_cast<int>(H.max_arity)), K_MAX});
     const int max_cost = k_disp * radius;
 
     // Track the best emission found across displacements.
@@ -719,8 +723,11 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
     // the winner is the same regardless of which path produced the displacement.
     const auto consider = [&](const Disp& disp,
                               const std::array<SlotIdx, K_MAX>& new_slots) {
-        tentative_count = k;
-        for (int idx = 0; idx < k; ++idx) {
+        // Use k_disp, not k: only the first min(k, max_arity) pointers can
+        // participate in any V/C candidate (arity <= max_arity <= k_disp).
+        // For k > K_MAX this also keeps all array accesses in bounds.
+        tentative_count = k_disp;
+        for (int idx = 0; idx < k_disp; ++idx) {
             const NodeId out_v = state.cdll.get_value(new_slots[static_cast<std::size_t>(idx)]);
             tentative_inputs[static_cast<std::size_t>(idx)] =
                 state.o2i[static_cast<std::size_t>(out_v)];
@@ -819,7 +826,7 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
 
         for (const Disp& disp : cost_class) {
             std::array<SlotIdx, K_MAX> new_slots{};
-            for (int idx = 0; idx < k; ++idx) {
+            for (int idx = 0; idx < k_disp; ++idx) {
                 new_slots[static_cast<std::size_t>(idx)] = displaced_slot(
                     state.cdll, state.get_ptr(idx + 1), disp.d[static_cast<std::size_t>(idx)]);
             }
@@ -867,11 +874,11 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
     std::vector<VCandidate> tied;
     if (tie_branch) {
         std::array<NodeId, K_MAX> tent{};
-        for (int idx = 0; idx < k; ++idx) {
+        for (int idx = 0; idx < k_disp; ++idx) {
             const NodeId out_v = state.cdll.get_value(best_new_slots[static_cast<std::size_t>(idx)]);
             tent[static_cast<std::size_t>(idx)] = state.o2i[static_cast<std::size_t>(out_v)];
         }
-        collect_tied_v_candidates(H, state, k, tent, k, best_v_cand, tied);
+        collect_tied_v_candidates(H, state, k, tent, k_disp, best_v_cand, tied);
     } else {
         tied.push_back(best_v_cand);
     }
@@ -970,8 +977,21 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     if (k < 1) {
         throw IsalHGError("k must be >= 1");
     }
-    if (k > K_MAX) {
-        throw IsalHGError("k exceeds K_MAX");
+    // k > K_MAX is supported when max_arity <= K_MAX: k_disp = min(k,
+    // max_arity) is further capped at K_MAX, so all fixed-size array accesses
+    // stay in bounds.  For instances with max_arity > K_MAX we cannot represent
+    // the high-arity hyperedges; raise a clear error rather than silently
+    // producing a wrong or stuck encoding.
+    constexpr int K_MAX_RUNTIME = 4096;
+    if (k > K_MAX_RUNTIME) {
+        throw IsalHGError("k exceeds K_MAX_RUNTIME (4096)");
+    }
+    if (static_cast<int>(H.max_arity) > K_MAX) {
+        throw IsalHGError(
+            "max_arity (" + std::to_string(H.max_arity) +
+            ") exceeds K_MAX (" + std::to_string(K_MAX) +
+            "); cannot encode hyperedges of this arity with the compiled encoder"
+        );
     }
 
     EncoderState state(H.n_nodes, H.n_edges, k, seed_node);

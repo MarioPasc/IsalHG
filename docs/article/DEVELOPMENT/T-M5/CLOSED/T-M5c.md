@@ -21,6 +21,7 @@ degenerate. Report metrics vs corpus density (descriptive; the Theorem-B
 
 **Module:** `experiments/article/analysis/clustering.py`
 **Tests:** `tests/unit/analysis/test_clustering.py` (13 unit tests, 1 slow marked)
+**Dep declaration:** `pyproject.toml` bench extra — `kmedoids>=0.5` (round-1 fix)
 
 ### Acceptance check output
 

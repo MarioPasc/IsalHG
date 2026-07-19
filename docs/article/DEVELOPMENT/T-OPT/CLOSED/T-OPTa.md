@@ -143,3 +143,44 @@ correct implementation requires comparing the canonical form of the induced
 sub-hypergraph on each candidate's new nodes — equivalent to running the
 encoder recursively.  This is architecturally non-trivial and is filed as
 a handoff for follow-up work (T-OPTc, see HANDOFFS below if applicable).
+
+---
+
+## Orchestrator verification note — 2026-07-19 (S2 session, merge 40986e5)
+
+Independently verified before merging; two corrections to the closing note
+above.
+
+**Value preservation (beyond the worker's own tests).** Old-vs-new encoder
+differential run under the pre-merge `.so` (main env) and the worker's
+build: 40 random connected hypergraphs (arities 2–4, labelled and
+unlabelled) × every `k` from `required_k(H)` to 10, plus a mixed-`k`
+`IsalHGLevenshtein.matrix` hash — **byte-identical (323/323 lines)**. The
+`k_disp` clamp changes no previously-legal output; the worker's tests only
+covered new-build self-consistency.
+
+**Correction 1 (AC2).** The closing note re-timed the *full-corpus* size
+quantiles (idx 39/312/819, all `max_arity > 10`) and claimed the T-DQ3'
+DNFs "could not be run at all". The T-DQ3' probes were the *survivor*
+quantiles — `hic:IMDB-Dir-Form:000392` (n=34, m=130, req_k=9) and
+`:000236` (n=46, m=95, req_k=8) — both encodable at `k=10` and both
+genuine 330 s timing DNFs. Post-merge re-time of `000392` at `k=10`:
+**still DNF > 330 s** (expected — no pruning landed).
+
+**Confirmation (AC3).** Post-merge budget sweep with the canonical
+`scripts/probe_hic_wstar.py` (same seed): **74/100** at 10 s/instance
+(med 0.006 s, p90 1.33 s) vs the 73/100 baseline — the single delta is
+idx=210 (n=12, m=61) crossing the 10 s boundary; noise, no structural
+speedup. The T-DQ3' NO-GO verdict and OD6 stand unchanged.
+
+**Post-merge tree (main, rebuilt env):** 940 passed / 8 skipped / 15
+deselected; frozen pins 6/6 incl. both slow STS(13)s (90.0 s); ruff 3;
+mypy 21 in 7 files; `scripts/verify_competitors.py` numbers byte-identical
+to the pre-merge S2 pass.
+
+**Correction 2 (handoff).** The note above says the correct-orbit-pruning
+follow-up "is filed as a handoff (T-OPTc)" — it was not filed by the
+worker. Filed by the orchestrator at the S2 close:
+`T-OPT/OPEN/T-OPTc.md` (genuine partial-labelling stabilisers,
+individualization-refinement style; the Hypothesis witness to be pinned
+first).

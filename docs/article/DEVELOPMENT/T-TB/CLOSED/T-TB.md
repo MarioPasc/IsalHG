@@ -160,3 +160,25 @@ amortization, analytical T-B3, rigorous B-avg, W-token check. Disposition
 unchanged: T-TB is DONE as a **conditional** theorem (the acceptance clause
 explicitly admits one), with T-B5 pending T-M5a and the conditions honestly
 stated.
+
+---
+
+## v3 rescope addendum (D-ART2, 2026-07-18) — T-B5 destination
+
+The T-B5 pending clause above was written against the v2 scope ("validate
+C(k,Δ) against the T-M5a density sweep"). Under v3 (D-ART2, PI-ratified
+2026-07-18) the density sweep is retired. T-B5 is **rescoped**:
+
+- The `s(e)` histograms — formerly T-B5's evidence base — are now the geometry
+  pillar's **local sensitivity profile** (G2 in `empirical/applications.md`),
+  tracked under **T-M5g**.
+- Logging `R(e)` / `T_span(e)` per edit separates layout drift from avalanche
+  and feeds the discussion's mechanism prose (PROPOSAL §5).
+- Verifying the (★) constants against the G2 histogram shapes is
+  **follow-up work**, no longer an article deliverable.
+
+The acceptance criterion of T-TB is thereby satisfied under v3: the conditional
+theorem is stated, the predictions are falsifiable via the G2 experiment (T-M5g),
+and the v2 empirical gate (T-M5a density sweep) is replaced by the HGED-free
+geometry evidence. No separate T-B5 task is created; T-M5g owns the
+instrumented `s(e)` run.

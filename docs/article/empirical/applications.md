@@ -1,6 +1,6 @@
 # The body — geometry measurement + applications
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). The paper's empirical body:
+**Status:** ACTIVE. The paper's empirical body:
 **A1 (MDS)** is dual-purpose — it measures the geometry
 (`../theoretical/geometry.md`: `D̂`, non-Euclidean `ν`, distortion) and is the
 flagship similarity map — the **G-profiles** measure the remaining invariants
@@ -21,7 +21,7 @@ licences behind each pipeline choice.
 **No HGED here — the scale decision (kept from v2).** These measurements
 validate on *task* metrics (ARI vs planted labels, accuracy/F1/AUC, stress) and
 on known perturbation budgets, **never** on the HGED oracle. Their scale is
-gated only by `w*_c` (and competitor) wall-clock — the T-DQ3' measurement — so
+gated only by `w*_c` (and competitor) wall-clock, so
 the real anchor (HIC, `../DATA.md` §2) is in scope at sizes the exact oracle
 could never reach. Competitors run the same pipeline off their own `D_rep`.
 
@@ -45,7 +45,7 @@ On every corpus, before any application: the pairwise-distance histogram of
   edits (all Qin op types), per density regime and on the four design fixtures
   (Fano, STS(9), the cyclic C13 orbit, GQ(2,2)). The C13 fixture is the cheap
   partial system, not a true STS(13): `s(e)` needs one `w*_c` per edit, and a
-  true STS(13) costs ~44 s per `w*_c` (T-M0c) — infeasible at histogram scale.
+  true STS(13) costs ~44 s per `w*_c` — infeasible at histogram scale.
   Predictions (three regimes by tie coherence) in
   `../theoretical/stability.md` §4.2; falsification target stated there.
 - **Ladder:** `d_I(H_0, H_t)` vs known accumulated Qin budget `t` along
@@ -100,7 +100,7 @@ perturbations ⇒ known membership; `../DATA.md` §1).
 ## A3 — kNN classification (supervised story)
 
 Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
-(synthetic) and HIC dataset labels (real; gated by T-DQ3' — `../DATA.md`).
+(synthetic) and HIC dataset labels (real; `../DATA.md` §2).
 
 - Licence: the G1 concentration + hubness profile (reported first; the kNN
   result is read against it).

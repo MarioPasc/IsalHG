@@ -1,6 +1,6 @@
 # Discussion evidence — the HGED-relation figure + information content
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). **This layer is discussion
+**Status:** ACTIVE. **This layer is discussion
 evidence, not a pillar.** The v2 scope ran a full HGED-faithfulness capstone
 here (correlation study E1, density sweep E2 validating Theorem B, competitor
 head-to-head on the HGED axis, MI). The v3 scope (PROPOSAL §1 pivot 2, §5)
@@ -27,7 +27,7 @@ one; cite it as the HGED reference alongside the GED lineage (Riesen & Bunke
 2009; Blumenthal et al., VLDB 2020).
 
 **Definition (Qin et al. 2023, adopted verbatim — the article's single official
-cost model; PI decision 2026-07-08, superseding an interim whole-edge
+cost model, superseding an interim whole-edge
 variant).** `HGED(H,H')` = min total cost of an edit sequence transforming `H`
 into a hypergraph isomorphic to `H'`, over Qin's Definition-3 atomic ops, all
 unit cost: (i) insert/delete a **cardinality-0** node or hyperedge (empty

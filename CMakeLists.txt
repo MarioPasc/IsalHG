@@ -61,6 +61,7 @@ nanobind_add_module(_core
     src/isalhg/core/_native/src/token.cpp
     src/isalhg/core/_native/src/sparse_hypergraph.cpp
     src/isalhg/core/_native/src/h2s.cpp
+    src/isalhg/core/_native/src/s2h.cpp
     src/isalhg/core/_native/src/structural_tuples.cpp
     src/isalhg/core/_native/src/wl.cpp
     src/isalhg/core/_native/src/canonical.cpp

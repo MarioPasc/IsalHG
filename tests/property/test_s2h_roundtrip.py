@@ -64,3 +64,41 @@ def test_canonical_round_trip(H: SparseHypergraph) -> None:
     tokens = greedy_h2s(H, seed_node=0, k=k)
     H_decoded = string_to_hypergraph(serialize(list(tokens)), k=k)
     assert canonical_string(H_decoded, k=k) == canonical_string(H, k=k)
+
+
+# ---------------------------------------------------------------------------
+# Explicit backend-parity property tests (T-OPTb AC1c)
+# ---------------------------------------------------------------------------
+
+
+@settings(max_examples=40, deadline=None)
+@given(small_connected_hypergraph(max_n=5, max_arity=3))
+def test_python_backend_round_trip(H: SparseHypergraph) -> None:
+    """Python backend: S2H(H2S(H)) ~ H (fingerprint equality)."""
+    k = required_k(H)
+    tokens = greedy_h2s(H, seed_node=0, k=k)
+    H_decoded = string_to_hypergraph(serialize(list(tokens)), k=k, backend="python")
+    assert canonical_string(H_decoded, k=k) == canonical_string(H, k=k)
+
+
+@settings(max_examples=40, deadline=None)
+@given(small_connected_hypergraph(max_n=5, max_arity=3))
+def test_cpp_backend_round_trip(H: SparseHypergraph) -> None:
+    """C++ backend: S2H(H2S(H)) ~ H (fingerprint equality, T-OPTb AC1)."""
+    k = required_k(H)
+    tokens = greedy_h2s(H, seed_node=0, k=k)
+    H_decoded = string_to_hypergraph(serialize(list(tokens)), k=k, backend="cpp")
+    assert canonical_string(H_decoded, k=k) == canonical_string(H, k=k)
+
+
+@settings(max_examples=30, deadline=None)
+@given(small_connected_hypergraph(max_n=5, max_arity=3))
+def test_cpp_python_s2h_parity(H: SparseHypergraph) -> None:
+    """C++ and Python S2H produce fingerprint-identical hypergraphs from the
+    same encoded string (T-OPTb AC1 — parity on Hypothesis-random strings)."""
+    k = required_k(H)
+    tokens = greedy_h2s(H, seed_node=0, k=k)
+    s = serialize(list(tokens))
+    H_cpp = string_to_hypergraph(s, k=k, backend="cpp")
+    H_py = string_to_hypergraph(s, k=k, backend="python")
+    assert canonical_string(H_cpp, k=k) == canonical_string(H_py, k=k)

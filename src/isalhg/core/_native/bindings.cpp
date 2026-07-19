@@ -25,6 +25,7 @@
 #include "isalhg/canonical.hpp"
 #include "isalhg/errors.hpp"
 #include "isalhg/h2s.hpp"
+#include "isalhg/s2h.hpp"
 #include "isalhg/sparse_hypergraph.hpp"
 #include "isalhg/structural_tuples.hpp"
 #include "isalhg/token.hpp"
@@ -230,6 +231,47 @@ NB_MODULE(_core, m) {
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).
+    // S2H interpreter: parse a Sigma_HG* string and execute the VM,
+    // returning raw hypergraph data for Python shim reconstruction.
+    //
+    // Returns (vertex_labels, edge_labels, edge_members):
+    //   vertex_labels : list[int]  -- one per node, in node-id order.
+    //   edge_labels   : list[int]  -- one per edge, in insertion order.
+    //   edge_members  : list[list[int]] -- member node ids per edge.
+    m.def(
+        "string_to_hypergraph_raw",
+        [](const std::string& s, int k, int n_vertex_labels, int n_edge_labels,
+           int seed_label) -> nb::tuple {
+            isalhg::S2HResult result;
+            {
+                nb::gil_scoped_release release;
+                result = isalhg::string_to_hypergraph_compute(
+                    s, k, n_vertex_labels, n_edge_labels, seed_label);
+            }
+            nb::list vertex_labels;
+            for (const auto v : result.vertex_labels) {
+                vertex_labels.append(static_cast<int>(v));
+            }
+            nb::list edge_labels;
+            for (const auto el : result.edge_labels) {
+                edge_labels.append(el);
+            }
+            nb::list edge_members_out;
+            for (const auto& members : result.edge_members) {
+                nb::list ml;
+                for (const auto v : members) {
+                    ml.append(static_cast<int>(v));
+                }
+                edge_members_out.append(ml);
+            }
+            return nb::make_tuple(vertex_labels, edge_labels, edge_members_out);
+        },
+        "s"_a, "k"_a, "n_vertex_labels"_a = 1, "n_edge_labels"_a = 1, "seed_label"_a = 0,
+        "Parse and execute a Sigma_HG* string.\n"
+        "Returns (vertex_labels, edge_labels, edge_members) for Python-side reconstruction.\n"
+        "W tokens execute as no-ops (never stripped). Pointer moves use CDLL slots (invariant 1).\n"
+        "Closed-alphabet: every well-formed string decodes without error.");
+
     m.def(
         "greedy_h2s_tokens",
         [](nb::object py_H, isalhg::NodeId seed_node, int k,

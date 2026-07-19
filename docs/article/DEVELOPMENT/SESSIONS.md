@@ -311,6 +311,19 @@ Picasso queue; T-M5a in `IN-PROGRESS/`.
   should read T-M5f's geometry-table spec appended at the bottom of its
   task file, and the G2 falsification may deserve a caveat line in the
   geometry table's prose (T-M5h owns the prose change).
+- *S3 addendum (2026-07-19 ~17:15 CEST):* **T-M5h executed and merged**
+  (`63d9a5d`) in this session per the human's direction (S4 deferred to a
+  fresh session). The worker grounded every number in
+  `g2_regime_confrontation.json` and corrected the orchestrator's own
+  earlier ratio claim (nauty/ours IQR spans **1.25–9.5×**, not 2.5–9.5× —
+  GQ(2,2) is 10.0/8.0). stability.md §4.2 now carries the measured-outcome
+  block (5 confirmed / 2 falsified + candidate explanations), geometry.md §6
+  the measured profile + ladder summary, applications.md §G2 the
+  measured-results framing; PROPOSAL.md untouched (no contradicted claim).
+  Acceptance grep re-run clean by the orchestrator; all numbers re-verified
+  against the JSON and the ladder configs (large base n=12 confirmed).
+  Docs-only merge — no suite rerun needed. S4 entry state: T-M5b first,
+  alone; T-M5h is DONE, so S4 has no prose-lane companion task.
 
 ---
 

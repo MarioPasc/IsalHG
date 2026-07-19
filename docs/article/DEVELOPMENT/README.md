@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 5 (+1 blocked, +1 in-progress) | 2 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 4 (+1 blocked, +1 in-progress) | 3 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -138,8 +138,8 @@ the body (HGED-free, characterize → exploit):
    T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g
 
 doc propagation:
-   T-M5h  fold the S3 measured G2 outcomes (incl. the §4.2 partial
-          falsification) into the reasoning prose ← M5f ✔, M5g ✔
+   T-M5h ✔ fold the S3 measured G2 outcomes (incl. the §4.2 partial
+          falsification) into the reasoning prose ← M5f ✔, M5g ✔ (DONE)
 
 discussion evidence (small, last):
    T-M5a ◐ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔

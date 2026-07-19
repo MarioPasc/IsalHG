@@ -9,7 +9,10 @@ and `RELATED_WORK.md` §Competitors (citations, code URLs, licenses).
 Every competitor and our own method expose the **same interface**
 (`HypergraphDistance`) and are reached the **same way** (the distance registry),
 so switching representation is a one-line change. All results below are
-reproducible on `main` as of 2026-07-15.
+reproducible on `main` as of 2026-07-19; `scripts/verify_competitors.py`
+re-runs the full six-representation check (planted corpus, 18 hypergraphs,
+5 planted iso pairs → distance 0 for every representation; the complete
+invariants separate all non-isomorphic pairs).
 
 ---
 
@@ -72,8 +75,11 @@ complete invariants (distance 0 ⟺ isomorphic). Pick accordingly.
 | `matrix(corpus)` | `-> np.ndarray` | dense symmetric `(N, N)` `float64`, zero diagonal; overridden where a whole-corpus computation is cheaper |
 | `fingerprint(H)` | `-> Any \| None` | optional per-hypergraph summary that amortizes `matrix` (canonical string, WL histogram, spectral signature); `None` when not applicable |
 
-For the head-to-head correlation study, every registered distance `D` is used
-identically: `corr(D.matrix(corpus), ExactHGED().matrix(corpus))`.
+Every consumer uses a registered distance identically: the applications
+(MDS, clustering, kNN, shortest path) and the geometry table all read
+`D.matrix(corpus)`. HGED enters the paper only through the single ours-only
+discussion figure E1' (`d_I` vs `exact_hged` on the mini-corpus); there is no
+competitor HGED head-to-head (retired at D-ART2).
 
 ---
 
@@ -112,7 +118,7 @@ Registered names split into three roles.
 |---|---|---|---|
 | `isalhg_levenshtein` | `IsalHGLevenshtein` | canonical H2S string `w*_c(H)` | raw Levenshtein (via `rapidfuzz`) |
 
-### 4.2 Competitors (the four in the study, + optional spectral fifth)
+### 4.2 Competitors (the five in the study)
 
 | name | class | representation | distance | role | optional dep |
 |---|---|---|---|---|---|
@@ -120,9 +126,9 @@ Registered names split into three roles.
 | `nauty_levi_edit` | `NautyLeviEditDistance` | nauty canonical form of the Levi graph | byte Levenshtein | **contrast** (iso-only, no navigable geometry) | `pynauty`, `rapidfuzz` |
 | `hpd_jsd` | `HPDDistance` | hyperedge-portrait tensor (Agostinelli et al., JCN 2026) | Jensen–Shannon (√JS = metric) | fair, hyperedge-path-centric | numpy/scipy |
 | `hypercot` | `HyperCOTDistance` | hypergraph co-optimal transport (Chowdhury et al., JACT 2024) | transport cost (metric by construction) | fair, mass-transport | **pinned conda env** (§6) |
-| `netlsd_l2` | `NetLSDDistance` | NetLSD heat-trace of the Levi expansion (Tsitsulin et al., KDD 2018) | L2 | optional spectral | `netlsd` |
+| `netlsd_l2` | `NetLSDDistance` | NetLSD heat-trace of the Levi expansion (Tsitsulin et al., KDD 2018) | L2 | fair, spectral — **full member** (promoted at D-ART2: the guaranteed at-scale baseline where HyperCOT's `O(n³)`/pair cannot reach) | `netlsd` |
 
-### 4.3 Ground-truth structural distance (for §2 correlation only)
+### 4.3 Ground-truth structural distance (discussion figure E1' only)
 
 | name | class | notes |
 |---|---|---|
@@ -202,7 +208,10 @@ cp /tmp/HyperCOT/cot.py /tmp/HyperCOT/hypercot.py \
 Version pins are load-bearing: `scipy==1.9.3` because POT 0.8.0 imports
 `scipy.optimize.linesearch.scalar_search_armijo` (removed in scipy ≥ 1.10);
 `numpy<1.24` because `hypercot.get_omega` uses integer array indexing NumPy 1.24
-rejects; `networkx<3` for HyperNetX 1.2.
+rejects; `networkx<3` for HyperNetX 1.2. Upstream HEAD is
+`5045539ac1465626f985813aabcf89489d5c98a4` (2023-01-19; the repo is static —
+verified at the 2026-07-19 env rebuild, and pinned in the
+`scripts/hypercot_worker.py` header).
 
 **Then use it exactly like any other distance:**
 
@@ -263,14 +272,14 @@ reps = ["isalhg_levenshtein", "hypergraph_wl_l1", "nauty_levi_edit",
 
 mats = {name: get_distance(name).matrix(corpus) for name in reps}
 
-# head-to-head vs ground truth (small corpora only)
+# E1' (discussion figure): rho between d_I and exact HGED on the mini-corpus.
+# Ours-only in the paper — no competitor rows (D-ART2).
 from scipy.stats import spearmanr
 import numpy as np
 Dtrue = get_distance("exact_hged").matrix(corpus)
 iu = np.triu_indices(len(corpus), k=1)
-for name, D in mats.items():
-    rho, _ = spearmanr(D[iu], Dtrue[iu])
-    print(f"{name:22} rho(HGED) = {rho:.3f}")
+rho, _ = spearmanr(mats["isalhg_levenshtein"][iu], Dtrue[iu])
+print(f"E1': rho(d_I, HGED) = {rho:.3f}")
 ```
 
 ---

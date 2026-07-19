@@ -85,6 +85,8 @@ bench = [
     "scikit-learn>=1.3",
     # netlsd: full-member competitor since D-ART2 (metric_space.representations.netlsd)
     "netlsd>=1.0",
+    # kmedoids: FasterPAM (Schubert & Lenssen 2022, JOSS 7(75)) for A2 clustering
+    "kmedoids>=0.5",
 ]
 
 # Developer toolchain

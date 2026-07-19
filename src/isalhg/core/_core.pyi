@@ -34,3 +34,10 @@ def canonical_string(
     algorithm_id: int,
     max_expansions: int = 0,
 ) -> str: ...
+def string_to_hypergraph_raw(
+    s: str,
+    k: int,
+    n_vertex_labels: int = 1,
+    n_edge_labels: int = 1,
+    seed_label: int = 0,
+) -> tuple[list[int], list[int], list[list[int]]]: ...

@@ -20,13 +20,22 @@ VM semantics (PROPOSAL.md "Virtual machine state"):
   ``{cdll.get_value(p_1), ..., cdll.get_value(p_i)}``; no-op if such a
   hyperedge already exists.
 - ``P[i]`` / ``N[i]``: advance / retreat pointer ``p_i``.
-- ``W``: no-op.
+- ``W``: no-op (never stripped — invariant 6 of CLAUDE.md).
+
+Backend dispatch
+----------------
+:func:`string_to_hypergraph` accepts a ``backend=`` keyword (``"python"``
+or ``"cpp"``; default ``"cpp"``). The C++ backend calls the native
+``_core.string_to_hypergraph_raw`` binding and reconstructs the
+:class:`~isalhg.core.sparse_hypergraph.SparseHypergraph` from the raw
+output. Both backends are semantically identical; the C++ path is faster.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Callable, Iterable
 
+from isalhg.core.backends import Backend, resolve
 from isalhg.core.cdll import CircularDoublyLinkedList
 from isalhg.core.instructions import (
     Token,
@@ -230,11 +239,11 @@ class StringToHypergraph:
 
 
 # ---------------------------------------------------------------------------
-# Convenience entry point
+# Backend implementations
 # ---------------------------------------------------------------------------
 
 
-def string_to_hypergraph(
+def _python_string_to_hypergraph(
     string: str,
     *,
     k: int,
@@ -242,13 +251,7 @@ def string_to_hypergraph(
     n_edge_labels: int = 1,
     seed_label: int = 0,
 ) -> SparseHypergraph:
-    """Parse ``string`` and run the resulting program on a fresh VM.
-
-    Returns
-    -------
-    SparseHypergraph
-        Final hypergraph state.
-    """
+    """Pure-Python S2H: parse ``string`` and run the VM."""
     tokens = parse(string)
     interpreter = StringToHypergraph(
         tokens,
@@ -259,3 +262,82 @@ def string_to_hypergraph(
     )
     H, _ = interpreter.run(trace=False)
     return H
+
+
+def _cpp_string_to_hypergraph(
+    string: str,
+    *,
+    k: int,
+    n_vertex_labels: int = 1,
+    n_edge_labels: int = 1,
+    seed_label: int = 0,
+) -> SparseHypergraph:
+    """C++ S2H: delegates to ``_core.string_to_hypergraph_raw`` and
+    reconstructs a :class:`~isalhg.core.sparse_hypergraph.SparseHypergraph`.
+
+    The Python ``validate()`` call is preserved so the same pre-check
+    semantics apply on both backends.
+    """
+    from isalhg.core import _core  # noqa: PLC0415 — lazy import, keeps core stdlib-only
+
+    tokens = parse(string)
+    validate(list(tokens), k=k, n_vertex_labels=n_vertex_labels, n_edge_labels=n_edge_labels)
+    vertex_labels, edge_labels, edge_members = _core.string_to_hypergraph_raw(
+        string, k, n_vertex_labels, n_edge_labels, seed_label
+    )
+    H = SparseHypergraph(n_nodes=0, n_vertex_labels=n_vertex_labels, n_edge_labels=n_edge_labels)
+    for lbl in vertex_labels:
+        H.add_node(label=lbl)
+    for members, lbl in zip(edge_members, edge_labels, strict=True):
+        H.add_hyperedge(members, label=lbl)
+    return H
+
+
+_S2H_BACKENDS: dict[str, Callable[..., SparseHypergraph]] = {
+    "python": _python_string_to_hypergraph,
+    "cpp": _cpp_string_to_hypergraph,
+}
+
+
+# ---------------------------------------------------------------------------
+# Public entry point (backend-dispatched)
+# ---------------------------------------------------------------------------
+
+
+def string_to_hypergraph(
+    string: str,
+    *,
+    k: int,
+    n_vertex_labels: int = 1,
+    n_edge_labels: int = 1,
+    seed_label: int = 0,
+    backend: Backend | None = None,
+) -> SparseHypergraph:
+    """Parse ``string`` and run the resulting program on a fresh VM.
+
+    Parameters
+    ----------
+    string : str
+        Semicolon-joined ``Sigma_HG*`` token sequence.
+    k : int
+        VM pointer count; must be >= max arity of any token in ``string``.
+    n_vertex_labels, n_edge_labels : int, optional
+        Vocabulary sizes (decision I45). Default 1 (trivial vocabulary).
+    seed_label : int, optional
+        Label of the initial seed vertex. Default 0.
+    backend : ``"python"`` | ``"cpp"`` | None, optional
+        Implementation backend. ``None`` resolves to the default (``"cpp"``).
+
+    Returns
+    -------
+    SparseHypergraph
+        Final hypergraph state after executing all tokens.
+    """
+    impl = resolve(backend, _S2H_BACKENDS)
+    return impl(
+        string,
+        k=k,
+        n_vertex_labels=n_vertex_labels,
+        n_edge_labels=n_edge_labels,
+        seed_label=seed_label,
+    )

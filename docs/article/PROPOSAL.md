@@ -237,13 +237,15 @@ record and for follow-up work.
 - OQ-A [open]. Exact-HGED mini-corpus for the §5 figure: size and (n, m)
   ceiling under the HPC-parallel exact oracle; connected-domain generators
   gate it. → `DATA.md`, `DEVELOPMENT/`.
-- OQ-B [open]. The real-anchor gate: is `w*_c` computable in acceptable time on
-  HIC-scale instances? A single measurement decides whether the applications'
-  real anchor is HIC or falls back to synthetic + small designs. → `DATA.md`
-  DQ3'.
-- OQ-C [open]. kNN label source confirmed as HIC dataset labels (real) +
-  planted family ids (synthetic); final choice of which HIC datasets clear the
-  OQ-B gate.
+- OQ-B [resolved 2026-07-19 — no]. The real-anchor gate measurement: `w*_c`
+  is not computable in acceptable time across a HIC IMDB corpus (corpus-level
+  `k` beyond the arity cap; symmetry-driven DNF tail inside the capped
+  sub-corpus). The declared fallback applies: the real anchor is the small
+  real designs + planted corpora, and application claims are synthetic-scale
+  claims. Measurement + surviving options in `DATA.md` §2.
+- OQ-C [resolved with OQ-B]. kNN label source = planted family ids (+ small
+  design classes). HIC labels enter only if the optional censored-subset
+  secondary exhibit is adopted (PI decision, `DEVELOPMENT/DECISIONS.md`).
 - OQ-D [resolved, v3]. Distance = **raw Levenshtein** primary (sibling
   precedent; matches the frozen `w*_c` + `d_Lev` decisions).
   Length-normalized / token-weighted variants: one ablation table at most.

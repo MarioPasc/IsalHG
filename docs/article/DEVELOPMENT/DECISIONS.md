@@ -1,5 +1,15 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
+- **OD6** — **[pending PI, raised 2026-07-19 at the T-DQ3' NO-GO]** Whether
+  S4 includes a *secondary* censored-subset HIC exhibit: all representations
+  scored on the identical computable IMDB subset (arity ≤ 10 **and**
+  `w*_c` ≤ 10 s/instance ⇒ ≈57% yield, both filters label-correlated,
+  censoring reported per class), clearly framed as a credibility exhibit and
+  not the anchor. Recommendation: include only if the per-class censoring
+  does not flip any A2/A3 conclusion on the planted corpora; otherwise cite
+  the gate measurement and the orbit-pruning re-test as future work. The
+  *primary* anchor decision is not pending — the pre-declared fallback in
+  `DATA.md` §2 executed automatically.
 - **OD1** — Architecture: additive `metric_space/` now (recommended) vs also
   reparenting to `isomorphisms/` (T-M6, optional/last).
 - **OD2** — `levi_reduction` home: `core/levi_reduction.py` (recommended) vs a

@@ -71,6 +71,23 @@ on HIC-scale instances), the real anchor falls back to the small real designs
 are then synthetic-scale claims. The scope survives the gate either way — the
 gate decides reach, not viability.
 
+**Gate outcome (measured 2026-07-19): the fallback applies.** On
+IMDB-Dir-Form (1,869 post-LCC instances) the corpus-level `k` is 110 (max
+hyperedge arity), beyond both the compiled arity cap (`K_MAX = 10`, decision
+B12) and the uncapped Python encoder (median instance, n=12: DNF at 330 s).
+Restricting to instances with arity ≤ 10 keeps 78.7% (per-class retention
+89%/71%/71%), and within that sub-corpus a 10 s/instance budget completes
+only 73% of a seeded 100-instance sample (median 7 ms, p90 1.4 s) — the
+failures are automorphism-driven, not size-driven (n=10, m=5 instances DNF
+while n=22, m=79 completes), so no size ceiling separates feasible from
+infeasible and a wall-clock filter would censor by structural symmetry. A
+corpus kept at ≈57% yield under two label-correlated filters is not a
+defensible primary anchor. The real anchor is therefore the small real
+designs + the planted-family corpora; a censored-subset HIC exhibit as a
+*secondary* experiment, and a re-test after stabiliser-orbit pruning (the
+symmetry cost is exactly what that value-preserving speedup removes), remain
+open options and are not assumed by any claim.
+
 ## 3. Ladder corpora (serve G2 and A4)
 
 Perturbation ladders `H_0 → H_1 → ⋯ → H_t` from `edit_path(H, t, rng)` with
@@ -115,9 +132,11 @@ wiring are new `datasets/synthetic/` modules → tracked in `DEVELOPMENT/`.
 - DQ1'. Mini-corpus size + (n, m) ceiling for all-pairs exact HGED under HPC
   parallelism (one probe run pins it). Rescoped from v2's DQ1 (which sized a
   full correlation corpus + density sweep).
-- DQ3'. **[blocking the real anchor]** Measure whether `w*_c` is computable in
-  acceptable time on a HIC IMDB instance (post seed-opt + C++ + orbit
-  pruning). Decides §2's gate; fallback declared there.
+- DQ3'. **[resolved 2026-07-19 — NO-GO, fallback executed]** `w*_c` is not
+  computable in acceptable time across a HIC IMDB corpus (corpus-level `k`
+  exceeds the arity cap; the arity-capped sub-corpus has a symmetry-driven
+  DNF tail). Measurement and consequences recorded in §2; re-testable after
+  stabiliser-orbit pruning.
 - DQ5. **[new, v3]** Sweep grid for the geometry-vs-density/size reporting
   (§1): which (n, m/n, arity-mix) cells, sized to the `w*_c` wall-clock
   budget. Replaces the v2 density-sweep grid (whose purpose was Theorem-B

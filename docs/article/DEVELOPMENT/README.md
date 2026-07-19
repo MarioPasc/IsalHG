@@ -62,7 +62,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 2 (+1 blocked) | 5 |
-| [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 1 | 0 |
+| [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)
 
@@ -124,7 +124,8 @@ T-M1a ✔ metric_space foundation (DONE)
    └─► T-M4 ✔ planted families + scoring primitives (DONE 2026-07-09; v3 deltas —
               geometry-sweep params + `geometry.py` helpers — owned by T-M5f)
 
-T-M4' ✔ HIC atlas loader (DONE 2026-07-09) ─► real anchor + gates T-DQ3'
+T-M4' ✔ HIC atlas loader (DONE 2026-07-09) ─► gated T-DQ3' ✔ (NO-GO 2026-07-19:
+       real anchor = fallback per DATA.md §2; OD6 secondary exhibit pending PI)
 
 canonical-form track (the metric's foundation): T-TA ✔ complete (9/9 closed)
 
@@ -150,20 +151,20 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, updated at the 2026-07-18 S1 reconciliation merge).** The
+**Critical path (v3, updated at the 2026-07-19 S2 close).** The
 canonical-form track is closed and the theory record needs no article-side
 work. T-M2c, T-M3a–d, T-M4, and T-M4' all closed pre-rescope (2026-07-09/15)
-on the then-main line and were adopted at the reconciliation merge; their v3
-deltas (geometry-sweep parameterization, `geometry.py` helpers, NetLSD's
-promoted acceptance) are owned by T-M5f and the S2-verification pass. The path
-to a submittable body now runs: **T-M5f/T-M5g (the characterization) →
-T-M5b–e (the applications)**, with **T-DQ3'** deciding the real anchor's
-reach (declared fallback in `DATA.md` §2). T-M5a (discussion evidence) runs
-last and small. T-M1c hardens the metric-axiom foundation and should land
-before the paper's methods section is drafted.
+on the then-main line and were adopted at the reconciliation merge; the S2
+verification pass (2026-07-19) re-verified all five competitor `D_rep`
+matrices on the planted corpus (iso pairs → 0, incl. NetLSD's promoted
+acceptance and HyperCOT through the rebuilt pinned env). **T-DQ3' is closed:
+NO-GO** — the real anchor falls back to small designs + planted corpora as
+declared in `DATA.md` §2 (secondary censored-HIC exhibit = OD6, pending PI).
+The path to a submittable body now runs: **T-M5f/T-M5g (the
+characterization) → T-M5b–e (the applications)** on the fallback corpus
+list. T-M5a (discussion evidence) runs last and small.
 
-**Runnable in parallel right now:** T-M1c, T-M5f, T-M5g, T-TBg (+ T-M0b
-filler); T-DQ3' is orchestrator-only and unblocked (T-M4' closed). Use
+**Runnable in parallel right now:** T-M5f, T-M5g, T-TBg. Use
 isolated git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the

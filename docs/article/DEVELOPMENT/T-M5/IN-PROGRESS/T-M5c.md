@@ -1,6 +1,6 @@
 # T-M5c — Clustering + dendrogram (HGED-free)
 **Declared:** 2026-07-08 13:40 CEST (split from T-M5)
-**Status:** OPEN
+**Status:** IN-PROGRESS
 **Depends on:** T-M1b, T-M3a–d, T-M4 (+ T-M4' for the real anchor)
 **Context to read first:**
 - `docs/article/empirical/applications.md` §A2 — k-medoids + dendrogram, metrics

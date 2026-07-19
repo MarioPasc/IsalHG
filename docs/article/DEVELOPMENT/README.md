@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 7 (+1 blocked) | 0 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 6 (+1 blocked) | 1 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 2 (+1 blocked) | 5 |
@@ -132,7 +132,7 @@ canonical-form track (the metric's foundation): T-TA ✔ complete (9/9 closed)
 
 the body (HGED-free, characterize → exploit):
    T-M5f  static geometry: helpers + per-corpus table spec   ← M1b ✔, M4 ✔
-   T-M5g  sensitivity + ladder profiles (incl. nauty contrast) ← M1b ✔, M2c ✔, M3a ✔, M4 ✔
+   T-M5g ✔ sensitivity + ladder profiles (incl. nauty contrast) ← M1b ✔, M2c ✔, M3a ✔, M4 ✔ (DONE 2026-07-19)
    T-M5b  MDS flagship + geometry table  ← M1b ✔, M3a–d ✔, M4 ✔, M5f (+ M4' ✔ real)
    T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← same
    T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g
@@ -161,11 +161,11 @@ matrices on the planted corpus (iso pairs → 0, incl. NetLSD's promoted
 acceptance and HyperCOT through the rebuilt pinned env). **T-DQ3' is closed:
 NO-GO** — the real anchor falls back to small designs + planted corpora as
 declared in `DATA.md` §2 (secondary censored-HIC exhibit = OD6, pending PI).
-The path to a submittable body now runs: **T-M5f/T-M5g (the
+The path to a submittable body now runs: **T-M5f (the
 characterization) → T-M5b–e (the applications)** on the fallback corpus
-list. T-M5a (discussion evidence) runs last and small.
+list. T-M5g ✔ is DONE (2026-07-19). T-M5a (discussion evidence) runs last and small.
 
-**Runnable in parallel right now:** T-M5f, T-M5g, T-TBg. Use
+**Runnable in parallel right now:** T-M5f, T-TBg. Use
 isolated git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the

@@ -73,7 +73,10 @@ def _build_dataset(cell: CellSpec):  # noqa: ANN202
     if name == "perturbation_ladder":
         from isalhg.datasets.synthetic.perturbation_ladder import PerturbationLadderHypergraphs
 
-        return PerturbationLadderHypergraphs(**params)
+        # Strip G2-runner-specific keys that are not dataset constructor params.
+        _ladder_strip = {"n_edits_per_h", "max_arity"}
+        ladder_params = {k: v for k, v in params.items() if k not in _ladder_strip}
+        return PerturbationLadderHypergraphs(**ladder_params)
     if name == "erdos_renyi":
         from isalhg.datasets.synthetic.erdos_renyi import ErdosRenyiHypergraphs
 
@@ -550,6 +553,227 @@ def _is_nan(x: float) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Cell runner: G2 sensitivity (T-M5g)
+# ---------------------------------------------------------------------------
+
+
+#: Design fixture names that ``run_g2_design_sensitivity_cell`` recognises.
+_G2_DESIGN_BUILDERS: dict[str, Any] = {}  # populated lazily below
+
+
+def _load_g2_designs() -> dict[str, Any]:
+    """Return the design-builder dict, importing designs on first call."""
+    if not _G2_DESIGN_BUILDERS:
+        from isalhg.datasets.synthetic.designs import (
+            cyclic_triple_orbit_13,
+            fano_plane,
+            gq_2_2_doily,
+            sts_9,
+        )
+
+        _G2_DESIGN_BUILDERS["fano_plane"] = fano_plane
+        _G2_DESIGN_BUILDERS["sts_9"] = sts_9
+        _G2_DESIGN_BUILDERS["cyclic_triple_orbit_13"] = lambda: cyclic_triple_orbit_13((0, 1, 3))
+        _G2_DESIGN_BUILDERS["gq_2_2_doily"] = gq_2_2_doily
+    return _G2_DESIGN_BUILDERS
+
+
+def _g2_edit_record(
+    H: Any,
+    rng: random.Random,
+    distance_isalhg: Any,
+    distance_nauty: Any,
+    max_arity: int,
+) -> dict[str, Any]:
+    """Apply one connectivity-preserving edit and return both sensitivity values."""
+    from isalhg.core.sparse_hypergraph import qin_edit_cost, random_connected_edit
+
+    H_prime, op_name = random_connected_edit(H, rng, max_arity=max_arity)
+    s_e_isalhg = float(distance_isalhg.pairwise(H, H_prime))
+    s_e_nauty = float(distance_nauty.pairwise(H, H_prime))
+    qin = int(qin_edit_cost(H, H_prime))
+    return {
+        "op": op_name,
+        "s_e_isalhg": s_e_isalhg,
+        "s_e_nauty": s_e_nauty,
+        "qin_cost": qin,
+    }
+
+
+def run_g2_sensitivity_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
+    """G2 sensitivity: s(e) for both IsalHG and nauty contrast per connected edit.
+
+    Applies connectivity-preserving random edits (:func:`random_connected_edit`)
+    to each hypergraph in the corpus and records both ``s_e_isalhg`` (IsalHG
+    Levenshtein) and ``s_e_nauty`` (nauty-Levi edit distance). The dual
+    measurement is the G2 contrast: ours (compact, structured) vs nauty
+    (avalanche-everywhere on any edit).
+
+    The corpus is loaded via the dataset factory identical to
+    ``run_sensitivity_cell``. Use ``dataset_params.max_arity`` (default 3)
+    to cap edit arity and ``dataset_params.n_edits_per_h`` (default 20).
+
+    Output: ``{output_dir}/g2_sensitivity.json``.
+
+    Parameters
+    ----------
+    cell : CellSpec
+        ``type`` must be ``'g2_sensitivity'``.
+    output_dir : Path
+
+    Returns
+    -------
+    dict
+        Result with ``records`` list and aggregate summary statistics.
+    """
+    result_path = output_dir / "g2_sensitivity.json"
+    if _is_done(output_dir, "g2_sensitivity"):
+        logger.info("  skip %s g2_sensitivity (done)", cell.output_key())
+        with open(result_path) as f:
+            return json.load(f)
+
+    from isalhg.metric_space.distances.isalhg_levenshtein import IsalHGLevenshtein
+    from isalhg.metric_space.representations.nauty_levi_edit import NautyLeviEditDistance
+
+    dist_params = cell.distance_params.get("isalhg_levenshtein", {})
+    distance_isalhg = IsalHGLevenshtein(**dist_params)
+    distance_nauty = NautyLeviEditDistance()
+
+    hypergraphs, corpus_meta = _load_corpus(cell)
+    n_edits_per_h = int(cell.dataset_params.get("n_edits_per_h", 20))
+    max_arity = int(cell.dataset_params.get("max_arity", 3))
+    rng = random.Random(cell.seed)
+
+    records: list[dict[str, Any]] = []
+    for h_idx, H in enumerate(hypergraphs):
+        edits: list[dict[str, Any]] = []
+        for _ in range(n_edits_per_h):
+            try:
+                edits.append(_g2_edit_record(H, rng, distance_isalhg, distance_nauty, max_arity))
+            except Exception as exc:
+                logger.debug("g2 edit failed h_idx=%d: %s", h_idx, exc)
+        records.append(
+            {
+                "source_id": f"H_{h_idx}",
+                "source_type": "random",
+                # Strip trailing seed suffix (e.g. "sparse_s0" → "sparse") so
+                # the regime key matches the _REGIME_PREDICTION dict in analysis/g2.py.
+                "regime": (cell.label or "random").split("_s")[0],
+                "design_name": None,
+                "edits": edits,
+            }
+        )
+
+    all_s_e = [e["s_e_isalhg"] for r in records for e in r["edits"]]
+    all_nauty = [e["s_e_nauty"] for r in records for e in r["edits"]]
+
+    result: dict[str, Any] = {
+        "status": "done",
+        "type": "g2_sensitivity",
+        "n_edits_total": len(all_s_e),
+        "mean_s_e_isalhg": float(np.mean(all_s_e)) if all_s_e else 0.0,
+        "median_s_e_isalhg": float(np.median(all_s_e)) if all_s_e else 0.0,
+        "mean_s_e_nauty": float(np.mean(all_nauty)) if all_nauty else 0.0,
+        "median_s_e_nauty": float(np.median(all_nauty)) if all_nauty else 0.0,
+        "records": records,
+    }
+    result.update(corpus_meta)
+    _atomic_write_json(result_path, result)
+    return result
+
+
+def run_g2_design_sensitivity_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
+    """G2 design-fixture sensitivity: s(e) on Fano / STS(9) / C13 / GQ(2,2).
+
+    Runs the dual-distance sensitivity measurement on the four hand-built
+    symmetric-design fixtures. These are the calibration objects for the
+    three-regime prediction from ``stability.md`` §4.2:
+
+    - Predicted near-unimodal (coherent): ``fano_plane``, ``sts_9``
+    - Predicted heavy-tailed / bimodal (incoherent): ``cyclic_triple_orbit_13``,
+      ``gq_2_2_doily``
+
+    ``dataset_params.designs`` lists the fixture names to run (subset of the
+    four keys above; default is all four).
+    ``dataset_params.n_edits_per_design`` (default 20) controls the edit count.
+    ``dataset_params.max_arity`` (default 3) caps edit arity.
+
+    Output: ``{output_dir}/g2_design_sensitivity.json``.
+
+    Parameters
+    ----------
+    cell : CellSpec
+        ``type`` must be ``'g2_design_sensitivity'``.
+    output_dir : Path
+
+    Returns
+    -------
+    dict
+        Result with ``records`` list keyed by design name.
+    """
+    result_path = output_dir / "g2_design_sensitivity.json"
+    if _is_done(output_dir, "g2_design_sensitivity"):
+        logger.info("  skip %s g2_design_sensitivity (done)", cell.output_key())
+        with open(result_path) as f:
+            return json.load(f)
+
+    from isalhg.metric_space.distances.isalhg_levenshtein import IsalHGLevenshtein
+    from isalhg.metric_space.representations.nauty_levi_edit import NautyLeviEditDistance
+
+    dist_params = cell.distance_params.get("isalhg_levenshtein", {})
+    distance_isalhg = IsalHGLevenshtein(**dist_params)
+    distance_nauty = NautyLeviEditDistance()
+
+    design_builders = _load_g2_designs()
+    designs_to_run: list[str] = list(cell.dataset_params.get("designs", list(design_builders)))
+    n_edits = int(cell.dataset_params.get("n_edits_per_design", 20))
+    max_arity = int(cell.dataset_params.get("max_arity", 3))
+    rng = random.Random(cell.seed)
+
+    records: list[dict[str, Any]] = []
+    for design_name in designs_to_run:
+        if design_name not in design_builders:
+            logger.warning("Unknown design fixture %r; skipping", design_name)
+            continue
+        H = design_builders[design_name]()
+        edits: list[dict[str, Any]] = []
+        for _ in range(n_edits):
+            try:
+                edits.append(_g2_edit_record(H, rng, distance_isalhg, distance_nauty, max_arity))
+            except Exception as exc:
+                logger.debug("g2 design edit failed %s: %s", design_name, exc)
+        records.append(
+            {
+                "source_id": design_name,
+                "source_type": "design",
+                "regime": "design",
+                "design_name": design_name,
+                "n_nodes": H.n_nodes,
+                "n_edges": H.n_edges,
+                "edits": edits,
+            }
+        )
+
+    all_s_e = [e["s_e_isalhg"] for r in records for e in r["edits"]]
+    all_nauty = [e["s_e_nauty"] for r in records for e in r["edits"]]
+
+    result: dict[str, Any] = {
+        "status": "done",
+        "type": "g2_design_sensitivity",
+        "designs": designs_to_run,
+        "n_edits_total": len(all_s_e),
+        "mean_s_e_isalhg": float(np.mean(all_s_e)) if all_s_e else 0.0,
+        "median_s_e_isalhg": float(np.median(all_s_e)) if all_s_e else 0.0,
+        "mean_s_e_nauty": float(np.mean(all_nauty)) if all_nauty else 0.0,
+        "median_s_e_nauty": float(np.median(all_nauty)) if all_nauty else 0.0,
+        "records": records,
+        "seed": cell.seed,
+    }
+    _atomic_write_json(result_path, result)
+    return result
+
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 
@@ -558,6 +782,8 @@ _CELL_RUNNERS: dict[str, Any] = {
     "sensitivity": run_sensitivity_cell,
     "ladder": run_ladder_cell,
     "info_content": run_info_content_cell,
+    "g2_sensitivity": run_g2_sensitivity_cell,
+    "g2_design_sensitivity": run_g2_design_sensitivity_cell,
 }
 
 

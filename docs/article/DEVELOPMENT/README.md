@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 5 (+1 blocked, +1 in-progress) | 2 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 5 (+1 blocked, +1 in-progress) | 3 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -133,9 +133,12 @@ canonical-form track (the metric's foundation): T-TA ✔ complete (9/9 closed)
 the body (HGED-free, characterize → exploit):
    T-M5f ✔ static geometry: helpers + per-corpus table spec ← M1b ✔, M4 ✔ (DONE 2026-07-19)
    T-M5g ✔ sensitivity + ladder profiles (incl. nauty contrast) ← M1b ✔, M2c ✔, M3a ✔, M4 ✔ (DONE 2026-07-19)
-   T-M5b  MDS flagship + geometry table  ← M1b ✔, M3a–d ✔, M4 ✔, M5f (+ M4' ✔ real)
-   T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← same
-   T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g
+   T-M5b ✔ MDS flagship + geometry table ← M1b ✔, M3a–d ✔, M4 ✔, M5f ✔ (DONE 2026-07-19)
+          [D.npy caches in /media/.../results/T-M5b/d_matrix/; T-M5c/d/e read these]
+          [runner-bug workaround documented; fix filed → T-M5i]
+   T-M5i  fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (OPEN; low priority)
+   T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← T-M5b ✔
+   T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔
 
 doc propagation:
    T-M5h  fold the S3 measured G2 outcomes (incl. the §4.2 partial
@@ -168,15 +171,15 @@ matrices on the planted corpus (iso pairs → 0, incl. NetLSD's promoted
 acceptance and HyperCOT through the rebuilt pinned env). **T-DQ3' is closed:
 NO-GO** — the real anchor falls back to small designs + planted corpora as
 declared in `DATA.md` §2 (secondary censored-HIC exhibit = OD6, pending PI).
-The path to a submittable body now runs: **T-M5b–e (the applications)** on
-the fallback corpus list — the characterization (T-M5f ✔, T-M5g ✔) closed at
-S3 (2026-07-19). T-M5a (discussion evidence) is IN-PROGRESS: part 1 (DQ1'
-probe + Picasso E1' submission) ran at S3; part 2 (harvest + figure + bits)
-runs at S5.
+The path to a submittable body now runs: **T-M5c–e (the remaining applications)**
+on the fallback corpus list — the characterization (T-M5f ✔, T-M5g ✔) and the
+MDS flagship (T-M5b ✔, geometry table produced 2026-07-19) are closed. T-M5a
+(discussion evidence) is IN-PROGRESS: part 1 (DQ1' probe + Picasso E1'
+submission) ran at S3; part 2 (harvest + figure + bits) runs at S5.
 
-**Runnable in parallel right now:** T-M5h (doc propagation, prose-only lane).
-The next code wave is T-M5b alone, then { T-M5c ∥ T-M5d ∥ T-M5e } (S4). Use
-isolated git worktrees for agents that touch overlapping `core/` files.
+**Runnable in parallel right now:** { T-M5c ∥ T-M5d ∥ T-M5e } (S4) + T-M5h
+(doc propagation, prose-only lane). Use isolated git worktrees for agents
+that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

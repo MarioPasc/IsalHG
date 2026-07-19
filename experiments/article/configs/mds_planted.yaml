@@ -1,0 +1,80 @@
+# T-M5b — MDS D-matrix config (planted_families; v3 HGED-free).
+#
+# Canonical D-matrix cache layout for the planted_families corpus.
+# T-M5c (clustering), T-M5d (kNN), and T-M5e (shortest path) reuse the
+# cached D.npy files produced here without recomputing.
+#
+# IMPORTANT — runner bug:
+#   experiments/article/runner.py's _build_dataset fallback calls
+#   get_dataset(name, **params) but the registry expects get_dataset(name, params: dict).
+#   The runner CANNOT currently execute planted_families cells via its registry path.
+#   D matrices are therefore computed by:
+#       python -m experiments.article.analysis.mds \
+#           --output-root /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5b/ \
+#           --corpus planted_main
+#   which uses the SAME output layout as the runner would produce, enabling
+#   T-M5c/d/e to load the caches without modification.
+#   Filed for fix: see task-handoff from T-M5b.
+#
+# Cache layout (mirrors runner.run_d_matrix_cell):
+#   {output_root}/d_matrix/planted_families/{label}/seed{seed}/{distance}/D.npy
+#   {output_root}/d_matrix/planted_families/{label}/seed{seed}/{distance}/meta.json
+#
+# Corpus sizing (probe results, 2026-07-19):
+#   planted_main (N=60, n=10): isalhg 0.10s, WL 0.01s, NetLSD 0.18s,
+#       HPD 0.31s, nauty 0.00s → total < 1s all representations
+#   planted_small (N=20, n=6): hypercot 0.72s
+#
+# Seeds: seed_value=42 (pinned; printed in meta.json).
+# HyperCOT: O(n³)/pair — runs on planted_small only; scale limit stated.
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5b
+
+cells:
+  # ── Main corpus: all representations except HyperCOT ──────────────────────
+  - type: d_matrix
+    dataset: planted_families
+    seed: 42
+    label: planted_main
+    dataset_params:
+      n_families: 5
+      members_per_family: 12
+      n_nodes: 10
+      k: 3
+      n_edges: 10
+      seed_value: 42
+      n_edits: 3
+      max_retries: 300
+    distances:
+      - isalhg_levenshtein
+      - hypergraph_wl_l1
+      - netlsd_l2
+      - hpd_jsd
+      - nauty_levi_edit
+    distance_params:
+      isalhg_levenshtein: {}
+      hypergraph_wl_l1: {}
+      netlsd_l2: {}
+      hpd_jsd: {}
+      nauty_levi_edit: {}
+
+  # ── Small corpus: IsalHG + HyperCOT (O(n³)/pair, scale-limited) ──────────
+  - type: d_matrix
+    dataset: planted_families
+    seed: 42
+    label: planted_small
+    dataset_params:
+      n_families: 4
+      members_per_family: 5
+      n_nodes: 6
+      k: 3
+      n_edges: 5
+      seed_value: 42
+      n_edits: 2
+      max_retries: 200
+    distances:
+      - isalhg_levenshtein
+      - hypercot
+    distance_params:
+      isalhg_levenshtein: {}
+      hypercot: {}

@@ -1,6 +1,6 @@
 # T-M3d — `HyperCOTDistance` (pinned conda env, subprocess)
 **Declared:** 2026-07-08 13:40 CEST (split from T-M3)
-**Status:** BLOCKED
+**Status:** DONE (env rebuilt + end-to-end verified 2026-07-19; see S2 verification note)
 **Depends on:** T-M1a
 **Context to read first:**
 - `docs/article/COMPETITORS.md` §2 (dual role: theory anchor + competitor) · `RELATED_WORK.md` — Chowdhury et al. 2024, `samirchowdhury/HyperCOT` (pins `hypernetx==1.2`, `POT==0.8.0`)
@@ -89,3 +89,35 @@ This function name is inferred from the paper and package conventions; it
 must be verified against the actual source when the env is built. If the
 name differs, only `scripts/hypercot_worker.py` needs updating (no change
 to `src/` files).
+
+---
+
+## S2 verification note — 2026-07-19 10:58 CEST (orchestrator)
+
+The BLOCKED state above was superseded in two steps:
+
+1. **`c2fddd6` (2026-07-15, pre-reconciliation):** the coordinator pre-built
+   the env on that machine and rewrote the worker with the verified upstream
+   API (`get_hgraph_dual → convert_to_line_graph → get_v → get_omega(...,
+   "jaccard_index")`, then `cot.cot_numpy(...)[2]` per pair), replacing the
+   inferred `hypercot_distance` call. This file was never updated then —
+   fixed now.
+2. **S2 rebuild (2026-07-19, this machine):** `isalhg-hypercot` env rebuilt
+   from the `envs/hypercot.yml` recipe verbatim (network restored); HyperCOT
+   cloned at upstream HEAD `5045539ac1465626f985813aabcf89489d5c98a4`
+   (2023-01-19 — the repo never moved, so the `f190266` hash previously in
+   the worker header was a copy-paste from the HPD vendor commit; header
+   corrected).
+
+Verification against acceptance (all clauses):
+
+```
+pytest tests/unit/metric_space/test_hypercot.py -m "" -q
+10 passed  (guard-path 5, end-to-end 4, HIC smoke 1 — the smoke ran on real
+            RHG-10 data after fixing the stale HIC_ROOT path, which was
+            missing the /hypergraph segment; data was on disk all along)
+
+matrix() on the S2 planted corpus (18 hypergraphs, 5 planted iso pairs):
+symmetric, zero diagonal, non-negative; iso-pair max 7.1e-16; off-diag
+median 5.36. PASS — distance 0 on isomorphic pairs confirmed.
+```

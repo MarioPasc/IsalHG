@@ -23,7 +23,7 @@ pytestmark = pytest.mark.unit
 
 pynauty = pytest.importorskip("pynauty")
 
-HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data")
+HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data/hypergraph")
 _HIC_SMOKE_FILE = HIC_ROOT / "RHG" / "RHG_10.txt"
 
 

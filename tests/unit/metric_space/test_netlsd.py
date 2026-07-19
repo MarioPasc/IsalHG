@@ -27,7 +27,7 @@ from isalhg.errors import RepresentationDependencyMissingError
 
 pytestmark = pytest.mark.unit
 
-HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data")
+HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data/hypergraph")
 
 
 def _path_hypergraph() -> SparseHypergraph:

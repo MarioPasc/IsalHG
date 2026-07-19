@@ -241,7 +241,7 @@ Apache-2.0). Point it at the data root and pick a dataset by name:
 from pathlib import Path
 from isalhg.datasets.hic_atlas import HICAtlasDataset
 
-HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data")
+HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data/hypergraph")
 ds = HICAtlasDataset(root=HIC_ROOT, hic_name="RHG-10")   # loads, extracts largest connected component
 corpus = [item.hypergraph for item in ds][:20]           # cap for a quick run
 D = get_distance("hpd_jsd").matrix(corpus)

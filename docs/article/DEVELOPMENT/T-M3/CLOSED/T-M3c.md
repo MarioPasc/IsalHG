@@ -46,3 +46,16 @@ every corpus, including those HyperCOT's `O(n³)`/pair cannot reach, so it is
 the guaranteed at-scale fair baseline. The v3 acceptance additions —
 `matrix()` on the planted corpus; iso pairs → distance 0 (sanity) — are
 pending verification in the S2 verification pass (SESSIONS.md).
+
+---
+**S2 verification (2026-07-19 10:58 CEST, orchestrator).** Promoted
+acceptance verified: `netlsd_l2.matrix()` on the planted corpus (18
+hypergraphs = 4 families × 3 members + 4 permuted copies + Fano pair, seed
+0): symmetric, zero diagonal; iso-pair max 1.51e-14 (within the spectral
+tolerance); off-diag median 0.183. Two environment facts surfaced: (a)
+`netlsd` was **not installed in the main `isalhg` env** until now (the
+T-M3c closing tests ran only in the worker's cloned env) — installed
+`netlsd 1.0.2` and added it to the `bench` extra; (b) the HIC smoke test's
+`HIC_ROOT` was missing the `/hypergraph` segment, so it skipped as "data
+absent" on a machine where the data was present — path fixed, smoke now
+runs (11 passed, 0 skipped).

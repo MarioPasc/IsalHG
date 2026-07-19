@@ -4,7 +4,8 @@ Upstream repository
 -------------------
 URL:         https://github.com/samirchowdhury/HyperCOT
 Licence:     MIT
-Commit hash: f190266  (HEAD when isalhg-hypercot was built)
+Commit hash: 5045539ac1465626f985813aabcf89489d5c98a4  (upstream HEAD, 2023-01-19;
+             verified at env rebuild 2026-07-19)
 Pinned deps: hypernetx==1.2  POT==0.8.0  numpy==1.23.5  scipy==1.9.3
 
 Version-constraint rationale

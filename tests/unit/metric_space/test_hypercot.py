@@ -43,7 +43,7 @@ pytestmark = pytest.mark.unit
 _HYPERCOT_PYTHON = Path.home() / ".conda" / "envs" / "isalhg-hypercot" / "bin" / "python"
 
 # Absolute path to HIC data files (may not exist on every machine).
-_HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data")
+_HIC_ROOT = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/HIC/data/hypergraph")
 
 
 def _env_present() -> bool:

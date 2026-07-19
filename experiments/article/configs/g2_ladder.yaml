@@ -1,0 +1,88 @@
+# T-M5g G2 — perturbation ladder response.
+#
+# Measures d_I(H_0, H_t) vs known Qin budget t for connectivity-preserving
+# perturbation ladders (random_connected_edit).  The edit budget is HGED-free:
+# HGED(H_0, H_t) <= t by construction (Qin cost model).
+#
+# Reuses the existing ``ladder`` cell type (runner.run_ladder_cell) which
+# already uses PerturbationLadderHypergraphs internally (D-CONN1 compliant).
+#
+# Three base sizes, two seeds each = 6 cells.
+# Wall-clock budget (measured 2026-07-19):
+#   small (n=5, m=3):   ~0.13s/ladder × 8 ladders × 2 seeds = ~2.1s
+#   medium (n=8, m=5):  ~0.4s/ladder  × 8 ladders × 2 seeds = ~6.4s
+#   larger (n=12, m=8): ~1.1s/ladder  × 6 ladders × 2 seeds = ~13.2s
+#
+# Analysis: experiments.article.analysis.ladder.analyze_ladder
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5g/g2_ladder
+
+cells:
+  # ── Small bases (n=5, m=3) ───────────────────────────────────────────────
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 42
+    label: small_s0
+    dataset_params:
+      n_nodes: 5
+      n_edges: 3
+      arity_range: [2, 3]
+      max_t: 10
+      n_ladders: 8
+
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 43
+    label: small_s1
+    dataset_params:
+      n_nodes: 5
+      n_edges: 3
+      arity_range: [2, 3]
+      max_t: 10
+      n_ladders: 8
+
+  # ── Medium bases (n=8, m=5) ──────────────────────────────────────────────
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 42
+    label: medium_s0
+    dataset_params:
+      n_nodes: 8
+      n_edges: 5
+      arity_range: [2, 3]
+      max_t: 10
+      n_ladders: 8
+
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 43
+    label: medium_s1
+    dataset_params:
+      n_nodes: 8
+      n_edges: 5
+      arity_range: [2, 3]
+      max_t: 10
+      n_ladders: 8
+
+  # ── Larger bases (n=12, m=8) — past the exact-HGED ceiling ──────────────
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 42
+    label: large_s0
+    dataset_params:
+      n_nodes: 12
+      n_edges: 8
+      arity_range: [2, 4]
+      max_t: 10
+      n_ladders: 6
+
+  - type: ladder
+    dataset: perturbation_ladder
+    seed: 43
+    label: large_s1
+    dataset_params:
+      n_nodes: 12
+      n_edges: 8
+      arity_range: [2, 4]
+      max_t: 10
+      n_ladders: 6

@@ -1,0 +1,131 @@
+# T-M5g G2 — local sensitivity profiles (characterize → exploit, v3 scope).
+#
+# Measures s(e) = d_I(H, H⊕e) and s_nauty(e) for connectivity-preserving
+# single edits (random_connected_edit) to produce the G2 geometry invariants:
+#   - Local sensitivity profile (ours vs nauty contrast)
+#   - Three-regime confrontation (stability.md §4.2 prediction)
+#
+# Two sub-runs:
+#   (a) g2_sensitivity — random corpora, three density regimes, two seeds each
+#   (b) g2_design_sensitivity — four design fixtures (Fano, STS(9), C13, GQ(2,2))
+#
+# Wall-clock budget (measured 2026-07-19):
+#   sparse:  ~1.4ms/edit → 25 HGs × 30 edits/HG = 750 edits → ~1.1s/cell
+#   medium:  ~4.5ms/edit → 20 HGs × 20 edits/HG = 400 edits → ~1.8s/cell
+#   dense:   ~162ms/edit → 15 HGs × 10 edits/HG = 150 edits → ~24s/cell
+#   designs: Fano 12.6ms × 100 = 1.3s; STS(9) 148ms × 50 = 7.4s;
+#            C13 273ms × 30 = 8.2s; GQ(2,2) 820ms × 15 = 12.3s
+#
+# Analysis: experiments.article.analysis.g2.analyze_g2
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5g/g2_sensitivity
+
+cells:
+  # ── (a) Random corpora: sparse ───────────────────────────────────────────
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 42
+    label: sparse_s0
+    dataset_params:
+      n_nodes: 6
+      n_edges: 3
+      arity_range: [2, 3]
+      max_t: 0
+      n_ladders: 25
+      n_edits_per_h: 30
+      max_arity: 3
+
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 43
+    label: sparse_s1
+    dataset_params:
+      n_nodes: 6
+      n_edges: 3
+      arity_range: [2, 3]
+      max_t: 0
+      n_ladders: 25
+      n_edits_per_h: 30
+      max_arity: 3
+
+  # ── (a) Random corpora: medium ────────────────────────────────────────────
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 42
+    label: medium_s0
+    dataset_params:
+      n_nodes: 8
+      n_edges: 5
+      arity_range: [2, 3]
+      max_t: 0
+      n_ladders: 20
+      n_edits_per_h: 20
+      max_arity: 3
+
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 43
+    label: medium_s1
+    dataset_params:
+      n_nodes: 8
+      n_edges: 5
+      arity_range: [2, 3]
+      max_t: 0
+      n_ladders: 20
+      n_edits_per_h: 20
+      max_arity: 3
+
+  # ── (a) Random corpora: dense ─────────────────────────────────────────────
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 42
+    label: dense_s0
+    dataset_params:
+      n_nodes: 7
+      n_edges: 8
+      arity_range: [2, 4]
+      max_t: 0
+      n_ladders: 15
+      n_edits_per_h: 10
+      max_arity: 4
+
+  - type: g2_sensitivity
+    dataset: perturbation_ladder
+    seed: 43
+    label: dense_s1
+    dataset_params:
+      n_nodes: 7
+      n_edges: 8
+      arity_range: [2, 4]
+      max_t: 0
+      n_ladders: 15
+      n_edits_per_h: 10
+      max_arity: 4
+
+  # ── (b) Design fixtures ───────────────────────────────────────────────────
+  - type: g2_design_sensitivity
+    dataset: ""
+    seed: 42
+    label: designs_all
+    dataset_params:
+      designs:
+        - fano_plane
+        - sts_9
+        - cyclic_triple_orbit_13
+        - gq_2_2_doily
+      n_edits_per_design: 100
+      max_arity: 3
+
+  # Reduced-edit version for fast validation (sts_9 and C13 are slower)
+  - type: g2_design_sensitivity
+    dataset: ""
+    seed: 43
+    label: designs_s1
+    dataset_params:
+      designs:
+        - fano_plane
+        - sts_9
+        - cyclic_triple_orbit_13
+        - gq_2_2_doily
+      n_edits_per_design: 50
+      max_arity: 3

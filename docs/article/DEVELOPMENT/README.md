@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 4 (+1 blocked, +1 in-progress) | 2 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 5 (+1 blocked, +1 in-progress) | 2 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -137,8 +137,14 @@ the body (HGED-free, characterize → exploit):
    T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← same
    T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g
 
+doc propagation:
+   T-M5h  fold the S3 measured G2 outcomes (incl. the §4.2 partial
+          falsification) into the reasoning prose ← M5f ✔, M5g ✔
+
 discussion evidence (small, last):
-   T-M5a  E1' figure (exact HGED, ours only) + bits  ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
+   T-M5a ◐ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
+          [IN-PROGRESS: part 1 done at S3 — DQ1' resolved, mini-corpus pinned,
+           Picasso job 1616143 running; part 2 harvests at S5]
           [v2 pipeline executed + closed pre-rescope (`experiments/article/`,
            2026-07-09); that closure is superseded at D-ART2 — see the rescope
            note in T-M5a; T-M5a' (full-scale v2 harvest) parked in BLOCKED/]
@@ -168,8 +174,8 @@ S3 (2026-07-19). T-M5a (discussion evidence) is IN-PROGRESS: part 1 (DQ1'
 probe + Picasso E1' submission) ran at S3; part 2 (harvest + figure + bits)
 runs at S5.
 
-**Runnable in parallel right now:** none — the S3 fan-out is merged; next
-wave is T-M5b alone, then { T-M5c ∥ T-M5d ∥ T-M5e } (S4). Use
+**Runnable in parallel right now:** T-M5h (doc propagation, prose-only lane).
+The next code wave is T-M5b alone, then { T-M5c ∥ T-M5d ∥ T-M5e } (S4). Use
 isolated git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the

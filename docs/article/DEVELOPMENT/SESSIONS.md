@@ -30,7 +30,7 @@ optional small task to fill a freed slot; never blocks the session.
 |---|---|---|---|---|
 | ☑ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
 | ☑ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
-| ☐ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
+| ☑ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☐ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
 | ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
 | ☐ | **S6** — Optional & stretch | Only if wanted after everything article-critical is closed | { T-M4a ∥ T-TBe } (either or none) → T-M6 | S1–S5 done; explicit human opt-in |
@@ -263,7 +263,54 @@ Picasso queue; T-M5a in `IN-PROGRESS/`.
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **Session run 2026-07-19 ~16:00–17:00 CEST (Fable orchestrator). S3 CLOSED
+  — all five exit criteria met.** Preflight baselines 971/8/15, ruff 3,
+  mypy 21/7 (identical to S2 close); snapshot `wip/orchestrator-20260719-1610`.
+- *Fan-out as planned:* T-M5f ∥ T-M5g ∥ T-TBg, all three DONE and merged
+  serially (`87bb172`, `80c9978`, `6537298`). All three worktrees were cut
+  from the current main tip — the S1/S2 stale-base hazard did not recur
+  (launch-prompt `git merge main` instruction kept).
+- *T-M5f merged:* ν + Shepard added to `embedding.py`; new `geometry.py`
+  (concentration, length floor, N_k, hubness skewness — hand-checked
+  0.8165 pin); 31 tests; geometry-table spec appended to T-M5b;
+  `geometry.md` needed no refinement. Worktree suite 1002/8/15 green.
+- *T-M5g merged after a round-1 correction:* the worker's closing note was
+  smoke-only; orchestrator ran the FULL harness in its worktree (8/8
+  sensitivity cells 214 s, 6/6 ladder cells 23 s, RTX-4060) and the analysis
+  (records merged across cells — the CLI takes one JSON per type).
+  **Three-regime confrontation (stability.md §4.2): 5 confirmed, 2
+  FALSIFIED** — C13 orbit and GQ(2,2) predicted heavy-tailed, measured
+  heavy-tail 0.000 (narrow ours-profile under single arity≤3 Qin edits).
+  Nauty avalanche contrast confirmed everywhere (IQR_nauty 2.5–9.5× ours).
+  Ladders near-monotone (80% monotone steps; mean Δd_I 3.2→11.7 with size).
+  Worker updated its closing note with the full-run table (`8618a75`).
+  Figures + confrontation JSON on the results drive under `T-M5g/analysis/`.
+- *T-TBg merged:* stability.md §6 checklist (~90 lines) relocated to
+  `T-TB/`; task ids/dates/audit phrasing stripped from stability.md,
+  correlation.md, applications.md + 4 READMEs; acceptance grep re-run by the
+  orchestrator — only the deliberate ledger-pointer lines remain; deleted
+  lines audited, no scientific claim lost.
+- *`[O]` T-M5a part 1 executed:* DQ1' probe (0 DNFs to n=10; ceiling
+  (10,8); `DATA.md` §6 resolved), mini-corpus pinned
+  (`e1prime_mini_corpus.yaml`, 12 cells, ≈7,560 pairs), local smoke green
+  (ρ=0.633 on cell 0; HGED=0 ⇔ d_I=0), repo rsynced + editable install
+  rebuilt on Picasso, **job 1616143 submitted and RUNNING (all 12 array
+  tasks)**; results →
+  `fscratch/isalhg_results/T-M5a/e1prime`. T-M5a → `IN-PROGRESS/` with the
+  part-1 record appended.
+- *Handoffs:* **T-M5h filed (OPEN, user-directed)** — propagate the S3
+  measured outcomes (incl. the §4.2 partial falsification) into
+  stability.md/geometry.md/applications.md prose.
+- *Baselines at S3 close (merged `main`):* **1010 passed, 8 skipped, 15
+  deselected; ruff 3; mypy 21 in 7 files.** `main` not pushed (not asked).
+- **⚠ Hazards for the next orchestrator:** (1) S5's harvest must check the
+  Picasso outputs' `meta.json` per cell (idempotent re-submit fills any
+  missing cell — resubmit only failed indices with `--array=<idx>`).
+  (2) The `rtk` git proxy hides merge commits in `git log` output — use
+  `git show -s --format='%h %p %s'` for ground truth. (3) S4's T-M5b
+  should read T-M5f's geometry-table spec appended at the bottom of its
+  task file, and the G2 falsification may deserve a caveat line in the
+  geometry table's prose (T-M5h owns the prose change).
 
 ---
 

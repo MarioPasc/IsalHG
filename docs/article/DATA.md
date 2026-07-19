@@ -129,9 +129,16 @@ wiring are new `datasets/synthetic/` modules → tracked in `DEVELOPMENT/`.
 
 ## 6. Open data questions
 
-- DQ1'. Mini-corpus size + (n, m) ceiling for all-pairs exact HGED under HPC
-  parallelism (one probe run pins it). Rescoped from v2's DQ1 (which sized a
-  full correlation corpus + density sweep).
+- DQ1'. **[resolved 2026-07-19 — probe run, corpus pinned]** Exact HGED on
+  connected ladder-corpus pairs (arity ≤ 3) costs median 1–92 ms, p90 ≤ 2.5 s,
+  max 4.8 s per pair with zero DNFs under a 30 s cap for n ≤ 10, m ≲ 8 —
+  the mini-corpus ceiling is (n, m) = (10, 8). The pinned E1' corpus:
+  12 blocks (base sizes n = 5..10 × 2 seeds), each 4 perturbation ladders ×
+  9 snapshots = 36 items → 630 all-pairs per block, ≈ 7,560 (d_I, HGED)
+  pairs total; within-ladder pairs supply the perturbation budgets,
+  cross-ladder pairs the unrelated range (§4 composition). A single-block
+  local check: exact HGED all-pairs in 15.8 s at n = 5; HGED spans 1–29 and
+  the HGED = 0 pairs coincide exactly with d_I = 0.
 - DQ3'. **[resolved 2026-07-19 — NO-GO, fallback executed]** `w*_c` is not
   computable in acceptable time across a HIC IMDB corpus (corpus-level `k`
   exceeds the arity cap; the arity-capped sub-corpus has a symmetry-driven

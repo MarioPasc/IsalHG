@@ -171,3 +171,75 @@ def kruskal_stress_1(
     if denominator == 0.0:
         return 0.0
     return float(np.sqrt(numerator / denominator))
+
+
+def neg_eigenvalue_mass(
+    eigenvalues: NDArray[np.float64],
+    tol: float = 1e-10,
+) -> float:
+    """Non-Euclidean mass ν of the Gram spectrum.
+
+    Measures the proportion of the total eigenvalue magnitude carried by
+    strictly negative eigenvalues (those below ``-tol``).  A value of 0
+    means the metric is Euclidean; values near 1 indicate strong
+    non-Euclideanness.
+
+    ``ν = Σ_{λ < -tol} |λ| / Σ_i |λ_i|``
+
+    Parameters
+    ----------
+    eigenvalues : numpy.ndarray
+        1-D array of eigenvalues from :func:`classical_mds` (or any symmetric
+        matrix), in **any** order.
+    tol : float, optional
+        Eigenvalues in ``(-tol, 0)`` are treated as numerical zero and do not
+        contribute to the numerator.  Matches the tolerance in :func:`is_psd`.
+
+    Returns
+    -------
+    float
+        ``ν ∈ [0, 1)``; returns 0.0 when all eigenvalues are zero.
+    """
+    import numpy as np
+
+    eigenvalues = np.asarray(eigenvalues, dtype=np.float64)
+    total = float(np.sum(np.abs(eigenvalues)))
+    if total == 0.0:
+        return 0.0
+    neg_sum = float(np.sum(np.abs(eigenvalues[eigenvalues < -tol])))
+    return neg_sum / total
+
+
+def shepard_data(
+    D_original: NDArray[np.float64],
+    D_embedded: NDArray[np.float64],
+) -> tuple[NDArray[np.float64], NDArray[np.float64]]:
+    """Extract upper-triangle pairs (d_ij, δ_ij) for a Shepard diagram.
+
+    A Shepard diagram plots original dissimilarities against embedding
+    distances as a scatter plot.  Proximity to the identity line indicates
+    low distortion.
+
+    Parameters
+    ----------
+    D_original : numpy.ndarray
+        Symmetric ``(n, n)`` original distance matrix.
+    D_embedded : numpy.ndarray
+        Symmetric ``(n, n)`` distance matrix computed from the embedding
+        (e.g. from :func:`embed_classical`).
+
+    Returns
+    -------
+    d_original : numpy.ndarray
+        1-D array of ``n*(n-1)/2`` upper-triangle entries from ``D_original``.
+    d_embedded : numpy.ndarray
+        1-D array of ``n*(n-1)/2`` upper-triangle entries from ``D_embedded``,
+        aligned with ``d_original``.
+    """
+    import numpy as np
+
+    D_o = np.asarray(D_original, dtype=np.float64)
+    D_e = np.asarray(D_embedded, dtype=np.float64)
+    n = D_o.shape[0]
+    idx = np.triu_indices(n, k=1)
+    return D_o[idx], D_e[idx]

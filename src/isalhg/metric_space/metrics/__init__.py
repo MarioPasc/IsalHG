@@ -13,6 +13,11 @@ information
     Fixed-width-code bit-count estimator and incidence-list competitor
     model; compression ratio and Wilcoxon input vector (§3, PROPOSAL.md).
 embedding
-    Classical (Torgerson–Gower) MDS solve, Kruskal stress-1, and PSD /
-    negative-eigenvalue check (A1, PROPOSAL.md §5).
+    Classical (Torgerson–Gower) MDS solve, Kruskal stress-1, PSD /
+    negative-eigenvalue check, non-Euclidean mass ν, and Shepard data
+    (A1, PROPOSAL.md §5).
+geometry
+    Concentration diagnostics (diameter/median ratio, IQR), length-difference
+    floor, k-occurrence counts N_k, and hubness skewness (A3 precondition,
+    ``geometry.md`` §5).
 """

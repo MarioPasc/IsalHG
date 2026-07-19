@@ -19,6 +19,8 @@ from isalhg.metric_space.metrics.embedding import (  # noqa: E402
     embed_classical,
     is_psd,
     kruskal_stress_1,
+    neg_eigenvalue_mass,
+    shepard_data,
 )
 
 
@@ -129,3 +131,82 @@ class TestKruskalStress1:
         D = np.array([[0, 1, 3], [1, 0, 2], [3, 2, 0]], dtype=float)
         stress = kruskal_stress_1(D, D)
         assert stress < 1e-10
+
+
+class TestNegEigenvalueMass:
+    def test_all_positive_mass_zero(self) -> None:
+        eigs = np.array([3.0, 2.0, 1.0, 0.5])
+        assert neg_eigenvalue_mass(eigs) == pytest.approx(0.0)
+
+    def test_known_mix(self) -> None:
+        # eigenvalues [1.2, 0.8, 0.1, -0.5]
+        # ν = 0.5 / (1.2+0.8+0.1+0.5) = 0.5/2.6
+        eigs = np.array([1.2, 0.8, 0.1, -0.5])
+        expected = 0.5 / 2.6
+        assert neg_eigenvalue_mass(eigs) == pytest.approx(expected, rel=1e-9)
+
+    def test_all_zero_returns_zero(self) -> None:
+        eigs = np.array([0.0, 0.0, 0.0])
+        assert neg_eigenvalue_mass(eigs) == pytest.approx(0.0)
+
+    def test_numerical_noise_not_counted(self) -> None:
+        # Eigenvalue at -1e-15 is numerical noise; should not inflate ν
+        eigs = np.array([2.0, 0.5, -1e-15, -0.25])
+        # Only -0.25 should count (tol=1e-10 by default)
+        expected = 0.25 / (2.0 + 0.5 + 1e-15 + 0.25)
+        assert neg_eigenvalue_mass(eigs) == pytest.approx(expected, rel=1e-6)
+
+    def test_pinned_spectrum_edit_distance_matrix(self) -> None:
+        # D from edit distances on 4 strings: "ab", "ba", "a", "b"
+        # d("ab","ba")=2; others=1 — a non-Euclidean metric
+        D = np.array([[0, 2, 1, 1], [2, 0, 1, 1], [1, 1, 0, 1], [1, 1, 1, 0]], dtype=float)
+        eigenvalues, _ = classical_mds(D)
+        # Largest eigenvalue ≈ 2.0; smallest ≈ -0.25 (non-Euclidean)
+        assert eigenvalues[0] == pytest.approx(2.0, rel=1e-6)
+        assert eigenvalues[-1] < -0.1
+        nu = neg_eigenvalue_mass(eigenvalues)
+        # ν = 0.25 / (2.0+0.5+~0+0.25) ≈ 0.0909
+        assert nu == pytest.approx(0.25 / 2.75, rel=1e-4)
+        assert is_psd(eigenvalues) is False
+
+    def test_euclidean_distance_matrix_mass_zero(self) -> None:
+        rng = np.random.default_rng(42)
+        X = rng.random((6, 2))
+        D = _euclidean_distance_matrix(X)
+        eigenvalues, _ = classical_mds(D)
+        # Euclidean metric → PSD Gram matrix → ν = 0
+        assert neg_eigenvalue_mass(eigenvalues) == pytest.approx(0.0, abs=1e-8)
+
+
+class TestShepardData:
+    def test_shape(self) -> None:
+        n = 5
+        rng = np.random.default_rng(1)
+        D = rng.random((n, n))
+        D = (D + D.T) / 2
+        np.fill_diagonal(D, 0.0)
+        d_orig, d_emb = shepard_data(D, D)
+        expected_len = n * (n - 1) // 2
+        assert d_orig.shape == (expected_len,)
+        assert d_emb.shape == (expected_len,)
+
+    def test_identical_matrices_gives_equal_arrays(self) -> None:
+        D = np.array([[0, 1, 3], [1, 0, 2], [3, 2, 0]], dtype=float)
+        d_orig, d_emb = shepard_data(D, D)
+        np.testing.assert_allclose(d_orig, d_emb)
+
+    def test_values_are_upper_triangle(self) -> None:
+        D = np.array([[0, 2, 1, 1], [2, 0, 1, 1], [1, 1, 0, 1], [1, 1, 1, 0]], dtype=float)
+        d_orig, _ = shepard_data(D, D)
+        # Upper triangle of 4x4: indices (0,1),(0,2),(0,3),(1,2),(1,3),(2,3)
+        expected = np.array([2.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+        np.testing.assert_allclose(d_orig, expected)
+
+    def test_perfect_embedding_low_stress(self) -> None:
+        X_true = np.array([[0.0, 0.0], [1.0, 0.0], [0.0, 1.0], [1.0, 1.0]])
+        D = _euclidean_distance_matrix(X_true)
+        X_emb = embed_classical(D, n_dims=2)
+        D_emb = _euclidean_distance_matrix(X_emb)
+        d_orig, d_emb = shepard_data(D, D_emb)
+        # Perfect embedding: d_ij ≈ δ_ij
+        np.testing.assert_allclose(d_orig, d_emb, atol=1e-6)

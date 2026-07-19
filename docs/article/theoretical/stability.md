@@ -437,6 +437,36 @@ different fates:
    heavy tail on Fano or STS(9) would falsify §3's coherence criterion; the
    falsifiability survives the rescope intact.
 
+   **Measured outcome (connectivity-preserving single Qin edits, `max_arity = 3`,
+   seven regimes: sparse/medium/dense random, Fano, STS(9), cyclic C13 orbit,
+   GQ(2,2)).** 5 confirmed, 2 falsified.
+   - *Confirmed (heavy_tail_frac = 0.000 where unimodal predicted):* sparse
+     (IQR_ours = 2.0, IQR_nauty = 11.0), medium (4.0 / 17.0), dense (5.25 /
+     11.0), Fano (5.0 / 20.0), STS(9) (7.0 / 15.0).
+   - ***Falsified:*** cyclic C13 (predicted heavy-tailed; measured
+     heavy_tail_frac = 0.000, IQR_ours = 2.0, IQR_nauty = 19.0) and GQ(2,2)
+     doily (predicted heavy-tailed; measured heavy_tail_frac = 0.000,
+     IQR_ours = 8.0, IQR_nauty = 10.0). Both designs are 3-uniform; all edits
+     are drawn at `max_arity = 3`.
+
+   Two candidate explanations, not mutually exclusive: (i) the `max_arity = 3`
+   guard restricts edits to the same arity family as the existing edges,
+   excluding arity-diverse edits that would cross a tier boundary in the `w*_c`
+   branching tree — the predicted avalanche may require adding edges of higher
+   arity to break the uniform structure; (ii) the avalanche mechanism is grounded
+   in tie-set discontinuity near symmetric inputs, and a single discrete
+   connectivity-preserving Qin edit at these `n` values (C13: n = 13, GQ(2,2):
+   n = 15) may not reach the asymptotic regime the mechanism requires. A
+   follow-up would test `s(e)` with arity-diverse edits on the same fixtures and
+   on larger symmetric designs.
+
+   The nauty contrast is confirmed including on the falsified designs: IsalHG
+   IQR_ours = 2.0–8.0 tokens against IQR_nauty = 10.0–20.0 across all seven
+   regimes (ratio 1.25–9.5×). The compact IsalHG profile on C13 and GQ(2,2) is
+   not shared by nauty (IQR_nauty = 19.0 and 10.0 respectively), confirming that
+   the low sensitivity variance is a property of the IsalHG encoding, not of the
+   structural edits themselves.
+
 ---
 
 ## 5. Downstream: non-Euclidean geometry and MDS (moved to `geometry.md`)

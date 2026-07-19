@@ -1,6 +1,6 @@
 # The geometry of the IsalHG hypergraph metric space
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). **The article's central theoretical
+**Status:** ACTIVE. **The article's central theoretical
 object**: the characterization the paper leads with and the licence system the
 applications cite. The companion `stability.md` holds the foundation (§1) and
 the HGED-relation analysis the closing discussion compresses (§2–4);
@@ -136,6 +136,23 @@ because we apply the edits (Qin-cost accounting on the generator side).
   monotonicity vs `t` is the ladder response read along recovered paths;
   (c) the discussion's mechanism prose (drift/avalanche) points at these
   measured profiles instead of hypothetical worst cases.
+
+**Measured profile.** Seven regimes: sparse/medium/dense random corpora and
+four design fixtures (Fano, STS(9), cyclic C13 orbit, GQ(2,2)); connectivity-
+preserving single Qin edits at `max_arity = 3`. IQR of `s(e)` (IsalHG) ranges
+2.0–8.0 tokens, heavy_tail_frac = 0.000 throughout — the sensitivity profile
+is compact and near-unimodal across every tested configuration. The three-regime
+prediction in `stability.md` §4.2 is confirmed for the random corpora and the
+two coherent-tie designs (Fano, STS(9)), and **falsified** for the two
+incoherent-tie designs (cyclic C13, GQ(2,2)), which show compact profiles under
+single arity-3 edits rather than the predicted heavy tail; `stability.md` §4.2
+records the measured numbers and the candidate explanations. Nauty-Levi contrast
+confirmed: IQR_nauty = 10.0–20.0 across all regimes (ratio 1.25–9.5× ours),
+rendering the per-regime and per-fixture contrast figures. **Ladder response**
+(six corpora, small/medium/large base size, two seeds each): ≈80% of per-ladder
+steps are monotone; mean `d_I` increment per Qin budget step grows from 3.2
+(n = 5 base) to 11.7 (n = 12 base); all six ladders globally increasing, with
+local one-step regressions within ladder variance.
 
 ## 7. Mapping to experiments
 

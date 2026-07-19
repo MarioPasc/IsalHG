@@ -46,15 +46,27 @@ On every corpus, before any application: the pairwise-distance histogram of
   (Fano, STS(9), the cyclic C13 orbit, GQ(2,2)). The C13 fixture is the cheap
   partial system, not a true STS(13): `s(e)` needs one `w*_c` per edit, and a
   true STS(13) costs ~44 s per `w*_c` — infeasible at histogram scale.
-  Predictions (three regimes by tie coherence) in
-  `../theoretical/stability.md` §4.2; falsification target stated there.
+  **Measured (connectivity-preserving single Qin edits, `max_arity = 3`, seven
+  regimes):** IQR_ours = 2.0–8.0 tokens, heavy_tail_frac = 0.000 throughout.
+  The three-regime prediction (`../theoretical/stability.md` §4.2) is confirmed
+  for the random corpora and the two coherent-tie designs (Fano, STS(9)), and
+  **falsified** for the two incoherent-tie designs (cyclic C13, GQ(2,2)), which
+  show compact near-unimodal profiles under single arity-3 Qin edits rather
+  than the predicted heavy tail. Rendered figures: sensitivity contrast per
+  regime and per design fixture.
 - **Ladder:** `d_I(H_0, H_t)` vs known accumulated Qin budget `t` along
-  perturbation ladders; monotone near-linear response is the smoothness
-  evidence for neighbourhood methods.
+  perturbation ladders. **Measured (six corpora, small/medium/large base size,
+  two seeds each):** ≈80% of per-ladder steps are monotone; mean `d_I`
+  increment per Qin budget step grows from 3.2 (n = 5 base) to 11.7 (n = 12
+  base); all six ladders globally increasing. This near-monotone trend is the
+  smoothness evidence for neighbourhood methods (A2/A3).
 - **Contrast:** the same `s(e)` measurement on the nauty-Levi canonical-string
-  distance. Expected: avalanche-everywhere — the measured demonstration that
-  iso-only canonical labelling yields no navigable geometry
-  (`../COMPETITORS.md` §3), replacing assertion with a figure.
+  distance. **Measured:** IQR_nauty = 10.0–20.0 across all seven regimes
+  (ratio 1.25–9.5× ours) — the demonstration that iso-only canonical labelling
+  yields no navigable geometry (`../COMPETITORS.md` §3) is a measured figure.
+  The contrast holds on both falsified designs: C13 IQR_nauty = 19.0 vs
+  IQR_ours = 2.0; GQ(2,2) IQR_nauty = 10.0 vs IQR_ours = 8.0. Rendered
+  figures: contrast histograms per regime and per design fixture.
 - Consumers: licences for A2/A3 neighbourhood methods; A4's scoring baseline;
   the discussion's drift/avalanche prose points at these histograms.
 

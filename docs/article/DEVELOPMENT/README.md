@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 4 (+1 blocked, +1 in-progress) | 4 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 1 (+1 blocked, +1 in-progress) | 7 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -137,8 +137,9 @@ the body (HGED-free, characterize → exploit):
           [D.npy caches in /media/.../results/T-M5b/d_matrix/; T-M5c/d/e read these]
           [runner-bug workaround documented; fix filed → T-M5i]
    T-M5i  fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (OPEN; low priority)
-   T-M5c  clustering + dendrogram · T-M5d kNN (reads G1) ← T-M5b ✔
-   T-M5e  shortest path (ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔
+   T-M5c ✔ clustering + dendrogram (A2) ← T-M5b ✔ (DONE 2026-07-19; ARI/NMI vs planted labels)
+   T-M5d ✔ kNN (A3, reads G1) ← T-M5b ✔ (DONE 2026-07-19; G1 hubness→kNN prediction confirmed)
+   T-M5e ✔ shortest path (A4, ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔ (DONE 2026-07-19; decodability differentiator + monotonicity=1.0; recovery null)
 
 doc propagation:
    T-M5h ✔ fold the S3 measured G2 outcomes (incl. the §4.2 partial
@@ -162,24 +163,27 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, updated at the 2026-07-19 S2 close).** The
+**Critical path (v3, updated at the 2026-07-19 S4 close).** The
 canonical-form track is closed and the theory record needs no article-side
-work. T-M2c, T-M3a–d, T-M4, and T-M4' all closed pre-rescope (2026-07-09/15)
-on the then-main line and were adopted at the reconciliation merge; the S2
-verification pass (2026-07-19) re-verified all five competitor `D_rep`
-matrices on the planted corpus (iso pairs → 0, incl. NetLSD's promoted
-acceptance and HyperCOT through the rebuilt pinned env). **T-DQ3' is closed:
-NO-GO** — the real anchor falls back to small designs + planted corpora as
-declared in `DATA.md` §2 (secondary censored-HIC exhibit = OD6, pending PI).
-The path to a submittable body now runs: **T-M5c–e (the remaining applications)**
-on the fallback corpus list — the characterization (T-M5f ✔, T-M5g ✔) and the
-MDS flagship (T-M5b ✔, geometry table produced 2026-07-19) are closed. T-M5a
-(discussion evidence) is IN-PROGRESS: part 1 (DQ1' probe + Picasso E1'
-submission) ran at S3; part 2 (harvest + figure + bits) runs at S5.
+work. **The whole HGED-free body is now closed:** the characterization
+(T-M5f ✔ geometry helpers, T-M5g ✔ sensitivity+ladder), the MDS flagship +
+geometry table (T-M5b ✔, OOS-CV D̂), and all four applications —
+**A2 clustering (T-M5c ✔), A3 kNN (T-M5d ✔), A4 shortest-path (T-M5e ✔)** —
+ran on the fallback corpus list (planted families; no HIC per the T-DQ3'
+NO-GO) and merged green at S4. Measured headlines: IsalHG is non-Euclidean
+(ν=0.123, D̂=21) while the vector competitors saturate the CV cap; the G1
+hubness profile predicts the kNN ordering (WL hubness 1.777 → AUC≈0.50);
+A4's decodability differentiator holds (only IsalHG exhibits decoded S2H
+intermediates; nauty cannot navigate). On task metrics IsalHG is competitive
+but mid-pack (HPD-JSD leads A2/A3 on this corpus) — reported honestly; the
+capability matrix (A4) is the categorical differentiator.
+**The only remaining article-critical work is T-M5a** (discussion evidence):
+IN-PROGRESS — part 1 (DQ1' probe + Picasso E1' job 1616143) ran at S3;
+part 2 (harvest + ρ figure + bits table) runs at S5. T-M5i (runner kwarg
+fix) stays OPEN, low-priority, off the critical path.
 
-**Runnable in parallel right now:** { T-M5c ∥ T-M5d ∥ T-M5e } (S4) + T-M5h
-(doc propagation, prose-only lane). Use isolated git worktrees for agents
-that touch overlapping `core/` files.
+**Runnable now:** S5 = `[O]` T-M5a part 2 (Picasso harvest) + the closure
+sweep. Nothing in S4 remains.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

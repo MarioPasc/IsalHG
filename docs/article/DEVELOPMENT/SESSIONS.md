@@ -31,7 +31,7 @@ optional small task to fill a freed slot; never blocks the session.
 | ☑ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
 | ☑ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
 | ☑ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
-| ☐ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
+| ☑ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
 | ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
 | ☐ | **S6** — Optional & stretch | Only if wanted after everything article-critical is closed | { T-M4a ∥ T-TBe } (either or none) → T-M6 | S1–S5 done; explicit human opt-in |
 
@@ -349,7 +349,78 @@ matrix filled (A4).
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **Session run 2026-07-19 ~17:20–19:40 CEST (Opus orchestrator). S4 CLOSED —
+  all four exit criteria met.** Preflight baselines 1010/8/15, ruff 3, mypy
+  21/7 (green); snapshot `wip/orchestrator-20260719-1718`. Corpus = the
+  declared **fallback** (planted families; NO HIC — T-DQ3' NO-GO). OD6
+  (secondary censored-HIC exhibit) stayed pending-PI and non-gating.
+- *Main advanced mid-session:* **T-M5h** (S3 doc-propagation) was merged to
+  `main` by a parallel actor during the run (`3489ba5`+`63d9a5d`+`390756e`) —
+  prose-only, off every S4 code lane; adopted cleanly. `ca214b3` remained an
+  ancestor; code baseline unchanged (T-M5h added no code).
+- *Phase 1 — T-M5b first, alone:* MDS flagship + geometry table.
+  **Round-1 correction (orchestrator-caught):** the worker's CV `D̂` selector
+  was **in-sample** (embedded the full matrix, read "held-out" RMSE off the
+  same fit) → D̂ pinned to the cap for every non-Euclidean rep (incl. IsalHG).
+  Sent back; worker replaced it with genuine K-fold leave-out-points CV +
+  Gower (1968) out-of-sample extension, raised the cap to min(n−1,40), and
+  added an L1-from-R³ test that fails under the old code (recovers D̂≈3).
+  Corrected table: **IsalHG D̂=21** (real elbow, ν=0.123, non-Euclidean);
+  WL-L1/HPD D̂=40, NautyEdit D̂=39 (censored, PSD Euclidean-like, monotone
+  curve — honestly flagged); NetLSD D̂=5. Merged `5802ae9`. Also filed:
+  **T-M5i** (runner `_build_dataset` kwarg bug; worker worked around with a
+  bespoke cache writer of identical layout; low-priority, OPEN).
+- *Phase 2 — { T-M5c ∥ T-M5d ∥ T-M5e }, 3 isolated worktrees.* All read
+  T-M5b's cached `D.npy`; README/SESSIONS reserved to the orchestrator (zero
+  worker README edits → no 3-way churn); merged serially, each on a
+  re-verified canonical suite.
+  - **T-M5c (A2 clustering)** — PAM (`kmedoids.fasterpam`; sklearn-extra had a
+    numpy ABI break) + UPGMA dendrogram; silhouette/Dunn/DB/ARI/NMI/cophenetic.
+    **Round-1 correction:** `kmedoids` was imported but undeclared → merged
+    suite would have errored; sent back to declare `kmedoids>=0.5` in the
+    `bench` extra (orchestrator pre-installed it in the shared env). Result
+    (planted_main): IsalHG ARI 0.181/NMI 0.318 — **mid-pack** (HPD-JSD leads
+    at ARI 0.331; WL/NautyEdit ARI≈0). Merged.
+  - **T-M5d (A3 kNN)** — precomputed KNN, LOO/stratified CV, acc/macro-F1/
+    AUC-OvR vs k, read against the G1 profile. **Clean first pass.** Headline:
+    the G1 hubness prediction is confirmed — **WL hubness 1.777 → AUC-OvR
+    ≈0.50**; IsalHG 65%/AUC 0.80; HPD best 72%/0.87; NautyEdit ~27%
+    (avalanche destroys neighbourhoods regardless of hubness). Merged.
+  - **T-M5e (A4 shortest-path)** — Dijkstra on a kNN(k=3) `D`-graph;
+    path-recovery + monotonicity + S2H-decoded intermediates. **Clean first
+    pass** (scorer verified correct on a planted-recoverable path).
+    Result (44-item ladder pool): **monotonicity=1.00 all reps**; the
+    **decodability differentiator holds** — IsalHG decodes 3 valid S2H
+    intermediates, WL collapses to a 2-node direct path, NetLSD/HPD have no
+    decoder, nauty cannot navigate (G2 avalanche); capability matrix filled.
+    **Path recovery is a null** (0.00 ours/WL/NetLSD, 0.33 HPD) — the d_I
+    geodesic shortcuts the specific edit path; honest and *consistent with §5's
+    no-proxy thesis*, not a defect. Merged.
+- *Verification discipline:* every worker's closing check re-run by the
+  orchestrator in its own env under the canonical `-m "not slow"` scope
+  (workers' own counts used ad-hoc scopes); two undeclared-dependency /
+  leakage defects caught that the workers' green self-checks had hidden.
+  Confirmed the workers' "ruff 14" was a wider-scope artifact — canonical
+  `src/ tests/` ruff stayed **3**.
+- *Baselines at S4 close (merged `main`):* **1062 passed, 8 skipped, 16
+  deselected; ruff 3; mypy 21 in 7 files** (1010 → +12 M5b +13 M5c +13 M5d
+  +14 M5e, zero failures, zero drift). `main` **not pushed** (not asked).
+- *Follow-ups for S5 / prose:* (1) the geometry table shows censored D̂ as a
+  bare cap number for WL/HPD/NautyEdit — a `d_hat_censored` flag / prose
+  caveat belongs in the geometry-table prose (T-M5h owns prose; note for the
+  writer). (2) A4 recovery was measured on one endpoint pair / one target
+  ladder — averaging over more pairs would strengthen scores (i)/(ii);
+  optional polish, non-blocking (A4 is a capability differentiator, not a
+  benchmark statistic). (3) On task metrics IsalHG is competitive but not
+  dominant (HPD-JSD leads A2/A3 on the planted corpus) — the paper's edge is
+  the geometry licences + the A4 capability matrix, reported honestly.
+- **⚠ Hazards for the next orchestrator:** (1) `main` advanced mid-S4 (T-M5h);
+  always re-check `git merge-base main HEAD` and prefer `git show -s
+  --format='%h %p %s'` over `git log` (rtk hides merge commits). (2) Worker
+  self-reported ruff/pytest counts use inconsistent scopes — always re-run the
+  canonical `pytest tests/{unit,property,integration} -m "not slow"` +
+  `ruff check src/ tests/`. (3) `kmedoids` is now a `bench`-extra dependency —
+  a fresh env needs `pip install -e ".[dev]"` to get it.
 
 ---
 

@@ -1,6 +1,6 @@
 # Empirical track
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). Breaks down the empirical work of
+**Status:** ACTIVE. Breaks down the empirical work of
 `docs/article/PROPOSAL.md`. Companion: `../theoretical/` (the theory the
 measurements realize).
 

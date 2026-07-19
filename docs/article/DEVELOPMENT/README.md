@@ -61,7 +61,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 7 (+1 blocked) | 0 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
-| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 2 (+1 blocked) | 5 |
+| [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |
 | [`T-OPT`](T-OPT/) | C++ engine revision for the metric-space workload | 1 | 2 |
 
@@ -147,7 +147,8 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
    T-TB ✔ closed (conditional analysis = the discussion's source)
    T-TBb ✔ closure merged at the S1 reconciliation (T-TBf, 2026-07-18)
    T-TBc BLOCKED (parked at D-ART2, pending PI — transcoding ablation)
-   T-TBe stretch (crossing peak; follow-up only) · T-TBg doc disentangle
+   T-TBe stretch (crossing peak; follow-up only)
+   T-TBg ✔ doc disentangle (DONE)
 
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
@@ -165,7 +166,7 @@ The path to a submittable body now runs: **T-M5f/T-M5g (the
 characterization) → T-M5b–e (the applications)** on the fallback corpus
 list. T-M5a (discussion evidence) runs last and small.
 
-**Runnable in parallel right now:** T-M5f, T-M5g, T-TBg. Use
+**Runnable in parallel right now:** T-M5f, T-M5g. Use
 isolated git worktrees for agents that touch overlapping `core/` files.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the

@@ -1,6 +1,6 @@
 # Stability of the IsalHG hypergraph metric
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). This document holds the paper's
+**Status:** ACTIVE. This document holds the paper's
 **foundation** (§1 completeness → metric — Theorem A + Corollary A, the only
 formal theorem/corollary pair the article states) and the **HGED-relation
 analysis** (§2–§4) that the closing discussion compresses. Since the v3 rescope
@@ -29,7 +29,7 @@ add/remove); NP-hard, exact only at small scale.
 
 - Status in IsalGraph: **proved** (their Theorem 1) — for their *exhaustive /
   triplet-pruned* canonical searches, which branch over every tied candidate.
-- Status in IsalHG: **RESOLVED at T-TA (2026-07-08)**, with a split verdict.
+- Status in IsalHG: **RESOLVED**, with a split verdict.
   Full proof + counterexamples:
   `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/proofs/theorem_a_completeness.{tex,pdf}`.
   - **(⇒) proved unconditionally** for every variant (round-trip soundness of
@@ -37,7 +37,7 @@ add/remove); NP-hard, exact only at small scale.
     string alone never records the seed vertex's label, so on non-trivial
     vertex vocabularies the bare string is incomplete (2-vertex counterexample;
     backend false positive). Trivial vocabulary (all corpora to date): `F ≡ w*`.
-    **Implemented at T-TAb (2026-07-09):** `core.canonical.canonical_fingerprint`
+    **Implemented:** `core.canonical.canonical_fingerprint`
     returns `F(H)`, `IsalHGBackend.fingerprint` serialises it, and `d_I` takes
     the distance over the seed-label-prefixed token sequence (Corollary A).
     The seed label is recovered as the one vertex label of `H` that `w*` never
@@ -50,17 +50,17 @@ add/remove); NP-hard, exact only at small scale.
     for two edge orderings of the *same* hypergraph. The historical property
     suite missed it because `permute` preserves edge insertion order.
   - **(⇐) proved for the tie-complete encoder** `"canonical"`
-    (added at T-TA: branches over the full η-tie set, `tie_branch=True`;
+    (branches over the full η-tie set, `tie_branch=True`;
     execution-forest bijection, the IsalGraph Step-2 argument done right).
     **Theorem A holds for `w*_c := w*_canonical`**; empirically backed
     (150/150 shuffle+relabel invariance; biconditional == pynauty under
     Hypothesis; pinned regression tests in
     `tests/{unit/core/test_canonical_encoder,property/test_completeness}.py`).
-    Ported to C++ at T-TAa (native `AlgorithmVariant::GreedyMinComplete`,
+    Available in C++ (native `AlgorithmVariant::GreedyMinComplete`,
     byte-identical to the Python reference on 3,344 per-seed comparisons):
     `w*_c` costs 6.4 ms on the Fano plane and 1.1 s on GQ(2,2), so every
     downstream `d_I` computation runs on `w*_c` at corpus scale.
-    **Package default since T-TAd (D-TA1, 2026-07-09):** `canonical_string`,
+    **Package default:** `canonical_string`,
     `canonical_fingerprint`, `IsalHGBackend`, and `IsalHGLevenshtein` all
     compute `w*_c` unless an algorithm is explicitly overridden
     (`ISALHG_ALGORITHM` env var preserved for the preprint pipeline).
@@ -69,7 +69,7 @@ add/remove); NP-hard, exact only at small scale.
     GQ(2,2)** — the greedy string is not canonical even on vertex-transitive
     designs.
 
-**Frozen definition of `w*_c` (D-TA2, PI 2026-07-09).** `w*_c` is the
+**Frozen definition of `w*_c`.** `w*_c` is the
 **unpruned** tie-complete lex-min: the κ-minimum over the *full* residual tie
 set `T(σ)` and all label-respecting orderings, exactly as implemented by the
 Python reference (`tie_branch=True`) and the C++
@@ -85,7 +85,7 @@ vertex-transitive designs, where every tied candidate carries the same value
 under *any* iso-invariant key. Regression pins in
 `tests/unit/core/test_wstar_c_frozen.py` fix `w*_c` on {Fano, STS(9), the
 cyclic partial C13(0,1,3), the n=4 counterexample} (fast) and on both true
-STS(13)s (slow marker; T-M0c); a refinement that changes the value fails
+STS(13)s (slow marker); a refinement that changes the value fails
 loudly.
 
 **Corollary A (Metric).** With Theorem A for `w*_c`, `d_I(H,H') :=
@@ -93,7 +93,7 @@ d_Lev(w*_c(H), w*_c(H'))` is a metric on isomorphism classes (per fixed `k`
 and vocabulary): non-negativity and symmetry from `d_Lev`; identity of
 indiscernibles from Theorem A; triangle inequality inherited from `d_Lev`.
 Direct port of IsalGraph Corollary 1. **All downstream metric-space claims and
-T-TB must be stated over `w*_c`**, not the greedy `w*` (which stays a fast
+Theorem B must be stated over `w*_c`**, not the greedy `w*` (which stays a fast
 one-sided heuristic: equal strings still certify isomorphism, and it is exact
 on edge-order-preserving pipelines and on automorphism-coherent-tie inputs
 like the design fixtures — Fano verified `w*_greedy = w*_c`).
@@ -110,8 +110,8 @@ user-supplied fixed `k`); the paper must state `(k, h, vocabulary)` once when
 introducing `d_I` and use the same triple throughout.  Domain restriction:
 `d_I` is defined only for `n ≥ 1`; the empty hypergraph is excluded because
 `w*_c(∅) = ""` is indistinguishable from `w*_c(•)` (the single vertex),
-breaking identity of indiscernibles (`DegenerateHypergraphError` in code,
-T-M1c).  The normalized ablation `edit/max_len` is a *dissimilarity*, not a
+breaking identity of indiscernibles (`DegenerateHypergraphError` in code).
+The normalized ablation `edit/max_len` is a *dissimilarity*, not a
 metric: it violates the triangle inequality (Marzal & Vidal, IEEE TPAMI
 15(9), 1993; pinned witness triple in
 `tests/unit/metric_space/test_isalhg_levenshtein.py::TestNormalizedNonMetric`).
@@ -180,9 +180,8 @@ justify its one-sided form:
 HGED is the one from Qin et al. (ICDE 2023) **verbatim** — its Definition-3
 empty-shell taxonomy, all ops unit cost, so deleting/inserting an arity-`a`
 hyperedge costs `a+1` — adopted as the article's single official cost model
-(PI decision 2026-07-08 at T-M2a close; an interim whole-edge variant from
-T-M2, in which a whole-hyperedge insert/delete was one unit op, is
-superseded and removed). The right-hand side of Theorem B is therefore a
+(an interim whole-edge variant in which a whole-hyperedge insert/delete was
+one unit op is superseded). The right-hand side of Theorem B is therefore a
 citable object with no convention caveat. Two consequences, both favourable:
 (a) the §2.1 single-edit reduction decomposes an optimal HGED path into
 Qin's *atomic* ops — each strictly more local than a whole-edge op (a
@@ -272,13 +271,13 @@ tie-set perturbations only when the perturbed tie is *automorphism-coherent*
 return equal completions, so the lex-min is indifferent to which branch is chosen.
 Coherence therefore eliminates the tie-jump avalanche sources (§3 sources 3–4) —
 it does not protect against sources 1–2 (seed-level changes). On Fano/STS(9),
-where `w*_greedy = w*_c` was verified at T-TAa, all-depth coherence is *inferred*
+where `w*_greedy = w*_c` was verified (see `scripts/bench_tie_complete.py`), all-depth coherence is *inferred*
 by Prop 6.0's sufficient direction; the coherence criterion predicts no heavy
 tail in the E2b histogram for those designs (§4), which is the falsification test.
 
-**Proof risk (vindicated at T-TB).** Pointer values are CDLL *indices*
+**Proof risk (vindicated).** Pointer values are CDLL *indices*
 (`CLAUDE.md` invariant 1); a vertex insertion shifts absolute indices globally.
-The T-TB proof works in *relative* CDLL order via a shifted state
+The proof works in *relative* CDLL order via a shifted state
 correspondence φ — but φ resolves state *identification* only. Because `P_i`/
 `N_i` are **unit steps**, run lengths are slot counts: a vertex-count-changing
 edit adds ±1 token to every later pointer run spanning the edited slot
@@ -286,8 +285,7 @@ edit adds ±1 token to every later pointer run spanning the edited slot
 CDLL distance (`R(e)`). Neither term is bounded by any function of `(k,Δ)` in
 the worst case, so the O(kΔ) locality is **conditional on layout-locality**
 (conditions (iv)–(v), `theorem_b_stability.tex` Def. layout); the hazard this
-paragraph originally flagged is real. **Resolved at T-TBb (2026-07-14,
-`pointer_run_amortization.tex`):** (v) is *refuted* — the orphaned-introducer
+paragraph originally flagged is real. **Resolved (see `pointer_run_amortization.tex`):** (v) is *refuted* — the orphaned-introducer
 mechanism (an incidence edit re-homes a vertex's introduction point; the
 orphaned introducer pays the CDLL distance between the sites) gives
 bounded-degree tie-free families with `R(e) = Θ(n)` at Qin cost 1 under
@@ -298,10 +296,9 @@ pointer movement of `w*_c`), and the probe (`scripts/probe_pointer_runs.py`)
 shows `M(H)/n` grows with `n` at fixed density — so average-case (iv) also
 fails generically; the drift is polynomial, additive, and directly measurable
 per instance. The C branch requires separate treatment: from the
-T-TAa closing analysis, "a C candidate requires `members == set(tentative_inputs
+completeness proof, "a C candidate requires `members == set(tentative_inputs
 [:arity])` and `SparseHypergraph` forbids duplicate member sets, so the C tie set
-is always a singleton — there is no edge-id dependence to remove" (T-TAa.md,
-closing note). C therefore never produces a tie and never triggers an avalanche
+is always a singleton — there is no edge-id dependence to remove". C therefore never produces a tie and never triggers an avalanche
 via the tie-set mechanism.
 
 **Conditional bound.** Under tie-set transparency (i)–(iii) *and*
@@ -323,7 +320,7 @@ See T-B2 of `stability/theorem_b_stability.tex`.
 structural cost is exactly one `V`/`C` token against Qin cost ≥ 1 — ratio ≤ 1,
 uniformly in arity. The entire `k`-dependence of `C(k,Δ)` enters through the
 layout-locality run budget `(c_3+c_4)·k·Δ`, not through the edit's structural
-footprint. Sharpened at T-B2.
+footprint. See §T-B2 of `stability/theorem_b_stability.tex`.
 
 ---
 
@@ -351,7 +348,7 @@ in §2.2). The avalanche failure modes, grouped by mechanism:
    `ξ(v)` for some `v ∈ N_r[e]` (r = tuple depth = 3) that participates in an
    early tie `T(σ_d)` → the search switches branch early and the remaining string
    diverges. Wall-clock analogy: the high backtracking cost on the cyclic C13/GQ(2,2)
-   (T-TAa: 270 ms / 1.09 s vs 34 ms / 61 ms greedy) is the search-tree analogue.
+   (270 ms / 1.09 s vs 34 ms / 61 ms greedy for the complete vs greedy encoder) is the search-tree analogue.
 4. **Deep tie perturbation** (condition ii fails, depth `d` arbitrary): same as
    source 3 at arbitrary `d`; sensitivity `≤ |w*_c| - d`. Uncommon on sparse
    inputs; frequent on dense or symmetric inputs.
@@ -370,19 +367,18 @@ against tie-set perturbations — sources 3–4 are suppressed. By Remark 6.1, t
 stabiliser of `μ` at depth `d` shrinks as `d` increases; vertex-transitivity
 buys coherence at the root only.
 
-Empirical verdict (T-TAa, `scripts/bench_tie_complete.py`, i7-13700KF):
+Empirical verdict (`scripts/bench_tie_complete.py`, i7-13700KF):
 
-| Design | `w*_greedy = w*_c` | First incoherent edge tie (T-TBb exact audit) | Sources 3–4 exposure |
+| Design | `w*_greedy = w*_c` | First incoherent edge tie (exact orbit-pruned audit) | Sources 3–4 exposure |
 |---|---|---|---|
 | Fano plane | True | none over the full orbit-pruned tree | Absent — **proved** via Prop 6.0 |
 | STS(9) | True | **depth 3** (branch completions genuinely diverge) | **Exposed** despite equality |
-| C13 cyclic (partial; ex-"STS(13)", T-M0c) | **False** | depth 2 (hand-proved: trivial pointwise block stabiliser) | Active |
+| C13 cyclic (partial; formerly labelled STS(13)) | **False** | depth 2 (hand-proved: trivial pointwise block stabiliser) | Active |
 | GQ(2,2) doily | **False** | depth 6 | Active |
 
 All four designs are vertex-transitive. The avalanche regime for `w*_c` is
-**not the vertex-transitive regime as a whole**, and — corrected at T-TBb
-(2026-07-14, `pointer_run_amortization.tex` §T-B3 +
-`scripts/tb3_coherence_criterion.py`) — **not the string-equality regime
+**not the vertex-transitive regime as a whole**, and — corrected (see
+`pointer_run_amortization.tex` §T-B3 and `scripts/tb3_coherence_criterion.py`) — **not the string-equality regime
 either**: the earlier "coherence inferred from Prop 6.0 + verified equality"
 entries for Fano/STS(9) affirmed the consequent, and the exact orbit-pruned
 criterion audit refutes the STS(9) one (incoherent tie at depth 3 with
@@ -461,101 +457,6 @@ criterion). Consequences the applications section must own:
 - Bourgain/JL give `O(log n)`-distortion Euclidean embeddings if isometry is not
   required — a fallback framing if the non-Euclidean residual is large.
 
----
-
-## 6. Proof-effort checklist (what has to be done)
-
-- [x] T-A: **PROVED AND PI-REVIEWED** (T-TA, proof 2026-07-08, review passed
-      2026-07-09): proof for `"canonical"` + counterexamples for the greedy
-      variants + empirical completeness suite. Corollary A — `d_I` is a metric on
-      isomorphism classes of connected hypergraphs at fixed `k`, depth and
-      vocabulary — is therefore **established, not conjectured**, and every claim
-      below rests on it. `w*_c` is frozen as the *unpruned* tie-complete lex-min
-      (D-TA2); the complete algorithm becomes the package default at T-TAd.
-- [x] T-B0: **PROVED (T-TB, 2026-07-09, §2 of `stability/theorem_b_stability.tex`).**
-      make the §2.1 decomposition well-defined. **Mechanism fixed by the PI
-      at T-M2c (2026-07-09): the article's domain is the connected hypergraphs,
-      `Σ_HG` does not change, and P1 is discharged by a path-normalization lemma —
-      not by teaching `w*` to accept disconnected inputs.** The lemma to prove: the
-      triangle inequality bounds `d_I` along *any* edit path, not only an optimal
-      one, so it suffices that **some** path `H → H'` has all-connected
-      intermediates and total Qin cost `≤ c·HGED(H,H')`. Such a path exists with
-      `c = 1`, because Qin's ops are unit-cost and the following two reorderings
-      preserve the op count: (i) **insert before delete** — all insertions and
-      extensions first, reaching `H ∪ H'` under the optimal correspondence `π`,
-      then all reductions and deletions; (ii) **no isolated vertex is ever
-      materialized** — pair each vertex insertion with its first incidence
-      addition, pair each vertex deletion with its last incidence removal, and
-      delete leaf-first. Every intermediate on the first leg then contains the
-      connected spanning `H`; on the second leg, the connected spanning `H'`.
-      *Residuals (documented in the proof):* (a) `H ∪ H'` connected — fails only
-      in the degenerate near-maximal-HGED regime, handled by B-worst; (b) the
-      reduce-before-extend interleaving (P3) is now proved per edge, with an
-      honest cost residual: matched edge pairs that are disjoint at arity `k`
-      (and the `k=2`, one-shared-member case) fall back to delete-and-reinsert,
-      inflating cost by ≤ 2 per such edge — zero under genericity, `≤ 2c_0`
-      in general, giving `d_I ≤ C·(HGED + 2c_0)`.
-- [x] T-B1: **PROVED under (i)–(v) (T-TB + orchestrator post-audit, 2026-07-09,
-      §3 of `stability/theorem_b_stability.tex`).** Lemma B1 — locality of `w*_c`
-      — holds under five conditions: seed membership (i), key-crossing freedom
-      over `N_r[e]` r=3 (ii — the earlier "V-candidate non-incidence" form was
-      unsatisfiable and is retracted), argmin-seed preservation (iii), plus the
-      **layout-locality** conditions span-boundedness (iv) and run-locality (v)
-      for the pointer-run terms `T_span(e)`, `R(e)`. The φ correspondence
-      resolves state identification in relative CDLL order; it does NOT bound
-      the run terms — unit-step `P_i`/`N_i` semantics make unconditional O(kΔ)
-      locality FALSE in adversarial layouts (the vindicated §2.2 proof risk).
-      Generic validity of (iv)–(v) is open → T-TBb. C candidates are a
-      singleton tie set by construction (T-TAa.md closing: "a C candidate
-      requires `members == set(tentative_inputs[:arity])` and
-      `SparseHypergraph` forbids duplicate member sets, so the C tie set is
-      always a singleton") — no C-tie avalanche possible; treated separately.
-- [x] T-B2: **PROVED — structural part; run terms conditional (T-TB +
-      orchestrator post-audit, 2026-07-09, §4 of
-      `stability/theorem_b_stability.tex`).** Token-difference decomposition:
-      ≤ `1+Δ` structural `V`/`C` token changes (one per affected edge encoding;
-      per-edge count) + `R(e)` + `T_span(e)` pointer-run tokens. Under (iv)–(v):
-      `s(e) ≤ (1+Δ) + (c_3+c_4)·k·Δ = O(k·Δ)` — see (★). Two prior formulas
-      retracted (per-vertex `c_2·k·Δ` double count; `(2k+1)(1+Δ)` via the false
-      "≤2k+1 tokens per edge" premise). Qin-costing remark: structural cost is
-      one token per affected edge per unit Qin cost (ratio ≤ 1, uniform in
-      arity); all `k`-dependence lives in the layout-locality run budget.
-- [x] T-B3: **RESOLVED WITH DOCUMENTED OBSTRUCTION (T-TBb, 2026-07-14,
-      `pointer_run_amortization.tex` §T-B3).** Depth-2 classification proved by
-      hand for all four designs (Fano: axis-elation group transitive; STS(9):
-      axis-shear group transitive; cyclic-13: trivial pointwise block
-      stabiliser ⇒ incoherent; GQ(2,2): order-8 pointwise line stabiliser
-      transitive). Exact orbit-pruned audit over the full search trees
-      (`scripts/tb3_coherence_criterion.py`, no truncation): Fano
-      criterion-coherent everywhere ⇒ its equality is *proved* from Prop 6.0;
-      cyclic-13/GQ(2,2) incoherent at depths 2/6 (consistent with divergence).
-      **Obstruction:** STS(9) is criterion-incoherent at depth 3 with genuinely
-      divergent branch completions, yet per-seed greedy/complete equality holds
-      robustly (0/72 shuffled pairs) — Prop 6.0 is strictly sufficient and the
-      classification is not criterion-decidable; incoherence = avalanche
-      *exposure*, not divergence.
-- [x] T-B4 (stretch): **DEMOTED TO EMPIRICAL (T-TBb, 2026-07-14).** The B-avg
-      sketch's premise 1 ("generically distinct ξ") is *false* at constant
-      density (positive Galton–Watson type-collision probability ⇒ Θ(n²)
-      depth-3 ξ-collisions); (v) fails on natural incidence-edit ensembles and
-      average (iv) fails generically (probe: `M/n` grows with `n`). Honest
-      replacement: `E[s(e)] ≤ (1+Δ) + E[R + T_span] + P[tie exposure]·O(mk)`,
-      every term instrumented in the per-edit logging (v3: the G2 profiles,
-      T-M5g). See `pointer_run_amortization.tex` §B-avg.
-- [ ] T-B5 (rescoped, v3): the `s(e)` histograms are now the geometry pillar's
-      local sensitivity profile (`geometry.md` §6); logging `R(e)`/`T_span(e)`
-      per edit separates layout drift from avalanche and feeds the discussion's
-      mechanism prose. Verifying the (★) *constants* against the histograms is
-      follow-up work, no longer an article deliverable.
-- [x] T-TBb (filed 2026-07-09; **DONE 2026-07-14**): pointer-run amortization —
-      all four deliverables closed in
-      `/media/.../proofs/stability/pointer_run_amortization.tex`:
-      (1) generic (iv)–(v) **refuted** (orphaned-introducer family `R(e)=Θ(n)`;
-      crossing-averaging identity `E[T_span] ≤ M(H)/n` with `M/n` measured
-      growing in `n`; worst-case crossing peak left as a stated conjecture);
-      (2) analytical T-B3 resolved with the STS(9) obstruction documented;
-      (3) B-avg demoted to empirical with the ξ-collision obstruction proved
-      at constant density; (4) `W`-token proviso discharged and pinned
-      (`tests/unit/core/test_no_w_tokens.py`). The extended per-edit
-      instrumentation spec — log `M(H)`, `R(e)`, `T_span(e)`, first-incoherent
-      depth — lives, under v3, with the G2 profiles (T-M5g), not T-M5a.
+*Proof-effort status for Theorem A and Theorem B is tracked in the
+engineering ledger (`docs/article/DEVELOPMENT/T-TA/` and
+`docs/article/DEVELOPMENT/T-TB/`).*

@@ -1,6 +1,6 @@
 # Theoretical track
 
-**Status:** ACTIVE (v3 rescope 2026-07-18). Breaks down the theoretical claims
+**Status:** ACTIVE. Breaks down the theoretical claims
 of `docs/article/PROPOSAL.md`. Companion: `../empirical/` (the experiments that
 measure what the theory frames).
 

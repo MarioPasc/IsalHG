@@ -82,3 +82,26 @@ Full suite: **986 passed / 8 skipped** (31 new tests vs S2 baseline).
 Ruff: **3 errors** (at baseline; pre-existing ANN001, SIM108, E731).
 Mypy: **21 errors in 7 files** (exactly at baseline; _S2H_BACKENDS typed as
 `dict[str, Callable[..., SparseHypergraph]]` eliminates new errors).
+
+---
+
+## Orchestrator verification note — 2026-07-19 (S2 session)
+
+Re-ran the worker's S2H suites in its env (33 passed) and added an
+independent corpus-scale check the closing note lacked: on a random
+connected hypergraph (n=30, m=60, arities 2–4, greedy-encoded,
+|w| = 1692 tokens), C++ and Python decodes are structurally identical
+(parity=True) at **5.78 vs 4.65 Mtok/s — 1.24×**. This corrects the
+closing note's expectation that "the compute-only C++ phase benefits more
+at larger hypergraphs": the speedup is flat from 31 to 1692 tokens because
+`parse()` + `validate()` remain Python-side for both backends and scale
+with |w|. Decode is not a bottleneck anywhere in the article pipeline
+(~0.4 ms per corpus-scale string); the port's value is implementation
+parity with the native encoder (runtime `k`, shared reach) and the 31 new
+parity tests. Moving parse/validate into C++ is possible but has no
+consumer — deliberately not filed as a task.
+
+Post-merge main (rebuilt env): 971 passed / 8 skipped / 15 deselected;
+frozen pins 6/6; ruff 3; mypy 21 in 7 files;
+`scripts/verify_competitors.py` ALL PASS with numbers byte-identical to
+the S2 baseline.

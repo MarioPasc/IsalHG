@@ -294,8 +294,12 @@ iso-invariant seed set `S(H)` (invariant 4).
   Refining the tie set with an iso-invariant key preserves completeness but
   returns a *different* canonical form, so it is forbidden; the only
   value-preserving speedup is stabiliser-orbit pruning (proof Prop. 6.0).
-  Pinned on {Fano, STS(9), cyclic STS(13), n=4 counterexample} by
-  `tests/unit/core/test_wstar_c_frozen.py`.
+  Pinned on {Fano, STS(9), the cyclic partial C13(0,1,3), n=4 counterexample}
+  (fast) plus both true STS(13)s (slow marker; T-M0c 2026-07-18) by
+  `tests/unit/core/test_wstar_c_frozen.py`. True Steiner systems of orders
+  3–15 (all 85 iso-classes) live in `datasets/synthetic/sts_catalog.py`; the
+  cyclic 13-point objects are *partial* triple systems
+  (`cyclic_triple_orbit_13`), kept as cheap hard instances.
 
 **Isomorphism test.** `iso(H1, H2) := (F(H1) == F(H2))` — exact with
 `"canonical"`; with the greedy variants it is one-sided (equal

@@ -99,7 +99,13 @@ Python and become a `KaskiOstergardSTSDataset` (subclass of
 `HypergraphDataset` per `CODE_DESIGN.md` §2.2). This replaces our
 current cyclic-construction `sts_13_pair` (which used starter blocks
 `{0,1,4}` and `{0,1,6}` over Z/13Z to materialise the 2 STS(13) iso
-classes empirically) with the canonical published source. The STS(19)
+classes empirically) with the canonical published source.
+*As built (T-M0c, article ledger, 2026-07-18):* vendored as
+`src/isalhg/datasets/data/sts/sts{3,7,9,13,15}.txt` with a
+`SteinerTripleSystems` dataset registered as `"sts_catalog"` in
+`datasets/synthetic/sts_catalog.py` (85 iso-classes, pynauty-verified at
+vendoring); the cyclic pair was renamed `cyclic_triple_13_pair` — the
+starters materialise *partial* systems, not the 2 STS(13) classes. The STS(19)
 `1k_sample` is deferred — it requires the `stsc` build and the
 fingerprint cost on a single STS(19) is already several seconds under
 the current bounded-backtracking IsalHG (open question #1 in
@@ -536,7 +542,7 @@ catalogs (Cohort A.1, A.4) provide the same role at lower coverage.
 
 | Cohort | Status | Module path / file |
 |---|---|---|
-| **A.1** Kaski-Östergård STS(13)/15 plaintext | Not yet ported; planned `KaskiOstergardSTSDataset` | `src/isalhg/datasets/catalog/kaski_ostergard.py` |
+| **A.1** Kaski-Östergård STS(13)/15 plaintext | **Shipped 2026-07-18** (article ledger T-M0c) as `SteinerTripleSystems`, dataset `"sts_catalog"`, orders 3–15 | `src/isalhg/datasets/synthetic/sts_catalog.py` + `datasets/data/sts/` |
 | **A.1** STS(19) `1k_sample` | Not yet ported; deferred (needs `stsc`) | `src/isalhg/datasets/catalog/kaski_ostergard.py` |
 | **A.2** GQ(2,2) doily | **Shipped** (Phase 1) | `tests/conftest.py`, `synthetic.exhaustive_small._large_named_designs` |
 | **A.3** Fano, STS(9) | **Shipped** (Phase 1) | `tests/conftest.py` |
@@ -573,10 +579,11 @@ Ordered by priority for the empirical paper:
    because the headline competitive number (geometric-mean speedup
    over best-of-Levi at the largest `(n, r, m/n)` cell) lives here.
 2. **Port Kaski-Östergård STS catalogs (A.1, plaintext only).**
-   Estimated 80 lines (`KaskiOstergardSTSDataset` plus parser for the
-   `{a..o}` triple format). Replaces the cyclic-construction STS(13)
-   we currently ship with the canonical published source and adds 80
-   STS(15) classes as Tier 1 fixtures. No external tooling required.
+   **Done 2026-07-18** (article ledger T-M0c; as
+   `datasets/synthetic/sts_catalog.py`, dataset `"sts_catalog"`). Adds the
+   canonical published source (85 classes, orders 3–15) alongside the
+   cyclic-construction 13-point objects we ship — which are *partial*
+   triple systems, renamed `cyclic_triple_orbit_13` accordingly.
 3. **Port LLM4Hypergraph corpus (A.6) and substitute pynauty oracle.**
    Estimated 200 lines split across vendoring the third-party code,
    patching the missing `HGSCKernel` call, and writing the

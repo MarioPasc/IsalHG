@@ -185,8 +185,14 @@ Remark 6.1 / §Empirical. It had not: T-TAa measured the *true* doily via
 `scripts/bench_tie_complete.py`, and only the true doily reproduces its published
 row (61 ms / 1093 ms / 17.8× / `w*_greedy ≠ w*_c`). The proof stands unedited and
 the PI may review it. The fixture is fixed and its GQ(2,2) evidence is now pinned
-by a regression test rather than a bench script. A sibling defect — the "STS(13)"
-fixtures are not Steiner triple systems — is parked as `T-M0c` (naming/citation
-only; the objects are still vertex-transitive, which is all Remark 6.1 needs).
+by a regression test rather than a bench script. The sibling defect — the
+"STS(13)" fixtures are not Steiner triple systems — was **resolved at T-M0c
+(2026-07-18, PI chose promote+rename)**: the cyclic orbits are truthfully named
+(`cyclic_triple_orbit_13`, ids `cyclic_triple_13_*`), the true STS catalog of
+orders 3–15 is vendored (`datasets/synthetic/sts_catalog.py`, dataset
+`"sts_catalog"`, 85 iso-classes), both true STS(13)s carry slow-marked `w*_c`
+pins, and the proof's six "STS(13)" mentions were renamed to `C_{13}` (PDF
+recompiled; `.bak-t-m0c` kept for PI review). Closing note:
+`T-M0/CLOSED/T-M0c.md`.
 
 Decisions awaiting the PI live in [`DECISIONS.md`](DECISIONS.md).

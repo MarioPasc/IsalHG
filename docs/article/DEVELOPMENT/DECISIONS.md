@@ -161,3 +161,6 @@
   unless the PI reopens it); (e) NetLSD promotion. **The only PI input still
   outstanding is T-M0c** (rename the cyclic-13 fixtures vs promote them to
   true STS(13)s) — a separate decision, never part of this package.
+  *[Resolved 2026-07-18: PI chose (b) promote, extended to the full
+  Kaski–Östergård catalog (orders 3–15); executed same day — see
+  `T-M0/CLOSED/T-M0c.md`.]*

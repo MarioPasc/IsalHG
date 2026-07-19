@@ -43,9 +43,11 @@ On every corpus, before any application: the pairwise-distance histogram of
 
 - **Sensitivity:** histograms of `s(e) = d_I(H, H⊕e)` over single structural
   edits (all Qin op types), per density regime and on the four design fixtures
-  (Fano, STS(9), STS(13), GQ(2,2)). Predictions (three regimes by tie
-  coherence) in `../theoretical/stability.md` §4.2; falsification target
-  stated there.
+  (Fano, STS(9), the cyclic C13 orbit, GQ(2,2)). The C13 fixture is the cheap
+  partial system, not a true STS(13): `s(e)` needs one `w*_c` per edit, and a
+  true STS(13) costs ~44 s per `w*_c` (T-M0c) — infeasible at histogram scale.
+  Predictions (three regimes by tie coherence) in
+  `../theoretical/stability.md` §4.2; falsification target stated there.
 - **Ladder:** `d_I(H_0, H_t)` vs known accumulated Qin budget `t` along
   perturbation ladders; monotone near-linear response is the smoothness
   evidence for neighbourhood methods.

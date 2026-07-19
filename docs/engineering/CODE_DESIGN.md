@@ -370,7 +370,9 @@ The ordering rests on three principles, in priority order:
 
 1. **Hand-built fixtures before synthetic generators.** Random hypergraphs
    carry no ground-truth iso label; design-theoretic instances (Fano plane,
-   STS(9), GQ(2,2), two non-iso STS(13)) do. Correctness can be asserted on
+   STS(9), GQ(2,2), two non-iso cyclic C13 orbits — plus, since T-M0c, the
+   vendored STS catalog of orders 3–15 in
+   `datasets/synthetic/sts_catalog.py`) do. Correctness can be asserted on
    the latter without yet having a baseline.
 2. **Pynauty before bulk synthetic data.** Pynauty is the iso oracle, not a
    competitor. Every "fingerprint(H1) == fingerprint(H2)" assertion in a

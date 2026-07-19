@@ -65,8 +65,9 @@ add/remove); NP-hard, exact only at small scale.
     compute `w*_c` unless an algorithm is explicitly overridden
     (`ISALHG_ALGORITHM` env var preserved for the preprint pipeline).
     Measured on the designs, `w*_greedy = w*_c` on Fano and STS(9)
-    (automorphism-coherent ties) but **differs on STS(13) and GQ(2,2)** — the
-    greedy string is not canonical even on vertex-transitive designs.
+    (automorphism-coherent ties) but **differs on the cyclic C13 and
+    GQ(2,2)** — the greedy string is not canonical even on vertex-transitive
+    designs.
 
 **Frozen definition of `w*_c` (D-TA2, PI 2026-07-09).** `w*_c` is the
 **unpruned** tie-complete lex-min: the κ-minimum over the *full* residual tie
@@ -82,8 +83,9 @@ related by an automorphism fixing `dom(μ)` pointwise have equal completions),
 which also attacks the actual cost — automorphism redundancy on
 vertex-transitive designs, where every tied candidate carries the same value
 under *any* iso-invariant key. Regression pins in
-`tests/unit/core/test_wstar_c_frozen.py` fix `w*_c` on {Fano, STS(9), cyclic
-STS(13), the n=4 counterexample}; a refinement that changes the value fails
+`tests/unit/core/test_wstar_c_frozen.py` fix `w*_c` on {Fano, STS(9), the
+cyclic partial C13(0,1,3), the n=4 counterexample} (fast) and on both true
+STS(13)s (slow marker; T-M0c); a refinement that changes the value fails
 loudly.
 
 **Corollary A (Metric).** With Theorem A for `w*_c`, `d_I(H,H') :=
@@ -348,7 +350,7 @@ in §2.2). The avalanche failure modes, grouped by mechanism:
 3. **Early tie perturbation** (condition ii fails, depth `d` small): edit shifts
    `ξ(v)` for some `v ∈ N_r[e]` (r = tuple depth = 3) that participates in an
    early tie `T(σ_d)` → the search switches branch early and the remaining string
-   diverges. Wall-clock analogy: the high backtracking cost on STS(13)/GQ(2,2)
+   diverges. Wall-clock analogy: the high backtracking cost on the cyclic C13/GQ(2,2)
    (T-TAa: 270 ms / 1.09 s vs 34 ms / 61 ms greedy) is the search-tree analogue.
 4. **Deep tie perturbation** (condition ii fails, depth `d` arbitrary): same as
    source 3 at arbitrary `d`; sensitivity `≤ |w*_c| - d`. Uncommon on sparse
@@ -374,7 +376,7 @@ Empirical verdict (T-TAa, `scripts/bench_tie_complete.py`, i7-13700KF):
 |---|---|---|---|
 | Fano plane | True | none over the full orbit-pruned tree | Absent — **proved** via Prop 6.0 |
 | STS(9) | True | **depth 3** (branch completions genuinely diverge) | **Exposed** despite equality |
-| STS(13) cyclic | **False** | depth 2 (hand-proved: trivial pointwise block stabiliser) | Active |
+| C13 cyclic (partial; ex-"STS(13)", T-M0c) | **False** | depth 2 (hand-proved: trivial pointwise block stabiliser) | Active |
 | GQ(2,2) doily | **False** | depth 6 | Active |
 
 All four designs are vertex-transitive. The avalanche regime for `w*_c` is
@@ -431,7 +433,7 @@ different fates:
    - *Coherent-tie symmetric designs (Fano, STS(9))*: near-unimodal despite
      high symmetry (coherence inferred from Prop 6.0 + verified
      `w*_greedy = w*_c`).
-   - *Incoherent-tie symmetric designs (STS(13), GQ(2,2))*: all four sources
+   - *Incoherent-tie symmetric designs (cyclic C13, GQ(2,2))*: all four sources
      active → heavy-tailed or bimodal.
    This is measured by the **local sensitivity profile** (`geometry.md` §6) —
    a geometry measurement consumed by the contrast baseline and the

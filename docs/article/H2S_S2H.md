@@ -517,8 +517,9 @@ iso(H₁, H₂)  ⟺  F(H₁) = F(H₂)
 is an exact isomorphism test, and — the point for the article — `d_I` is
 **well defined on isomorphism classes**: isomorphic hypergraphs have identical
 `w*_c`, so `d_I(H,H') = 0 ⟺ H ≅ H'`, the identity-of-indiscernibles axiom of a
-metric on the quotient `V_HG / ≅`. `w*_c` is pinned on {Fano, STS(9), cyclic
-STS(13), the `n=4` counterexample} by `tests/unit/core/test_wstar_c_frozen.py`
+metric on the quotient `V_HG / ≅`. `w*_c` is pinned on {Fano, STS(9), the
+cyclic partial C13(0,1,3), the `n=4` counterexample} (fast) and on both true
+STS(13)s (slow marker; T-M0c) by `tests/unit/core/test_wstar_c_frozen.py`
 so any accidental change to the frozen definition fails loudly.
 
 ---

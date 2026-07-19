@@ -139,65 +139,127 @@ def pairwise_l2(X: np.ndarray) -> np.ndarray:
 
 def cv_dimension_selection(
     D: np.ndarray,
-    max_dims: int,
-    test_fraction: float = 0.2,
+    max_dims: int | None = None,
+    n_folds: int = 5,
     rng_seed: int = 42,
 ) -> tuple[int, list[float]]:
-    """Select D̂ by cross-validated reconstruction error on held-out pairs.
+    """Select D̂ by K-fold leave-out-points CV with Gower out-of-sample MDS extension.
 
-    Procedure: embed the full distance matrix at each candidate dimension ``d``
-    using classical (Torgerson–Gower) MDS, evaluate Kruskal RMSE only on a
-    random held-out subset of the C(N,2) upper-triangle pairs, and pick the
-    dimension that minimises the held-out error.
+    For each fold, classical (Torgerson–Gower) MDS is fit on the TRAIN points
+    only (n_train × n_train submatrix); each held-out point is then placed
+    using the Gower (1968) out-of-sample extension formula; the RMSE between
+    the predicted distances (held-out ↔ train) and the true distances measures
+    generalisation.  No held-out point participates in fitting the embedding.
 
-    This is the "practical CV-MDS" approach: embedding uses all pairs (not just
-    training pairs), and the test set provides an unbiased estimate of how well
-    the embedding generalises.  True out-of-sample fitting (MDS on partial
-    matrices) is numerically ill-posed and not used here.
+    The resulting CV-error curve is typically U-shaped or plateaus at the true
+    intrinsic dimension; the parsimony rule then picks the smallest ``d`` whose
+    error is within a relative tolerance of the global minimum.
+
+    If a representation saturates at ``max_dims`` (monotone-decreasing CV
+    curve with the parsimony rule still picking the cap), the caller should
+    report D̂ as ">= cap (censored; monotone CV curve)" rather than the bare
+    number.
+
+    Gower (1968) out-of-sample formula: given the train embedding
+    ``X_train = V_d Λ_d^{1/2}`` and a new point p with squared distances
+    ``δ_p = [d(p,x_i)²]`` to all train points,
+
+        b_p = −½ (δ_p − μ_row − μ_p + μ_grand)
+        y_p = V_d^T b_p / √Λ_d
+
+    where ``μ_row = mean_j(D_train²[:,j])``, ``μ_p = mean_i(δ_p[i])``,
+    and ``μ_grand = mean(D_train²)``.
+
+    References: Gower 1968; Bengio et al. 2004 (NeurIPS); Trosset & Priebe 2008.
 
     Parameters
     ----------
     D : numpy.ndarray
-        Symmetric ``(n, n)`` distance matrix.
-    max_dims : int
-        Maximum dimension to evaluate.  Clipped to ``n - 1``.
-    test_fraction : float, optional
-        Fraction of C(N,2) pairs held out for evaluation.  Default ``0.2``.
+        Symmetric ``(n, n)`` distance matrix with zero diagonal.
+    max_dims : int or None, optional
+        Maximum dimension to evaluate.  Clipped to ``n - 1``.  Defaults to
+        ``min(n - 1, 40)`` so a genuine elbow below the cap can appear.
+    n_folds : int, optional
+        Number of CV folds (leave-out-points).  Default ``5``.
     rng_seed : int, optional
-        Seed for the random pair split.  Default ``42``.
+        Seed for fold assignment.  Default ``42``.
 
     Returns
     -------
     d_hat : int
-        1-indexed dimension minimising the held-out RMSE.
+        1-indexed dimension minimising the CV RMSE (parsimony-corrected).
     cv_errors : list[float]
-        Held-out RMSE for each dimension ``d = 1, …, max_dims``, so
+        Mean held-out RMSE over folds for each ``d = 1, …, max_dims``.
         ``cv_errors[d - 1]`` is the error at dimension ``d``.
     """
-    from isalhg.metric_space.metrics.embedding import embed_classical
-
     n = D.shape[0]
-    max_dims = min(max_dims, n - 1)
+    if max_dims is None:
+        max_dims = min(n - 1, 40)
+    else:
+        max_dims = min(max_dims, n - 1)
 
-    # Upper-triangle pair indices (excluding diagonal).
-    rows, cols = np.triu_indices(n, k=1)
-    n_pairs = len(rows)
-
-    # Random test/train split of pairs.
+    # Assign points to folds.
     rng = np.random.default_rng(rng_seed)
-    perm = rng.permutation(n_pairs)
-    n_test = max(1, int(n_pairs * test_fraction))
-    test_mask = perm[:n_test]
+    perm = rng.permutation(n)
+    fold_assignments = np.array_split(perm, n_folds)
 
-    d_orig_test = D[rows[test_mask], cols[test_mask]]
+    # Pre-compute squared distances (used in Gower centering throughout).
+    D_sq = D**2
 
     cv_errors: list[float] = []
     for d in range(1, max_dims + 1):
-        X = embed_classical(D, n_dims=d)
-        D_embed = pairwise_l2(X)
-        d_embed_test = D_embed[rows[test_mask], cols[test_mask]]
-        rmse = float(np.sqrt(np.mean((d_orig_test - d_embed_test) ** 2)))
-        cv_errors.append(rmse)
+        fold_rmses: list[float] = []
+
+        for k, test_idx in enumerate(fold_assignments):
+            train_idx = np.concatenate([fold_assignments[j] for j in range(n_folds) if j != k])
+            n_train = len(train_idx)
+
+            # Classical MDS on the train submatrix.
+            D_train_sq = D_sq[np.ix_(train_idx, train_idx)]
+            H = np.eye(n_train) - np.ones((n_train, n_train)) / n_train
+            B = -0.5 * H @ D_train_sq @ H
+
+            # Eigendecompose (ascending order from eigh; reverse to descending).
+            evals, evecs = np.linalg.eigh(B)
+            evals = evals[::-1]
+            evecs = evecs[:, ::-1]
+
+            # Only positive eigenvalues enter the embedding; cap at d.
+            d_actual = min(d, int(np.sum(evals > 1e-10)))
+            if d_actual == 0:
+                # Degenerate fold (all train distances zero); skip.
+                fold_rmses.append(float(D.max()))
+                continue
+
+            evals_d = evals[:d_actual]  # (d_actual,)
+            evecs_d = evecs[:, :d_actual]  # (n_train, d_actual)
+            X_train = evecs_d * np.sqrt(evals_d)  # (n_train, d_actual)
+
+            # Pre-compute centering terms for the Gower formula.
+            mu_row = D_train_sq.mean(axis=1)  # (n_train,) row means of D²_train
+            mu_grand = float(D_train_sq.mean())  # scalar grand mean
+
+            # Embed each held-out point out-of-sample and measure RMSE.
+            point_rmses: list[float] = []
+            for p in test_idx:
+                d_new_sq = D_sq[p, train_idx]  # squared dists: p → all train
+                mu_p = float(d_new_sq.mean())
+                b_p = -0.5 * (d_new_sq - mu_row - mu_p + mu_grand)
+                y_p = evecs_d.T @ b_p / np.sqrt(evals_d)  # (d_actual,)
+
+                # Predicted distances from p to each train point.
+                d_pred = np.sqrt(
+                    np.maximum(
+                        0.0,
+                        np.sum((X_train - y_p[np.newaxis, :]) ** 2, axis=1),
+                    )
+                )
+                d_true = D[p, train_idx]
+                point_rmses.append(float(np.sqrt(np.mean((d_pred - d_true) ** 2))))
+
+            fold_rmses.append(float(np.mean(point_rmses)))
+
+        cv_errors.append(float(np.mean(fold_rmses)))
 
     # Parsimony rule: pick the *smallest* d within a relative tolerance of
     # the global minimum.  Without this, machine-epsilon fluctuations among
@@ -205,8 +267,7 @@ def cv_dimension_selection(
     # at large d on near-Euclidean inputs.
     min_err = min(cv_errors)
     # Tolerance = 0.1% of the improvement from d=1 to the minimum, or 1e-8
-    # absolute — whichever is larger.  This is tight enough not to collapse
-    # a genuine elbow but wide enough to absorb double-precision noise.
+    # absolute — whichever is larger.
     range_err = cv_errors[0] - min_err
     tol_abs = max(1e-8, range_err * 1e-3)
 
@@ -695,7 +756,7 @@ def run_mds_pipeline(
     corpus_label: str,
     corpus_cfg: dict[str, Any],
     distance_names: list[str],
-    max_dims: int = 10,
+    max_dims: int | None = None,
     cv_rng_seed: int = 42,
 ) -> list[dict[str, Any]]:
     """Run the full T-M5b MDS pipeline on one corpus.
@@ -718,8 +779,9 @@ def run_mds_pipeline(
         PlantedFamilyDataset constructor kwargs.
     distance_names : list[str]
         Registered distance names to run.
-    max_dims : int, optional
-        Maximum CV dimension to evaluate.  Default ``10``.
+    max_dims : int or None, optional
+        Maximum CV dimension to evaluate.  Passed to ``cv_dimension_selection``;
+        defaults to ``min(n - 1, 40)`` when ``None``.
     cv_rng_seed : int, optional
         RNG seed for CV pair split.  Default ``42``.
 
@@ -924,8 +986,8 @@ def main() -> None:
     parser.add_argument(
         "--max-dims",
         type=int,
-        default=10,
-        help="Maximum CV dimension to evaluate (default: 10)",
+        default=40,
+        help="Maximum CV dimension to evaluate (default: 40; clipped to n-1)",
     )
     parser.add_argument(
         "--cv-seed",

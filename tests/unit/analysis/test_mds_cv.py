@@ -180,6 +180,76 @@ _REQUIRED_COLUMNS = {
 }
 
 
+def test_cv_dimension_selection_oos_vs_leaky_l1_r3() -> None:
+    """OOS K-fold CV finds D̂=3 on L1 distances from R^3; the leaky method overestimates.
+
+    Data: N=40 points in R^3, pairwise L1 distances (seed=3, pinned).
+
+    L1 distances from R^3 are non-Euclidean: the double-centred Gram matrix B has
+    negative eigenvalues (verified inline). The true intrinsic dimension is 3.
+
+    Leaky (in-sample) behaviour: the full-N-point MDS embedding is used to evaluate
+    'held-out' pairs. The 4th positive eigenvector of B captures a cross-term
+    artifact from approximating the non-Euclidean L1 metric in Euclidean space.
+    Because the test points ARE INCLUDED in the full-matrix fit, the artifact is
+    specifically tailored to minimise test-train RMSE at d=4 → in-sample parsimony
+    picks d_hat=4 (overestimates by 1).
+
+    OOS behaviour (corrected): the train-only embedding is fit; test points are
+    placed via the Gower out-of-sample extension. The 4th eigenvector of B_train is
+    specific to the training set's L1 cross-term structure and does NOT consistently
+    improve held-out predictions → parsimony picks d_hat=3 (true intrinsic dimension).
+    """
+    from experiments.article.analysis.mds import cv_dimension_selection, pairwise_l2
+    from isalhg.metric_space.metrics.embedding import embed_classical
+
+    rng = np.random.default_rng(3)
+    N, max_dims = 40, 10
+
+    # L1 distances from R^3 (non-Euclidean)
+    X = rng.standard_normal((N, 3))
+    D = np.abs(X[:, None, :] - X[None, :, :]).sum(axis=-1)
+    np.fill_diagonal(D, 0.0)
+
+    # Verify non-Euclidean (negative eigenvalues in B)
+    Hn = np.eye(N) - np.ones((N, N)) / N
+    B = -0.5 * Hn @ (D**2) @ Hn
+    assert np.any(np.linalg.eigvalsh(B) < -1.0), (
+        "Expected non-Euclidean distance matrix for L1 from R^3"
+    )
+
+    # --- Leaky (old) implementation, reconstructed inline ---
+    # Embeds ALL N points at each d; 'held-out' RMSE is evaluated on the same
+    # in-sample embedding — this is the pre-fix behaviour.
+    rows_idx, cols_idx = np.triu_indices(N, k=1)
+    d_true_pairs = D[rows_idx, cols_idx]
+    leaky_errors: list[float] = []
+    for d in range(1, max_dims + 1):
+        X_emb = embed_classical(D, n_dims=d)
+        D_emb = pairwise_l2(X_emb)
+        rmse = float(np.sqrt(np.mean((d_true_pairs - D_emb[rows_idx, cols_idx]) ** 2)))
+        leaky_errors.append(rmse)
+    min_l = min(leaky_errors)
+    range_l = leaky_errors[0] - min_l
+    tol_l = max(1e-8, range_l * 1e-3)
+    d_hat_leaky = next(d for d, err in enumerate(leaky_errors, 1) if err <= min_l + tol_l)
+    assert d_hat_leaky == 4, (
+        f"Expected leaky d_hat == 4 on L1-from-R3 data (in-sample artifact at d=4), "
+        f"got {d_hat_leaky}. Leaky CV errors: {leaky_errors}"
+    )
+
+    # --- OOS K-fold CV (the corrected implementation) ---
+    d_hat_oos, oos_errors = cv_dimension_selection(D, max_dims=max_dims, rng_seed=3)
+    assert d_hat_oos in {2, 3}, (
+        f"Expected OOS d_hat in {{2, 3}} for L1-from-R3 data (true dim=3), "
+        f"got {d_hat_oos}. OOS CV errors: {oos_errors}"
+    )
+    assert d_hat_oos < d_hat_leaky, (
+        f"OOS d_hat ({d_hat_oos}) should be strictly less than leaky d_hat "
+        f"({d_hat_leaky}): OOS must not carry the in-sample artifact at d=4."
+    )
+
+
 def test_geometry_table_row_all_columns_present() -> None:
     """geometry_table_row returns a dict with all required column keys."""
     from experiments.article.analysis.mds import geometry_table_row

@@ -1,6 +1,6 @@
 # T-M3e — Propagate the S2 outcomes into the competitor + session docs
 **Declared:** 2026-07-19 11:37 CEST
-**Status:** OPEN
+**Status:** DONE (closed 2026-07-19, S2 close)
 **Depends on:** T-DQ3' (CLOSED); T-OPTa/T-OPTb (their outcomes are appended
 when they land — the S2-verification content is writable now)
 **Delegation:** orchestrator-only (session-close doc sweep; touches
@@ -33,3 +33,21 @@ member; the usage doc points at `scripts/verify_competitors.py`; SESSIONS.md
 S2 row ticked with orchestrator notes appended (orchestrator's own act).
 **Out of scope here:** reasoning-doc rewrites (`PROPOSAL.md`,
 `theoretical/*` — already updated at the T-DQ3' close); any source edits.
+
+---
+
+## Closing note — 2026-07-19 (orchestrator, S2 close)
+
+All acceptance clauses verified:
+- `grep -n "head-to-head" docs/article/COMPETITORS_USAGE.md` → one hit, the
+  historical "no competitor HGED head-to-head (retired at D-ART2)" note.
+- §4.2 names NetLSD **full member** (D-ART2 point 5); §4.3 rescoped to the
+  ours-only E1' figure; §8 example computes ρ for `d_I` only.
+- Usage doc reproducibility anchor = `scripts/verify_competitors.py` with
+  the 2026-07-19 numbers; HyperCOT upstream commit `5045539` recorded in §6
+  and in the worker-script header.
+- SESSIONS.md S2 row ticked with orchestrator notes appended (same commit).
+- T-OPT outcomes recorded in the ledger (T-OPTa/T-OPTb closing +
+  verification notes; T-OPTc filed OPEN); no competitor-doc impact — the
+  engine work changed no distance value (old-vs-new differential
+  byte-identical, `verify_competitors.py` numbers unchanged).

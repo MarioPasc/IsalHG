@@ -29,7 +29,7 @@ optional small task to fill a freed slot; never blocks the session.
 | ✓ | Session | Goal | Task structure | Gates |
 |---|---|---|---|---|
 | ☑ | **S1** — Baseline & foundations | Ledger reconciled; connected domain; corpora + primitives exist | `[O]` branch decision → `[O]` T-TBf → { T-M1c ∥ T-M2c ∥ T-M4 } (+ T-M0b filler; stretch: pull S2 wave 1 forward) | v3 pushed at `5e6b73e`; D-ART2 PI-ratified — no approval gate |
-| ☐ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
+| ☑ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
 | ☐ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☐ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
 | ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
@@ -175,7 +175,64 @@ declared fallback in `DATA.md` §2 applies if red).
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **Session run 2026-07-19 ~10:45–14:00 CEST (Fable orchestrator). S2 CLOSED —
+  all three exit criteria met — plus a user-directed T-OPT extension.**
+- *Shape change (stated reason):* per the S1 notes, wave-1/2 code was already
+  CLOSED, so no workers were spawned for T-M3a–d/T-M4'; S2 ran as the
+  orchestrator verification pass + `[O]` T-DQ3'. Preflight baselines
+  910/18/15, ruff 3, mypy 21/7 (green).
+- *Verification pass (PASS, re-runnable via `scripts/verify_competitors.py`):*
+  all six representations on the planted corpus (18 hypergraphs, 5 planted
+  iso pairs): iso pairs → 0 (netlsd 1.5e-14, hypercot 7.1e-16), both complete
+  invariants separate every non-iso pair; d_I offdiag med 7 / max 17. T-M3c's
+  promoted acceptance verified.
+- *Defects found + fixed (commit `7dc30e8`):* (a) three test files' `HIC_ROOT`
+  missed the `/hypergraph` segment — their "HIC data absent" skips were
+  wrong-path skips (data on disk all along); 10 tests un-skipped. (b) `netlsd`
+  was not installed in the main env (T-M3c tested only in its worker env) —
+  installed, added to the `bench` extra. (c) `scripts/hypercot_worker.py`
+  pinned commit `f190266` — a copy-paste of the **HPD** vendor hash; true
+  HyperCOT HEAD is `5045539` (repo static since 2023-01-19). (d) T-M3d read
+  `Status: BLOCKED` inside `CLOSED/` with a stale closing note — reconciled
+  (the `c2fddd6` coordinator completion was never reflected in the ledger).
+- *HyperCOT env:* rebuilt verbatim from `envs/hypercot.yml` (network up);
+  10/10 tests incl. the HIC smoke on real RHG-10 data.
+- *T-DQ3' (closed, `T-DQ/CLOSED/T-DQ3prime.md`): **NO-GO — fallback executed**
+  (`DATA.md` §2, PROPOSAL OQ-B/OQ-C resolved).* Corpus k=110 on IMDB-Dir-Form
+  is beyond `K_MAX` and Python-DNF on the *median* instance; the arity≤10
+  sub-corpus keeps 78.7% (class retention 89/71/71%) but a 10 s budget
+  completes only 73/100 — DNFs symmetry-driven, not size-driven (n=10, m=5
+  DNF while n=22, m=79 completes). ≈57% yield under two label-correlated
+  filters ≠ defensible anchor. **OD6 filed (pending PI):** optional
+  censored-subset secondary exhibit. Arity-cap survival across all 12 HIC
+  sets recorded in the closing note (Steam-Player worst at 24.8%).
+- *User-directed extension (mid-session):* new scope **T-OPT** (C++ engine
+  revision). **T-OPTa** merged (`40986e5`): runtime `k > K_MAX` via the
+  `k_disp` clamp — orchestrator differential proved it value-preserving
+  (40 hypergraphs × full k-sweep + matrix hash, byte-identical); **orbit
+  pruning premise refuted** — the worker's per-node fingerprint is necessary
+  but not sufficient for orbit membership (Hypothesis n=5 witness); encoder
+  stays unpruned, `w*_c` untouched, budget re-run 74/100 ≈ baseline (verdict
+  unchanged). Worker's AC2 claim corrected in the ledger (the named T-DQ3'
+  DNFs are genuine timing DNFs — 000392 re-confirmed >330 s post-merge).
+  **T-OPTb** merged: C++ S2H interpreter, corpus-scale parity verified;
+  speedup flat ~1.24× (parse/validate stay Python-side) — decode is not a
+  bottleneck; value = reach parity + 31 tests. **T-OPTc filed OPEN** (correct
+  stabiliser-orbit pruning; the worker's promised-but-unfiled handoff).
+  T-M3e (user-requested doc-propagation task) declared, executed, closed.
+- *Baselines at S2 close (merged `main`):* **971 passed, 8 skipped, 15
+  deselected; frozen pins 6/6 (~89 s); ruff 3; mypy 21 in 7 files;
+  `verify_competitors.py` ALL PASS** — numbers identical before/after both
+  C++ merges. `main` is **not pushed** (not asked).
+- **⚠ Hazards for the next orchestrator:** (1) the worktree-isolation hazard
+  recurred — T-OPTa's worktree was cut from the pre-session HEAD (`b30c8b6`);
+  the fix that worked for T-OPTb: an explicit launch-prompt instruction to
+  check `git merge-base main HEAD` and `git merge main` before starting.
+  Check it at every launch. (2) The greedy encoder is slow at moderate n
+  (`greedy_min_nbrdeg` ≈ 22 s at n=30, m=60; minutes at n=60) — size the DQ5
+  geometry sweep and the A4 ladder pools against measured `w*_c` wall-clock,
+  not assumptions. (3) S4's corpus list = the fallback (planted + small
+  designs); include HIC only if the PI approves OD6.
 
 ---
 

@@ -117,6 +117,19 @@ longer runs); the implementation remains in the tree.
   characterization ("this is the measured footprint of the relation on a small
   corpus"), never as validation of a bound.
 
+**Measured (provisional — 9 of the 12 mini-corpus cells; the three largest,
+n ∈ {9,10}, still on the exact oracle).** Pooled over all pairs with HGED > 0:
+Spearman ρ = 0.603 (N = 5,661 pairs, p ≈ 0; Pearson r = 0.616; OLS slope of
+`d_I` on HGED 0.463); per-cell ρ ranges 0.48–0.81. Every HGED = 0 pair has
+`d_I` = 0 — the identity-of-indiscernibles cross-check between the two
+metrics. The completed-cell boundary is itself informative: exact HGED on the
+n = 9–10 cells exhausted 16 GB / 6 h per cell (branch-and-bound frontier
+blow-up on cross-ladder pairs), i.e. the exact oracle reaches its practical
+ceiling *at the boundary of this mini-corpus* — a concrete illustration of why
+the article's methodology validates usefulness on task metrics rather than on
+an HGED axis. Final all-cell numbers replace these when the remaining cells
+complete.
+
 **Out of scope (recorded):** the v2 density sweep E2 (ρ vs Δ, the Theorem-B
 Δ-prediction) and the competitor HGED head-to-head. Both are follow-up
 material; the prediction itself is recorded in `../theoretical/stability.md`
@@ -141,6 +154,21 @@ fixed-width code**, *not* Shannon entropy and *not* compressed length.
   introduced (PROPOSAL §4). Corpora: the body corpora (no oracle needed).
 - An entropy-coded refinement of the estimator is optional future work, not
   load-bearing.
+
+**Measured (the three planted body corpora, N = 320 pooled).** Every
+hypergraph compresses: `r > 1` on 320/320 (fraction shorter = 1.000), pooled
+median r = 1.441 (per-corpus: 1.433 on the five-family N = 60 corpus, 1.565
+on the small N = 20 corpus, 1.439 on the N = 240 primary corpus), one-sided
+Wilcoxon p = 1.6 × 10⁻⁵⁴, OLS β = 0.749 < 1. Median canonical-string lengths
+are 22 tokens (n = 10 corpora) and 8 tokens (n = 6) — 81.4 and 29.6 bits at
+`log2 |Σ_HG(3)| = log2 13 ≈ 3.70` bits/token — against incidence-list codes
+of 114.0 and 44.5 bits (medians).
+The medians sit at the lower edge of the graph sibling's reported band
+(median r ∈ [1.45, 1.89]): "a hypergraph is a compact word" holds uniformly
+on the article's own corpora. Token counting goes through the bracket-aware
+parser (`;` separates fields inside `V[...]`/`C[...]` as well as tokens — a
+raw split overcounts ≈2× and *reverses* this conclusion; pinned by a
+regression test).
 
 ## Open (this layer)
 

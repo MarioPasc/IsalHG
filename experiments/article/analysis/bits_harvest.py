@@ -125,6 +125,7 @@ def compute_corpus_bits(
             pass
 
     from isalhg.core.canonical import canonical_string
+    from isalhg.core.instructions import parse as parse_tokens
     from isalhg.datasets.synthetic.planted_families import PlantedFamilyDataset
     from isalhg.metric_space.metrics.information import (
         alphabet_size_isalhg,
@@ -151,8 +152,9 @@ def compute_corpus_bits(
     records: list[dict[str, Any]] = []
     for H in hypergraphs:
         w = canonical_string(H, k=k_corpus)
-        tokens = [t for t in w.split(";") if t]
-        n_tokens = len(tokens)
+        # Use the proper parser: ";" also appears inside brackets as a field
+        # separator, so raw split(";") overcounts tokens ~2×.
+        n_tokens = len(parse_tokens(w))
 
         arities = [len(m) for m in H.hyperedges()]
         n_nodes = H.n_nodes

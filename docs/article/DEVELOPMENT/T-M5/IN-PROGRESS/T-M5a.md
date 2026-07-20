@@ -96,48 +96,57 @@ and Pearson r, writes scatter/joint-density figure.
 The part-1 smoke (n5_s0 alone) reported ρ=0.633; the 9-cell aggregate
 ρ=0.603 is consistent. Numbers are provisional (9/12 cells).
 
-### Bits harvest — PREMISE FALSIFIED
+### Bits harvest — PREMISE HOLDS (corrected; tokenization bug fixed)
 
 Pipeline: `experiments/article/analysis/bits_harvest.py` (new). Directly
 instantiates `PlantedFamilyDataset` (bypasses runner kwarg bug) for
 planted_main (N=60, n=10, k=3) and planted_small (N=20, n=6, k=3),
 computes fixed-width bits per hypergraph, pools, runs Wilcoxon + OLS.
 
-**Measured (planted_main + planted_small, N=80 pooled):**
+**Tokenization fix (orchestrator R1, 2026-07-20).** The initial commit
+used `w.split(";")` to count tokens, which overcounts ~2.7× because `";"`
+is also a field separator inside brackets in `V[le;i;j;ln1,...,lnj]`
+and `C[le;i]` tokens. The fix replaces the raw split with
+`isalhg.core.instructions.parse(w)` (bracket-aware). The initial
+"PREMISE FALSIFIED" finding was an artifact of this bug and is retracted.
+T-M5l (false handoff filed on that basis) was deleted from OPEN/.
+Stale cached `info_content.json` files were deleted and the harvest
+was re-run. A regression test (`test_tokenization_harvest_n_tokens_equals_parse_count`)
+pins correct tokenization end-to-end.
+
+**Measured (planted_main + planted_small, N=80 pooled; corrected):**
 
 | Metric | planted_main (N=60) | planted_small (N=20) | Pooled (N=80) |
 |---|---|---|---|
-| median r | 0.707 | 0.631 | 0.697 |
-| frac IsalHG shorter | 0.000 | 0.000 | 0.000 |
-| Wilcoxon p (H1: r>1) | 1 | 1 | 1 |
-| OLS β | — | — | 1.265 |
+| median r | 1.433 | 1.565 | 1.449 |
+| frac IsalHG shorter | 1.000 | 1.000 | 1.000 |
+| Wilcoxon p (H1: r>1) | — | — | 3.92e-15 |
+| OLS β | — | — | 0.730 |
 
-**Finding: PROPOSAL §4 "compact word" premise is FALSE for these corpora.**
-At k=3, |Σ_HG| = 13, log₂(13) = 3.70 bits/token. A planted_main
-hypergraph (n=10, m=10) has canonical string length ≈45 tokens = 166 bits
-vs ≈111 bits for the incidence list (r ≈ 0.74). Breakeven would require
-≤30 tokens — unreachable at this parameter range. The sibling (IsalGraph,
-k=2) achieved r ∈ [1.45, 1.89] because log₂(8) = 3 bits/token and graph
-strings are shorter (fewer pointer moves for arity-2 edges). PI decision
-required — filed as **T-M5l** (`T-M5/OPEN/T-M5l.md`).
+**Finding: PROPOSAL §4 "compact word" premise HOLDS.** Every hypergraph
+in both corpora compresses: median r = 1.449, fraction_shorter = 1.000,
+Wilcoxon p = 3.92e-15 (one-sided H1: r>1). The corrected median per-corpus
+token counts are: planted_main ≈ 22 tokens (naive split: 44),
+planted_small ≈ 8 tokens (naive: 20). Results sit in the sibling band
+[1.45, 1.89] reported for IsalGraph.
 
 ### Code changes (this branch)
 
 - `experiments/article/analysis/e1prime_harvest.py` — NEW harvest
   pipeline (multi-cell aggregation, scatter/joint-density figure)
-- `experiments/article/analysis/bits_harvest.py` — NEW bits pipeline
-  (direct dataset instantiation, bypasses runner kwarg bug)
+- `experiments/article/analysis/bits_harvest.py` — NEW bits pipeline;
+  corrected to use `parse()` for token counting
 - `experiments/article/analysis/correlation.py` — updated: MI removed
   (D-ART2); scatter title now shows Spearman ρ + Pearson r
 - `tests/unit/experiments_article/test_e1prime_harvest.py` — 7 tests,
   all pass
-- `tests/unit/experiments_article/test_bits_harvest.py` — 5 tests,
-  all pass (including teeth test for nan ratio)
+- `tests/unit/experiments_article/test_bits_harvest.py` — 7 tests,
+  all pass (5 original + 2 new regression tests for tokenization)
 
 ### Tests
 
 ```
-12 passed  (tests/unit/experiments_article/test_e1prime_harvest.py +
+14 passed  (tests/unit/experiments_article/test_e1prime_harvest.py +
              tests/unit/experiments_article/test_bits_harvest.py)
 ```
 
@@ -145,5 +154,4 @@ required — filed as **T-M5l** (`T-M5/OPEN/T-M5l.md`).
 
 1. Re-run `e1prime_harvest.py` after cells n9_s1/n10_s0/n10_s1 land
    (job 1618786). Updated ρ replaces the provisional numbers.
-2. Decide on T-M5l (bits premise) with PI before closing T-M5a.
-3. Move this file to `T-M5/CLOSED/T-M5a.md`, update scope counts.
+2. Move this file to `T-M5/CLOSED/T-M5a.md`, update scope counts.

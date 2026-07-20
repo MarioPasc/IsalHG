@@ -5,6 +5,7 @@ Acceptance criteria:
 - compression_ratio field = B_incidence / B_IsalHG.
 - harvest_bits pools corpora and calls analyze_info_content.
 - Idempotence: re-running skips already-done corpora.
+- Tokenization uses parse(), not raw split(";"), to count tokens.
 
 Teeth: a monkeypatched alphabet_size that returns 1 (log2(1)=0 bits)
 confirms that bits_isalhg yields 0 and compression_ratio becomes nan/inf —
@@ -150,3 +151,72 @@ def test_harvest_bits_produces_aggregate(tmp_path):
     # Per-corpus breakdown
     assert "per_corpus" in result
     assert result["per_corpus"][0]["label"] == "tiny_corpus"
+
+
+# ---------------------------------------------------------------------------
+# Regression: tokenization must use parse(), not raw split(";")
+# ---------------------------------------------------------------------------
+
+
+def test_tokenizer_split_vs_parse_discrepancy():
+    """Pure unit: parse() vs split(';') token count for a multi-field string.
+
+    ``'V[0;1;2;0,0];C[0;3]'`` has 2 tokens; raw split on ``;`` gives 6 pieces
+    because ``;`` also appears as a field separator inside brackets.  This
+    demonstrates the discrepancy that the harvest bug produced.
+    """
+    from isalhg.core.instructions import TokenC, TokenV, parse, serialize
+
+    tokens = [
+        TokenV(edge_label=0, i=1, j=2, new_node_labels=(0, 0)),
+        TokenC(edge_label=0, i=3),
+    ]
+    canonical_str = serialize(tokens)
+    assert canonical_str == "V[0;1;2;0,0];C[0;3]", canonical_str
+
+    # parse() returns the correct count
+    assert len(parse(canonical_str)) == 2
+
+    # raw split overcounts — 6 pieces, not 2
+    assert len([p for p in canonical_str.split(";") if p]) == 6
+
+
+def test_tokenization_harvest_n_tokens_equals_parse_count(tmp_path):
+    """End-to-end regression: n_tokens in records == len(parse(w)).
+
+    Runs compute_corpus_bits on a tiny corpus, then re-derives each canonical
+    string with the same k and asserts the recorded n_tokens matches
+    len(parse(w)).  Would fail under the old split(';') implementation because
+    V and C tokens embed ';' inside brackets, inflating the raw split count.
+    """
+    from experiments.article.analysis.bits_harvest import compute_corpus_bits
+    from isalhg.core.canonical import canonical_string
+    from isalhg.core.instructions import parse
+    from isalhg.datasets.synthetic.planted_families import PlantedFamilyDataset
+
+    params = _fake_corpus_params()
+    out_dir = tmp_path / "bits" / "parse_regression"
+    data = compute_corpus_bits("regression_test", params, out_dir)
+
+    k_corpus = data["k"]  # the actual k used inside compute_corpus_bits
+    dataset = PlantedFamilyDataset(**params)
+    hypergraphs = [item.hypergraph for item in dataset]
+
+    any_nested_semicolons = False
+    for H, record in zip(hypergraphs, data["records"], strict=False):
+        w = canonical_string(H, k=k_corpus)
+        parse_count = len(parse(w))
+        naive_count = len([p for p in w.split(";") if p])
+
+        assert record["n_tokens"] == parse_count, (
+            f"n_tokens={record['n_tokens']} but parse count={parse_count}. "
+            "Regression: tokenization uses raw split(';') instead of parse()."
+        )
+        if naive_count > parse_count:
+            any_nested_semicolons = True
+
+    # If no canonical string had nested semicolons this test has no teeth.
+    assert any_nested_semicolons, (
+        "Corpus produced no strings with nested semicolons — "
+        "test cannot detect the regression.  Use a corpus with V or C tokens."
+    )

@@ -116,9 +116,13 @@ def _wstar_worker(H: Any, q: mp.Queue[float]) -> None:  # type: ignore[type-arg]
 def wstar_ok(H: Any, budget: float = WSTAR_BUDGET) -> bool:
     """Return True if ``canonical_fingerprint(H)`` completes within ``budget`` seconds.
 
-    Uses ``multiprocessing.get_context("fork")`` so the subprocess inherits the
-    loaded SparseHypergraph without serialisation overhead. The C++ tie-complete
-    encoder ignores SIGALRM, so ``terminate()`` is the only reliable kill.
+    Uses ``multiprocessing.get_context("spawn")`` to start a clean child process
+    with no inherited C++ thread state. ``spawn`` is slightly slower than ``fork``
+    but avoids POSIX mutex inheritance when called after test frameworks (e.g.
+    pyclustering, sklearn) have created C++ thread pools. The spawn overhead
+    (~0.5 s) is absorbed by the 5 s budget; DNF detection is unaffected.
+    The C++ tie-complete encoder ignores SIGALRM, so ``terminate()`` is the
+    only reliable kill.
 
     Parameters
     ----------
@@ -132,7 +136,7 @@ def wstar_ok(H: Any, budget: float = WSTAR_BUDGET) -> bool:
     bool
         ``True`` if w*_c completed within ``budget``, ``False`` on DNF.
     """
-    ctx = mp.get_context("fork")
+    ctx = mp.get_context("spawn")
     q: mp.Queue[float] = ctx.Queue()  # type: ignore[type-arg]
     p = ctx.Process(target=_wstar_worker, args=(H, q))
     p.start()

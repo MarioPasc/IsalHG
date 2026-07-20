@@ -14,3 +14,12 @@
 **Description:** Implement stabilizer-orbit pruning in the tie-complete encoder: at each residual tie (edge-level and label-respecting-ordering-level), explore one representative per orbit of the pointwise stabilizer of `dom(μ)` instead of every candidate. Prop 6.0 guarantees the returned `w*_c` is unchanged; the win is exactly the automorphism redundancy that makes symmetric and hypertree-like inputs blow up. Needs an automorphism-group computation (port the T-TBb backtracking or bind nauty via the existing Levi reduction) whose cost must be amortized against the branching saved.
 **Acceptance:** `test_wstar_c_frozen.py` and the full unit+property suites green with pruning enabled; complete binary trees d ≤ 8 and density-1.0 connected ER draws at n = 48–96 encode within seconds (benchmarked before/after, wall-clock reported); byte-identical `w*_c` vs the unpruned encoder on a pinned random corpus (n ≤ 12 exhaustive-ish sample) and on {Fano, STS(9), cyclic-13, GQ(2,2)}.
 **Out of scope here:** any ρ-refinement of the tie set (changes the frozen definition, D-TA2); changing the seed cascade; T-M5a itself.
+
+---
+**Gate-expiry note (orchestrator, S5, 2026-07-20).** The "gates T-M5a's corpus
+n-range" clause in `Depends on` has expired: the E1' mini-corpus was pinned at
+n ≤ 10 by the DQ1' probe (T-M5a part 1, 2026-07-19) and the unpruned encoder
+completed all 12 `isalhg_levenshtein` cells on Picasso (job 1616143) — the
+E1' bottleneck was the exact-HGED oracle (OOM/timeout on 3 cells, resubmitted
+at S5 as job 1618786), not `w*_c`. T-TAi is now pure optimization/stretch
+(same standing as T-OPTc, its C++-side sibling); it gates no article artifact.

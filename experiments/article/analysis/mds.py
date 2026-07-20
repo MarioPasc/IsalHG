@@ -739,6 +739,99 @@ def smacof_stress_at_dim(D: np.ndarray, n_dims: int, rng_seed: int = 42) -> floa
 
 
 # ---------------------------------------------------------------------------
+# Horn parallel analysis (T-M5l)
+# ---------------------------------------------------------------------------
+
+
+def parallel_analysis(
+    D: np.ndarray,
+    n_permutations: int = 500,
+    percentile: float = 95,
+    rng_seed: int = 42,
+) -> tuple[int, np.ndarray, np.ndarray]:
+    """Horn parallel analysis for a dissimilarity (distance) matrix.
+
+    For each of ``n_permutations`` permutations:
+
+    1. Extract upper-triangle off-diagonal entries of ``D``.
+    2. Shuffle them randomly, fill back into a symmetric matrix with zero diagonal.
+    3. Double-centre (Torgerson–Gower): ``B = -½ (D²_perm - row_means -
+       col_means + grand_mean)`` — equivalent to ``-½ J D²_perm J`` but O(N²).
+    4. Eigendecompose ``B`` (descending order).
+
+    The *observed* eigenvalues are from the double-centred Gram of ``D`` itself.
+    ``D̂_Horn`` counts ranks ``r`` where *both*:
+
+    - ``obs_eigs[r] > 0`` (positive eigenvalue, i.e. a real embedded dimension), and
+    - ``obs_eigs[r] > null_threshold[r]`` (exceeds the ``percentile``-th null
+      eigenvalue at that rank).
+
+    This is the dissimilarity-matrix adaptation of Horn (1965) parallel analysis
+    (Horn, J.L. 1965, Psychometrika 30(2): 179–185).
+
+    Parameters
+    ----------
+    D : numpy.ndarray
+        Symmetric ``(n, n)`` distance matrix with zero diagonal.
+    n_permutations : int, optional
+        Number of null permutations.  Default ``500``.
+    percentile : float, optional
+        Percentile threshold for the null distribution.  Default ``95``.
+    rng_seed : int, optional
+        Seed for the permutation RNG.  Default ``42``.
+
+    Returns
+    -------
+    d_hat_horn : int
+        Estimated intrinsic dimension under the Horn criterion.
+    observed_eigs : numpy.ndarray
+        Observed eigenvalues of the double-centred Gram matrix, descending,
+        shape ``(n,)``.
+    null_threshold_curve : numpy.ndarray
+        ``percentile``-th null eigenvalue at each rank, descending, shape ``(n,)``.
+    """
+    D = np.asarray(D, dtype=np.float64)
+    n = D.shape[0]
+
+    def _double_centre(mat_sq: np.ndarray) -> np.ndarray:
+        # O(N²) equivalent of -0.5 * J @ mat_sq @ J.
+        row_means = mat_sq.mean(axis=1)
+        grand_mean = float(mat_sq.mean())
+        result: np.ndarray = -0.5 * (
+            mat_sq - row_means[:, np.newaxis] - row_means[np.newaxis, :] + grand_mean
+        )
+        return result
+
+    # Observed eigenvalues (descending).
+    B_obs = _double_centre(D**2)
+    obs_eigs: np.ndarray = np.linalg.eigh(B_obs)[0][::-1].copy()
+
+    # Upper-triangle off-diagonal indices for shuffling.
+    triu_idx = np.triu_indices(n, k=1)
+
+    # Build null distribution: rows = permutations, cols = ranks (descending).
+    rng = np.random.default_rng(rng_seed)
+    null_eigs_mat = np.empty((n_permutations, n), dtype=np.float64)
+
+    D_perm = np.zeros((n, n), dtype=np.float64)
+    for i in range(n_permutations):
+        vals = D[triu_idx].copy()
+        rng.shuffle(vals)
+        D_perm[:] = 0.0
+        D_perm[triu_idx] = vals
+        D_perm += D_perm.T  # symmetrise; diagonal stays 0
+        null_eigs_mat[i] = np.linalg.eigh(_double_centre(D_perm**2))[0][::-1]
+
+    # Percentile threshold at each rank.
+    null_thresh: np.ndarray = np.percentile(null_eigs_mat, percentile, axis=0)
+
+    # Count ranks where observed is positive AND exceeds the null threshold.
+    d_hat_horn = int(np.sum((obs_eigs > 0.0) & (obs_eigs > null_thresh)))
+
+    return d_hat_horn, obs_eigs, null_thresh
+
+
+# ---------------------------------------------------------------------------
 # Main pipeline
 # ---------------------------------------------------------------------------
 

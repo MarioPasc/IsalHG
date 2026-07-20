@@ -1,6 +1,6 @@
 # T-M5l — D̂ robustness: Horn parallel analysis + N-scaling + budget-Shepard
 **Declared:** 2026-07-20 (PI-directed: strengthen the `D̂` estimate beyond CV)
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** T-M5b ✔ (MDS pipeline + CV `D̂` + geometry table), T-M4 ✔
 (planted generator), T-M5j ✔ (HIC clean-corpus `D.npy` caches)
 **Context to read first:**
@@ -69,3 +69,82 @@ in the cloned env (main baseline: check current `main`).
 descriptor only); competitor D-matrices at the new N (ours `d_I` suffices for the
 dimension question); new HGED calls; editing the geometry.md prose (orchestrator
 writes the MDS-procedure section from these results).
+
+---
+
+## Closing note (2026-07-20)
+
+**Branch:** `feat/T-M5l-dhat-robustness`
+
+**Acceptance check output:**
+
+### `parallel_analysis` — unit tests (4/4 pass)
+
+```
+tests/unit/analysis/test_parallel_analysis.py::test_parallel_analysis_rank3_euclidean PASSED
+tests/unit/analysis/test_parallel_analysis.py::test_parallel_analysis_noise_returns_zero PASSED
+tests/unit/analysis/test_parallel_analysis.py::test_parallel_analysis_discriminates PASSED
+tests/unit/analysis/test_parallel_analysis.py::test_parallel_analysis_return_shapes PASSED
+```
+
+Rank-3 Euclidean → D̂_Horn = 3 (in [2,4]); noise → D̂_Horn ≤ 2. Discriminates.
+
+### D̂-vs-N sweep table
+
+```
+Corpus                     N       ν  D̂_CV D̂_Horn   P^(2)  floor  n_perm
+--------------------------------------------------------------------------
+planted_N60               60   0.123     21       3   0.982     38     200
+planted_N120             120   0.193     23       5   0.966     66     200
+planted_N240             240   0.250     26       8   0.954    123     200
+planted_N480             480   0.300     26      12   0.949    231     200
+IMDB-Wri-Genre-M         266   0.160     10       1   0.993    203     200
+IMDB-Wri-Genre           833   0.200     11       1   0.992    690     200
+```
+
+**Scientific answer:** D̂_CV drifts upward from 21 (N=60) to 26 (N=240–480 plateau),
+then stabilises — slight underestimate at N=60, converging toward D̂ ≈ 26.
+Horn D̂ (3→12) grows monotonically but stays well below CV D̂ (21→26); the gap
+is expected for non-Euclidean metrics where signal is distributed across many
+weak eigenvalues below the 95th-percentile null threshold. ν grows 0.123→0.300
+with N (increasing non-Euclideanness at scale). HIC real data (genre graphs) is
+substantially lower-dimensional (D̂_CV ≈ 10–11, D̂_Horn = 1) than planted
+synthetic data — consistent with genre data having dominant clustering directions
+not present in the structurally diverse planted families.
+
+### Budget-Shepard panel
+
+```
+ρ(budget, d_I)     = 0.6361
+ρ(budget, embed)   = 0.6492
+D̂_CV (ladder)     = 16
+n_pairs            = 150  (15 ladders × 10 steps)
+```
+
+Both d_I and the MDS embedding track the known Qin budget (ρ ≈ 0.64–0.65),
+confirming structural monotonicity without invoking the HGED oracle. The
+embedding tracks budget marginally better than raw d_I (ρ_embed > ρ_d_I), which
+is consistent with MDS projecting out high-frequency non-monotone variance.
+
+### Full suite
+
+```
+1124 passed, 8 skipped, 1 warning  (4 new tests in test_parallel_analysis.py)
+ruff: 0 new errors (baseline 14 pre-existing)
+mypy src/isalhg/: 21 errors matched (all pre-existing)
+```
+
+### Files changed
+
+- `experiments/article/analysis/mds.py` — added `parallel_analysis` function
+- `experiments/article/analysis/dhat_robustness.py` — NEW: sweep + budget-Shepard + figures + CLI
+- `tests/unit/analysis/test_parallel_analysis.py` — NEW: 4 unit tests
+
+### Results (not committed — external storage)
+
+`/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5l/`
+- `dhat_sweep_table.{csv,json}` — the full table above
+- `figures/horn_scree_planted_N{60,120,240,480}.pdf` — Horn scree per N
+- `figures/horn_scree_IMDB-Wri-Genre{,-M}.pdf`
+- `figures/dhat_sweep_bar.pdf` — D̂_CV vs D̂_Horn side-by-side
+- `figures/budget_shepard.pdf` — 2-panel: d_I vs t + embed_dist vs t, coloured by t

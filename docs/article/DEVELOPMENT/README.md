@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked, +1 in-progress) | 9 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked, +1 in-progress) | 10 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -142,6 +142,7 @@ the body (HGED-free, characterize → exploit):
    T-M5e ✔ shortest path (A4, ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔ (DONE 2026-07-19; decodability differentiator + monotonicity=1.0; recovery null)
    T-M5j ✔ HIC OD6 real-data exhibit (A1/A2/A3 on 6 IMDB genre, censored) ← M5b/c/d ✔, M4' ✔ (DONE 2026-07-20; PI-directed OD6; 2 clean datasets ~92%, 4 heavily censored 34–43%; clean read: genre near-unclusterable ARI<0.10, kNN AUC led by IsalHG/NetLSD, WL hubness-degraded — consistent with planted; censoring does not flip the IsalHG conclusion)
    T-M5k ✔ HPD merge-not-truncate fix + Wri-Genre table regeneration ← M5j ✔ (DONE 2026-07-20; R2 patch clobbered Wri-Genre{,-M} tables; _merge_repr_rows fix + TestMergeTableRows regression suite; tables regenerated from D.npy caches)
+   T-M5l ✔ D̂ robustness: Horn PA + N-scaling sweep + budget-Shepard ← M5b ✔, M4 ✔, M5j ✔ (DONE 2026-07-20; D̂_CV 21→26 plateau at N=480; Horn D̂ 3→12 (conservative for non-Euclidean); HIC real data D̂_CV=10–11; budget-Shepard ρ(t,d_I)=0.64, ρ(t,embed)=0.65)
 
 doc propagation:
    T-M5h ✔ fold the S3 measured G2 outcomes (incl. the §4.2 partial

@@ -136,7 +136,7 @@ the body (HGED-free, characterize → exploit):
    T-M5b ✔ MDS flagship + geometry table ← M1b ✔, M3a–d ✔, M4 ✔, M5f ✔ (DONE 2026-07-19)
           [D.npy caches in /media/.../results/T-M5b/d_matrix/; T-M5c/d/e read these]
           [runner-bug workaround documented; fix filed → T-M5i]
-   T-M5i  fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (OPEN; low priority)
+   T-M5i ✔ fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (DONE 2026-07-20; registry fallback passes dataset_params un-mutated + binds the cell seed via HypergraphDataset.seed(); real-path regression test)
    T-M5c ✔ clustering + dendrogram (A2) ← T-M5b ✔ (DONE 2026-07-19; ARI/NMI vs planted labels)
    T-M5d ✔ kNN (A3, reads G1) ← T-M5b ✔ (DONE 2026-07-19; G1 hubness→kNN prediction confirmed)
    T-M5e ✔ shortest path (A4, ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔ (DONE 2026-07-19; decodability differentiator + monotonicity=1.0; recovery null)
@@ -150,8 +150,13 @@ doc propagation:
 
 discussion evidence (small, last):
    T-M5a ◐ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
-          [IN-PROGRESS: part 1 done at S3 — DQ1' resolved, mini-corpus pinned,
-           Picasso job 1616143 running; part 2 harvests at S5]
+          [IN-PROGRESS: part 1 done at S3 (job 1616143 → 9/12 exact-HGED cells);
+           part 2 implementation merged at S5 — E1' provisional ρ=0.603
+           (N=5,661 pairs) + bits r>1 on 320/320 (incl. planted_n240; a
+           tokenization bug that reversed this was caught + regression-pinned);
+           the 3 boundary cells (n9_s1, n10_s0/s1: OOM/timeout at 16 GB/6 h)
+           rerun as job 1618786 (100 GB/72 h, running) — closure = idempotent
+           12/12 re-harvest when they land]
           [v2 pipeline executed + closed pre-rescope (`experiments/article/`,
            2026-07-09); that closure is superseded at D-ART2 — see the rescope
            note in T-M5a; T-M5a' (full-scale v2 harvest) parked in BLOCKED/]
@@ -166,27 +171,29 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, updated at the 2026-07-19 S4 close).** The
+**Critical path (v3, updated at the 2026-07-20 S5 sweep).** The
 canonical-form track is closed and the theory record needs no article-side
-work. **The whole HGED-free body is now closed:** the characterization
-(T-M5f ✔ geometry helpers, T-M5g ✔ sensitivity+ladder), the MDS flagship +
-geometry table (T-M5b ✔, OOS-CV D̂), and all four applications —
-**A2 clustering (T-M5c ✔), A3 kNN (T-M5d ✔), A4 shortest-path (T-M5e ✔)** —
-ran on the fallback corpus list (planted families; no HIC per the T-DQ3'
-NO-GO) and merged green at S4. Measured headlines: IsalHG is non-Euclidean
-(ν=0.123, D̂=21) while the vector competitors saturate the CV cap; the G1
-hubness profile predicts the kNN ordering (WL hubness 1.777 → AUC≈0.50);
+work. **The whole HGED-free body is closed and now measured on the N = 240
+primary corpus** (the post-S4 regime change: the N-scaling sweep in T-M5l
+showed D̂ = 21 at N = 60 is an under-resolved lower bound plateauing at 26,
+Horn bracket [12, 26], so the body re-ran at N = 240 — geometry and
+applications on one object, plus a runtime axis). Measured headlines
+(N = 240): IsalHG is non-Euclidean (ν = 0.250, D̂ = 26, stress 0.062) while
+the vector competitors saturate the CV cap; the G1 hubness profile predicts
+the kNN ordering (WL hubness 4.586 → AUC ≈ 0.49 chance-level collapse);
 A4's decodability differentiator holds (only IsalHG exhibits decoded S2H
-intermediates; nauty cannot navigate). On task metrics IsalHG is competitive
-but mid-pack (HPD-JSD leads A2/A3 on this corpus) — reported honestly; the
-capability matrix (A4) is the categorical differentiator.
-**The only remaining article-critical work is T-M5a** (discussion evidence):
-IN-PROGRESS — part 1 (DQ1' probe + Picasso E1' job 1616143) ran at S3;
-part 2 (harvest + ρ figure + bits table) runs at S5. T-M5i (runner kwarg
-fix) stays OPEN, low-priority, off the critical path.
+intermediates; nauty cannot navigate). On task metrics IsalHG is a
+competitive second (HPD-JSD leads A2/A3) — reported honestly; the capability
+matrix (A4) and the speed/capability trade-off are the differentiators. The
+HIC censored exhibit (T-M5j ✔, tables repaired at T-M5k ✔) cross-checks the
+hubness→kNN story on real data. Discussion evidence: bits r>1 on 320/320
+(pooled median 1.441, p = 1.6e-54); E1' provisional ρ = 0.603 on 9/12 cells.
+**The only remaining article-critical work is the T-M5a 12/12 re-harvest**
+(idempotent one-command update) when Picasso job 1618786 delivers the three
+boundary cells.
 
-**Runnable now:** S5 = `[O]` T-M5a part 2 (Picasso harvest) + the closure
-sweep. Nothing in S4 remains.
+**Runnable now:** T-M5a closure on the 1618786 harvest; then S6 (optional,
+human opt-in). Nothing else remains.
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

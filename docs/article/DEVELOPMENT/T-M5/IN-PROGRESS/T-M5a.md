@@ -155,3 +155,29 @@ planted_small ≈ 8 tokens (naive: 20). Results sit in the sibling band
 1. Re-run `e1prime_harvest.py` after cells n9_s1/n10_s0/n10_s1 land
    (job 1618786). Updated ρ replaces the provisional numbers.
 2. Move this file to `T-M5/CLOSED/T-M5a.md`, update scope counts.
+
+---
+**S5 orchestrator addendum (2026-07-20 ~23:45 CEST).** Part-2 implementation
+merged (`6d35fd1`, after a round-1 tokenization correction — see the record
+above). Post-merge extensions and the closure plan:
+
+- **Bits extended to the N = 240 primary corpus** (`882b62f`, after the S4
+  regime change to `planted_n240`): median r = 1.439, 240/240 shorter;
+  pooled over the three body corpora N = 320, median r = 1.441, one-sided
+  Wilcoxon p = 1.6e-54, OLS β = 0.749. Measured blocks folded into
+  `empirical/correlation.md` (`b482ab4`), all numbers verified against the
+  drive artifacts.
+- **The three boundary cells** (n9_s1, n10_s0, n10_s1) failed in job 1616143
+  by OOM (16.7 GB > 16 GB) and wallclock (6 h) — the exact-HGED
+  branch-and-bound frontier blows up on cross-ladder pairs, which the DQ1'
+  probe under-sampled (it timed ladder pairs only; a probe-design lesson for
+  the record). Resubmitted as **job 1618786** (`--array=9-11`, 100 GB, 72 h);
+  all three RUNNING since ~16:05 CEST. PI decision (Mario, 2026-07-20
+  ~23:20): let it run.
+- **Closure protocol:** when the three `exact_hged/D.npy` land, re-run
+  `python -m experiments.article.analysis.e1prime_harvest` on the synced
+  local copy (idempotent; consumes 12/12), replace the provisional ρ in
+  `empirical/correlation.md`, paste the final numbers here, and `git mv`
+  this file to `CLOSED/`. If 1618786 exhausts 72 h without landing, the
+  fallback is to pin E1' on the 9 completed cells with the oracle-ceiling
+  note already in `correlation.md` (PI to confirm).

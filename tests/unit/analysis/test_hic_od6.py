@@ -8,6 +8,8 @@ Acceptance criteria checked here
 4. ``per_class_yield`` computes correct fraction per class.
 5. ``make_censoring_table_row`` returns expected keys.
 6. ``stratified_subsample`` returns at most ``max_n`` items with balanced class coverage.
+7. ``_compute_hpd_d_matrix_safe`` handles per-instance IndexError (DEFECT-1 fix).
+8. ``compute_agreement_summary`` uses only clean datasets for ranking conclusions.
 
 Every test is designed to FAIL before ``hic_od6`` is implemented.
 """
@@ -209,3 +211,217 @@ class TestStratifiedSubsample:
         sub_hgs, sub_labels = stratified_subsample(hgs, labels, max_n=8, rng_seed=0)
         assert len(sub_hgs) == len(sub_labels)
         assert len(sub_hgs) <= 8
+
+
+# ---------------------------------------------------------------------------
+# 6. _compute_hpd_d_matrix_safe (DEFECT-1 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestHpdSafeMatrix:
+    """Verify _compute_hpd_d_matrix_safe handles per-instance IndexError.
+
+    Teeth test: demonstrates that the *raw* HPD matrix() propagates the
+    IndexError to the caller, while _compute_hpd_d_matrix_safe returns a
+    partial result on the computable subset.
+    """
+
+    def test_raw_hpd_matrix_raises_for_degenerate(self) -> None:
+        """Confirm the vendored HPD matrix() raises on a degenerate instance.
+
+        This is the bug that _compute_hpd_d_matrix_safe works around.
+        The test MUST pass (the raw function raises); remove it if/when the
+        vendored code is patched upstream.
+        """
+        import unittest.mock as mock
+
+        from isalhg.metric_space.representations.hpd import HPDDistance
+
+        call_count_box = [0]
+
+        def portrait_side_effect(_xgi_h: object) -> object:
+            call_count_box[0] += 1
+            if call_count_box[0] == 2:
+                raise IndexError("index 1 is out of bounds for axis 0 with size 1")
+            return {"mock": True}
+
+        with (
+            mock.patch(
+                "isalhg.metric_space.representations._hpd_vendor.hyperedge_portrait",
+                side_effect=portrait_side_effect,
+            ),
+            pytest.raises(IndexError),
+        ):
+            HPDDistance().matrix([_tiny_triangle(), _tiny_triangle(), _tiny_triangle()])
+
+    def test_safe_wrapper_drops_degenerate(self, tmp_path: object) -> None:
+        """_compute_hpd_d_matrix_safe drops failing instances; D has shape (n_ok, n_ok)."""
+        import unittest.mock as mock
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import _compute_hpd_d_matrix_safe
+
+        corpus = [_tiny_triangle(), _tiny_triangle(), _tiny_triangle()]
+        call_count_box = [0]
+
+        def portrait_side_effect(_xgi_h: object) -> object:
+            call_count_box[0] += 1
+            if call_count_box[0] == 2:  # second instance fails
+                raise IndexError("index 1 is out of bounds for axis 0 with size 1")
+            return {"mock": True}
+
+        with (
+            mock.patch(
+                "isalhg.metric_space.representations._hpd_vendor.hyperedge_portrait",
+                side_effect=portrait_side_effect,
+            ),
+            mock.patch(
+                "isalhg.metric_space.representations._hpd_vendor.hyper_portrait_divergence",
+                return_value=0.25,
+            ),
+        ):
+            D, good_idx, n_errors, error_sample = _compute_hpd_d_matrix_safe(
+                corpus, Path(str(tmp_path)), {"dataset": "test"}
+            )
+
+        assert n_errors == 1
+        assert good_idx == [0, 2]
+        assert D.shape == (2, 2)
+        assert error_sample != ""
+
+    def test_safe_wrapper_full_success(self, tmp_path: object) -> None:
+        """When all portraits succeed, n_errors=0 and D is (n, n)."""
+        import unittest.mock as mock
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import _compute_hpd_d_matrix_safe
+
+        corpus = [_tiny_triangle(), _tiny_triangle(), _tiny_triangle()]
+
+        with (
+            mock.patch(
+                "isalhg.metric_space.representations._hpd_vendor.hyperedge_portrait",
+                return_value={"mock": True},
+            ),
+            mock.patch(
+                "isalhg.metric_space.representations._hpd_vendor.hyper_portrait_divergence",
+                return_value=0.0,
+            ),
+        ):
+            D, good_idx, n_errors, error_sample = _compute_hpd_d_matrix_safe(
+                corpus, Path(str(tmp_path)), {"dataset": "test"}
+            )
+
+        assert n_errors == 0
+        assert good_idx == [0, 1, 2]
+        assert D.shape == (3, 3)
+        assert error_sample == ""
+
+
+# ---------------------------------------------------------------------------
+# 7. compute_agreement_summary — clean/censored split (DEFECT-2 fix)
+# ---------------------------------------------------------------------------
+
+
+class TestAgreementSummaryCleanSplit:
+    """Verify compute_agreement_summary restricts ranking to clean datasets."""
+
+    def _make_rows(self) -> tuple[list[dict], list[dict], list[dict]]:
+        """Return (censoring_rows, clustering_rows, knn_rows) for 2 clean + 1 censored."""
+        censoring_rows = [
+            {"hic_name": "Clean-A", "wstar_yield": 0.925},
+            {"hic_name": "Clean-B", "wstar_yield": 0.917},
+            {"hic_name": "Censored-C", "wstar_yield": 0.39},
+        ]
+        clustering_rows = [
+            {"hic_name": "Clean-A", "representation": "IsalHG", "pam_ari": 0.066, "pam_nmi": 0.116},
+            {"hic_name": "Clean-A", "representation": "WL-L1", "pam_ari": 0.057, "pam_nmi": 0.139},
+            {"hic_name": "Clean-B", "representation": "IsalHG", "pam_ari": 0.074, "pam_nmi": 0.051},
+            {"hic_name": "Clean-B", "representation": "WL-L1", "pam_ari": -0.012, "pam_nmi": 0.103},
+            # Censored dataset — high ARI that would flip ranking if included.
+            {"hic_name": "Censored-C", "representation": "WL-L1", "pam_ari": 0.45, "pam_nmi": 0.40},
+            {
+                "hic_name": "Censored-C",
+                "representation": "IsalHG",
+                "pam_ari": 0.01,
+                "pam_nmi": 0.01,
+            },
+        ]
+        knn_rows = [
+            {
+                "hic_name": "Clean-A",
+                "representation": "IsalHG",
+                "k": 9,
+                "accuracy": 0.555,
+                "macro_f1": 0.43,
+                "auc_ovr": 0.750,
+            },
+            {
+                "hic_name": "Clean-A",
+                "representation": "WL-L1",
+                "k": 9,
+                "accuracy": 0.490,
+                "macro_f1": 0.38,
+                "auc_ovr": 0.678,
+            },
+            {
+                "hic_name": "Clean-B",
+                "representation": "IsalHG",
+                "k": 9,
+                "accuracy": 0.400,
+                "macro_f1": 0.30,
+                "auc_ovr": 0.596,
+            },
+            {
+                "hic_name": "Clean-B",
+                "representation": "WL-L1",
+                "k": 9,
+                "accuracy": 0.370,
+                "macro_f1": 0.28,
+                "auc_ovr": 0.569,
+            },
+        ]
+        return censoring_rows, clustering_rows, knn_rows
+
+    def test_clean_datasets_identified(self) -> None:
+        """compute_agreement_summary identifies only high-yield datasets as clean."""
+        from experiments.article.analysis.hic_od6 import compute_agreement_summary
+
+        censoring_rows, clustering_rows, knn_rows = self._make_rows()
+        result = compute_agreement_summary(clustering_rows, knn_rows, censoring_rows)
+
+        assert "Clean-A" in result["clean_datasets"]
+        assert "Clean-B" in result["clean_datasets"]
+        assert "Censored-C" not in result["clean_datasets"]
+
+    def test_censored_dataset_not_used_for_ranking(self) -> None:
+        """The censored dataset's high WL ARI must NOT flip the clean ranking."""
+        from experiments.article.analysis.hic_od6 import compute_agreement_summary
+
+        censoring_rows, clustering_rows, knn_rows = self._make_rows()
+        result = compute_agreement_summary(clustering_rows, knn_rows, censoring_rows)
+
+        # On clean datasets, IsalHG leads ARI (0.07 vs WL -0.012 on avg).
+        # Censored-C has WL ARI=0.45 — if included it would flip the order.
+        clean_order = result["ari_order_clean"]
+        assert clean_order.index("IsalHG") < clean_order.index("WL-L1")
+
+    def test_conclusion_mentions_censoring(self) -> None:
+        """conclusion field must explain that heavily-censored sets are excluded."""
+        from experiments.article.analysis.hic_od6 import compute_agreement_summary
+
+        censoring_rows, clustering_rows, knn_rows = self._make_rows()
+        result = compute_agreement_summary(clustering_rows, knn_rows, censoring_rows)
+
+        conclusion = result["conclusion"].lower()
+        assert "censor" in conclusion
+
+    def test_no_censoring_rows_treats_all_as_clean(self) -> None:
+        """When censoring_rows=None, all datasets are treated as clean."""
+        from experiments.article.analysis.hic_od6 import compute_agreement_summary
+
+        _, clustering_rows, knn_rows = self._make_rows()
+        result = compute_agreement_summary(clustering_rows, knn_rows, censoring_rows=None)
+
+        # All three datasets should be in clean.
+        assert "Censored-C" in result["clean_datasets"]

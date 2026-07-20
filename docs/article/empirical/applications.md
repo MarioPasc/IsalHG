@@ -128,10 +128,10 @@ faithful centroid), and the per-representation `D̂` is itself a comparison axis
 | Representation | PSD | `ν` | `D̂` | stress@`D̂` | diam/med | `N_10` skew |
 |---|---|---|---|---|---|---|
 | IsalHG (`d_I`) | no | 0.123 | 21 | 0.053 | 1.50 | 0.231 |
-| WL histogram | yes | 0.000 | ≥40 (censored) | 0.643 | 1.10 | 1.777 |
+| WL histogram | yes | 0.000 | ≥40 (censored) | 0.240 | 1.10 | 1.777 |
 | NetLSD | yes | 0.000 | 5 | 0.000 | 3.63 | −0.551 |
-| HPD | yes | 0.000 | ≥40 (censored) | 0.170 | 1.41 | 0.490 |
-| nauty-Levi edit | no | 0.029 | 39 | 0.242 | 1.64 | −0.215 |
+| HPD | yes | 0.000 | ≥40 (censored) | 0.010 | 1.41 | 0.490 |
+| nauty-Levi edit | no | 0.029 | 39 | 0.013 | 1.64 | −0.215 |
 
 The theory brackets the distortion: Bourgain (1985) guarantees an `O(log N)`
 embedding exists (so MDS is justified) and Khot–Naor (2006) prove string-edit

@@ -64,6 +64,19 @@ BODY_CORPORA: list[dict[str, Any]] = [
             "max_retries": 200,
         },
     },
+    {
+        "label": "planted_n240",
+        "dataset_params": {
+            "n_families": 20,
+            "members_per_family": 12,
+            "n_nodes": 10,
+            "k": 3,
+            "n_edges": 10,
+            "seed_value": 42,
+            "n_edits": 3,
+            "max_retries": 300,
+        },
+    },
 ]
 
 

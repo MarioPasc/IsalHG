@@ -494,6 +494,7 @@ def run_info_content_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
             return json.load(f)
 
     from isalhg.core.canonical import canonical_string
+    from isalhg.core.instructions import parse
     from isalhg.metric_space.metrics.information import (
         alphabet_size_isalhg,
         bits_incidence_list,
@@ -512,10 +513,11 @@ def run_info_content_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
 
     records: list[dict[str, Any]] = []
     for H in hypergraphs:
-        # canonical_string returns semicolon-separated token string
+        # ";" separates tokens only at the top level — it also separates
+        # fields inside V[...]/C[...] brackets, so token counting must go
+        # through the bracket-aware parser, never a raw split.
         w = canonical_string(H, k=k)
-        tokens = [t for t in w.split(";") if t]
-        n_tokens = len(tokens)
+        n_tokens = len(parse(w))
 
         arities = [len(m) for m in H.hyperedges()]
         n_nodes = H.n_nodes

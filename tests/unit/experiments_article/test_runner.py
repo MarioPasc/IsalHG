@@ -491,3 +491,44 @@ def test_build_dataset_planted_families_real_path():
     # Each item must be a connected hypergraph (D-CONN1 domain constraint)
     for item in items:
         assert item.hypergraph.is_connected(), "All planted-family items must be connected"
+
+# ---------------------------------------------------------------------------
+# T15 — Info-content cell counts Σ_HG tokens with the bracket-aware parser
+# ---------------------------------------------------------------------------
+
+
+def test_info_content_cell_token_count_is_parser_based(tmp_path):
+    """Pins the T-M5a-era tokenization fix in ``run_info_content_cell``.
+
+    ";" separates tokens only at the top level of a serialized canonical
+    string — it also separates fields inside ``V[...]``/``C[...]`` brackets —
+    so ``n_tokens`` must equal ``len(parse(w))``.  A raw ``w.split(";")``
+    fragments every bracketed token and overcounts (~2x on these corpora);
+    this test fails under that implementation.
+    """
+    from experiments.article.runner import _load_corpus, run_info_content_cell
+    from isalhg.core.canonical import canonical_string
+    from isalhg.core.instructions import parse
+
+    cell = _tiny_info_content_cell()
+    out = tmp_path / "info_out"
+    run_info_content_cell(cell, out)
+    with open(out / "info_content.json") as f:
+        data = json.load(f)
+
+    hypergraphs, _ = _load_corpus(cell)
+    k = data["k"]
+    saw_bracketed_fields = False
+    for rec, H in zip(data["records"], hypergraphs, strict=True):
+        w = canonical_string(H, k=k)
+        true_count = len(parse(w))
+        naive_count = len([t for t in w.split(";") if t])
+        assert rec["n_tokens"] == true_count, (
+            f"n_tokens={rec['n_tokens']} must equal len(parse(w))={true_count}"
+        )
+        if naive_count != true_count:
+            saw_bracketed_fields = True
+    # The corpus must actually exercise the failure mode, or the pin is vacuous.
+    assert saw_bracketed_fields, (
+        "tiny corpus produced no string where split(';') and parse() disagree"
+    )

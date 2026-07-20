@@ -17,10 +17,14 @@
   Executed under **T-M5j** (`T-M5/`). The primary-anchor fallback (`DATA.md`
   §2) is unchanged; HIC application claims are stated as censored-subset
   claims with the yield table attached.
-- **OD1** — Architecture: additive `metric_space/` now (recommended) vs also
-  reparenting to `isomorphisms/` (T-M6, optional/last).
-- **OD2** — `levi_reduction` home: `core/levi_reduction.py` (recommended) vs a
-  new shared `reductions/` package.
+- **OD1** — **[RESOLVED 2026-07-20, PI (Mario), at the S5 sweep]** Architecture:
+  the **additive `metric_space/`** (the recommended option, de facto since
+  T-M1a) is adopted. Reparenting to `isomorphisms/` remains exactly the
+  optional T-M6 (S6, explicit opt-in) — executing T-M6 is the only path that
+  reopens this.
+- **OD2** — **[RESOLVED 2026-07-20, PI (Mario), at the S5 sweep]**
+  `levi_reduction` home: **`core/levi_reduction.py`** (the recommended option,
+  de facto since Phase 2; every Levi backend imports it from there).
 - **OD3** — **[resolved 2026-07-18, author]** HyperCOT: dedicated pinned conda
   env via subprocess; runs on the small/mid corpora only, its `O(n³)`/pair
   scale limit stated in every results table (part of the D-ART2 package).
@@ -28,8 +32,11 @@
   edit ops. The `networkx.graph_edit_distance`-on-Levi wrapper is rejected: GED
   on the bipartite Levi graph is not obviously equal to HGED (vertex/edge nodes
   differ semantically; the cost-lift needs an unproven correctness argument).
-- **OD5** — `metric_space/metrics/embedding.py`: keep the classical-MDS solve +
-  stress as a `src` primitive (recommended) vs push all of MDS into experiments.
+- **OD5** — **[RESOLVED 2026-07-20, PI (Mario), at the S5 sweep]**
+  `metric_space/metrics/embedding.py`: the classical-MDS solve + stress stay a
+  **`src` primitive** (the recommended option; unit-tested at T-M5f, consumed
+  by the T-M5b/T-M5j pipelines). Only the CV-dimension *loop* lives in
+  experiments.
 - **D-TA1** — **[resolved 2026-07-09, PI]** Which algorithm carries the
   article's `w*`. Theorem A (completeness ⇔) holds only for
   `greedy_min_complete` (tie-complete branching); the current default

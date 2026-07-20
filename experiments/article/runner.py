@@ -57,8 +57,12 @@ logger = logging.getLogger(__name__)
 def _build_dataset(cell: CellSpec):  # noqa: ANN202
     """Instantiate a HypergraphDataset from *cell*.
 
-    The seed from *cell* is injected as the ``seed`` kwarg so each cell is
-    independently reproducible.
+    Named branches (correlation_corpus, perturbation_ladder, erdos_renyi) inject
+    ``cell.seed`` as a constructor kwarg because those classes accept ``seed``
+    directly.  The registry fallback uses the :meth:`HypergraphDataset.seed` ABC
+    method instead — registry factories receive ``cell.dataset_params`` un-mutated
+    and cannot be assumed to accept a ``seed`` kwarg (e.g. PlantedFamilyDataset
+    uses ``seed_value``, not ``seed``).
     """
     name = cell.dataset
     params: dict[str, Any] = {**cell.dataset_params, "seed": cell.seed}
@@ -81,10 +85,12 @@ def _build_dataset(cell: CellSpec):  # noqa: ANN202
         from isalhg.datasets.synthetic.erdos_renyi import ErdosRenyiHypergraphs
 
         return ErdosRenyiHypergraphs(**params)
-    # Fallback to registry for future datasets
+    # Fallback to registry for datasets not listed above.
+    # Pass dataset_params un-mutated (no injected "seed" kwarg); bind the
+    # experiment seed via the HypergraphDataset.seed() ABC method instead.
     from isalhg.datasets.registry import get_dataset
 
-    return get_dataset(name, **params)
+    return get_dataset(name, cell.dataset_params).seed(cell.seed)
 
 
 # ---------------------------------------------------------------------------

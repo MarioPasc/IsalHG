@@ -4,17 +4,16 @@
 # T-M5c (clustering), T-M5d (kNN), and T-M5e (shortest path) reuse the
 # cached D.npy files produced here without recomputing.
 #
-# IMPORTANT — runner bug:
-#   experiments/article/runner.py's _build_dataset fallback calls
-#   get_dataset(name, **params) but the registry expects get_dataset(name, params: dict).
-#   The runner CANNOT currently execute planted_families cells via its registry path.
-#   D matrices are therefore computed by:
-#       python -m experiments.article.analysis.mds \
-#           --output-root /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5b/ \
-#           --corpus planted_main
-#   which uses the SAME output layout as the runner would produce, enabling
-#   T-M5c/d/e to load the caches without modification.
-#   Filed for fix: see task-handoff from T-M5b.
+# NOTE — T-M5i (fixed, R1): _build_dataset's registry fallback had two defects:
+#   (1) get_dataset(name, **params) — wrong calling convention (T-M5i initial fix).
+#   (2) params dict contained injected "seed" kwarg, but PlantedFamilyDataset
+#       uses "seed_value", not "seed" — TypeError even with correct convention.
+#   Fixed in T-M5i R1: the fallback now calls
+#       get_dataset(name, cell.dataset_params).seed(cell.seed)
+#   passing dataset_params un-mutated and binding the experiment seed via the
+#   HypergraphDataset.seed() ABC method.
+#   D matrices for T-M5b were computed via analysis.mds (same cache layout);
+#   the runner can now build planted_families cells via its standard path.
 #
 # Cache layout (mirrors runner.run_d_matrix_cell):
 #   {output_root}/d_matrix/planted_families/{label}/seed{seed}/{distance}/D.npy

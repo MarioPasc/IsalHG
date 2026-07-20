@@ -351,3 +351,143 @@ def test_ladder_acceptance_rate_reported(tmp_path):
             "Each ladder must report acceptance_rate from extra['acceptance_attempts']"
         )
         assert 0.0 < ladder["acceptance_rate"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# T11 — Registry fallback: old kwarg-unpack call raises TypeError (T-M5i)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_old_kwarg_style_raises_type_error():
+    """Demonstrates the pre-fix bug (T-M5i): get_dataset(name, **params) raises TypeError.
+
+    get_dataset(name, params: dict) is a positional-dict signature, not **kwargs.
+    Calling it with unpacked kwargs raises TypeError immediately at the call site,
+    regardless of whether the dataset name exists.  This test pins the bug that
+    _build_dataset line 87 had before the fix.
+    """
+    from isalhg.datasets.registry import get_dataset
+
+    with pytest.raises(TypeError):
+        # Simulates the pre-fix: get_dataset(name, **{"n_families": 1, "seed": 42})
+        # which expands to get_dataset(name, n_families=1, seed=42) — wrong calling
+        # convention for a (name, params: dict) signature.
+        get_dataset("planted_families", n_families=1, seed=42)  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# T12 — Registry fallback: positional dict is un-mutated dataset_params (T-M5i R1)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_registry_fallback_passes_unmutated_dataset_params():
+    """Post-fix (T-M5i R1): _build_dataset passes cell.dataset_params un-mutated.
+
+    The registry fallback must NOT inject ``seed`` into the params dict because
+    registry factories (e.g. PlantedFamilyDataset) may not accept a ``seed``
+    kwarg.  Seed binding uses HypergraphDataset.seed() instead.
+
+    TOOTH: the old call get_dataset(name, **params) raises TypeError (T11 above).
+    TOOTH for seed injection: T13 below confirms that injecting ``seed`` raises
+    TypeError even with the correct positional-dict calling convention.
+    """
+    from unittest.mock import MagicMock, patch
+
+    from experiments.article.runner import _build_dataset
+    from experiments.article.schemas import CellSpec
+
+    captured: dict = {}
+    mock_ds = MagicMock()
+
+    def _capturing_get_dataset(name: str, params: dict) -> MagicMock:
+        captured["name"] = name
+        captured["params"] = dict(params)
+        return mock_ds
+
+    cell = CellSpec(
+        type="d_matrix",
+        dataset="planted_families",  # falls through all three named branches
+        seed=42,
+        dataset_params={"n_families": 1, "members_per_family": 2},
+    )
+
+    with patch("isalhg.datasets.registry.get_dataset", _capturing_get_dataset):
+        _build_dataset(cell)
+
+    assert captured["name"] == "planted_families"
+    # dataset_params must be passed un-mutated — no injected "seed" kwarg
+    assert "seed" not in captured["params"], (
+        "registry fallback must not inject 'seed' into params; "
+        "registry factories may not accept it (e.g. PlantedFamilyDataset uses seed_value)"
+    )
+    assert captured["params"].get("n_families") == 1
+
+
+# ---------------------------------------------------------------------------
+# T13 — Seed injection TypeError: positional dict with "seed" fails (T-M5i R1)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_seed_injection_raises_type_error():
+    """Demonstrates the second defect (T-M5i R1): injecting 'seed' into params raises TypeError.
+
+    Even after the calling-convention fix (T11), passing a params dict that
+    contains 'seed' to the planted_families registry factory raises TypeError
+    because PlantedFamilyDataset.__init__() has no 'seed' kwarg (it uses
+    'seed_value').  This pins the defect that the first fix left unresolved.
+    """
+    from isalhg.datasets.registry import get_dataset
+
+    with pytest.raises(TypeError, match="seed"):
+        # Simulates the post-T11 but pre-R1 state: correct calling convention
+        # but wrong content — params dict includes injected "seed" kwarg.
+        get_dataset(
+            "planted_families",
+            {
+                "n_families": 2,
+                "members_per_family": 2,
+                "n_nodes": 5,
+                "k": 3,
+                "n_edges": 4,
+                "n_edits": 1,
+                "max_retries": 50,
+                "seed": 42,  # injected seed — PlantedFamilyDataset uses seed_value
+            },
+        )
+
+
+# ---------------------------------------------------------------------------
+# T14 — Real-path: _build_dataset builds planted_families end-to-end (T-M5i R1)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_planted_families_real_path():
+    """No mocks: _build_dataset builds and iterates planted_families via the registry.
+
+    TOOTH: the pre-R1 code (get_dataset(name, params_with_seed)) raises
+    TypeError as demonstrated by T13.  This test must succeed with the fix.
+    """
+    from experiments.article.runner import _build_dataset
+    from experiments.article.schemas import CellSpec
+
+    cell = CellSpec(
+        type="d_matrix",
+        dataset="planted_families",
+        seed=7,
+        dataset_params={
+            "n_families": 2,
+            "members_per_family": 2,
+            "n_nodes": 5,
+            "k": 3,
+            "n_edges": 4,
+            "n_edits": 1,
+            "max_retries": 50,
+        },
+    )
+    ds = _build_dataset(cell)
+    items = list(ds)
+    # 2 families × 2 members = 4 items
+    assert len(items) == 4, f"Expected 4 items, got {len(items)}"
+    # Each item must be a connected hypergraph (D-CONN1 domain constraint)
+    for item in items:
+        assert item.hypergraph.is_connected(), "All planted-family items must be connected"

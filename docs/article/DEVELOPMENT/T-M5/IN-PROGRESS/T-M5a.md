@@ -68,3 +68,90 @@ at S5.
   Logs: `~/execs/T-M5a/logs/T-M5a-e1prime_mini_corpus_1616143_*.{out,err}`.
 - **Remaining (part 2, S5):** harvest `D.npy` pairs, ours-only ρ + scatter
   figure, bits/Wilcoxon table on the body corpora, close the task.
+
+---
+**Part-2 record (worktree agent, 2026-07-20 16:19 CEST — branch
+worktree-agent-a67f566b0cb0884f4).** Implementation + execution; 12/12
+cell harvesting deferred to orchestrator (3 cells missing exact_hged).
+
+### E1' harvest (9/12 cells, provisional)
+
+Pipeline: `experiments/article/analysis/e1prime_harvest.py` (new). Scans
+the Picasso output root, classifies cells by completeness, pools all
+upper-triangle HGED>0 pairs across complete cells, computes Spearman ρ
+and Pearson r, writes scatter/joint-density figure.
+
+- **Consumed cells** (9): n5_s0, n5_s1, n6_s0, n6_s1, n7_s0, n7_s1,
+  n8_s0, n8_s1, n9_s0.
+- **Missing exact_hged** (3, resubmitted as job 1618786): n9_s1, n10_s0,
+  n10_s1.
+- **N pairs** (HGED>0, pooled): 5,661
+- **Spearman ρ**: 0.6033 (p ≈ 0, aggregate across 9 cells)
+- **Pearson r**: 0.6159
+- **OLS β (d_I = α + β·HGED)**: 0.4626
+- **Per-cell ρ range**: 0.481 (n8_s0) – 0.809 (n6_s0)
+- **Figure**: `/media/.../results/T-M5a/figures/e1prime_figure.pdf`
+- **JSON**: `/media/.../results/T-M5a/figures/e1prime_result.json`
+
+The part-1 smoke (n5_s0 alone) reported ρ=0.633; the 9-cell aggregate
+ρ=0.603 is consistent. Numbers are provisional (9/12 cells).
+
+### Bits harvest — PREMISE HOLDS (corrected; tokenization bug fixed)
+
+Pipeline: `experiments/article/analysis/bits_harvest.py` (new). Directly
+instantiates `PlantedFamilyDataset` (bypasses runner kwarg bug) for
+planted_main (N=60, n=10, k=3) and planted_small (N=20, n=6, k=3),
+computes fixed-width bits per hypergraph, pools, runs Wilcoxon + OLS.
+
+**Tokenization fix (orchestrator R1, 2026-07-20).** The initial commit
+used `w.split(";")` to count tokens, which overcounts ~2.7× because `";"`
+is also a field separator inside brackets in `V[le;i;j;ln1,...,lnj]`
+and `C[le;i]` tokens. The fix replaces the raw split with
+`isalhg.core.instructions.parse(w)` (bracket-aware). The initial
+"PREMISE FALSIFIED" finding was an artifact of this bug and is retracted.
+T-M5l (false handoff filed on that basis) was deleted from OPEN/.
+Stale cached `info_content.json` files were deleted and the harvest
+was re-run. A regression test (`test_tokenization_harvest_n_tokens_equals_parse_count`)
+pins correct tokenization end-to-end.
+
+**Measured (planted_main + planted_small, N=80 pooled; corrected):**
+
+| Metric | planted_main (N=60) | planted_small (N=20) | Pooled (N=80) |
+|---|---|---|---|
+| median r | 1.433 | 1.565 | 1.449 |
+| frac IsalHG shorter | 1.000 | 1.000 | 1.000 |
+| Wilcoxon p (H1: r>1) | — | — | 3.92e-15 |
+| OLS β | — | — | 0.730 |
+
+**Finding: PROPOSAL §4 "compact word" premise HOLDS.** Every hypergraph
+in both corpora compresses: median r = 1.449, fraction_shorter = 1.000,
+Wilcoxon p = 3.92e-15 (one-sided H1: r>1). The corrected median per-corpus
+token counts are: planted_main ≈ 22 tokens (naive split: 44),
+planted_small ≈ 8 tokens (naive: 20). Results sit in the sibling band
+[1.45, 1.89] reported for IsalGraph.
+
+### Code changes (this branch)
+
+- `experiments/article/analysis/e1prime_harvest.py` — NEW harvest
+  pipeline (multi-cell aggregation, scatter/joint-density figure)
+- `experiments/article/analysis/bits_harvest.py` — NEW bits pipeline;
+  corrected to use `parse()` for token counting
+- `experiments/article/analysis/correlation.py` — updated: MI removed
+  (D-ART2); scatter title now shows Spearman ρ + Pearson r
+- `tests/unit/experiments_article/test_e1prime_harvest.py` — 7 tests,
+  all pass
+- `tests/unit/experiments_article/test_bits_harvest.py` — 7 tests,
+  all pass (5 original + 2 new regression tests for tokenization)
+
+### Tests
+
+```
+14 passed  (tests/unit/experiments_article/test_e1prime_harvest.py +
+             tests/unit/experiments_article/test_bits_harvest.py)
+```
+
+### What the orchestrator does at 12/12 harvest (S5 close)
+
+1. Re-run `e1prime_harvest.py` after cells n9_s1/n10_s0/n10_s1 land
+   (job 1618786). Updated ρ replaces the provisional numbers.
+2. Move this file to `T-M5/CLOSED/T-M5a.md`, update scope counts.

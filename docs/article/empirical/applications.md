@@ -110,33 +110,35 @@ first-class descriptors.
   lower stress at matched `D`, and whose `D̂` is smaller (a lower faithful `D̂`
   argues the representation captures structure more compactly).
 
-**Measured (planted corpus, N = 60).** The geometry table below is the paper's
-central characterization. `d_I` is **genuinely non-Euclidean**: the double-centred
-Gram matrix is indefinite (not PSD) with non-Euclidean mass `ν = 0.123` — about
-an eighth of the distance mass lives in negative eigenvalues — and its
-cross-validated intrinsic dimension is `D̂ = 21`, with low residual distortion at
-that dimension (Kruskal stress-1 = 0.053). This `D̂` is the value at this corpus
-size; a dedicated `N`-scaling sweep with an independent Horn parallel-analysis
-cross-check (`../theoretical/geometry.md` §3) shows the estimate is a *lower
-bound* here — it climbs and plateaus near 26 for `N ≥ 240`, with a conservative
-Horn bracket of 12, so the planted geometry's intrinsic dimension is `[12, 26]`.
-Real HIC genre hypergraphs are markedly lower-dimensional (`D̂ ≈ 10`). The nauty-Levi canonical-string
-distance is also non-Euclidean but far less compressible (`ν = 0.029`,
-`D̂ = 39`). The three vector representations are, by construction, Euclidean
-(`ν = 0`): NetLSD sits in a genuinely low dimension (`D̂ = 5`), whereas the WL
-histogram and HPD distances do not concentrate — their cross-validation error
-falls monotonically to the search cap, so their `D̂` is reported as censored at
-that cap rather than as an estimate. The non-Euclidean verdict is what licenses
-the medoid-based clustering of A2 (a metric with negative eigenvalues has no
-faithful centroid), and the per-representation `D̂` is itself a comparison axis.
+**Measured (planted corpus, N = 240, twenty families).** The geometry table
+below is the paper's central characterization, reported on the corpus at which
+the intrinsic-dimension estimate has stabilized. (A smaller N = 60 corpus
+under-resolves it: the `N`-scaling sweep in `../theoretical/geometry.md` §3 shows
+`D̂` climbing from 21 at N = 60 and plateauing at 26 for N ≥ 240, corroborated by
+an independent Horn parallel-analysis bracket of [12, 26]; the applications
+below are run on this same N = 240 corpus so geometry and usefulness are
+measured on one object.) `d_I` is **genuinely non-Euclidean**: the double-centred
+Gram matrix is indefinite (not PSD) with non-Euclidean mass `ν = 0.250` — a
+quarter of the distance mass in negative eigenvalues — and cross-validated
+intrinsic dimension `D̂ = 26` at low residual distortion (Kruskal stress-1 =
+0.062). Real HIC genre hypergraphs are markedly lower-dimensional (`D̂ ≈ 10`,
+`../theoretical/geometry.md` §3). The nauty-Levi canonical-string distance is
+also non-Euclidean and less compressible (`ν = 0.133`, `D̂` censored at the cap).
+The three vector representations are, by construction, Euclidean (`ν = 0`):
+NetLSD sits in a genuinely low dimension (`D̂ = 5`), whereas the WL histogram and
+HPD distances do not concentrate — their cross-validation error falls
+monotonically to the search cap, so their `D̂` is reported as censored at that
+cap rather than as an estimate. The non-Euclidean verdict is what licenses the
+medoid-based clustering of A2 (a metric with negative eigenvalues has no faithful
+centroid), and the per-representation `D̂` is itself a comparison axis.
 
 | Representation | PSD | `ν` | `D̂` | stress@`D̂` | diam/med | `N_10` skew |
 |---|---|---|---|---|---|---|
-| IsalHG (`d_I`) | no | 0.123 | 21 | 0.053 | 1.50 | 0.231 |
-| WL histogram | yes | 0.000 | ≥40 (censored) | 0.240 | 1.10 | 1.777 |
-| NetLSD | yes | 0.000 | 5 | 0.000 | 3.63 | −0.551 |
-| HPD | yes | 0.000 | ≥40 (censored) | 0.010 | 1.41 | 0.490 |
-| nauty-Levi edit | no | 0.029 | 39 | 0.013 | 1.64 | −0.215 |
+| IsalHG (`d_I`) | no | 0.250 | 26 | 0.062 | 1.75 | 1.280 |
+| WL histogram | yes | 0.000 | ≥40 (censored) | 0.636 | 1.10 | 4.586 |
+| NetLSD | yes | 0.000 | 5 | 0.000 | 5.03 | 0.121 |
+| HPD | yes | 0.000 | ≥40 (censored) | 0.038 | 1.55 | 1.081 |
+| nauty-Levi edit | no | 0.133 | ≥40 (censored) | 0.080 | 1.79 | 0.330 |
 
 The theory brackets the distortion: Bourgain (1985) guarantees an `O(log N)`
 embedding exists (so MDS is justified) and Khot–Naor (2006) prove string-edit
@@ -159,14 +161,16 @@ perturbations ⇒ known membership; `../DATA.md` §1).
 - Competitor comparison: same metrics on each `D_rep`; report metrics vs
   corpus density so the sparse/dense behaviour is visible.
 
-**Measured (planted corpus, N = 60, five families).** Recovery of the planted
-partition is modest for every representation, and `d_I` is competitive but not
-best: Adjusted Rand Index is 0.181 for `d_I` (NMI 0.318), against 0.331 for HPD
-(NMI 0.457) and 0.170 for NetLSD, while the WL histogram and the nauty-Levi
-distance fail to recover the families at all (ARI ≈ 0.00). PAM is the correct
-estimator here precisely because the space is non-Euclidean (A1). We report this
-directly: on raw clustering quality `d_I` sits mid-pack; the paper's claim is a
-*licensed* usefulness, not benchmark dominance.
+**Measured (planted corpus, N = 240, twenty families).** Recovering twenty
+planted families from structure alone is a hard task, and recovery is modest for
+every representation — but the relative ordering is stable and `d_I` is a close
+second. Adjusted Rand Index is 0.102 for `d_I` (NMI 0.407), just behind HPD (ARI
+0.120, NMI 0.445), then NetLSD (ARI 0.051, NMI 0.364), while the nauty-Levi and
+WL distances essentially fail (ARI 0.018 and ≈ 0.00). PAM is the correct
+estimator here precisely because the space is non-Euclidean (A1). The conclusion
+carries over from the smaller five-family corpus: on raw clustering quality `d_I`
+sits mid-pack (a close second behind HPD); the paper's claim is *licensed*
+usefulness, not benchmark dominance.
 
 **Measured (real HIC genre, censored subset).** On the two cleanly computable
 IMDB genre datasets (`w*_c`-yield 92.5% and 91.7%), genre is near-unclusterable
@@ -188,14 +192,18 @@ Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
 - Metrics: accuracy, macro-F1, AUC (one-vs-rest). Report vs `k`.
 - Competitor comparison: k-NN on each `D_rep`, same folds.
 
-**Measured (planted corpus, N = 60).** The G1 hubness profile predicts the kNN
-ordering, and the prediction holds: the strongly hub-prone WL histogram
-(skewness 1.777) collapses to chance (AUC-OvR ≈ 0.50), while the benign-hubness
-representations classify well — `d_I` reaches AUC 0.80 and HPD 0.87; the
-nauty-Levi distance, despite low hubness, still trails (AUC 0.56) because its
-avalanche sensitivity (G2) destroys the neighbourhood structure kNN relies on.
-This is the clearest payoff of the no-orphan-geometry rule: a geometric quantity
-measured in G1 forecasts the supervised outcome before the classifier is run.
+**Measured (planted corpus, N = 240, twenty families).** The G1 hubness profile
+predicts the kNN ordering, and the prediction sharpens at this corpus size: the
+WL histogram's hubness rises to 4.586 and its AUC-OvR **collapses to chance
+(0.49)** — the clearest confirmation of the licence. The benign-hubness
+representations classify above chance: HPD leads (AUC 0.83), `d_I` is second
+(0.73), then NetLSD (0.66) and the nauty-Levi distance (0.61, held down by its
+avalanche sensitivity). The strong-hubness→failure prediction holds decisively at
+the extreme (WL); among the benign-hubness representations the residual ordering
+is set by the other measured geometry (concentration, metric structure), which we
+report rather than over-read. This is the payoff of the no-orphan-geometry rule:
+a geometric quantity measured in G1 forecasts the supervised outcome before the
+classifier is run, and the forecast is stable between N = 60 and N = 240.
 
 **Measured (real HIC genre, censored subset).** The same hubness contrast recurs
 on real data. On the two clean IMDB genre datasets the mean AUC-OvR at k = 9 is
@@ -270,3 +278,27 @@ competing representation possesses.
 
 HyperCOT's `O(n³)`-per-pair cost restricts it to the small/mid corpora; its
 rows state the limit rather than hide it (`../COMPETITORS.md` §2).
+
+## Runtime — the cost axis (and the `d_I` compromise)
+
+Every representation's pairwise matrix is timed (wall-clock, per the reporting
+standard). On the N = 240 planted corpus (28,680 pairs) the `D`-matrix
+wall-clock is: nauty-Levi 0.05 s, WL 0.09 s, **`d_I` 0.18 s**, NetLSD 0.27 s, HPD
+0.88 s; HyperCOT is `O(n³)` per pair (tractable only on tiny instances). `d_I`
+is the **compromise the other axes point to**: the two representations faster
+than it are disqualified on quality — nauty's geometry is avalanche-unusable
+(G2) and WL's hubness forces chance-level kNN (A3) — while the one that edges it
+on task metrics, HPD, costs ~5× the wall-clock, has *no decoder* (cannot run
+A4), and fails on a third of real HIC instances (its vendored portrait). `d_I`
+is the only representation that is simultaneously fast, competitive on task
+metrics (a close second on A2 and A3), decodable, and geometrically
+characterizable.
+
+The one honesty caveat: the runtime advantage is **per-instance-size dependent**.
+`w*_c` cost scales with hypergraph size and tie-symmetry, so `d_I` is fast on
+small-to-moderate instances (planted, most real hypergraphs) and becomes the
+*expensive* representation on large near-symmetric inputs — the mechanism behind
+the HIC censoring (`../DATA.md` §2). It is the mirror image of HyperCOT's
+profile, which is cheap per small instance but explodes with instance size. The
+cost claim is therefore "fast and capable on small-to-moderate instances,"
+stated with its size dependence, not a universal speed claim.

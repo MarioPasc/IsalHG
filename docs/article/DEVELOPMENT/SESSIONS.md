@@ -453,6 +453,20 @@ matrix filled (A4).
 
 ---
 
+- **Post-S4 addendum #2, 2026-07-20 evening (PI's own parallel session —
+  recorded here by the S5 orchestrator for continuity).** T-M5l (D̂
+  robustness: Horn parallel analysis + N-scaling sweep + budget-Shepard)
+  filed, executed, merged (`19fa344`); finding: D̂ = 21 at N = 60 is an
+  under-resolved lower bound that plateaus at 26 (Horn bracket [12, 26]).
+  Consequence executed in the same session: `planted_n240` (20 families × 12)
+  added across the A1/A2/A3 pipelines (`a1a6e7a`) and **N = 240 promoted to
+  the primary corpus** with a runtime axis (`0360b08`) — geometry and
+  applications now measured on one object (ν = 0.250, D̂ = 26; A2 ARI: HPD
+  0.120 > d_I 0.102; A3 AUC: HPD 0.83 > d_I 0.73, WL collapses at hubness
+  4.586). E1'/bits are corpus-independent (own mini-corpus + body corpora)
+  and were not invalidated; the S5 orchestrator synced the remaining prose
+  (G1 block) and extended bits to planted_n240.
+
 ## S5 — Discussion evidence & closure
 
 **Sequence.**
@@ -478,7 +492,69 @@ paper; `DECISIONS.md` has no silently-unresolved entry.
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **Session run 2026-07-20 ~16:00–00:00 CEST (Fable orchestrator). S5
+  functionally complete; row left unticked pending only the T-M5a 12/12
+  re-harvest (Picasso job 1618786, PI: let it run).** Preflight baselines
+  1081/8/16, ruff 3, mypy 21/7; snapshot `wip/orchestrator-20260720-1602`.
+- *Stated deviation from the `[O]`-only plan:* per the human's explicit
+  directive, the three implementation lanes ran as ledger-workers
+  (T-M5a pt-2 ∥ T-M5i ∥ T-M5k) with the orchestrator keeping HPC ops,
+  verification, merges, and closure. Every worker needed exactly the
+  verification discipline the plan assumes: **all three self-reported green
+  and all three carried defects their own checks hid.**
+- *Preflight finds:* (1) three fabricated stress@D̂ cells in the
+  user-committed A1 prose table (0.643/0.170/0.242 vs artifact
+  0.240/0.010/0.013; matched-D reading ruled out by recomputation) — fixed
+  `e16d0d6` (later superseded by the N=240 rewrite). (2) The T-M5j R2 HPD
+  patch had clobbered the two clean HIC datasets' tables to HPD-only rows —
+  filed T-M5k. (3) The three missing E1' cells died OOM (16.7 GB)/timeout —
+  resubmitted as job 1618786 (100 GB/72 h) before fan-out.
+- *T-M5i (2 rounds, merged `9eb12cc`):* R1 fix left the injected `seed`
+  kwarg reaching registry factories (its mock-based test hid it; caught by
+  a real-path repro) → R2 passes `dataset_params` un-mutated + binds the
+  cell seed via `HypergraphDataset.seed()`; real-path test T14. Named
+  branches untouched.
+- *T-M5k (1 round, merged `3a908f4`):* root cause = `run_hic_dataset` step 6
+  truncating tables to current-run rows; `_merge_repr_rows` fix + 4
+  regression tests; six tables regenerated from D.npy caches (backups under
+  `.pre-t-m5k-backup/`). Orchestrator verification vs the raw matrices found
+  **two transcription errors in the T-M5j closing note itself** (NetLSD
+  Wri-Genre-M hub 0.403→1.571; NautyEdit clean-mean AUC@9 0.640→0.654, tying
+  NetLSD) — correction note appended to T-M5j (`53a1555`), A3-HIC prose
+  narrowed to "hubness contrast recurs".
+- *T-M5a pt-2 (2 rounds, merged `6d35fd1`):* the worker's headline
+  "PREMISE FALSIFIED (bits)" was **refuted by verification** — its
+  `w.split(";")` token count fragments bracketed V/C tokens (~2×);
+  with the repo parser every hypergraph compresses (median r 1.433/1.565,
+  in-band). The false T-M5l handoff it had filed was retracted on-branch;
+  regression tests pin the tokenizer. E1' side verified against an
+  independent orchestrator computation (ρ=0.6033, N=5,661 — exact match).
+  The same split-bug existed dormant in `runner.run_info_content_cell`
+  (it had corrupted the v2 smoke bits, median r 0.51) — orchestrator fix
+  `3fd94ce` with a fail-then-pass regression test (T15).
+- *Post-merge, post-regime-change sync:* G1 measured block → N=240 values
+  (verified vs `geometry_table_planted_n240`; `bcb0ba0`); bits extended to
+  planted_n240 (`882b62f`; N=320 pooled median r=1.441, p=1.6e-54, β=0.749);
+  measured E1'(provisional) + bits blocks folded into `correlation.md`
+  (`b482ab4`). All A1/A2/A3 N=240 prose numbers verified against the drive
+  artifacts (all faithful).
+- *Closure sweep:* T-M0c proof-side renaming verified executed (0 STS(13)
+  in the tex, PDF recompiled 2026-07-19; the "remaining S5 item" bullet
+  above was stale). T-TAi's "gates T-M5a" claim expired (note appended,
+  `fb225b8`) — **no OPEN task gates the paper** (T-M4a/T-M6/T-OPTc/T-TAi/
+  T-TBe all optional/stretch). OD1/OD2/OD5 resolved (PI, `5ad163b`) —
+  DECISIONS.md has no silently-unresolved entry. Baselines at sweep:
+  **1108 passed / 8 skipped / 16 deselected, ruff 3, mypy 21/7** (+27 tests
+  over preflight, zero failures, zero drift across three serial merges).
+- *DQ1' probe-design lesson (for the record):* the probe timed ladder pairs
+  only; the expensive E1' pairs are the cross-ladder ones — the (10,8)
+  ceiling was optimistic for the oracle (not for `w*_c`). Recorded in the
+  T-M5a addendum; `correlation.md` now carries the oracle-ceiling note as
+  discussion-supporting evidence.
+- *Remaining to tick this row:* job 1618786 lands → idempotent
+  `e1prime_harvest` re-run (12/12), final ρ into `correlation.md`, T-M5a →
+  `CLOSED/`, tick. Fallback if 72 h expires: pin E1' on the 9 completed
+  cells (PI to confirm; protocol in the T-M5a addendum).
 
 ---
 

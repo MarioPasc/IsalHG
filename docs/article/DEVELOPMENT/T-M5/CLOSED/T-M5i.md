@@ -29,7 +29,7 @@ to the D-matrix cache layout; any analysis code.
 
 ---
 
-**Closing note (2026-07-20):**
+**Closing note (2026-07-20, updated after orchestrator R1 review):**
 
 **Premise check.** The task's verification note asked: "the E1' Picasso run
 (perturbation_ladder with non-empty dataset_params) ran through the runner
@@ -42,26 +42,52 @@ datasets not covered by the three named branches: `planted_families`,
 `exhaustive_small`, `symmetric_designs`, `sts_catalog`, `arb_benson`,
 `hic_atlas`, and any future registry dataset.
 
-**Fix.** One character changed on line 87:
-- Before: `return get_dataset(name, **params)`
-- After:  `return get_dataset(name, params)`
+**Two-defect fix (R1 — orchestrator review found second defect).**
 
-**YAML note updated.** `mds_planted.yaml` IMPORTANT block replaced with a
-post-fix note (workaround language removed).
+Defect 1 (initial fix): `get_dataset(name, **params)` unpacked the dict as
+kwargs; the registry expects a positional dict `get_dataset(name, params)`.
+Fixed: `return get_dataset(name, **params)` → `return get_dataset(name, params)`.
 
-**Tests added to `tests/unit/experiments_article/test_runner.py`:**
+Defect 2 (R1): `params` was built as `{**cell.dataset_params, "seed": cell.seed}`
+before the dispatch — the injected `"seed"` kwarg reaches the factory, which
+calls `PlantedFamilyDataset(**params)`. `PlantedFamilyDataset.__init__()` uses
+`seed_value`, not `seed` → `TypeError: got an unexpected keyword argument 'seed'`.
+The initial fix's mock test (T12) hid this by never invoking a real factory.
+Fixed (R1): pass `cell.dataset_params` un-mutated to the registry; bind the
+experiment seed via `HypergraphDataset.seed()` (the documented ABC seed-binding
+protocol): `return get_dataset(name, cell.dataset_params).seed(cell.seed)`.
+
+The three named branches (`correlation_corpus`, `perturbation_ladder`,
+`erdos_renyi`) are untouched — each injects `seed` as a constructor kwarg that
+their classes accept, and their pinned output (including the Picasso E1' data)
+is byte-identical.
+
+**Process error (R1).** Initial commit edited `docs/article/DEVELOPMENT/README.md`
+(orchestrator-owned file). Reverted to main's version in R1 commit.
+
+**YAML note updated.** `mds_planted.yaml` note updated to accurately describe
+the R1 fix (positional dict + `.seed()` protocol).
+
+**Tests in `tests/unit/experiments_article/test_runner.py`:**
 - T11 `test_build_dataset_old_kwarg_style_raises_type_error`: calls
-  `get_dataset("planted_families", n_families=1, seed=42)` (the pre-fix
-  unpacked-kwarg form) and asserts `TypeError` — demonstrates the bug existed.
-- T12 `test_build_dataset_registry_fallback_passes_positional_dict`: patches
-  `isalhg.datasets.registry.get_dataset` with a capturing mock, creates a
-  `planted_families` CellSpec, calls `_build_dataset`, and asserts the mock
-  received `(name, params_dict)` form with the correct values — confirms the fix.
+  `get_dataset("planted_families", n_families=1, seed=42)` and asserts
+  `TypeError` — pins the original kwarg-unpack bug.
+- T12 `test_build_dataset_registry_fallback_passes_unmutated_dataset_params`:
+  patches registry, verifies `dataset_params` passed un-mutated (no injected
+  `"seed"` in captured params) — pins calling convention + content.
+- T13 `test_build_dataset_seed_injection_raises_type_error`: calls
+  `get_dataset("planted_families", {..., "seed": 42})` and asserts `TypeError`
+  — pins the second defect (seed injection into registry factory).
+- T14 `test_build_dataset_planted_families_real_path`: no mocks; calls
+  `_build_dataset` with a real `planted_families` CellSpec and asserts 4 items
+  are returned, all connected — the end-to-end acceptance test.
 
-**Closing check:**
+**Closing check (R1):**
 ```
+pytest tests/unit/experiments_article/test_runner.py -v
+16 passed
 pytest tests/unit/ -q
-914 passed, 5 skipped in 133.15s
+[pending — run in background; prior baseline: 914 passed, 5 skipped]
 ruff: 14 errors (baseline, unchanged)
 mypy: 21 errors in 7 files (baseline, unchanged)
 ```

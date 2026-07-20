@@ -4,11 +4,16 @@
 # T-M5c (clustering), T-M5d (kNN), and T-M5e (shortest path) reuse the
 # cached D.npy files produced here without recomputing.
 #
-# NOTE — T-M5i (fixed): _build_dataset previously called get_dataset(name, **params)
-#   instead of get_dataset(name, params: dict), raising TypeError for planted_families.
-#   Fixed in T-M5i: runner.py line 87 now passes the dict positionally.
+# NOTE — T-M5i (fixed, R1): _build_dataset's registry fallback had two defects:
+#   (1) get_dataset(name, **params) — wrong calling convention (T-M5i initial fix).
+#   (2) params dict contained injected "seed" kwarg, but PlantedFamilyDataset
+#       uses "seed_value", not "seed" — TypeError even with correct convention.
+#   Fixed in T-M5i R1: the fallback now calls
+#       get_dataset(name, cell.dataset_params).seed(cell.seed)
+#   passing dataset_params un-mutated and binding the experiment seed via the
+#   HypergraphDataset.seed() ABC method.
 #   D matrices for T-M5b were computed via analysis.mds (same cache layout);
-#   the runner can now also build planted_families cells directly.
+#   the runner can now build planted_families cells via its standard path.
 #
 # Cache layout (mirrors runner.run_d_matrix_cell):
 #   {output_root}/d_matrix/planted_families/{label}/seed{seed}/{distance}/D.npy

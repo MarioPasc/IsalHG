@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked, +1 in-progress) | 9 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 1 (+1 blocked, +1 in-progress) | 8 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -136,7 +136,7 @@ the body (HGED-free, characterize → exploit):
    T-M5b ✔ MDS flagship + geometry table ← M1b ✔, M3a–d ✔, M4 ✔, M5f ✔ (DONE 2026-07-19)
           [D.npy caches in /media/.../results/T-M5b/d_matrix/; T-M5c/d/e read these]
           [runner-bug workaround documented; fix filed → T-M5i]
-   T-M5i ✔ fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (DONE 2026-07-20; one-line fix get_dataset(name, params); 2 regression tests added; baselines unchanged)
+   T-M5i  fix runner._build_dataset kwarg mismatch ← T-M5b ✔ (OPEN; low priority)
    T-M5c ✔ clustering + dendrogram (A2) ← T-M5b ✔ (DONE 2026-07-19; ARI/NMI vs planted labels)
    T-M5d ✔ kNN (A3, reads G1) ← T-M5b ✔ (DONE 2026-07-19; G1 hubness→kNN prediction confirmed)
    T-M5e ✔ shortest path (A4, ladder-scored, decoded intermediates) ← M2c ✔, M3a ✔, M5g ✔, M5b ✔ (DONE 2026-07-19; decodability differentiator + monotonicity=1.0; recovery null)
@@ -181,7 +181,7 @@ capability matrix (A4) is the categorical differentiator.
 **The only remaining article-critical work is T-M5a** (discussion evidence):
 IN-PROGRESS — part 1 (DQ1' probe + Picasso E1' job 1616143) ran at S3;
 part 2 (harvest + ρ figure + bits table) runs at S5. T-M5i (runner kwarg
-fix) DONE 2026-07-20 — closed off the critical path.
+fix) stays OPEN, low-priority, off the critical path.
 
 **Runnable now:** S5 = `[O]` T-M5a part 2 (Picasso harvest) + the closure
 sweep. Nothing in S4 remains.

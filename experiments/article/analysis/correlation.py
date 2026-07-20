@@ -1,16 +1,18 @@
-"""E1 — correlation analysis: d_I vs HGED.
+"""E1' — single-cell correlation helper: d_I vs HGED.
 
-Ports IsalGraph Table 2 (Spearman ρ / Pearson r) and adds mutual information
-(novel second axis not in the sibling paper).
+Rescoped at D-ART2 (2026-07-18): MI is dropped; the figure reports
+Spearman ρ + Pearson r (ours only, no competitor rows, no density sweep).
+MI was retired with the HGED head-to-head axis (PROPOSAL §5, OQ-F).
+
+For the multi-cell E1' aggregate (the article figure) use
+``experiments.article.analysis.e1prime_harvest.harvest_e1prime``.
+This module is the single-cell helper useful for smoke tests and per-cell
+diagnostics.
 
 Usage::
 
     from experiments.article.analysis.correlation import analyze_correlation
     result = analyze_correlation(d_I_dir, hged_dir, output_dir)
-
-The ``d_I_dir`` and ``hged_dir`` paths should point to the per-distance
-subdirectories produced by ``run_d_matrix_cell`` (containing ``D.npy`` and
-``meta.json``).
 """
 
 from __future__ import annotations
@@ -29,10 +31,11 @@ def analyze_correlation(
     d_I_dir: Path,
     hged_dir: Path,
     output_dir: Path,
-    *,
-    n_bins: int = 20,
 ) -> dict[str, Any]:
-    """Compute Spearman ρ, Pearson r, and MI between d_I and HGED.
+    """Compute Spearman ρ and Pearson r between d_I and HGED for one cell.
+
+    MI is not computed (retired at D-ART2; was for the competitor head-to-head
+    axis which the v3 scope drops).
 
     Parameters
     ----------
@@ -42,21 +45,16 @@ def analyze_correlation(
         Directory containing ``D.npy`` for ``exact_hged``.
     output_dir : Path
         Where to write ``correlation_result.json`` and the scatter figure.
-    n_bins : int
-        Number of bins for the mutual-information plug-in estimator.
 
     Returns
     -------
     dict
         Keys: spearman_rho, spearman_pvalue, pearson_r, pearson_pvalue,
-        mutual_information_bits, ols_slope_beta, ols_intercept, n_pairs.
+        ols_slope_beta, ols_intercept, n_pairs.
     """
-    from isalhg.metric_space.metrics.association import (
-        mutual_information_binned,
-        pearson_r,
-        spearman_r,
-        triu_vector,
-    )
+    from scipy.stats import pearsonr, spearmanr
+
+    from isalhg.metric_space.metrics.association import triu_vector
 
     result_path = output_dir / "correlation_result.json"
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -64,20 +62,16 @@ def analyze_correlation(
     D_I = np.load(d_I_dir / "D.npy")
     D_hged = np.load(hged_dir / "D.npy")
 
-    # Restrict to pairs where both distances are strictly positive
     x = triu_vector(D_hged)
     y = triu_vector(D_I)
-    mask = (x > 0) & (y > 0)
+    mask = x > 0
     x_filt, y_filt = x[mask], y[mask]
 
     if len(x_filt) < 5:
         logger.warning("Only %d valid pairs — correlation will be unreliable", len(x_filt))
 
-    rho, rho_pval = spearman_r(x_filt, y_filt)
-    r, r_pval = pearson_r(x_filt, y_filt)
-    mi = mutual_information_binned(x_filt, y_filt, n_bins=n_bins)
-
-    # OLS: d_I = a + beta * HGED
+    rho, rho_pval = spearmanr(x_filt, y_filt)
+    r_pear, r_p = pearsonr(x_filt, y_filt)
     beta, alpha = _ols(x_filt, y_filt)
 
     with open(d_I_dir / "meta.json") as f:
@@ -85,12 +79,11 @@ def analyze_correlation(
 
     result: dict[str, Any] = {
         "n_pairs": int(mask.sum()),
-        "n_pairs_total": len(x),
+        "n_pairs_total": int(len(x)),
         "spearman_rho": float(rho),
         "spearman_pvalue": float(rho_pval),
-        "pearson_r": float(r),
-        "pearson_pvalue": float(r_pval),
-        "mutual_information_bits": float(mi),
+        "pearson_r": float(r_pear),
+        "pearson_pvalue": float(r_p),
         "ols_slope_beta": float(beta),
         "ols_intercept": float(alpha),
         "mean_max_degree": d_I_meta.get("mean_max_degree"),
@@ -103,10 +96,9 @@ def analyze_correlation(
     _scatter_figure(x_filt, y_filt, result, output_dir / "scatter_d_I_vs_hged.pdf")
 
     logger.info(
-        "E1 correlation: rho=%.3f  r=%.3f  MI=%.3f bits  beta=%.3f  n=%d",
+        "E1' (single cell): rho=%.3f  r=%.3f  beta=%.3f  n=%d",
         rho,
-        r,
-        mi,
+        r_pear,
         beta,
         mask.sum(),
     )
@@ -114,11 +106,12 @@ def analyze_correlation(
 
 
 def _ols(x: np.ndarray, y: np.ndarray) -> tuple[float, float]:
-    """Return (slope, intercept) of OLS regression y = alpha + beta*x."""
+    """Return (slope beta, intercept alpha) for OLS y = alpha + beta*x."""
     if len(x) < 2:
         return float("nan"), float("nan")
     x_c = x - x.mean()
-    beta = float(np.dot(x_c, y) / np.dot(x_c, x_c)) if x_c.dot(x_c) > 0 else float("nan")
+    denom = x_c.dot(x_c)
+    beta = float(x_c.dot(y) / denom) if denom > 0 else float("nan")
     alpha = float(y.mean() - beta * x.mean())
     return beta, alpha
 
@@ -129,7 +122,7 @@ def _scatter_figure(
     result: dict[str, Any],
     out_path: Path,
 ) -> None:
-    """Save scatter plot of HGED (x) vs d_I (y) with OLS line."""
+    """Scatter of HGED (x-axis) vs d_I (y-axis) with OLS line."""
     try:
         import matplotlib
 
@@ -140,7 +133,7 @@ def _scatter_figure(
         return
 
     fig, ax = plt.subplots(figsize=(5, 4))
-    ax.scatter(x, y, alpha=0.4, s=8, color="#2166ac", rasterized=True)
+    ax.scatter(x, y, alpha=0.4, s=8, color="#2166ac", rasterized=True, linewidths=0)
 
     beta, alpha = result["ols_slope_beta"], result["ols_intercept"]
     x_line = np.array([x.min(), x.max()])
@@ -149,8 +142,10 @@ def _scatter_figure(
     ax.set_xlabel("HGED (Qin 2023)")
     ax.set_ylabel("$d_I$ (IsalHG Levenshtein)")
     rho = result["spearman_rho"]
+    r_pear = result["pearson_r"]
     ax.set_title(
-        f"ρ={rho:.3f}  MI={result['mutual_information_bits']:.2f} bits  n={result['n_pairs']}"
+        f"ρ={rho:.3f}  r={r_pear:.3f}  n={result['n_pairs']}",
+        fontsize=9,
     )
     ax.legend(fontsize=8)
     fig.tight_layout()

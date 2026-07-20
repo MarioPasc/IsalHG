@@ -68,3 +68,82 @@ at S5.
   Logs: `~/execs/T-M5a/logs/T-M5a-e1prime_mini_corpus_1616143_*.{out,err}`.
 - **Remaining (part 2, S5):** harvest `D.npy` pairs, ours-only ρ + scatter
   figure, bits/Wilcoxon table on the body corpora, close the task.
+
+---
+**Part-2 record (worktree agent, 2026-07-20 16:19 CEST — branch
+worktree-agent-a67f566b0cb0884f4).** Implementation + execution; 12/12
+cell harvesting deferred to orchestrator (3 cells missing exact_hged).
+
+### E1' harvest (9/12 cells, provisional)
+
+Pipeline: `experiments/article/analysis/e1prime_harvest.py` (new). Scans
+the Picasso output root, classifies cells by completeness, pools all
+upper-triangle HGED>0 pairs across complete cells, computes Spearman ρ
+and Pearson r, writes scatter/joint-density figure.
+
+- **Consumed cells** (9): n5_s0, n5_s1, n6_s0, n6_s1, n7_s0, n7_s1,
+  n8_s0, n8_s1, n9_s0.
+- **Missing exact_hged** (3, resubmitted as job 1618786): n9_s1, n10_s0,
+  n10_s1.
+- **N pairs** (HGED>0, pooled): 5,661
+- **Spearman ρ**: 0.6033 (p ≈ 0, aggregate across 9 cells)
+- **Pearson r**: 0.6159
+- **OLS β (d_I = α + β·HGED)**: 0.4626
+- **Per-cell ρ range**: 0.481 (n8_s0) – 0.809 (n6_s0)
+- **Figure**: `/media/.../results/T-M5a/figures/e1prime_figure.pdf`
+- **JSON**: `/media/.../results/T-M5a/figures/e1prime_result.json`
+
+The part-1 smoke (n5_s0 alone) reported ρ=0.633; the 9-cell aggregate
+ρ=0.603 is consistent. Numbers are provisional (9/12 cells).
+
+### Bits harvest — PREMISE FALSIFIED
+
+Pipeline: `experiments/article/analysis/bits_harvest.py` (new). Directly
+instantiates `PlantedFamilyDataset` (bypasses runner kwarg bug) for
+planted_main (N=60, n=10, k=3) and planted_small (N=20, n=6, k=3),
+computes fixed-width bits per hypergraph, pools, runs Wilcoxon + OLS.
+
+**Measured (planted_main + planted_small, N=80 pooled):**
+
+| Metric | planted_main (N=60) | planted_small (N=20) | Pooled (N=80) |
+|---|---|---|---|
+| median r | 0.707 | 0.631 | 0.697 |
+| frac IsalHG shorter | 0.000 | 0.000 | 0.000 |
+| Wilcoxon p (H1: r>1) | 1 | 1 | 1 |
+| OLS β | — | — | 1.265 |
+
+**Finding: PROPOSAL §4 "compact word" premise is FALSE for these corpora.**
+At k=3, |Σ_HG| = 13, log₂(13) = 3.70 bits/token. A planted_main
+hypergraph (n=10, m=10) has canonical string length ≈45 tokens = 166 bits
+vs ≈111 bits for the incidence list (r ≈ 0.74). Breakeven would require
+≤30 tokens — unreachable at this parameter range. The sibling (IsalGraph,
+k=2) achieved r ∈ [1.45, 1.89] because log₂(8) = 3 bits/token and graph
+strings are shorter (fewer pointer moves for arity-2 edges). PI decision
+required — filed as **T-M5l** (`T-M5/OPEN/T-M5l.md`).
+
+### Code changes (this branch)
+
+- `experiments/article/analysis/e1prime_harvest.py` — NEW harvest
+  pipeline (multi-cell aggregation, scatter/joint-density figure)
+- `experiments/article/analysis/bits_harvest.py` — NEW bits pipeline
+  (direct dataset instantiation, bypasses runner kwarg bug)
+- `experiments/article/analysis/correlation.py` — updated: MI removed
+  (D-ART2); scatter title now shows Spearman ρ + Pearson r
+- `tests/unit/experiments_article/test_e1prime_harvest.py` — 7 tests,
+  all pass
+- `tests/unit/experiments_article/test_bits_harvest.py` — 5 tests,
+  all pass (including teeth test for nan ratio)
+
+### Tests
+
+```
+12 passed  (tests/unit/experiments_article/test_e1prime_harvest.py +
+             tests/unit/experiments_article/test_bits_harvest.py)
+```
+
+### What the orchestrator does at 12/12 harvest (S5 close)
+
+1. Re-run `e1prime_harvest.py` after cells n9_s1/n10_s0/n10_s1 land
+   (job 1618786). Updated ρ replaces the provisional numbers.
+2. Decide on T-M5l (bits premise) with PI before closing T-M5a.
+3. Move this file to `T-M5/CLOSED/T-M5a.md`, update scope counts.

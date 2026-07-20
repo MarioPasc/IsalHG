@@ -1,6 +1,6 @@
 # T-M5j — HIC OD6 real-data exhibit (A1/A2/A3 on IMDB genre, censored)
 **Declared:** 2026-07-20 (PI-directed, OD6 resolved — `DECISIONS.md`)
-**Status:** OPEN
+**Status:** IN-PROGRESS
 **Depends on:** T-M5b ✔ (MDS + geometry helpers), T-M5c ✔ (clustering), T-M5d ✔ (kNN),
 T-M4' ✔ (HIC atlas loader), T-M3a–d ✔ (competitors)
 **Context to read first:**

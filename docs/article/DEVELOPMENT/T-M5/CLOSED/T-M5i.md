@@ -85,9 +85,9 @@ the R1 fix (positional dict + `.seed()` protocol).
 **Closing check (R1):**
 ```
 pytest tests/unit/experiments_article/test_runner.py -v
-16 passed
+16 passed in 6.93s
 pytest tests/unit/ -q
-[pending — run in background; prior baseline: 914 passed, 5 skipped]
+916 passed, 5 skipped in 170s  (+2 from T13+T14)
 ruff: 14 errors (baseline, unchanged)
 mypy: 21 errors in 7 files (baseline, unchanged)
 ```

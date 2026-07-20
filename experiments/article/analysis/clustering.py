@@ -70,6 +70,16 @@ CORPUS_CONFIGS: dict[str, dict[str, Any]] = {
         "n_edits": 3,
         "max_retries": 300,
     },
+    "planted_n240": {
+        "n_families": 20,
+        "members_per_family": 12,
+        "n_nodes": 10,
+        "k": 3,
+        "n_edges": 10,
+        "seed_value": 42,
+        "n_edits": 3,
+        "max_retries": 300,
+    },
     "planted_small": {
         "n_families": 4,
         "members_per_family": 5,
@@ -1012,7 +1022,7 @@ def main(argv: list[str] | None = None) -> int:
 
     corpus_label: str = args.corpus
     corpus_cfg = CORPUS_CONFIGS[corpus_label]
-    distance_names = MAIN_DISTANCES if corpus_label == "planted_main" else SMALL_DISTANCES
+    distance_names = SMALL_DISTANCES if corpus_label == "planted_small" else MAIN_DISTANCES
 
     rows = run_clustering_pipeline(
         output_root=args.output_root,

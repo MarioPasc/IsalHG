@@ -58,6 +58,16 @@ CORPUS_CONFIGS: dict[str, dict[str, Any]] = {
         "n_edits": 3,
         "max_retries": 300,
     },
+    "planted_n240": {
+        "n_families": 20,
+        "members_per_family": 12,
+        "n_nodes": 10,
+        "k": 3,
+        "n_edges": 10,
+        "seed_value": 42,
+        "n_edits": 3,
+        "max_retries": 300,
+    },
     "planted_small": {
         "n_families": 4,
         "members_per_family": 5,
@@ -621,7 +631,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--corpus",
-        choices=["planted_main", "planted_small", "all"],
+        choices=["planted_main", "planted_n240", "planted_small", "all"],
         default="all",
         help="Which corpus to run.",
     )
@@ -659,8 +669,8 @@ def main(argv: list[str] | None = None) -> None:
 
     for corpus_label in corpora_to_run:
         corpus_cfg = CORPUS_CONFIGS[corpus_label]
-        distance_names = MAIN_DISTANCES if corpus_label == "planted_main" else SMALL_DISTANCES
-        k_values = K_VALUES_MAIN if corpus_label == "planted_main" else K_VALUES_SMALL
+        distance_names = SMALL_DISTANCES if corpus_label == "planted_small" else MAIN_DISTANCES
+        k_values = K_VALUES_SMALL if corpus_label == "planted_small" else K_VALUES_MAIN
 
         run_knn_pipeline(
             output_root=args.output_root,

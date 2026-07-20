@@ -74,6 +74,16 @@ CORPUS_CONFIGS: dict[str, dict[str, Any]] = {
         "n_edits": 3,
         "max_retries": 300,
     },
+    "planted_n240": {
+        "n_families": 20,
+        "members_per_family": 12,
+        "n_nodes": 10,
+        "k": 3,
+        "n_edges": 10,
+        "seed_value": 42,
+        "n_edits": 3,
+        "max_retries": 300,
+    },
     "planted_small": {
         "n_families": 4,
         "members_per_family": 5,

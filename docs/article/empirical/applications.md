@@ -192,11 +192,11 @@ avalanche sensitivity (G2) destroys the neighbourhood structure kNN relies on.
 This is the clearest payoff of the no-orphan-geometry rule: a geometric quantity
 measured in G1 forecasts the supervised outcome before the classifier is run.
 
-**Measured (real HIC genre, censored subset).** The same ordering recurs on real
-data. On the two clean IMDB genre datasets the mean AUC-OvR at k = 9 is 0.673
-for `d_I` and 0.654 for NetLSD (the two leaders), against 0.624 for the WL
-histogram, which again trails in line with its elevated real-data hubness
-(skewness 4.5–7.4). The agreement of the hubness→kNN prediction across synthetic
+**Measured (real HIC genre, censored subset).** The same hubness contrast recurs
+on real data. On the two clean IMDB genre datasets the mean AUC-OvR at k = 9 is
+0.673 for `d_I`, followed by NetLSD and the nauty-Levi edit distance (both
+0.654), against 0.624 for the WL histogram, which again trails in line with its
+elevated real-data hubness (skewness 4.5–7.4). The agreement of the hubness→kNN prediction across synthetic
 *and* real corpora is the empirical spine of the geometric characterization. (HPD
 is not conclusive on the clean datasets: its vendored hyperedge-portrait
 construction raises an index error on a third of the real instances, so it is

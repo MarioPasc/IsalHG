@@ -295,3 +295,23 @@ by Dir-Genre (43% yield), which is excluded.
 
 Results: `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M5j/`
 (geometry/clustering/kNN CSVs + figures + D-matrix cache).
+
+---
+**Correction note (orchestrator, S5 sweep, 2026-07-20 — via T-M5k
+regeneration).** Two transcription errors in this closing note's prose/tables,
+found when T-M5k regenerated the R2-clobbered clean-dataset tables from the
+cached `D.npy` matrices (deterministic pipeline: cached `survivor_indices.json`,
+`StratifiedKFold(5, seed=42)`); both values independently recomputed by the
+orchestrator from the raw matrices:
+
+1. Geometry table, Wri-Genre-M NetLSD `hub_skew`: **0.403 → 1.571**
+   (`hubness_skewness(D, k=10)` on `d_matrix/IMDB-Wri-Genre-M/netlsd_l2/D.npy`;
+   the Wri-Genre NetLSD row, 1.578, was already correct).
+2. Clean-mean AUC@k=9, NautyEdit: **0.640 → 0.654** (per-dataset 0.720 /
+   0.588). Consequence: NautyEdit ties NetLSD (0.6539) for second behind
+   IsalHG (0.673); "IsalHG and NetLSD lead" reads more precisely as "IsalHG
+   leads; NetLSD and NautyEdit tie for second". The WL-L1 hubness-degradation
+   conclusion and the censoring verdict are unaffected.
+
+The regenerated `tables/*.csv|json` under `results/T-M5j/` are the artifacts of
+record; the superseded numbers above are kept for the audit trail.

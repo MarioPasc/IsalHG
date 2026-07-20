@@ -45,6 +45,7 @@ import os
 import tempfile
 import time
 from collections import Counter
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 from typing import Any
 
@@ -141,6 +142,27 @@ def wstar_ok(H: Any, budget: float = WSTAR_BUDGET) -> bool:
         p.join()
         return False
     return not q.empty()
+
+
+def _parallel_wstar_check(args: tuple[Any, float]) -> bool:
+    """Module-level worker for ``ProcessPoolExecutor``; wraps ``wstar_ok``.
+
+    Must be at module level so the pickling machinery can locate it.
+    Each call forks a grandchild process to run ``canonical_fingerprint``
+    with a hard kill on timeout (fork-in-fork is safe on Linux).
+
+    Parameters
+    ----------
+    args : tuple[SparseHypergraph, float]
+        ``(H, budget)`` pair.
+
+    Returns
+    -------
+    bool
+        Forwarded from ``wstar_ok``.
+    """
+    H, budget = args
+    return wstar_ok(H, budget)
 
 
 # ---------------------------------------------------------------------------
@@ -445,6 +467,7 @@ def run_hic_dataset(
     knn_k_values: list[int] | None = None,
     knn_n_folds: int = 5,
     knn_rng_seed: int = 42,
+    n_workers: int = 8,
 ) -> dict[str, Any]:
     """Run A1/A2/A3 on one HIC IMDB dataset with w*_c censoring.
 
@@ -468,6 +491,10 @@ def run_hic_dataset(
         Stratified CV folds for kNN.  Default 5.
     knn_rng_seed : int
         RNG seed for kNN CV.  Default 42.
+    n_workers : int
+        Parallel workers for the w*_c censoring filter.  Default 8.
+        Each worker forks a grandchild for ``canonical_fingerprint``; fork-in-fork
+        is safe on Linux.  Speedup is proportional to the DNF fraction × n_workers.
 
     Returns
     -------
@@ -530,18 +557,37 @@ def run_hic_dataset(
             survivor_indices = []
 
     if not survivor_cache.exists():
-        logger.info("  applying w*_c filter (budget=%.1fs) on %d items...", wstar_budget, n_capped)
+        logger.info(
+            "  applying w*_c filter (budget=%.1fs, n_workers=%d) on %d items...",
+            wstar_budget,
+            n_workers,
+            n_capped,
+        )
         t_filt = time.perf_counter()
-        survivors = []
-        sur_labels_raw = []
-        survivor_indices = []
-        for i, (H, lbl) in enumerate(zip(capped_hgs, capped_labels_raw, strict=True)):
-            if wstar_ok(H, budget=wstar_budget):
-                survivors.append(H)
-                sur_labels_raw.append(lbl)
-                survivor_indices.append(i)
-            if (i + 1) % 50 == 0:
-                logger.info("    filtered %d/%d ...", i + 1, n_capped)
+
+        # Parallel filter: each future runs wstar_ok(H, budget) in a Pool worker
+        # which itself forks a grandchild for canonical_fingerprint (fork-in-fork
+        # is safe on Linux; the C++ encoder ignores SIGALRM so terminate() is needed).
+        ctx = mp.get_context("fork")
+        args_list = [(H, wstar_budget) for H in capped_hgs]
+        ok_by_idx: dict[int, bool] = {}
+        with ProcessPoolExecutor(max_workers=n_workers, mp_context=ctx) as executor:
+            future_to_idx = {
+                executor.submit(_parallel_wstar_check, args_list[i]): i for i in range(n_capped)
+            }
+            for n_done, future in enumerate(as_completed(future_to_idx), start=1):
+                idx = future_to_idx[future]
+                try:
+                    ok_by_idx[idx] = future.result()
+                except Exception:
+                    ok_by_idx[idx] = False
+                if n_done % 50 == 0:
+                    logger.info("    filtered %d/%d ...", n_done, n_capped)
+
+        survivor_indices = [i for i in range(n_capped) if ok_by_idx.get(i, False)]
+        survivors = [capped_hgs[i] for i in survivor_indices]
+        sur_labels_raw = [capped_labels_raw[i] for i in survivor_indices]
+
         t_filt_elapsed = time.perf_counter() - t_filt
         n_surv = len(survivors)
         logger.info("  survivors: %d/%d in %.1fs", n_surv, n_capped, t_filt_elapsed)
@@ -550,6 +596,7 @@ def run_hic_dataset(
             {
                 "n_capped": n_capped,
                 "wstar_budget_s": wstar_budget,
+                "n_workers": n_workers,
                 "survivor_indices": survivor_indices,
                 "n_survivors": n_surv,
                 "wall_clock_s": t_filt_elapsed,
@@ -950,6 +997,7 @@ def run_full_pipeline(
     datasets: list[str] | None = None,
     distance_names: list[str] | None = None,
     wstar_budget: float = WSTAR_BUDGET,
+    n_workers: int = 8,
 ) -> None:
     """Run the HIC OD6 exhibit pipeline across all 6 IMDB datasets.
 
@@ -965,6 +1013,8 @@ def run_full_pipeline(
         Representations to evaluate.  Defaults to ``MAIN_DISTANCES``.
     wstar_budget : float
         Per-instance w*_c timeout.
+    n_workers : int
+        Parallel workers for the w*_c censoring filter.  Default 8.
     """
     if datasets is None:
         datasets = IMDB_DATASETS
@@ -984,6 +1034,7 @@ def run_full_pipeline(
             results_root=results_root,
             distance_names=distance_names,
             wstar_budget=wstar_budget,
+            n_workers=n_workers,
         )
         all_censoring.append(summary["censoring_row"])
         all_clustering.extend(summary["clustering_rows"])
@@ -1052,6 +1103,12 @@ def _parse_args() -> argparse.Namespace:
         help="Per-instance w*_c timeout in seconds (default: 5.0).",
     )
     p.add_argument(
+        "--n-workers",
+        type=int,
+        default=8,
+        help="Parallel workers for the w*_c censoring filter (default: 8).",
+    )
+    p.add_argument(
         "--log-level",
         default="INFO",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -1071,4 +1128,5 @@ if __name__ == "__main__":
         datasets=args.datasets,
         distance_names=args.distances,
         wstar_budget=args.wstar_budget,
+        n_workers=args.n_workers,
     )

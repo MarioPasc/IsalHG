@@ -351,3 +351,69 @@ def test_ladder_acceptance_rate_reported(tmp_path):
             "Each ladder must report acceptance_rate from extra['acceptance_attempts']"
         )
         assert 0.0 < ladder["acceptance_rate"] <= 1.0
+
+
+# ---------------------------------------------------------------------------
+# T11 — Registry fallback: old kwarg-unpack call raises TypeError (T-M5i)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_old_kwarg_style_raises_type_error():
+    """Demonstrates the pre-fix bug (T-M5i): get_dataset(name, **params) raises TypeError.
+
+    get_dataset(name, params: dict) is a positional-dict signature, not **kwargs.
+    Calling it with unpacked kwargs raises TypeError immediately at the call site,
+    regardless of whether the dataset name exists.  This test pins the bug that
+    _build_dataset line 87 had before the fix.
+    """
+    from isalhg.datasets.registry import get_dataset
+
+    with pytest.raises(TypeError):
+        # Simulates the pre-fix: get_dataset(name, **{"n_families": 1, "seed": 42})
+        # which expands to get_dataset(name, n_families=1, seed=42) — wrong calling
+        # convention for a (name, params: dict) signature.
+        get_dataset("planted_families", n_families=1, seed=42)  # type: ignore[call-arg]
+
+
+# ---------------------------------------------------------------------------
+# T12 — Registry fallback: post-fix positional dict call works (T-M5i)
+# ---------------------------------------------------------------------------
+
+
+def test_build_dataset_registry_fallback_passes_positional_dict():
+    """Post-fix (T-M5i): _build_dataset passes params as a single positional dict.
+
+    planted_families falls through all three named branches in _build_dataset
+    and reaches the registry fallback.  After the fix, get_dataset(name, params)
+    is called with a dict, not with **params.
+
+    TOOTH: the old call get_dataset(name, **params) raises TypeError (T11 above).
+    """
+    from unittest.mock import MagicMock, patch
+
+    from experiments.article.runner import _build_dataset
+    from experiments.article.schemas import CellSpec
+
+    captured: dict = {}
+    mock_ds = MagicMock()
+
+    def _capturing_get_dataset(name: str, params: dict) -> MagicMock:
+        captured["name"] = name
+        captured["params"] = dict(params)
+        return mock_ds
+
+    cell = CellSpec(
+        type="d_matrix",
+        dataset="planted_families",  # falls through all three named branches
+        seed=42,
+        dataset_params={"n_families": 1, "members_per_family": 2},
+    )
+
+    with patch("isalhg.datasets.registry.get_dataset", _capturing_get_dataset):
+        result = _build_dataset(cell)
+
+    assert result is mock_ds, "Mock dataset must be returned"
+    assert captured["name"] == "planted_families"
+    # seed injected by _build_dataset
+    assert captured["params"].get("seed") == 42, "seed must be present in params dict"
+    assert captured["params"].get("n_families") == 1

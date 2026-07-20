@@ -84,7 +84,7 @@ def _build_dataset(cell: CellSpec):  # noqa: ANN202
     # Fallback to registry for future datasets
     from isalhg.datasets.registry import get_dataset
 
-    return get_dataset(name, **params)
+    return get_dataset(name, params)
 
 
 # ---------------------------------------------------------------------------

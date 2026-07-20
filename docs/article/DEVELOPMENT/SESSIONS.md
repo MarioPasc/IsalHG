@@ -422,6 +422,35 @@ matrix filled (A4).
   `ruff check src/ tests/`. (3) `kmedoids` is now a `bench`-extra dependency —
   a fresh env needs `pip install -e ".[dev]"` to get it.
 
+- **Post-S4 addendum 2026-07-20 (PI-directed): Picasso copy-back + OD6 HIC
+  exhibit (T-M5j).** Two user asks after the S4 close.
+  - *Picasso E1' copy-back:* job 1616143 finished; rsynced
+    `fscratch/isalhg_results/T-M5a/e1prime/` → local — 21 `D.npy` (12/12
+    `isalhg_levenshtein`, **9/12 `exact_hged`**; 3 expensive HGED cells DNF'd →
+    S5 must resubmit `--array=<missing>`). Nothing else on the Picasso drive.
+  - *OD6 resolved (PI: include HIC)* — recorded in `DECISIONS.md`; **A4 excluded**
+    (ladder-based). Feasibility probed first: local `w*_c` on IMDB genre is fast
+    (median ≈ 1 ms; the earlier "HIC infeasible" read was the high-symmetry RHG
+    datasets, which lack labels). **T-M5j** filed + orchestrated:
+    A1/A2/A3 on all 6 IMDB genre variants, full arity≤10 subset, 5 s `w*_c`
+    timeout censoring.
+  - *T-M5j (2 rounds, merged):* censoring is bimodal — **2 clean** (Wri-Genre
+    92.5%, Wri-Genre-M 91.7%), **4 heavily censored** (Dir-*/Wri-Form 34–43%
+    yield, min-class 14–38%; the T-DQ3' label-correlated tail). **Round-1
+    correction (orchestrator-caught):** HPD-JSD silently vanished from the two
+    clean datasets — a *vendored* `hyperedge_portrait` `IndexError` on degenerate
+    instances (Wri-Genre 295/833, Wri-Genre-M 102/266) swallowed into a log
+    warning; and the worker's aggregate "IsalHG mid-pack 3/5 / NetLSD leads"
+    conflated clean with the ≤43%-censored Dir-* sets. Sent back; worker surfaced
+    HPD on its per-instance-computable subset (flagged) and re-drew conclusions
+    from clean data only. **Honest clean-HIC read:** genre is near-unclusterable
+    from structure (A2 ARI < 0.10 for *every* rep); A3 kNN AUC led by IsalHG +
+    NetLSD, WL-L1 trails (hub_skew 4.5–7.4 → the same G1 hubness story as
+    planted). **OD6 acceptance test: censoring does NOT flip the IsalHG
+    conclusion.** Suite 1062 → **1081** (+12 R1 +7 R2), ruff 3, mypy 21.
+    Artifacts under `results/T-M5j/` (D caches, per-dataset geometry/clustering/
+    kNN tables, censoring table, figures). `main` not pushed.
+
 ---
 
 ## S5 — Discussion evidence & closure

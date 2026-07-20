@@ -115,7 +115,12 @@ central characterization. `d_I` is **genuinely non-Euclidean**: the double-centr
 Gram matrix is indefinite (not PSD) with non-Euclidean mass `ν = 0.123` — about
 an eighth of the distance mass lives in negative eigenvalues — and its
 cross-validated intrinsic dimension is `D̂ = 21`, with low residual distortion at
-that dimension (Kruskal stress-1 = 0.053). The nauty-Levi canonical-string
+that dimension (Kruskal stress-1 = 0.053). This `D̂` is the value at this corpus
+size; a dedicated `N`-scaling sweep with an independent Horn parallel-analysis
+cross-check (`../theoretical/geometry.md` §3) shows the estimate is a *lower
+bound* here — it climbs and plateaus near 26 for `N ≥ 240`, with a conservative
+Horn bracket of 12, so the planted geometry's intrinsic dimension is `[12, 26]`.
+Real HIC genre hypergraphs are markedly lower-dimensional (`D̂ ≈ 10`). The nauty-Levi canonical-string
 distance is also non-Euclidean but far less compressible (`ν = 0.029`,
 `D̂ = 39`). The three vector representations are, by construction, Euclidean
 (`ν = 0`): NetLSD sits in a genuinely low dimension (`D̂ = 5`), whereas the WL

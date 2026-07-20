@@ -61,21 +61,96 @@ not embed isometrically into any `R^D`.
   still drive MDS/clustering. The paper reports `ν`, it does not apologize for
   it.
 
-## 3. Intrinsic dimension
+## 3. Intrinsic dimension — the estimation procedure
 
 The estimated intrinsic dimension `D̂` of `(·, d_I)` is a **standalone
 descriptor**: "hypergraph space under `d_I` has intrinsic dimension `D̂`."
+Choosing `D̂` is not a free parameter but a modelling decision, and the correct
+decision depends on whether `B` is positive semidefinite.
 
-- **Primary estimator (PI note, PROPOSAL v2 §5, retained):** cross-validation
-  on held-out dissimilarities — hold out a random subset of the `C(N,2)` pairs,
-  fit MDS on the rest, pick `D̂` minimizing out-of-sample reconstruction error.
-  Robust to the non-Euclidean residual (does not assume PSD `B`).
-- **Supporting:** Mardia `P^(1)`, `P^(2)` goodness-of-fit ratios; the
-  negative-eigenvalue floor `λ_D ≫ |λ_min|`; parallel analysis.
+**The exact case does not apply here.** Schoenberg's criterion gives a unique,
+non-arbitrary answer *only* when `B` is PSD: then the minimal isometric
+dimension is `D = rank(B) = #{λ > 0}`. The three metric axioms do not guarantee
+this, and `d_I` is one of the metrics they fail for — its `B` is indefinite
+(`ν > 0`, §2), so no exact Euclidean embedding exists at any `D`. Dimension
+selection is therefore an **approximation problem**, and the negative
+eigenvalues become the instrument rather than the obstruction.
+
+**Primary estimator — cross-validation on held-out dissimilarities.** This is
+the most defensible general-purpose choice and it makes no PSD assumption. The
+one subtlety that must be honoured: "hold out a subset of pairs, fit on the
+rest, predict the held-out" only measures generalization if the held-out pairs
+are genuinely *out of sample*. Masking matrix entries while still embedding the
+full matrix is secretly in-sample — its reconstruction error falls
+monotonically in `D` and drives the estimate to the search ceiling. The correct
+realization is **leave-out-points** with an out-of-sample placement: embed the
+training points by classical MDS, position each held-out point from its
+distances to the training set via the Gower (1968) landmark formula, and score
+the predicted held-out↔train distances. This yields a genuine minimum.
+
+**Corroborating estimator — Horn parallel analysis.** Independently of CV, we
+build a null spectrum by permuting the off-diagonal dissimilarities, symmetrizing,
+double-centring and eigendecomposing over many permutations, and retain the
+dimensions whose observed eigenvalue exceeds the 95th-percentile null at their
+rank (Horn 1965, adapted to a dissimilarity matrix). On a PSD input it recovers
+the true rank (a rank-3 Euclidean cloud returns 3); on a non-PSD input it is
+deliberately **conservative** — the permutation null retains large positive
+eigenvalues, so only the clearly-dominant observed dimensions survive, and the
+95th-percentile threshold carries a nominal `≈0.05·N` false-retention floor.
+Horn therefore reports the lower end of a bracket, CV the reconstruction-optimal
+upper end.
+
+**Supporting:** Mardia `P^(1)`, `P^(2)` goodness-of-fit ratios (the squared
+version preferred, as it downweights the small mixed-sign eigenvalues); the
+negative-eigenvalue floor `λ_D ≫ |λ_min|`. An alternative notion — a *distortion
+budget* rather than a spectral one — is available if isometry is not required
+(Bourgain's `O(log N)` embedding and Johnson–Lindenstrauss reduction, §4); the
+paper reports the spectral `D̂` and cites the distortion bracket rather than
+selecting `D` from it.
+
+**Measured — `D̂` is corpus-dependent, and a single small corpus under-resolves
+it.** Estimated on the planted family corpus at four sizes and cross-checked on
+two real HIC genre corpora (`d_I` only; `w*_c` is fast on these instances, so
+the corpus size `N` is cheap to scale — only the per-instance node count `n`
+drives cost):
+
+| corpus | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
+|---|---|---|---|---|---|
+| planted | 60 | 0.123 | 21 | 3 | 0.982 |
+| planted | 120 | 0.193 | 23 | 5 | 0.966 |
+| planted | 240 | 0.250 | 26 | 8 | 0.954 |
+| planted | 480 | 0.300 | 26 | 12 | 0.949 |
+| HIC IMDB-Wri-Genre-M | 266 | 0.160 | 10 | 1 | 0.993 |
+| HIC IMDB-Wri-Genre | 833 | 0.200 | 11 | 1 | 0.992 |
+
+The CV estimate on the synthetic corpus climbs from 21 at `N = 60` and
+**plateaus at 26 for `N ≥ 240`**: the widely-quoted `D̂ = 21` is a lower bound
+at small `N`, not the converged value. Horn brackets this conservatively from
+below (12 at `N = 480`), so the honest statement is that the planted-family
+geometry has intrinsic dimension in the range **[12, 26]**, converging near 26
+under the reconstruction criterion. The non-Euclidean mass `ν` itself grows with
+corpus diversity (0.12 → 0.30), consistent with more structurally varied
+families departing further from Euclidean geometry. **Real genre hypergraphs are
+markedly lower-dimensional** (`D̂ ≈ 10–11`, Horn ≈ 1) than the synthetic
+families — a substantive finding, reported as a censored-subset measurement (the
+HIC caveat, `../DATA.md` §2). The estimate is thus reported as a bracket with its
+`N`-dependence stated, never as a bare number.
+
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis
   independent of any oracle — a *lower faithful* `D̂` than a competitor
   representation's argues `d_I` captures hypergraph structure more compactly;
-  `D̂` per representation is a head-to-head result.
+  `D̂` per representation is a head-to-head result (the Euclidean vector
+  competitors WL and HPD do not concentrate at all — their CV error rides to the
+  search cap, so their `D̂` is reported as censored, itself a contrast).
+
+**Structural-faithfulness check (HGED-free).** Because the intrinsic dimension
+and the embedding are only as meaningful as the distances they preserve, we
+verify that the `d_I`-MDS map tracks *true* structural distance without the HGED
+oracle: along perturbation ladders the accumulated Qin edit budget `t` is known
+by construction, and both the raw metric and its embedding increase with it —
+Spearman `ρ(t, d_I) = 0.636` and `ρ(t, embedding distance) = 0.649` on a
+165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
+faithfulness statement about known edits, not an HGED-proxy claim.
 
 ## 4. Embeddability and distortion
 

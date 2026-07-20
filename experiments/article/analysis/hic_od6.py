@@ -374,11 +374,84 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     if not rows:
         return
     path.parent.mkdir(parents=True, exist_ok=True)
-    fieldnames = list(rows[0].keys())
+    # Union of all keys across rows: rows may have different schemas
+    # (e.g., HPD rows carry hpd_n_errors/hpd_note; other rows do not).
+    # restval="" fills missing keys with an empty string.
+    seen: dict[str, None] = {}
+    for r in rows:
+        seen.update(dict.fromkeys(r.keys()))
+    fieldnames = list(seen)
     with path.open("w", newline="") as fh:
-        writer = csv.DictWriter(fh, fieldnames=fieldnames)
+        writer = csv.DictWriter(fh, fieldnames=fieldnames, restval="")
         writer.writeheader()
         writer.writerows(rows)
+
+
+def _read_existing_rows_json(path: Path) -> list[dict[str, Any]]:
+    """Load rows from an existing ``{path}`` JSON artifact (key ``"rows"``).
+
+    Returns an empty list when the file does not exist or cannot be parsed.
+    Using the JSON artifact (rather than the CSV) preserves numeric types
+    so that merged rows are uniformly typed.
+
+    Parameters
+    ----------
+    path : Path
+        Path to a JSON file written by ``_atomic_write_json`` with structure
+        ``{"rows": [...]}``.
+
+    Returns
+    -------
+    list[dict[str, Any]]
+        The ``"rows"`` list, or ``[]`` on any error.
+    """
+    if not path.exists():
+        return []
+    try:
+        with path.open() as f:
+            data = json.load(f)
+        return data.get("rows", [])
+    except Exception:
+        return []
+
+
+def _merge_repr_rows(
+    existing: list[dict[str, Any]],
+    new_rows: list[dict[str, Any]],
+    new_repr_labels: set[str],
+    repr_key: str = "representation",
+) -> list[dict[str, Any]]:
+    """Merge ``new_rows`` into ``existing``, replacing rows for listed representations.
+
+    Replaces rows whose ``repr_key`` value is in ``new_repr_labels``.
+
+    Rows in ``existing`` whose ``repr_key`` value is NOT in ``new_repr_labels``
+    are kept unchanged and placed before ``new_rows`` in the output.  This
+    prevents a partial-distance re-run from truncating representations that
+    were not processed in the current run.
+
+    Parameters
+    ----------
+    existing : list[dict]
+        Rows from the previously-written table (loaded via
+        ``_read_existing_rows_json``).
+    new_rows : list[dict]
+        Rows computed in the current run.
+    new_repr_labels : set[str]
+        Display labels (e.g. ``{"HPD-JSD"}``) for the representations
+        processed in this run.  Existing rows for these labels are replaced.
+    repr_key : str
+        The dict key that holds the representation label.  Default
+        ``"representation"`` (all three table types use this key).
+
+    Returns
+    -------
+    list[dict]
+        Kept existing rows (for reps NOT in ``new_repr_labels``) followed by
+        ``new_rows``.
+    """
+    kept = [r for r in existing if r.get(repr_key) not in new_repr_labels]
+    return kept + new_rows
 
 
 # ---------------------------------------------------------------------------
@@ -957,26 +1030,41 @@ def run_hic_dataset(
             logger.debug("    figures failed for %s: %s", dist_name, exc)
 
     # ----------------------------------------------------------------
-    # 6. Write per-dataset tables
+    # 6. Write per-dataset tables (merge, not truncate)
+    #
+    # When distance_names is a strict subset of MAIN_DISTANCES (e.g. a
+    # single-representation re-run), only the rows for those representations
+    # should be refreshed; existing rows for other representations must be
+    # preserved.  _merge_repr_rows keeps existing rows for representations NOT
+    # in the current run and replaces rows that were recomputed.
     # ----------------------------------------------------------------
     ds_output = results_root / "tables"
     ds_output.mkdir(parents=True, exist_ok=True)
 
-    _write_csv(ds_output / f"geometry_table_{hic_name}.csv", geometry_rows)
-    _atomic_write_json(
-        ds_output / f"geometry_table_{hic_name}.json",
-        {"rows": geometry_rows},
+    # Display labels that were processed in this run.
+    _processed_reprs: set[str] = {REPR_LABELS.get(d, d) for d in distance_names}
+
+    geom_csv = ds_output / f"geometry_table_{hic_name}.csv"
+    geom_json = ds_output / f"geometry_table_{hic_name}.json"
+    merged_geom = _merge_repr_rows(
+        _read_existing_rows_json(geom_json), geometry_rows, _processed_reprs
     )
-    _write_csv(ds_output / f"clustering_table_{hic_name}.csv", clustering_rows)
-    _atomic_write_json(
-        ds_output / f"clustering_table_{hic_name}.json",
-        {"rows": clustering_rows},
+    _write_csv(geom_csv, merged_geom)
+    _atomic_write_json(geom_json, {"rows": merged_geom})
+
+    clust_csv = ds_output / f"clustering_table_{hic_name}.csv"
+    clust_json = ds_output / f"clustering_table_{hic_name}.json"
+    merged_clust = _merge_repr_rows(
+        _read_existing_rows_json(clust_json), clustering_rows, _processed_reprs
     )
-    _write_csv(ds_output / f"knn_table_{hic_name}.csv", knn_rows)
-    _atomic_write_json(
-        ds_output / f"knn_table_{hic_name}.json",
-        {"rows": knn_rows},
-    )
+    _write_csv(clust_csv, merged_clust)
+    _atomic_write_json(clust_json, {"rows": merged_clust})
+
+    knn_csv = ds_output / f"knn_table_{hic_name}.csv"
+    knn_json = ds_output / f"knn_table_{hic_name}.json"
+    merged_knn = _merge_repr_rows(_read_existing_rows_json(knn_json), knn_rows, _processed_reprs)
+    _write_csv(knn_csv, merged_knn)
+    _atomic_write_json(knn_json, {"rows": merged_knn})
 
     return {
         "censoring_row": censoring_row,

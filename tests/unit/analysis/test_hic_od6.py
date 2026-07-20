@@ -425,3 +425,146 @@ class TestAgreementSummaryCleanSplit:
 
         # All three datasets should be in clean.
         assert "Censored-C" in result["clean_datasets"]
+
+
+# ---------------------------------------------------------------------------
+# 8. _merge_repr_rows + _read_existing_rows_json — T-M5k regression test
+# ---------------------------------------------------------------------------
+
+
+class TestMergeTableRows:
+    """Regression tests for the HPD-only re-run clobbering fix (T-M5k).
+
+    Teeth: Before the fix, ``_merge_repr_rows`` and ``_read_existing_rows_json``
+    did not exist (``ImportError`` on import), demonstrating the pre-fix code
+    path had no merge guard.  After the fix both symbols are present and the
+    tests below confirm that a partial-distance re-run keeps non-recomputed
+    representations intact.
+
+    Acceptance criterion 3 from T-M5k:
+    ``a regression test shows the HPD-patch path no longer drops non-HPD rows.``
+    """
+
+    def _full_geom_rows(self) -> list[dict]:
+        """Simulate five-representation geometry rows (as stored in JSON)."""
+        return [
+            {"representation": "IsalHG", "nu": 0.200, "d_hat": 11, "stress_at_d_hat": 0.091},
+            {"representation": "WL-L1", "nu": 0.048, "d_hat": 40, "stress_at_d_hat": 0.409},
+            {"representation": "NetLSD", "nu": 0.000, "d_hat": 4, "stress_at_d_hat": 0.000},
+            {
+                "representation": "HPD-JSD",
+                "nu": 0.000,
+                "d_hat": 40,
+                "stress_at_d_hat": 0.044,
+                "hpd_n_errors": 295,
+            },
+            {"representation": "NautyEdit", "nu": 0.078, "d_hat": 15, "stress_at_d_hat": 0.035},
+        ]
+
+    def test_hpd_only_rerun_keeps_other_reps(self, tmp_path: object) -> None:
+        """An HPD-only re-run must keep IsalHG/WL/NetLSD/NautyEdit rows.
+
+        Demonstrates that ``_merge_repr_rows`` prevents the clobbering that
+        the R2 HPD patch introduced (only HPD in ``distance_names`` → full
+        tables overwritten with one row).
+        """
+        import json
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import (
+            _merge_repr_rows,
+            _read_existing_rows_json,
+        )
+
+        tmp_path = Path(str(tmp_path))
+
+        # Write a complete 5-rep JSON table (as T-M5j R1 produced).
+        json_path = tmp_path / "geometry_table_Test.json"
+        full_rows = self._full_geom_rows()
+        json_path.write_text(json.dumps({"rows": full_rows}))
+
+        # Simulate an HPD-only re-run: new_rows contains only the refreshed HPD row.
+        new_hpd_row = {
+            "representation": "HPD-JSD",
+            "nu": 0.000,
+            "d_hat": 40,
+            "stress_at_d_hat": 0.044,
+            "hpd_n_errors": 295,
+            "hpd_note": "subset only",
+        }
+        processed_reprs = {"HPD-JSD"}
+
+        existing = _read_existing_rows_json(json_path)
+        merged = _merge_repr_rows(existing, [new_hpd_row], processed_reprs)
+
+        repr_labels = [r["representation"] for r in merged]
+        assert "IsalHG" in repr_labels, "IsalHG dropped by HPD-only re-run"
+        assert "WL-L1" in repr_labels, "WL-L1 dropped by HPD-only re-run"
+        assert "NetLSD" in repr_labels, "NetLSD dropped by HPD-only re-run"
+        assert "HPD-JSD" in repr_labels, "HPD-JSD missing after re-run"
+        assert "NautyEdit" in repr_labels, "NautyEdit dropped by HPD-only re-run"
+        assert len(merged) == 5, f"Expected 5 rows, got {len(merged)}"
+
+    def test_hpd_row_is_replaced_not_duplicated(self, tmp_path: object) -> None:
+        """The refreshed HPD row replaces the old one; no duplicate."""
+        import json
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import (
+            _merge_repr_rows,
+            _read_existing_rows_json,
+        )
+
+        tmp_path = Path(str(tmp_path))
+        json_path = tmp_path / "geom.json"
+        json_path.write_text(json.dumps({"rows": self._full_geom_rows()}))
+
+        new_hpd = {"representation": "HPD-JSD", "nu": 0.001, "d_hat": 38}
+        existing = _read_existing_rows_json(json_path)
+        merged = _merge_repr_rows(existing, [new_hpd], {"HPD-JSD"})
+
+        hpd_rows = [r for r in merged if r["representation"] == "HPD-JSD"]
+        assert len(hpd_rows) == 1, "HPD-JSD must appear exactly once after merge"
+        assert hpd_rows[0]["nu"] == 0.001, "New HPD row should replace old one"
+
+    def test_read_existing_rows_json_missing_file(self, tmp_path: object) -> None:
+        """_read_existing_rows_json returns [] when the file does not exist."""
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import _read_existing_rows_json
+
+        result = _read_existing_rows_json(Path(str(tmp_path)) / "nonexistent.json")
+        assert result == []
+
+    def test_full_rerun_replaces_all_rows(self, tmp_path: object) -> None:
+        """A full-distance re-run (all 5 reps) replaces all existing rows."""
+        import json
+        from pathlib import Path
+
+        from experiments.article.analysis.hic_od6 import (
+            _merge_repr_rows,
+            _read_existing_rows_json,
+        )
+
+        tmp_path = Path(str(tmp_path))
+        json_path = tmp_path / "geom.json"
+        # Existing table has stale values.
+        stale = [
+            {"representation": "IsalHG", "nu": 0.999},
+            {"representation": "WL-L1", "nu": 0.999},
+        ]
+        json_path.write_text(json.dumps({"rows": stale}))
+
+        new_rows = [
+            {"representation": "IsalHG", "nu": 0.200},
+            {"representation": "WL-L1", "nu": 0.048},
+            {"representation": "NetLSD", "nu": 0.000},
+        ]
+        processed = {"IsalHG", "WL-L1", "NetLSD"}
+
+        existing = _read_existing_rows_json(json_path)
+        merged = _merge_repr_rows(existing, new_rows, processed)
+
+        assert len(merged) == 3
+        isalhg_row = next(r for r in merged if r["representation"] == "IsalHG")
+        assert isalhg_row["nu"] == 0.200, "Stale IsalHG row should be replaced"

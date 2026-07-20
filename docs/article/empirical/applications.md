@@ -46,15 +46,18 @@ On every corpus, before any application: the pairwise-distance histogram of
   strong concentration predict degraded kNN); competitors get the same table —
   whose metric concentrates less is itself a head-to-head axis.
 
-**Measured (planted corpus, N = 60, five families).** The hubness signatures
-separate the representations sharply. `d_I` is mildly hub-prone (`N_10`
-skewness 0.231) with moderate concentration (diameter-to-median 1.5); the WL
-histogram distance is strongly hub-prone (skewness 1.777), while NetLSD is
-anti-hub (−0.551). This ordering is the precondition the A3 result is read
-against: the high-hubness representation is predicted to lose most under kNN.
+**Measured (planted corpus, N = 240, twenty families).** The hubness signatures
+separate the representations sharply. `d_I` is moderately hub-prone (`N_10`
+skewness 1.280) with moderate concentration (diameter-to-median 1.75); the WL
+histogram distance is extremely hub-prone (skewness 4.586), while NetLSD is
+hubness-neutral (0.121) but strongly concentrated (diameter-to-median 5.03).
+This ordering is the precondition the A3 result is read against: the
+extreme-hubness representation is predicted to lose most under kNN. (On the
+smaller N = 60 corpus the same ordering holds at milder values — `d_I` 0.231,
+WL 1.777, NetLSD −0.551 — the k-occurrence skew sharpens as the corpus grows.)
 The same profile recomputed on the real HIC genre corpora preserves the
-contrast — WL hubness rises to 4.5–7.4 there, `d_I` stays benign — so the
-prediction transfers to real data.
+contrast — WL hubness is 4.5–7.4 there, `d_I` stays moderate (1.1–1.8) — so
+the prediction transfers to real data.
 
 ## G2 — Local sensitivity + ladder response (geometry, the smoothness evidence)
 

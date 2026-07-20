@@ -1,15 +1,22 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
-- **OD6** — **[pending PI, raised 2026-07-19 at the T-DQ3' NO-GO]** Whether
-  S4 includes a *secondary* censored-subset HIC exhibit: all representations
-  scored on the identical computable IMDB subset (arity ≤ 10 **and**
-  `w*_c` ≤ 10 s/instance ⇒ ≈57% yield, both filters label-correlated,
-  censoring reported per class), clearly framed as a credibility exhibit and
-  not the anchor. Recommendation: include only if the per-class censoring
-  does not flip any A2/A3 conclusion on the planted corpora; otherwise cite
-  the gate measurement and the orbit-pruning re-test as future work. The
-  *primary* anchor decision is not pending — the pre-declared fallback in
-  `DATA.md` §2 executed automatically.
+- **OD6** — **[RESOLVED 2026-07-20, PI (Mario) directed: INCLUDE]** The
+  *secondary* censored-subset HIC exhibit is adopted: run A1 (MDS + geometry
+  table), A2 (clustering), A3 (kNN) on real HIC data **alongside** the planted
+  fallback (which stays the primary corpus). **Scope (PI choices, 2026-07-20):**
+  all **6 IMDB genre variants** (`IMDB-{Wri,Dir}-{Genre,Genre-M,Form}`), the
+  **full arity ≤ 10 subset** per dataset. A4 (shortest-path) is **out of HIC
+  scope** — it is ladder-based (synthetic perturbation budgets); HIC has no
+  ladder structure. **Censoring protocol:** per-instance `w*_c` computed under
+  a hard 5 s timeout (multiprocessing kill); DNFs dropped; per-class yield
+  reported per dataset; framed as a credibility exhibit, not the anchor.
+  **Feasibility (measured 2026-07-20):** on IMDB-Wri-Genre the arity ≤ 10
+  subset is 901 items with 93% `w*_c` yield at 5 s (median 1 ms; DNFs are the
+  T-DQ3' symmetry tail, e.g. n=8 m=13); IMDB-Dir-Form is the worst case
+  (~57% yield, heavier label-correlated censoring — reported, not hidden).
+  Executed under **T-M5j** (`T-M5/`). The primary-anchor fallback (`DATA.md`
+  §2) is unchanged; HIC application claims are stated as censored-subset
+  claims with the yield table attached.
 - **OD1** — Architecture: additive `metric_space/` now (recommended) vs also
   reparenting to `isomorphisms/` (T-M6, optional/last).
 - **OD2** — `levi_reduction` home: `core/levi_reduction.py` (recommended) vs a

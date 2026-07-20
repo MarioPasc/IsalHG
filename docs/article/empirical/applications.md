@@ -18,12 +18,19 @@ precedent of Neuhaus & Bunke (2007) and Bunke & Riesen (2008)
 substrate (a complete-invariant string metric) plus the measured geometric
 licences behind each pipeline choice.
 
-**No HGED here — the scale decision (kept from v2).** These measurements
-validate on *task* metrics (ARI vs planted labels, accuracy/F1/AUC, stress) and
-on known perturbation budgets, **never** on the HGED oracle. Their scale is
-gated only by `w*_c` (and competitor) wall-clock, so
-the real anchor (HIC, `../DATA.md` §2) is in scope at sizes the exact oracle
-could never reach. Competitors run the same pipeline off their own `D_rep`.
+**No HGED here — the scale decision.** These measurements validate on *task*
+metrics (ARI vs planted labels, accuracy/F1/AUC, stress) and on known
+perturbation budgets, **never** on the HGED oracle. Their scale is gated only by
+`w*_c` (and competitor) wall-clock. The primary corpus is the planted-family
+synthetic family (`../DATA.md` §1), where membership is ground truth. Real
+hypergraph data enters as a **censored secondary exhibit**: on the HIC IMDB
+genre atlas (`../DATA.md` §2) `w*_c` is not computable in acceptable time across
+the full corpus — the canonical search explodes on high-arity, near-symmetric
+instances — so the real-data measurements are reported on the subset with edge
+arity ≤ 10 whose `w*_c` completes within a fixed per-instance budget, with the
+per-class censoring reported alongside. Application claims are therefore
+synthetic-scale claims, cross-checked on real data where `w*_c` is computable.
+Competitors run the same pipeline off their own `D_rep`.
 
 ---
 
@@ -38,6 +45,16 @@ On every corpus, before any application: the pairwise-distance histogram of
 - Consumer: A3's kNN result is interpreted against this profile (high hubness /
   strong concentration predict degraded kNN); competitors get the same table —
   whose metric concentrates less is itself a head-to-head axis.
+
+**Measured (planted corpus, N = 60, five families).** The hubness signatures
+separate the representations sharply. `d_I` is mildly hub-prone (`N_10`
+skewness 0.231) with moderate concentration (diameter-to-median 1.5); the WL
+histogram distance is strongly hub-prone (skewness 1.777), while NetLSD is
+anti-hub (−0.551). This ordering is the precondition the A3 result is read
+against: the high-hubness representation is predicted to lose most under kNN.
+The same profile recomputed on the real HIC genre corpora preserves the
+contrast — WL hubness rises to 4.5–7.4 there, `d_I` stays benign — so the
+prediction transfers to real data.
 
 ## G2 — Local sensitivity + ladder response (geometry, the smoothness evidence)
 
@@ -93,6 +110,34 @@ first-class descriptors.
   lower stress at matched `D`, and whose `D̂` is smaller (a lower faithful `D̂`
   argues the representation captures structure more compactly).
 
+**Measured (planted corpus, N = 60).** The geometry table below is the paper's
+central characterization. `d_I` is **genuinely non-Euclidean**: the double-centred
+Gram matrix is indefinite (not PSD) with non-Euclidean mass `ν = 0.123` — about
+an eighth of the distance mass lives in negative eigenvalues — and its
+cross-validated intrinsic dimension is `D̂ = 21`, with low residual distortion at
+that dimension (Kruskal stress-1 = 0.053). The nauty-Levi canonical-string
+distance is also non-Euclidean but far less compressible (`ν = 0.029`,
+`D̂ = 39`). The three vector representations are, by construction, Euclidean
+(`ν = 0`): NetLSD sits in a genuinely low dimension (`D̂ = 5`), whereas the WL
+histogram and HPD distances do not concentrate — their cross-validation error
+falls monotonically to the search cap, so their `D̂` is reported as censored at
+that cap rather than as an estimate. The non-Euclidean verdict is what licenses
+the medoid-based clustering of A2 (a metric with negative eigenvalues has no
+faithful centroid), and the per-representation `D̂` is itself a comparison axis.
+
+| Representation | PSD | `ν` | `D̂` | stress@`D̂` | diam/med | `N_10` skew |
+|---|---|---|---|---|---|---|
+| IsalHG (`d_I`) | no | 0.123 | 21 | 0.053 | 1.50 | 0.231 |
+| WL histogram | yes | 0.000 | ≥40 (censored) | 0.643 | 1.10 | 1.777 |
+| NetLSD | yes | 0.000 | 5 | 0.000 | 3.63 | −0.551 |
+| HPD | yes | 0.000 | ≥40 (censored) | 0.170 | 1.41 | 0.490 |
+| nauty-Levi edit | no | 0.029 | 39 | 0.242 | 1.64 | −0.215 |
+
+The theory brackets the distortion: Bourgain (1985) guarantees an `O(log N)`
+embedding exists (so MDS is justified) and Khot–Naor (2006) prove string-edit
+metrics require non-trivial distortion (so the measured residual is expected,
+not a defect).
+
 ## A2 — Unsupervised structure (one story: clustering + hierarchy)
 
 Corpus with **planted families** (seed motifs + seed-stable, non-isomorphic
@@ -109,6 +154,24 @@ perturbations ⇒ known membership; `../DATA.md` §1).
 - Competitor comparison: same metrics on each `D_rep`; report metrics vs
   corpus density so the sparse/dense behaviour is visible.
 
+**Measured (planted corpus, N = 60, five families).** Recovery of the planted
+partition is modest for every representation, and `d_I` is competitive but not
+best: Adjusted Rand Index is 0.181 for `d_I` (NMI 0.318), against 0.331 for HPD
+(NMI 0.457) and 0.170 for NetLSD, while the WL histogram and the nauty-Levi
+distance fail to recover the families at all (ARI ≈ 0.00). PAM is the correct
+estimator here precisely because the space is non-Euclidean (A1). We report this
+directly: on raw clustering quality `d_I` sits mid-pack; the paper's claim is a
+*licensed* usefulness, not benchmark dominance.
+
+**Measured (real HIC genre, censored subset).** On the two cleanly computable
+IMDB genre datasets (`w*_c`-yield 92.5% and 91.7%), genre is near-unclusterable
+from structure alone: **every** representation scores ARI < 0.10, including
+`d_I`. No representation leads meaningfully — an honest negative result. The four
+remaining IMDB genre datasets are retained at only 34–43% under the `w*_c`
+budget, with label-correlated censoring (some genres below 20% retention); their
+clustering numbers are reported for completeness but are not used for
+representation ranking.
+
 ## A3 — kNN classification (supervised story)
 
 Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
@@ -119,6 +182,25 @@ Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
 - Method: k-NN with `metric='precomputed'`, leave-one-out / stratified CV.
 - Metrics: accuracy, macro-F1, AUC (one-vs-rest). Report vs `k`.
 - Competitor comparison: k-NN on each `D_rep`, same folds.
+
+**Measured (planted corpus, N = 60).** The G1 hubness profile predicts the kNN
+ordering, and the prediction holds: the strongly hub-prone WL histogram
+(skewness 1.777) collapses to chance (AUC-OvR ≈ 0.50), while the benign-hubness
+representations classify well — `d_I` reaches AUC 0.80 and HPD 0.87; the
+nauty-Levi distance, despite low hubness, still trails (AUC 0.56) because its
+avalanche sensitivity (G2) destroys the neighbourhood structure kNN relies on.
+This is the clearest payoff of the no-orphan-geometry rule: a geometric quantity
+measured in G1 forecasts the supervised outcome before the classifier is run.
+
+**Measured (real HIC genre, censored subset).** The same ordering recurs on real
+data. On the two clean IMDB genre datasets the mean AUC-OvR at k = 9 is 0.673
+for `d_I` and 0.654 for NetLSD (the two leaders), against 0.624 for the WL
+histogram, which again trails in line with its elevated real-data hubness
+(skewness 4.5–7.4). The agreement of the hubness→kNN prediction across synthetic
+*and* real corpora is the empirical spine of the geometric characterization. (HPD
+is not conclusive on the clean datasets: its vendored hyperedge-portrait
+construction raises an index error on a third of the real instances, so it is
+scored only on a per-instance-censored subset and flagged as such.)
 
 ## A4 — Shortest path between hypergraphs (the capability differentiator)
 
@@ -144,15 +226,31 @@ to an actual hypergraph via S2H.
 - Competitor comparison: (i)–(ii) for vector competitors where a path is
   computable at all; the capability matrix records who cannot run this.
 
+**Measured (ladder pool of 44 hypergraphs).** Accumulated path length is
+**monotone in the ladder budget for every representation** (monotone fraction
+1.00) — the ladder response of G2 read along shortest paths. Exact recovery of
+the specific ladder intermediates, by contrast, is essentially null for all
+representations (0.00 for `d_I`, WL and NetLSD; 0.33 for HPD): the `d_I` geodesic
+routes through same-budget alternatives rather than retracing the exact edit
+sequence. We report this as a feature, not a failure — it is a direct empirical
+illustration of the closing discussion's point that `d_I` is not an edit-distance
+proxy. The **decodability differentiator is the categorical result**: only `d_I`
+exhibits the intermediate hypergraphs along the path — three intermediate
+strings decoded via S2H to valid hypergraphs, whereas the WL path collapses to a
+direct two-node hop, NetLSD and HPD have no decoder, and the nauty-Levi distance
+cannot navigate at all (its avalanche profile). The capability matrix below
+records this: usefulness on A4 is not a score, it is a capability that no
+competing representation possesses.
+
 ## Corpora needed (→ `../DATA.md`)
 
 | Measurement | Corpus requirement |
 |---|---|
 | G1/G2 profiles | every corpus (profiles are per-corpus preambles); designs for the sensitivity fixtures |
-| A1 MDS | planted-family synthetic + real anchor (HIC, gated) |
-| A2 clustering | planted families (known membership) + real anchor |
-| A3 kNN | labelled: planted family ids + HIC dataset labels |
-| A4 path | ladder endpoints + intermediate pool with distractors |
+| A1 MDS | planted-family synthetic (primary) + HIC IMDB genre (censored secondary exhibit) |
+| A2 clustering | planted families (known membership) + HIC IMDB genre |
+| A3 kNN | labelled: planted family ids + HIC IMDB genre labels |
+| A4 path | ladder endpoints + intermediate pool with distractors (synthetic only) |
 
 ## Competitor applicability (→ `../COMPETITORS.md`)
 

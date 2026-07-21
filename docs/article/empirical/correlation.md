@@ -117,18 +117,19 @@ longer runs); the implementation remains in the tree.
   characterization ("this is the measured footprint of the relation on a small
   corpus"), never as validation of a bound.
 
-**Measured (provisional — 9 of the 12 mini-corpus cells; the three largest,
-n ∈ {9,10}, still on the exact oracle).** Pooled over all pairs with HGED > 0:
-Spearman ρ = 0.603 (N = 5,661 pairs, p ≈ 0; Pearson r = 0.616; OLS slope of
-`d_I` on HGED 0.463); per-cell ρ ranges 0.48–0.81. Every HGED = 0 pair has
-`d_I` = 0 — the identity-of-indiscernibles cross-check between the two
-metrics. The completed-cell boundary is itself informative: exact HGED on the
-n = 9–10 cells exhausted 16 GB / 6 h per cell (branch-and-bound frontier
-blow-up on cross-ladder pairs), i.e. the exact oracle reaches its practical
-ceiling *at the boundary of this mini-corpus* — a concrete illustration of why
-the article's methodology validates usefulness on task metrics rather than on
-an HGED axis. Final all-cell numbers replace these when the remaining cells
-complete.
+**Measured (provisional — 11 of the 12 mini-corpus cells; the last n = 10
+cell still on the exact oracle).** Pooled over all pairs with HGED > 0:
+Spearman ρ = 0.622 (N = 6,921 pairs, p ≈ 0; Pearson r = 0.663; OLS slope of
+`d_I` on HGED 0.568); per-cell ρ ranges 0.48–0.81, with the two largest
+completed cells at the top of the range (n = 9: 0.72; n = 10: 0.69). Every
+HGED = 0 pair has `d_I` = 0 — the identity-of-indiscernibles cross-check
+between the two metrics. The cost boundary is itself informative: the n = 9–10
+cells exhausted a first 16 GB / 6 h allocation and needed up to 8.5 h and a
+55 GB peak per 630-pair cell on the rerun (branch-and-bound frontier blow-up
+on cross-ladder pairs), i.e. the exact oracle reaches its practical ceiling
+*at the boundary of this mini-corpus* — a concrete illustration of why the
+article's methodology validates usefulness on task metrics rather than on an
+HGED axis. Final all-cell numbers replace these when the last cell completes.
 
 **Out of scope (recorded):** the v2 density sweep E2 (ρ vs Δ, the Theorem-B
 Δ-prediction) and the competitor HGED head-to-head. Both are follow-up

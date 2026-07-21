@@ -181,3 +181,12 @@ above). Post-merge extensions and the closure plan:
   this file to `CLOSED/`. If 1618786 exhausts 72 h without landing, the
   fallback is to pin E1' on the 9 completed cells with the oracle-ceiling
   note already in `correlation.md` (PI to confirm).
+
+- **11/12 interim harvest (2026-07-21 ~09:50 CEST).** Job 1618786 delivered
+  n9_s1 (COMPLETED 8h29, MaxRSS 55.0 GB) and n10_s0 (COMPLETED 7h50);
+  n10_s1 still RUNNING (>17 h). Re-harvest (idempotent): **ρ = 0.6222,
+  N = 6,921 pairs, Pearson r = 0.6634, OLS β = 0.5682**; per-cell ρ 0.481
+  (n8_s0) – 0.809 (n6_s0), with n9_s1 = 0.721 and n10_s0 = 0.685; HGED=0 ⇔
+  d_I=0 holds on all 11 cells. Orchestrator recomputed the pooled ρ
+  independently from the D matrices — exact match. Provisional blocks in
+  `correlation.md` + README updated to 11/12.

@@ -151,12 +151,12 @@ doc propagation:
 discussion evidence (small, last):
    T-M5a ◐ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
           [IN-PROGRESS: part 1 done at S3 (job 1616143 → 9/12 exact-HGED cells);
-           part 2 implementation merged at S5 — E1' provisional ρ=0.603
-           (N=5,661 pairs) + bits r>1 on 320/320 (incl. planted_n240; a
-           tokenization bug that reversed this was caught + regression-pinned);
-           the 3 boundary cells (n9_s1, n10_s0/s1: OOM/timeout at 16 GB/6 h)
-           rerun as job 1618786 (100 GB/72 h, running) — closure = idempotent
-           12/12 re-harvest when they land]
+           part 2 implementation merged at S5 — E1' provisional ρ=0.622
+           (N=6,921 pairs, 11/12 cells) + bits r>1 on 320/320 (incl.
+           planted_n240; a tokenization bug that reversed this was caught +
+           regression-pinned); job 1618786 (100 GB/72 h) delivered n9_s1
+           (8.5 h, 55 GB peak) + n10_s0 (7.8 h); n10_s1 still running —
+           closure = idempotent 12/12 re-harvest when it lands]
           [v2 pipeline executed + closed pre-rescope (`experiments/article/`,
            2026-07-09); that closure is superseded at D-ART2 — see the rescope
            note in T-M5a; T-M5a' (full-scale v2 harvest) parked in BLOCKED/]
@@ -187,10 +187,11 @@ competitive second (HPD-JSD leads A2/A3) — reported honestly; the capability
 matrix (A4) and the speed/capability trade-off are the differentiators. The
 HIC censored exhibit (T-M5j ✔, tables repaired at T-M5k ✔) cross-checks the
 hubness→kNN story on real data. Discussion evidence: bits r>1 on 320/320
-(pooled median 1.441, p = 1.6e-54); E1' provisional ρ = 0.603 on 9/12 cells.
-**The only remaining article-critical work is the T-M5a 12/12 re-harvest**
-(idempotent one-command update) when Picasso job 1618786 delivers the three
-boundary cells.
+(pooled median 1.441, p = 1.6e-54); E1' provisional ρ = 0.622 on 11/12 cells
+(N = 6,921 pairs; the two hardest completed cells sit at the top of the
+per-cell range). **The only remaining article-critical work is the T-M5a
+12/12 re-harvest** (idempotent one-command update) when Picasso job 1618786
+delivers the last cell (n10_s1).
 
 **Runnable now:** T-M5a closure on the 1618786 harvest; then S6 (optional,
 human opt-in). Nothing else remains.

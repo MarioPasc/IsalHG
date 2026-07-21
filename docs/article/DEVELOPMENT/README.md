@@ -58,7 +58,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked, +1 in-progress) | 11 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked) | 12 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
@@ -149,14 +149,14 @@ doc propagation:
           falsification) into the reasoning prose ← M5f ✔, M5g ✔ (DONE)
 
 discussion evidence (small, last):
-   T-M5a ◐ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
-          [IN-PROGRESS: part 1 done at S3 (job 1616143 → 9/12 exact-HGED cells);
-           part 2 implementation merged at S5 — E1' provisional ρ=0.622
-           (N=6,921 pairs, 11/12 cells) + bits r>1 on 320/320 (incl.
-           planted_n240; a tokenization bug that reversed this was caught +
-           regression-pinned); job 1618786 (100 GB/72 h) delivered n9_s1
-           (8.5 h, 55 GB peak) + n10_s0 (7.8 h); n10_s1 still running —
-           closure = idempotent 12/12 re-harvest when it lands]
+   T-M5a ✔ E1' figure (exact HGED, ours only) + bits ← M1b ✔, M2 ✔, M2c ✔, M4 ✔
+          (DONE 2026-07-21; E1' FINAL on the 11-block corpus — ρ=0.622,
+           N=6,921 pairs, per-cell 0.48–0.81, HGED=0 ⇔ d_I=0; the 12th block
+           (n10_s1) excluded whole-block at the measured oracle ceiling
+           (>100 GB/18 h OOM; DATA.md §4), PI-decided; bits r>1 on 320/320
+           incl. planted_n240 — pooled median 1.441, Wilcoxon p=1.6e-54;
+           a tokenization bug that reversed this was caught +
+           regression-pinned)
           [v2 pipeline executed + closed pre-rescope (`experiments/article/`,
            2026-07-09); that closure is superseded at D-ART2 — see the rescope
            note in T-M5a; T-M5a' (full-scale v2 harvest) parked in BLOCKED/]
@@ -186,15 +186,15 @@ intermediates; nauty cannot navigate). On task metrics IsalHG is a
 competitive second (HPD-JSD leads A2/A3) — reported honestly; the capability
 matrix (A4) and the speed/capability trade-off are the differentiators. The
 HIC censored exhibit (T-M5j ✔, tables repaired at T-M5k ✔) cross-checks the
-hubness→kNN story on real data. Discussion evidence: bits r>1 on 320/320
-(pooled median 1.441, p = 1.6e-54); E1' provisional ρ = 0.622 on 11/12 cells
-(N = 6,921 pairs; the two hardest completed cells sit at the top of the
-per-cell range). **The only remaining article-critical work is the T-M5a
-12/12 re-harvest** (idempotent one-command update) when Picasso job 1618786
-delivers the last cell (n10_s1).
+hubness→kNN story on real data. Discussion evidence (final): bits r>1 on
+320/320 (pooled median 1.441, p = 1.6e-54); E1' ρ = 0.622 on the final
+11-block corpus (N = 6,921 pairs; the hardest completed cells sit at the top
+of the per-cell range; the twelfth block excluded whole-block at the measured
+oracle ceiling — DATA.md §4). **T-M5a is CLOSED (2026-07-21) and S1–S5 are
+complete: no article-critical work remains.**
 
-**Runnable now:** T-M5a closure on the 1618786 harvest; then S6 (optional,
-human opt-in). Nothing else remains.
+**Runnable now:** S6 only (optional stretch — T-M4a ∥ T-TBe, then T-M6;
+explicit human opt-in).
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

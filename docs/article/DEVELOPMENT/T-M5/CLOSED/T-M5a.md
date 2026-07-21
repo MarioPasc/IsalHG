@@ -1,6 +1,6 @@
 # T-M5a — Discussion evidence: E1' figure + information content (rescoped at D-ART2)
 **Declared:** 2026-07-08 13:40 CEST (split from T-M5) · **rescoped** 2026-07-18 17:56 CEST (D-ART2)
-**Status:** IN-PROGRESS (part 1 — DQ1' probe + Picasso E1' submission — started 2026-07-19 at S3; part 2 harvests at S5)
+**Status:** DONE (closed 2026-07-21 at S5; E1' final on the 11-block corpus per PI decision)
 **Depends on:** T-M1b, T-M2 (DONE — oracle), T-M2c (connected mini-corpus generators), T-M4 (association + information primitives)
 **Context to read first:**
 - `docs/article/empirical/correlation.md` — E1' spec + the bits estimator + what is retired
@@ -190,3 +190,30 @@ above). Post-merge extensions and the closure plan:
   d_I=0 holds on all 11 cells. Orchestrator recomputed the pooled ρ
   independently from the D matrices — exact match. Provisional blocks in
   `correlation.md` + README updated to 11/12.
+
+---
+**Closing note (orchestrator, 2026-07-21 ~10:30 CEST). Status → DONE.**
+
+- **n10_s1 verdict:** job 1618786 task 11 ended OUT_OF_MEMORY at the 100 GB
+  allocation after ~18 h (its siblings completed at ≤ 8.5 h / 55 GB peak).
+  **PI decision (Mario, 2026-07-21): close E1' at 11/12 blocks** — whole-block
+  exclusion (the spec forbids per-pair censoring), disclosed in `DATA.md` §4
+  (final composition) and `correlation.md` (the measured oracle ceiling).
+- **Final E1' numbers (11 blocks, 6,921 HGED>0 pairs):** Spearman ρ = 0.6222
+  (p ≈ 0), Pearson r = 0.6634, OLS β = 0.5682; per-cell ρ 0.481–0.809
+  (n9_s1 = 0.721, n10_s0 = 0.685); HGED = 0 ⇔ d_I = 0 on every block.
+  Orchestrator-verified by independent recomputation from the D matrices
+  (exact match). Figure: `results/T-M5a/figures/e1prime_figure.pdf` (+ JSON).
+- **Bits (final):** pooled N = 320 over the three planted body corpora incl.
+  the N = 240 primary — median r = 1.441 (1.433 / 1.565 / 1.439 per corpus),
+  fraction shorter 1.000, one-sided Wilcoxon p = 1.62e-54, OLS β = 0.7485.
+  Table + figure: `results/T-M5a/bits/`. Independently recomputed (match).
+- **Acceptance check:** reproduces `correlation.md` E1' criteria (ρ +
+  scatter, ours-only, no MI/sweep/competitor rows) ✓; §Information content
+  criteria (fixed-width code, incidence-list model, ratio + Wilcoxon + OLS) ✓;
+  E1' figure and bits table render ✓; mini-corpus pinned by DQ1' with the
+  final 11-block composition recorded in `DATA.md` §4 ✓.
+- Reproduce via `python -m experiments.article.analysis.e1prime_harvest
+  --e1prime-dir <results>/T-M5a/e1prime --output-dir <results>/T-M5a/figures`
+  and `python -m experiments.article.analysis.bits_harvest --output-dir
+  <results>/T-M5a/bits` (both idempotent).

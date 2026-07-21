@@ -32,7 +32,7 @@ optional small task to fill a freed slot; never blocks the session.
 | ☑ | **S2** — Competitors & real anchor | All five `D_rep` implementations + the real-anchor verdict | { T-M3a ∥ T-M3b ∥ T-M3c } → { T-M3d ∥ T-M4' } → `[O]` T-DQ3' | S1 merged green |
 | ☑ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☑ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
-| ☐ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
+| ☑ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
 | ☐ | **S6** — Optional & stretch | Only if wanted after everything article-critical is closed | { T-M4a ∥ T-TBe } (either or none) → T-M6 | S1–S5 done; explicit human opt-in |
 
 ---
@@ -555,6 +555,23 @@ paper; `DECISIONS.md` has no silently-unresolved entry.
   `e1prime_harvest` re-run (12/12), final ρ into `correlation.md`, T-M5a →
   `CLOSED/`, tick. Fallback if 72 h expires: pin E1' on the 9 completed
   cells (PI to confirm; protocol in the T-M5a addendum).
+- **S5 CLOSED 2026-07-21 ~10:35 CEST.** Job 1618786 delivered n9_s1
+  (8h29, 55 GB peak) and n10_s0 (7h50) → interim 11/12 harvest ρ=0.622
+  (N=6,921), independently recomputed (exact match). n10_s1 then died
+  **OUT_OF_MEMORY at 100 GB after ~18 h**; **PI decision (Mario): close E1'
+  at 11 blocks** — whole-block exclusion (spec forbids per-pair censoring),
+  recorded as the final composition in `DATA.md` §4 and as the measured
+  oracle-ceiling data point in `correlation.md`. T-M5a → `CLOSED/` with the
+  full acceptance check; README hub final (T-M5 0 open / 12 closed; no
+  article-critical work remains; Runnable now = S6 opt-in). Closing
+  baselines: **1108 passed / 8 skipped / 16 deselected, ruff 3, mypy 21 in
+  7 files** (identical to the S5-sweep numbers; docs-only closure diff).
+  `main` pushed.
+- *S6 entry state:* everything article-facing is measured, verified, and
+  reproducible from `experiments/article/` (harvests idempotent). Optional
+  pool: T-M4a (entropy-coded bits), T-TBe (crossing peak), T-M6 (reparent),
+  T-OPTc / T-TAi (encoder optimization, value-preserving only). None gates
+  the paper.
 
 ---
 

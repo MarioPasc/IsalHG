@@ -120,6 +120,16 @@ pairs) so the scatter is populated across its range, not only near 0 and max.
 Size: pinned by an oracle wall-clock probe (DQ1'); no density sweep is run, so
 the v2 requirement of a wide (n, Δ) grid is gone — one honest corpus suffices.
 
+**Final composition (measured, 2026-07-21).** 11 of the 12 pinned blocks:
+n = 5..10 × 2 seeds, minus the second n = 10 block, whose exact-HGED
+all-pairs run exceeded a 100 GB memory allocation after 18 h (its two sibling
+hard blocks completed at up to 8.5 h / 55 GB peak per 630-pair block). The
+exclusion is whole-block — the E1' protocol forbids per-pair censoring (a
+censored pair would bias ρ) — and is reported as the measured practical
+ceiling of the exact oracle; the DQ1' probe, which timed within-ladder pairs
+only, did not expose the cross-ladder branch-and-bound blow-up. Final corpus:
+11 blocks × 630 = 6,930 pairs (6,921 with HGED > 0).
+
 ## 5. Reuse from the existing data layer
 
 The current `isalhg.datasets` layer (exhaustive_small, permute-based iso

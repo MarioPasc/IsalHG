@@ -86,6 +86,61 @@ literature. See PROPOSAL §5.)*
   skewness) as the standard diagnostic for nearest-neighbour reliability in
   high-dimensional metric data; the G1 precondition report for kNN (A3).
 
+## Application motivation — practitioner domains (A1–A4)
+
+Citable precedents for the *task* (not for our method) that open each application
+subsection in `empirical/applications.md`. Added at T-M8c (2026-07-22).
+
+- **Klamt, S., Haus, U.-U., and Theis, F.** "Hypergraphs and Cellular Networks."
+  *PLOS Computational Biology* 5(5):e1000385, 2009. DOI:10.1371/journal.pcbi.1000385.
+  — Establishes hypergraph representations of biochemical reaction and signalling
+  networks; motivates structural analysis and comparison of module-scale reaction
+  hypergraphs (A1 scenario). *Verification: authors, title, venue, DOI confirmed by
+  agent knowledge at high confidence (Klamt, MPI Magdeburg; Haus; Theis, Helmholtz).*
+- **Benson, A. R., Gleich, D. F., and Leskovec, J.** "Higher-order organization of
+  complex networks." *Science* 353(6295):163–166, 2016. DOI:10.1126/science.aad9029.
+  — Introduces higher-order motif analysis of complex networks; motivates the task
+  of surveying and structurally triaging a corpus of network motifs (A1 scenario).
+  *Verification: authors, title, venue, DOI confirmed at very high confidence
+  (landmark paper, widely cited).*
+- **Milo, R., Shen-Orr, S., Itzkovitz, S., Kashtan, N., Chklovskii, D., and Alon, U.**
+  "Network motifs: Simple building blocks of complex networks." *Science*
+  298(5594):824–827, 2002. DOI:10.1126/science.298.5594.824.
+  — Establishes the systematic study of recurring higher-order structural patterns
+  (motifs) in biological networks; directly motivates grouping network modules by
+  structural family and selecting structural representatives (A2 scenario).
+  *Verification: authors, title, venue, DOI confirmed at very high confidence
+  (one of the most cited papers in network biology).*
+- **Newman, M. E. J.** "The structure of scientific collaboration networks."
+  *PNAS* 98(2):404–409, 2001. DOI:10.1073/pnas.98.2.404.
+  — Establishes co-authorship networks where each paper is a hyperedge over its
+  authors; motivates the structural classification of collaboration hypergraphs
+  by type (A3 scenario). *Verification: author, title, venue, DOI confirmed at
+  very high confidence (Newman's canonical collaboration-network paper).*
+- **Chodrow, P. S., Veldt, N., and Benson, A. R.** "Generative hypergraph clustering:
+  From blockmodels to modularity." *Science Advances* 7(28):eabh1303, 2021.
+  DOI:10.1126/sciadv.abh1303.
+  — Studies the problem of classifying hypergraphs into structural community types;
+  directly motivates the A3 task of assigning an incoming hypergraph to a structural
+  class. *Verification: authors, title, venue, DOI confirmed at high confidence
+  (Chodrow, Veldt, Benson — active hypergraph-community-detection researchers;
+  Science Advances; DOI eabh1303).*
+- **Holme, P. and Saramäki, J.** "Temporal networks." *Physics Reports*
+  519(3):97–125, 2012. DOI:10.1016/j.physrep.2012.03.001.
+  — The standard review on temporal network analysis; establishes the task of
+  comparing two network-state snapshots and tracing the trajectory between them,
+  motivating the A4 path-finding scenario. *Verification: authors, title, venue,
+  DOI confirmed at very high confidence (canonical temporal-networks review).*
+- **Battiston, F., Cencetti, G., Iacopini, I., Latora, V., Lucas, M., Patania, A.,
+  Young, J.-G., and Petri, G.** "Networks beyond pairwise interactions: Structure
+  and dynamics." *Physics Reports* 874:1–92, 2020. DOI:10.1016/j.physrep.2020.05.004.
+  — Comprehensive review of higher-order/hypergraph network science, covering
+  temporal dynamics of higher-order interactions; motivates tools that track
+  structural transitions between hypergraph states (A4 scenario).
+  *Verification: authors, title, venue, DOI confirmed at very high confidence
+  (Battiston-led review, Physics Reports 2020; widely cited in the hypergraph
+  community).*
+
 ## Distance-matrix → classification/clustering pipeline (applications §A2–A3)
 
 - **Neuhaus & Bunke.** *Bridging the Gap Between GED and Kernel Machines.* World

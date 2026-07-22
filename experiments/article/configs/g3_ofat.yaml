@@ -1,0 +1,72 @@
+# G3 — One-Factor-At-a-Time geometry-response experiment (T-M7f)
+# Runs experiments.article.g3_analysis.run_default_g3()
+# All bases are ADMITTED Stratum A designs (n <= 20, 30s feasibility budget passed).
+# PENDING_CLUSTER designs (STS13, AG24, PG23, PG24) excluded.
+
+experiment: g3_ofat
+
+output_dir: artifacts/g3
+
+# Distance representations to evaluate (6 total: ours + 5 competitors)
+distance_names:
+  - isalhg_levenshtein      # d_I (our method, primary)
+  - hypergraph_wl_l1        # WL-L1 histogram (vector; no decoder)
+  - netlsd_l2               # NetLSD on Levi expansion (full member since D-ART2)
+  - hpd_jsd                 # Hyperedge Portrait Divergence (JSD)
+  - nauty_levi_edit         # nauty-Levi canonical string edit (contrast baseline)
+  - degree_seq_l1           # degree-sequence L1 (naive baseline; T-M7c)
+
+# HyperCOT excluded: subprocess + pinned conda env complexity;
+# scale limit (O(n^3)/pair) noted as out of scope for this run.
+
+axes:
+  # M1 — vertex growth: one new vertex + one 2-edge per step
+  - axis: M1
+    base_name: tight_cycle_k3_n5   # tight 3-cycle, n=5, m=5, k=3 (ADMITTED 0.001s)
+    T: 10
+    seed: 1001
+    skip_mds_nu: false              # fast base; run MDS + nu
+
+  # M2 — densification: one new edge over existing vertices per step
+  - axis: M2
+    base_name: loose_path_k3_n9    # loose 3-path, n=9, m=4, k=3 (ADMITTED 0.001s)
+    T: 10
+    seed: 1002
+    skip_mds_nu: false              # fast base; run MDS + nu
+
+  # M3 — arity increase: one add_incidence per step (per-k, analyzed separately)
+  - axis: M3
+    base_name: fano_plane_k3       # Fano STS(7), n=7, m=7, k=3 (ADMITTED 0.005s)
+    T: 10                          # sequence terminates early when all vertices consumed
+    seed: 1003
+    skip_mds_nu: true              # canonical cost rises as arities grow
+
+  - axis: M3
+    base_name: tight_path_k4_n6   # tight 4-path, n=6, m=3, k=4 (ADMITTED 0.002s)
+    T: 5
+    seed: 1004
+    skip_mds_nu: true
+
+  - axis: M3
+    base_name: tight_path_k5_n7   # tight 5-path, n=7, m=3, k=5 (ADMITTED 0.030s)
+    T: 4
+    seed: 1005
+    skip_mds_nu: true
+
+  # M4 — incidence edit: alternating add/remove incidences (Qin unit ops)
+  - axis: M4
+    base_name: sts9_k3            # STS(9), n=9, m=12, k=3 (ADMITTED 0.102s)
+    T: 10
+    seed: 1006
+    skip_mds_nu: true             # STS(9) canonical cost non-trivial per step
+
+  # M5 — symmetry break: random connectivity-preserving edit on high-symmetry base
+  - axis: M5
+    base_name: gq22_k3            # GQ(2,2) doily, n=15, m=15, k=3 (ADMITTED 1.255s)
+    T: 10
+    seed: 1007
+    skip_mds_nu: true             # GQ(2,2) canonical cost 1.25s/call; 55 pairs too slow
+
+# M3 discipline note: per task T-M7f, M3 is analyzed per base k,
+# never pooling raw d_I across k values. The three M3 entries above
+# are three independent sub-experiments — results are never aggregated.

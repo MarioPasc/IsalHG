@@ -30,32 +30,29 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export CONDA_ENV_NAME="isalhg"
 export REPO_DIR="/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG"
 export T_M7H_CONFIG="${REPO_DIR}/experiments/article/configs/stratum_b_sweep.yaml"
+export T_M7H_ENVELOPE="${REPO_DIR}/experiments/article/stratum_b_feasibility_envelope.json"
 export T_M7H_OUTPUT_DIR="/mnt/home/users/tic_163_uma/mpascual/fscratch/results/T-M7h/stratum_b/per_block"
 LOGS_DIR="/mnt/home/users/tic_163_uma/mpascual/execs/T-M7h/logs"
 
-# 19 pending Stratum B blocks (from stratum_b_feasibility_envelope.json).
-# Order matches SLURM_ARRAY_TASK_ID 0-18 (0-indexed).
-BLOCK_KEYS=(
-    "er_uniform_k3_n24_rho1"
-    "er_uniform_k3_n24_rho2"
-    "er_uniform_k3_n24_rho4"
-    "er_uniform_k3_n32_rho1"
-    "er_uniform_k3_n32_rho2"
-    "er_uniform_k3_n32_rho4"
-    "er_uniform_k3_n48_rho1"
-    "er_uniform_k3_n48_rho2"
-    "er_uniform_k3_n48_rho4"
-    "er_uniform_k3_n64_rho1"
-    "er_uniform_k3_n64_rho2"
-    "er_uniform_k3_n64_rho4"
-    "er_uniform_k5_n8_rho1"
-    "er_uniform_k5_n8_rho2"
-    "er_uniform_k5_n16_rho1"
-    "er_uniform_k5_n16_rho2"
-    "er_uniform_k5_n16_rho4"
-    "er_uniform_k7_n8_rho1"
-    "er_uniform_k10_n16_rho1"
+# ── Derive pending block keys from the enumerator (single source of truth) ───
+# feasibility_pilot.py --list-blocks --pending-envelope reads the YAML config,
+# enumerates runnable blocks, and filters to those still pending in the envelope.
+# This eliminates hard-coded key lists that drift from the actual enumerator naming.
+PYTHON_BIN="$(conda run -n "${CONDA_ENV_NAME}" which python 2>/dev/null \
+    || echo "${HOME}/.conda/envs/${CONDA_ENV_NAME}/bin/python")"
+
+mapfile -t BLOCK_KEYS < <(
+    cd "${REPO_DIR}" && "${PYTHON_BIN}" -m experiments.article.feasibility_pilot \
+        --config "${T_M7H_CONFIG}" \
+        --list-blocks \
+        --pending-envelope "${T_M7H_ENVELOPE}"
 )
+
+if [[ "${#BLOCK_KEYS[@]}" -eq 0 ]]; then
+    echo "ERROR: --list-blocks returned no pending blocks. Check envelope and config." >&2
+    exit 1
+fi
+echo "Derived ${#BLOCK_KEYS[@]} pending block keys from the enumerator."
 
 N_BLOCKS="${#BLOCK_KEYS[@]}"   # 19
 ARRAY_MAX="$((N_BLOCKS - 1))"  # 18

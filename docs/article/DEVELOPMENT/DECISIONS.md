@@ -10,9 +10,15 @@
   (label-aware member) while the planted rows measure `d_I^⊥` (structural
   member); these are incomparable family members and the lower HIC `D̂ ≈ 10–11`
   may partly reflect the vocabulary rather than purely structural differences.
-  Recommended if the wall-clock is acceptable — the `w*_c` cost does not change
-  when labels are trivialised (same instances run; the per-instance censoring
-  budget applies identically). Not gating on any article claim. Execution owned
+  Cost caveat (orchestrator correction, 2026-07-22): the `w*_c` cost is NOT
+  unchanged under label-stripping — labels enter the seed cascade and the
+  tie-breaking, so trivialising the vocabulary weakens tie-breaking and the
+  tie-complete branching cost can only stay equal or grow; on near-symmetric
+  instances it can grow sharply (the T-DQ3' DNF tail was symmetry-driven with
+  labels still present). The stripped run therefore needs its own censoring
+  pass, and the clean-dataset yield may drop below the labelled run's.
+  Recommended only after a small stripped pre-pilot on one clean HIC dataset
+  confirms acceptable yield. Not gating on any article claim. Execution owned
   by T-M7g if adopted.
 
 - **OD6** — **[RESOLVED 2026-07-20, PI (Mario) directed: INCLUDE]** The

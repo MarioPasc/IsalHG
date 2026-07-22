@@ -37,11 +37,23 @@ Blocks requiring cluster measurement:
 | `vm_complexity_timeout` (1 sample) | k=7, n=8, density=1 → 1 block |
 | `vm_complexity_timeout_k10_...` (1 sample) | k=10, n=16, density=1 → 1 block |
 
+**Scope addition (orchestrator, 2026-07-22, post-T-M7a merge):** the six
+Stratum A designs reclassified PENDING_CLUSTER at T-M7a — `sts13_0`,
+`sts13_1`, `sts15_0`, `ag24`, `pg23`, `pg24` (workstation DNF at the 30 s
+budget; tie-complete branching vs large automorphism groups). Cluster-measure
+each via `scripts/feasibility_pilot_stratum_a.py` (measurement ceiling 300 s;
+admission still by the DATA.md §4 criterion p90 ≤ 30 s + 0 DNFs) and update
+`artifacts/feasibility_pilot/feasibility_pilot_stratum_a.json` +
+`admitted_catalog.txt` with final tristate statuses. `ag24`/`pg23`/`pg24` are
+the structured arity-4/5 designs T-M7e's §4.2 re-scoring wants — report their
+verdicts prominently in the closing note.
+
 **Acceptance:** `stratum_b_feasibility_envelope.json` updated with
 cluster-measured p50/p90 for all 19 pending blocks; every block has
 `n_pilot ≥ 30` or a documented cluster-measured exclusion reason; the
-`summary` dict reflects final counts; closing note reports the resulting
-admitted set and gates T-M7d explicitly.
+`summary` dict reflects final counts; the six Stratum A designs carry
+cluster-measured p50/p90 and final statuses in the Stratum A pilot artifacts;
+closing note reports the resulting admitted set and gates T-M7d explicitly.
 **Out of scope here:** running G1/A1–A3 on the admitted cells (T-M7d); any
 changes to `src/isalhg/`; generating new SLURM configs beyond what `feasibility_pilot.py` needs.
 

@@ -1,0 +1,107 @@
+# Stratum B parametric sweep — T-M7b
+#
+# Full-factorial grid declaration for the Stratum B generalizability corpus.
+# Source spec: docs/article/REVIEW/DATA.md §2B and §4.
+#
+# This file is a RECIPE, not a flat cell list.
+# The Python enumerator (experiments.article.stratum_b_cells) expands it into
+# StratumBCell objects; the feasibility pilot filters to runnable cells and
+# records the envelope artifact before any corpus generation runs.
+#
+# k-family discipline (stability.md §1, DATA.md §5):
+#   d_I^{k,h,Σ} is an index family.  Absolute d_I values across different k are
+#   INCOMPARABLE.  The analysis stubs produced downstream MUST compare only
+#   dimensionless geometry descriptors across k (ν, D̂, stress, hubness skew)
+#   and within-k application rankings.  No config or analysis stub may pool raw
+#   d_I across different k.
+#
+# Generator notes:
+#   erdos_renyi  : registered as "random_erdos_renyi" in the package.
+#                  UniformErdosRenyiHypergraphs(n, r, c, ...).  Uniform arity r.
+#   chung_lu     : ChungLuHypergraphs raises NotImplementedError everywhere.
+#                  Cells declared but skip_reason="generator_not_implemented".
+#                  Will be unblocked when T-M7a (or equivalent) fills the stub.
+#   mixed_arity  : No package generator; declared with
+#                  skip_reason="mode_not_implemented".  Requires a new generator.
+#
+# Connectivity: require_connected=true (T-M2c, D-CONN1).
+# The ER generator enforces connectivity via rejection-sampling (connected_max_attempts).
+#
+# Seeds:
+#   seed = seed_base + cell_block_index * seed_stride + seed_index
+#   seed_index in [0, n_seeds)
+#   cell_block_index: flat index over (arity_cfg_idx, n_idx, density_idx)
+#   in the declaration order below.  Deterministic; printed into every result record.
+#
+# Feasibility gate (DATA.md §4):
+#   Each cell is admitted only after feasibility_pilot.py confirms
+#   p90(w*_c wall-clock) ≤ budget_s with 0 DNFs over n_pilot instances.
+#   Dropped cells are logged with measured p50/p90 and the reason.
+#   The admitted region is the paper's scalability / feasibility-envelope figure.
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7b
+
+seed_base: 1000
+seed_stride: 100
+n_seeds: 20
+budget_s: 30.0
+n_pilot: 30
+require_connected: true
+connected_max_attempts: 1000
+
+n_values: [8, 16, 24, 32, 48, 64]
+density_ratios: [1, 2, 4]   # target m/n values
+
+# Arity configurations — each entry defines one arity axis.
+# mode=uniform: r (uniform hyperedge arity) = k; generator must be erdos_renyi.
+# mode=mixed: arities drawn from [2, k]; no package generator yet (not_implemented).
+# generator=chung_lu: stub (not_implemented).
+#
+# Ordering here determines cell_block_index; do not reorder without regenerating
+# the seed table.
+arity_configs:
+  # ── Uniform arity, Erdős–Rényi (runnable) ──────────────────────────────────
+  - mode: uniform
+    k: 3
+    generator: erdos_renyi
+  - mode: uniform
+    k: 5
+    generator: erdos_renyi
+  - mode: uniform
+    k: 7
+    generator: erdos_renyi
+  - mode: uniform
+    k: 10
+    generator: erdos_renyi
+  # ── Mixed arity [2, k], Erdős–Rényi (declared, not yet runnable) ───────────
+  # No mixed-arity ER generator exists in the package.  These cells are
+  # declared for the full-factorial record; the pilot marks them not_runnable.
+  # Unblock: implement a mixed-arity hypergraph generator and register it.
+  - mode: mixed
+    k: 3
+    generator: erdos_renyi
+  - mode: mixed
+    k: 5
+    generator: erdos_renyi
+  - mode: mixed
+    k: 7
+    generator: erdos_renyi
+  - mode: mixed
+    k: 10
+    generator: erdos_renyi
+  # ── Chung-Lu (declared, not yet runnable) ──────────────────────────────────
+  # ChungLuHypergraphs.{metadata, __iter__} raise NotImplementedError.
+  # Declared for the full-factorial record; the pilot marks them not_runnable.
+  # Unblock: implement ChungLuHypergraphs and register as "random_chung_lu".
+  - mode: uniform
+    k: 3
+    generator: chung_lu
+  - mode: uniform
+    k: 5
+    generator: chung_lu
+  - mode: uniform
+    k: 7
+    generator: chung_lu
+  - mode: uniform
+    k: 10
+    generator: chung_lu

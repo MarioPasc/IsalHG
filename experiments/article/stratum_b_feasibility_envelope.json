@@ -1,0 +1,631 @@
+{
+  "schema_version": "1.0",
+  "task": "T-M7b",
+  "config": {
+    "yaml": "experiments/article/configs/stratum_b_sweep.yaml",
+    "budget_s": 30.0,
+    "n_pilot_target": 5,
+    "local_timeout_per_instance_s": 35,
+    "measurement_date": "2026-07-22",
+    "note": "Local pilot (5 instances/block, 35s timeout). k=3 n>=24 and k>=5 n>=16 require Picasso."
+  },
+  "summary": {
+    "n_measured_blocks": 8,
+    "n_admitted": 8,
+    "n_excluded_confirmed_infeasible": 5,
+    "n_escalate_to_hpc": 12
+  },
+  "findings": {
+    "k3_n8_16": "ADMITTED: all 6 (n x density) blocks at k=3, n in {8,16} are within budget (p90 <= 10.9s)",
+    "k3_n_ge_24": "NOT_MEASURED_LOCALLY: each instance exceeds 35s timeout; escalate to Picasso",
+    "k5_n8": "PROVISIONALLY_ADMITTED: single sample; p50=3.6s (rho=1), 7.4s (rho=2) both within 30s budget; needs full 30-instance pilot",
+    "k5_n_ge_16": "INFERRED_INFEASIBLE: extrapolating from k5_n8_p50=3605ms; n=16 would be far slower",
+    "k7_k10": "INFEASIBLE: VM complexity (k pointers) causes timeout at minimum feasible n. The k=10 advertised arity cap is measured infeasible locally \u2014 documented as a finding per task acceptance criteria.",
+    "chung_lu": "NOT_RUNNABLE: ChungLuHypergraphs.{metadata,__iter__} raise NotImplementedError",
+    "mixed_arity": "NOT_RUNNABLE: no mixed-arity generator in the package"
+  },
+  "hpc_escalation": {
+    "needed": true,
+    "scope": "k=3 at n in {24,32,48,64}; k=5 at n in {8,16} (full 30-instance pilot)",
+    "tool": "picasso-sbatch skill",
+    "note": "Escalation is for measurement only; T-M7b config and code are complete."
+  },
+  "admitted_block_keys": [
+    "er_uniform_k3_n8_rho1",
+    "er_uniform_k3_n8_rho2",
+    "er_uniform_k3_n8_rho4",
+    "er_uniform_k3_n16_rho1",
+    "er_uniform_k3_n16_rho2",
+    "er_uniform_k3_n16_rho4",
+    "er_uniform_k5_n8_rho1",
+    "er_uniform_k5_n8_rho2"
+  ],
+  "excluded": [
+    {
+      "block_key": "er_uniform_k3_n24_rho1",
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho2",
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho4",
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho1",
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho2",
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho4",
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho1",
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho2",
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho4",
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho1",
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho2",
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho4",
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho1",
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho2",
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho4",
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms"
+    },
+    {
+      "block_key": "er_uniform_k7_n8_rho1",
+      "reason": "vm_complexity:k=7_timeout_at_n=8_wstar_c_VM_with_7_pointers"
+    },
+    {
+      "block_key": "er_uniform_k10_n16_rho1",
+      "reason": "vm_complexity:k=10_timeout_at_n=16_wstar_c_VM_with_10_pointers"
+    }
+  ],
+  "block_results": [
+    {
+      "block_key": "er_uniform_k3_n8_rho1",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 5,
+      "p50_ms": 2.2,
+      "p90_ms": 43.9,
+      "n_ok": 5,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho2",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 5,
+      "p50_ms": 10.3,
+      "p90_ms": 36.2,
+      "n_ok": 5,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho4",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 5,
+      "p50_ms": 1328.2,
+      "p90_ms": 2716.6,
+      "n_ok": 5,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho1",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 5,
+      "p50_ms": 174.9,
+      "p90_ms": 234.1,
+      "n_ok": 5,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho2",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 5,
+      "p50_ms": 659.3,
+      "p90_ms": 2388.3,
+      "n_ok": 5,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho4",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 4,
+      "p50_ms": 6249.8,
+      "p90_ms": 10878.4,
+      "n_ok": 4,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "",
+      "note": "1_of_5_instances_exceeded_35s_per_instance_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho1",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho2",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho4",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=24_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho1",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho2",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho4",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=32_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho1",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho2",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho4",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=48_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho1",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho2",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho4",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 3,
+      "admitted": false,
+      "reason": "pilot_timeout:k=3_n=64_each_instance_exceeds_35s; escalate_to_Picasso",
+      "note": "local_pilot_budget_exceeded"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho1",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 1,
+      "n_pilot": 1,
+      "p50_ms": 3605.1,
+      "p90_ms": 3605.1,
+      "n_ok": 1,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "provisional_single_sample:p50=3605ms_within_30s_budget_but_needs_full_pilot",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho2",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 2,
+      "n_pilot": 1,
+      "p50_ms": 7410.0,
+      "p90_ms": 7410.0,
+      "n_ok": 1,
+      "n_timeout": 0,
+      "admitted": true,
+      "reason": "provisional_single_sample:p50=7410ms_within_30s_budget_but_needs_full_pilot",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho1",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 1,
+      "n_pilot": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 1,
+      "admitted": false,
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms",
+      "note": "inferred_infeasible_from_k5_n8_p50_3605ms_n16_would_be_much_slower"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho2",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 2,
+      "n_pilot": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 1,
+      "admitted": false,
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms",
+      "note": "inferred_infeasible_from_k5_n8"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho4",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 4,
+      "n_pilot": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 1,
+      "admitted": false,
+      "reason": "inferred_infeasible:k=5_n=16_extrapolated_from_k5_n8_p50=3605ms",
+      "note": "inferred_infeasible_from_k5_n8"
+    },
+    {
+      "block_key": "er_uniform_k7_n8_rho1",
+      "n": 8,
+      "k": 7,
+      "density_ratio": 1,
+      "n_pilot": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 1,
+      "admitted": false,
+      "reason": "vm_complexity:k=7_timeout_at_n=8_wstar_c_VM_with_7_pointers",
+      "note": "vm_complexity_timeout"
+    },
+    {
+      "block_key": "er_uniform_k10_n16_rho1",
+      "n": 16,
+      "k": 10,
+      "density_ratio": 1,
+      "n_pilot": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "n_ok": 0,
+      "n_timeout": 1,
+      "admitted": false,
+      "reason": "vm_complexity:k=10_timeout_at_n=16_wstar_c_VM_with_10_pointers",
+      "note": "vm_complexity_timeout_k10_at_minimum_feasible_n"
+    }
+  ],
+  "figure_data": {
+    "k3_rho1": {
+      "k": 3,
+      "density_ratio": 1,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        2.2,
+        174.9,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        43.9,
+        234.1,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "k3_rho2": {
+      "k": 3,
+      "density_ratio": 2,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        10.3,
+        659.3,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        36.2,
+        2388.3,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "k3_rho4": {
+      "k": 3,
+      "density_ratio": 4,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        1328.2,
+        6249.8,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        2716.6,
+        10878.4,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    "k5_rho1": {
+      "k": 5,
+      "density_ratio": 1,
+      "n_values": [
+        8,
+        16
+      ],
+      "p50_ms": [
+        3605.1,
+        null
+      ],
+      "p90_ms": [
+        3605.1,
+        null
+      ],
+      "admitted": [
+        true,
+        false
+      ]
+    },
+    "k5_rho2": {
+      "k": 5,
+      "density_ratio": 2,
+      "n_values": [
+        8,
+        16
+      ],
+      "p50_ms": [
+        7410.0,
+        null
+      ],
+      "p90_ms": [
+        7410.0,
+        null
+      ],
+      "admitted": [
+        true,
+        false
+      ]
+    },
+    "k5_rho4": {
+      "k": 5,
+      "density_ratio": 4,
+      "n_values": [
+        16
+      ],
+      "p50_ms": [
+        null
+      ],
+      "p90_ms": [
+        null
+      ],
+      "admitted": [
+        false
+      ]
+    }
+  }
+}

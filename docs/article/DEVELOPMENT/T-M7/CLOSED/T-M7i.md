@@ -91,3 +91,51 @@ to produce the correct dict for CL/mixed cells — is downstream work owned by
 **T-M7d** (preflight for the Stratum B sweep).  T-M7h owns the Picasso
 feasibility pilot once those cells are unblocked.
 
+---
+
+## Correction note (2026-07-22, post-coordinator review)
+
+**Defect found and fixed in `mixed_arity_erdos_renyi.py`.**
+
+The original closing note above described a shared-probability design
+(`p = c·n / Σ_{a=2}^{k} C(n,a)`) passed as `[p, p, …, p]` to
+`xgi.random_hypergraph`.  The coordinator identified that this makes the
+expected edge count for arity `a` proportional to `C(n,a)`, concentrating
+≈86% of edges at the largest arity (e.g. arity-5 at `n=16, k=5`).  The
+"mixed arity ∈ [2,k]" axis from `DATA.md §2B` exists to measure arity
+heterogeneity; with the shared-p construction the axis was effectively
+uniform-`k` in disguise.
+
+**Fix applied:** replaced `_p_from_c_mixed(c, n, k) → float` (shared
+probability) with `_p_per_arity(c, n, k) → list[float]`, using the
+balanced formula `p_a = c·n / ((k−1)·C(n,a))`.  This gives equal expected
+edge count `c·n/(k−1)` per arity class and total `E[m] = c·n` preserved.
+When `p_a > 1.0` for small arities at high density, `p_a` is clamped to
+1.0 with a logged warning.  The constructor now stores `self._ps:
+list[float]` (one probability per arity class) and passes it directly to
+`xgi.random_hypergraph`; the old `self._p: float` field is gone.
+
+**Additional tests added** (2 new tests in `TestArityDistribution`):
+
+- `test_balanced_arity_mixture_pinned` — pinned at `(n=20, k=5, c=3.0,
+  seed=42)`, asserts every arity class in `[2,5]` is non-empty and no
+  single class exceeds 60% of edges; also asserts determinism under the
+  same seed.  This test would have failed against the old shared-p code
+  (arity-5 would dominate at ~71%, arity-2 absent).
+- `test_density_contract` — for seeds 0–4 at `(n=20, k=5, c=2.0)`, asserts
+  `|n_edges − c·n| / (c·n) ≤ 1.0` (100% relative-error bound), confirming
+  the density formula is preserved across the model change.
+
+**Final test output (post-fix):**
+
+```
+tests/unit/datasets/test_mixed_arity_erdos_renyi.py  25 passed
+tests/unit/datasets/test_chung_lu.py                 18 passed
+tests/unit/ (full suite)                             982 passed, 5 skipped
+```
+
+**Checks (post-fix):**
+
+- ruff: 3 errors (baseline unchanged).
+- mypy: 21 errors (baseline unchanged).
+

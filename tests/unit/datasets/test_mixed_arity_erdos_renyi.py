@@ -185,3 +185,66 @@ class TestArityDistribution:
                 seen_arities[len(members)] += 1
         for a in range(2, k + 1):
             assert seen_arities[a] > 0, f"arity {a} never appeared in 10 seeds at c=3"
+
+    def test_balanced_arity_mixture_pinned(self) -> None:
+        """Pinned realization: all arities present, no single class exceeds 60%.
+
+        Balanced design gives E[m_a] = c*n/(k-1) = 3.0*20/4 = 15 per arity.
+        The shared-p defect would give arity-5 ~71% and arity-2 ~0.9%,
+        causing this test to fail on the dominance check and likely on the
+        all-arities-present check as well.
+        """
+        k = 5
+        ds = MixedArityErdosRenyiHypergraphs(n=20, k=k, c=3.0, seed=42)
+        item = next(iter(ds))
+        h = item.hypergraph
+
+        counts: Counter[int] = Counter()
+        for _, members, _ in h.iter_edges():
+            counts[len(members)] += 1
+
+        total = sum(counts.values())
+        assert total > 0, "expected at least one edge"
+
+        for a in range(2, k + 1):
+            assert counts[a] > 0, (
+                f"arity {a} absent; histogram={dict(sorted(counts.items()))}, total={total}. "
+                "Suggests shared-p defect: largest-arity class dominated, "
+                "smallest-arity class starved."
+            )
+
+        dominant_frac = max(counts[a] for a in range(2, k + 1)) / total
+        assert dominant_frac <= 0.60, (
+            f"arity class dominates at {dominant_frac:.1%}; "
+            f"histogram={dict(sorted(counts.items()))}, total={total}. "
+            "Expected balanced mixture (~25% per class for k=5)."
+        )
+
+        # Determinism: same seed must reproduce the same histogram.
+        ds2 = MixedArityErdosRenyiHypergraphs(n=20, k=k, c=3.0, seed=42)
+        item2 = next(iter(ds2))
+        counts2: Counter[int] = Counter()
+        for _, members, _ in item2.hypergraph.iter_edges():
+            counts2[len(members)] += 1
+        assert counts == counts2, (
+            f"arity histogram not deterministic: {dict(counts)} vs {dict(counts2)}"
+        )
+
+    def test_density_contract(self) -> None:
+        """Realized edge count stays within 100% of c*n across five pinned seeds.
+
+        With balanced per-arity p_a, total E[m] = c*n is preserved.  A 100%-
+        relative-error bound is loose enough to accommodate Binomial variance
+        but catches gross formula errors (wrong normalization, off-by-arity bugs).
+        """
+        n, k, c = 20, 5, 2.0
+        expected_m = c * n  # = 40
+        for seed in range(5):
+            ds = MixedArityErdosRenyiHypergraphs(n=n, k=k, c=c, seed=seed)
+            item = next(iter(ds))
+            actual_m = item.hypergraph.n_edges
+            rel_err = abs(actual_m - expected_m) / expected_m
+            assert rel_err <= 1.0, (
+                f"seed={seed}: n_edges={actual_m} deviates from E[m]={expected_m:.0f} "
+                f"by {rel_err:.0%}; density contract broken (expected within 100%)"
+            )

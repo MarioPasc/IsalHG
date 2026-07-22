@@ -17,14 +17,14 @@ should be a first-class main figure, not buried in prose.
 Rows = the six representations; columns = capabilities. Render as a
 checkmark / partial / cross grid (✓ / ~ / ✗), not a paragraph.
 
-| Capability | IsalHG | WL-hist | NetLSD | HyperCOT | HPD | nauty-edit |
-|---|:--:|:--:|:--:|:--:|:--:|:--:|
-| **Complete invariant** (exact iso: `d = 0 ⇔ ≅`) | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ |
-| **True metric** (triangle inequality) | ✓ | ✓ | ✓ | ✓ | ✗ (JSD) | ✓ |
-| **Decodable** (recover the hypergraph from the representation) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ |
-| **Navigable geometry** (bounded single-edit sensitivity `s(e)`) | ✓ (IQR 2–8) | — | — | — | — | ✗ (IQR 10–20) |
-| **Scales to `n ≳ 10²`** | ✗ (symmetry-gated) | ✓ | ✓ | ✗ (`O(n³)`) | ✓ | ~ |
-| **Single metric drives all 4 tasks** (A1–A4) | ✓ | ✓ | ✓ | ✓ | ~ | ✓ |
+| Capability | IsalHG | WL-hist | NetLSD | HyperCOT | HPD | nauty-edit | Deg-seq L1 |
+|---|:--:|:--:|:--:|:--:|:--:|:--:|:--:|
+| **Complete invariant** (exact iso: `d = 0 ⇔ ≅`) | ✓ | ✗ | ✗ | ✗ | ✗ | ✓ | ✗ |
+| **True metric** (triangle inequality) | ✓ | ✓ | ✓ | ✓ | ✗ (JSD) | ✓ | ✓ |
+| **Decodable** (recover the hypergraph from the representation) | ✓ | ✗ | ✗ | ✗ | ✗ | ✗ | ✗ |
+| **Navigable geometry** (bounded single-edit sensitivity `s(e)`) | ✓ (IQR 2–8) | — | — | — | — | ✗ (IQR 10–20) | — |
+| **Scales to `n ≳ 10²`** | ✗ (symmetry-gated) | ✓ | ✓ | ✗ (`O(n³)`) | ✓ | ~ | ✓ |
+| **Single metric drives all 4 tasks** (A1–A4) | ✓ | ✓ | ✓ | ✓ | ~ | ✓ | ✓ |
 
 ### The two rows where IsalHG stands alone
 
@@ -44,27 +44,37 @@ checkmark / partial / cross grid (✓ / ~ / ✗), not a paragraph.
 - **Complete invariant.** IsalHG: Theorem A (tie-complete `w*_c`). nauty:
   canonical form over the Levi reduction (complete by construction). WL / NetLSD
   / HyperCOT / HPD: lossy embeddings — non-isomorphic hypergraphs can collide.
+  **Deg-seq L1:** ✗ — the degree sequence is a coarse first-order summary; any
+  two non-isomorphic hypergraphs sharing a degree multiset receive distance 0
+  (pinned incompleteness witness: `non_iso_pair_small`, degrees [2,2,1,1], H1
+  two 3-edges vs H2 three 2-edges; `d_DS = 0`).
 - **True metric.** `d_I`, WL-L1, NetLSD-L2, HyperCOT (transport metric), nauty-
   edit all satisfy the triangle inequality. **HPD uses Jensen–Shannon
   divergence, which is not a metric** (its square root is) — a free correctness
-  point in IsalHG's favour; state it explicitly.
+  point in IsalHG's favour; state it explicitly. **Deg-seq L1:** ✓ — L1 on
+  zero-padded vectors embedded in ℝ^max(n,n') satisfies all metric axioms.
 - **Decodable.** Only `w*_c` has an inverse (S2H); the alphabet is closed, so
   every canonical string — and every intermediate on an edit path — decodes to a
   valid hypergraph. Vector / spectral / transport / portrait representations have
   no decoder. nauty's canonical string is decodable to the *graph* but its
-  avalanche geometry makes path intermediates meaningless.
+  avalanche geometry makes path intermediates meaningless. **Deg-seq L1:** ✗ —
+  the degree sequence has no inverse.
 - **Navigable geometry.** Measured single-edit sensitivity: IsalHG IQR 2–8
   tokens (no heavy tail); nauty-Levi IQR 10–20 across all seven regimes (ratio
   1.25–9.5× ours). Vector reps have no natural single-edit-in-representation-space
-  notion — marked "—".
+  notion — marked "—". **Deg-seq L1:** — (no natural single-edit-in-degree-space
+  notion, and degree sequences are not decodable to hypergraphs).
 - **Scales to `n ≳ 10²`.** WL / NetLSD / HPD are polynomial and run on the HIC
   real corpora. HyperCOT is `O(n³)`/pair (small/mid only). IsalHG is
   symmetry-gated (the HIC NO-GO: arity 110 + near-symmetric blow-up). nauty
   scales on most inputs but is worst-case exponential — marked "~".
+  **Deg-seq L1:** ✓ — O(n log n) per pair; no external dependencies.
 - **Single metric drives all 4 tasks.** IsalHG / WL / NetLSD / HyperCOT / nauty
   each expose one distance that feeds A1–A4 uniformly. HPD is "~" because JSD is
   not a metric, so MDS/k-medoids/kNN-with-precomputed-metric are only
-  approximately licensed.
+  approximately licensed. **Deg-seq L1:** ✓ as a metric, it can feed A1–A3; A4
+  path-intermediates are not decodable to hypergraphs (already captured by the
+  Decodable row).
 
 ---
 

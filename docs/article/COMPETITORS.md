@@ -100,7 +100,52 @@ Stability-by-construction competitors (WL, NetLSD, HyperCOT) buy their
 smoothness by giving up completeness — the frontier position the discussion
 makes explicit.
 
-## 4. Resolved / remaining
+## 4. Naive structural baseline (degree-sequence L1)
+
+*Added at T-M7c, 2026-07-22. Contract written before any result is seen.*
+
+**Definition.** For a hypergraph `H` with `n` vertices, let `deg(H)` be the
+primal-degree sequence sorted in non-increasing order. The **degree-sequence L1
+distance** is
+
+    d_DS(H, H') = ||deg(H) - deg(H')||_1   (zero-padded to equal length)
+
+where padding extends the shorter sequence with zeros. This is a metric:
+non-negativity and symmetry are immediate; the triangle inequality is inherited
+from L1 on finite-dimensional vectors after embedding both sequences into
+ℝ^max(n,n').
+
+**Incompleteness witness (documented here before seeing data).** The distance is
+explicitly *not* a complete invariant: any two non-isomorphic hypergraphs that
+share a primal-degree multiset receive distance 0. A pinned witness is the
+`non_iso_pair_small` fixture — H1 (4 nodes, two 3-edges sharing a pair) and H2
+(4 nodes, three 2-edges forming a path) both have degree sequence [2, 2, 1, 1],
+so `d_DS(H1, H2) = 0` despite non-isomorphism. The distance is O(n log n) per
+pair and purely structural.
+
+**Interpretation contract (written before results are seen, 2026-07-22).**
+
+The naive baseline answers the question no current table answers: *does any
+method beat a trivially cheap structural signal?* Two outcomes are equally valid
+and both improve the paper:
+
+1. **If IsalHG and the sophisticated methods clearly exceed the naive row** on a
+   task, the degree-sequence baseline contextualizes the gain: the task requires
+   higher-order structure that the first-order degree profile cannot capture, and
+   the sophisticated methods earn their complexity.
+2. **If any sophisticated method barely beats the naive baseline** on a task,
+   that is reported plainly — it means the task's discriminative signal is mostly
+   first-order and the added complexity of a richer representation is not yet
+   justified on that task. This is a scientific finding, not a failure.
+
+Neither outcome is suppressed. The naive row is present in every comparison
+surface (geometry table, A2 clustering, A3 kNN, A4 capability row, HIC exhibit)
+and interpreted by the paragraph above, not cherry-picked after results are seen.
+
+**Registry name.** `"degree_seq_l1"` — implemented in
+`src/isalhg/metric_space/representations/degree_seq_l1.py` (T-M7c, 2026-07-22).
+
+## 5. Resolved / remaining
 
 - CQ1. **[resolved]** Fair = WL, NetLSD, HyperCOT, HPD; contrast = nauty. §3.
 - CQ2. **[resolved]** No learned baseline — classical only.
@@ -113,3 +158,8 @@ makes explicit.
   wrap behind the `metric_space/representations/` layer emitting pairwise
   `D_rep` (they are *not* `IsoBackend`s — they yield distances, not iso
   decisions).
+- CQ6. **[resolved, T-M7c 2026-07-22]** Naive structural baseline added:
+  degree-sequence L1 (`degree_seq_l1`). One primary naive baseline per the
+  REVIEW decision; the alternative candidates (size signature,
+  incidence-Jaccard) are not added. Interpretation contract pre-registered in
+  §4 above.

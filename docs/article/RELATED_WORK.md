@@ -86,6 +86,73 @@ literature. See PROPOSAL §5.)*
   skewness) as the standard diagnostic for nearest-neighbour reliability in
   high-dimensional metric data; the G1 precondition report for kNN (A3).
 
+## Application motivation — practitioner domains (A1–A4)
+
+Citable precedents for the *task* (not for our method) that open each application
+subsection in `empirical/applications.md`. Added at T-M8c (2026-07-22).
+All seven entries verified 2026-07-22 via CrossRef API
+(`api.crossref.org/works/<DOI>`); title, full author list (given and family names),
+container title, year, volume, issue, and page/article-id matched field by field
+against the CrossRef response.
+
+- **Klamt, S., Haus, U.-U., and Theis, F.** "Hypergraphs and Cellular Networks."
+  *PLOS Computational Biology* 5(5):e1000385, 2009. DOI:10.1371/journal.pcbi.1000385.
+  — Establishes hypergraph representations of biochemical reaction and signalling
+  networks; motivates structural analysis and comparison of module-scale reaction
+  hypergraphs (A1 scenario). *Verified 2026-07-22 via CrossRef: title exact;
+  authors Steffen Klamt / Utz-Uwe Haus / Fabian Theis; container "PLoS
+  Computational Biology"; 2009-05; vol. 5 issue 5 page e1000385.*
+- **Benson, A. R., Gleich, D. F., and Leskovec, J.** "Higher-order organization of
+  complex networks." *Science* 353(6295):163–166, 2016. DOI:10.1126/science.aad9029.
+  — Introduces higher-order motif analysis of complex networks; motivates the task
+  of surveying and structurally triaging a corpus of network motifs (A1 scenario).
+  *Verified 2026-07-22 via CrossRef: title exact; authors Austin R. Benson /
+  David F. Gleich / Jure Leskovec; container "Science"; 2016-07; vol. 353 issue
+  6295 pp. 163–166.*
+- **Milo, R., Shen-Orr, S., Itzkovitz, S., Kashtan, N., Chklovskii, D., and Alon, U.**
+  "Network Motifs: Simple Building Blocks of Complex Networks." *Science*
+  298(5594):824–827, 2002. DOI:10.1126/science.298.5594.824.
+  — Establishes the systematic study of recurring higher-order structural patterns
+  (motifs) in biological networks; directly motivates grouping network modules by
+  structural family and selecting structural representatives (A2 scenario).
+  *Verified 2026-07-22 via CrossRef: title exact (CrossRef capitalisation:
+  "Network Motifs: Simple Building Blocks of Complex Networks"); authors R. Milo /
+  S. Shen-Orr / S. Itzkovitz / N. Kashtan / D. Chklovskii / U. Alon (6 authors);
+  container "Science"; 2002-10; vol. 298 issue 5594 pp. 824–827.*
+- **Newman, M. E. J.** "The structure of scientific collaboration networks."
+  *PNAS* 98(2):404–409, 2001. DOI:10.1073/pnas.98.2.404.
+  — Establishes co-authorship networks where each paper is a hyperedge over its
+  authors; motivates the structural classification of collaboration hypergraphs
+  by type (A3 scenario). *Verified 2026-07-22 via CrossRef: title exact; single
+  author given as "M." family "Newman" (CrossRef abbreviates given name; standard
+  full name M. E. J. Newman); container "Proceedings of the National Academy of
+  Sciences"; 2001-01; vol. 98 issue 2 pp. 404–409.*
+- **Chodrow, P. S., Veldt, N., and Benson, A. R.** "Generative hypergraph clustering:
+  From blockmodels to modularity." *Science Advances* 7(28):eabh1303, 2021.
+  DOI:10.1126/sciadv.abh1303.
+  — Studies the problem of classifying hypergraphs into structural community types;
+  directly motivates the A3 task of assigning an incoming hypergraph to a structural
+  class. *Verified 2026-07-22 via CrossRef: title exact; authors Philip S. Chodrow /
+  Nate Veldt / Austin R. Benson; container "Science Advances"; 2021-07; vol. 7
+  issue 28 article id eabh1303 (no page range; article-id only).*
+- **Holme, P. and Saramäki, J.** "Temporal networks." *Physics Reports*
+  519(3):97–125, 2012. DOI:10.1016/j.physrep.2012.03.001.
+  — The standard review on temporal network analysis; establishes the task of
+  comparing two network-state snapshots and tracing the trajectory between them,
+  motivating the A4 path-finding scenario. *Verified 2026-07-22 via CrossRef:
+  title exact; authors Petter Holme / Jari Saramäki; container "Physics Reports";
+  2012-10; vol. 519 issue 3 pp. 97–125.*
+- **Battiston, F., Cencetti, G., Iacopini, I., Latora, V., Lucas, M., Patania, A.,
+  Young, J.-G., and Petri, G.** "Networks beyond pairwise interactions: Structure
+  and dynamics." *Physics Reports* 874:1–92, 2020. DOI:10.1016/j.physrep.2020.05.004.
+  — Comprehensive review of higher-order/hypergraph network science, covering
+  temporal dynamics of higher-order interactions; motivates tools that track
+  structural transitions between hypergraph states (A4 scenario). *Verified
+  2026-07-22 via CrossRef: title exact; all 8 authors confirmed: Federico
+  Battiston / Giulia Cencetti / Iacopo Iacopini / Vito Latora / Maxime Lucas /
+  Alice Patania / Jean-Gabriel Young / Giovanni Petri; container "Physics
+  Reports"; 2020-08; vol. 874 pp. 1–92.*
+
 ## Distance-matrix → classification/clustering pipeline (applications §A2–A3)
 
 - **Neuhaus & Bunke.** *Bridging the Gap Between GED and Kernel Machines.* World

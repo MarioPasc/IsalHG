@@ -96,6 +96,8 @@ shift).
 
 ## A1 — Metric MDS (FLAGSHIP; measures the geometry)
 
+Biochemical reaction networks represent each reaction as a hyperedge over its participating molecular species; a database of module-scale reaction networks therefore forms a corpus of small hypergraphs whose structural diversity an analyst surveys before selecting candidate mechanisms for experimental validation (Klamt, Haus, and Theis 2009; Benson, Gleich, and Leskovec 2016).<!-- envelope-sensitive -->
+
 Goal: embed hypergraph space `(·, d_I)` into `R^D`; visualize similarity;
 report the **estimated intrinsic dimension** and non-Euclidean mass as
 first-class descriptors.
@@ -162,6 +164,8 @@ not a defect).
 
 ## A2 — Unsupervised structure (one story: clustering + hierarchy)
 
+Databases of biological network motifs and signaling-pathway submodules catalog structurally distinct higher-order interaction patterns; grouping these module-scale hypergraphs into structural families and returning a *medoid* — an actual representative hypergraph that an analyst can directly inspect, rather than a centroid undefined in non-Euclidean space — makes the structural taxonomy actionable (Milo et al. 2002).<!-- envelope-sensitive -->
+
 Corpus with **planted families** (seed motifs + seed-stable, non-isomorphic
 perturbations ⇒ known membership; `../DATA.md` §1).
 
@@ -198,6 +202,8 @@ representation ranking.
 
 ## A3 — kNN classification (supervised story)
 
+In co-authorship and collaboration networks, each paper or project forms a hyperedge over its participants; assigning an incoming team-structure hypergraph to one of a set of known structural types — using only its distance to labelled examples, without retraining — is a recurring classification task in the analysis of these systems (Newman 2001; Chodrow, Veldt, and Benson 2021).<!-- envelope-sensitive -->
+
 Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
 (synthetic) and HIC dataset labels (real; `../DATA.md` §2).
 
@@ -232,6 +238,8 @@ construction raises an index error on a third of the real instances, so it is
 scored only on a per-instance-censored subset and flagged as such.)
 
 ## A4 — Shortest path between hypergraphs (the capability differentiator)
+
+Temporal higher-order network datasets record a system's interaction structure at successive time points; comparing two snapshots asks not just how different the states are but which structural path connects them, with every intermediate a valid, inspectable hypergraph — a requirement that no fingerprinting method without a closed, decodable alphabet can satisfy (Holme and Saramäki 2012; Battiston et al. 2020).<!-- envelope-sensitive -->
 
 The path `H_A → H_B` of minimal accumulated `d_I` through a pool of
 intermediates. Two properties no competitor shares: (a) canonical-form

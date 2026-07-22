@@ -61,7 +61,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked) | 12 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-M7`](T-M7/) | Pre-writing revision, code: strict corpora + sweep/stats harness + baselines + G3 + real anchor | 4 (+1 blocked) | 4 |
-| [`T-M8`](T-M8/) | Pre-writing revision, docs: label-family Remark, capability matrix, motivation, repro artifact | 3 | 1 |
+| [`T-M8`](T-M8/) | Pre-writing revision, docs: label-family Remark, capability matrix, motivation, repro artifact | 2 | 2 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |

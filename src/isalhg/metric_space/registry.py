@@ -39,6 +39,7 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "netlsd_l2": "isalhg.metric_space.representations.netlsd",
     "hpd_jsd": "isalhg.metric_space.representations.hpd",
     "hypercot": "isalhg.metric_space.representations.hypercot",
+    "degree_seq_l1": "isalhg.metric_space.representations.degree_seq_l1",
 }
 
 

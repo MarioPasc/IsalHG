@@ -70,18 +70,19 @@ shift).
   partial system, not a true STS(13): `s(e)` needs one `w*_c` per edit, and a
   true STS(13) costs ~44 s per `w*_c` — infeasible at histogram scale.
   **Measured (connectivity-preserving single Qin edits, `max_arity = 3`, seven
-  regimes):** IQR_ours = 2.0–8.0 tokens, heavy_tail_frac = 0.000 throughout.
+  regimes; metric `d_I^⊥`):** IQR_ours = 2.0–8.0 tokens, heavy_tail_frac = 0.000 throughout.
   The three-regime prediction (`../theoretical/stability.md` §4.2) is confirmed
   for the random corpora and the two coherent-tie designs (Fano, STS(9)), and
   **falsified** for the two incoherent-tie designs (cyclic C13, GQ(2,2)), which
   show compact near-unimodal profiles under single arity-3 Qin edits rather
   than the predicted heavy tail. Rendered figures: sensitivity contrast per
   regime and per design fixture.
-- **Ladder:** `d_I(H_0, H_t)` vs known accumulated Qin budget `t` along
-  perturbation ladders. **Measured (six corpora, small/medium/large base size,
-  two seeds each):** ≈80% of per-ladder steps are monotone; mean `d_I`
-  increment per Qin budget step grows from 3.2 (n = 5 base) to 11.7 (n = 12
-  base); all six ladders globally increasing. This near-monotone trend is the
+- **Ladder:** `d_I^⊥(H_0, H_t)` vs known accumulated Qin budget `t` along
+  perturbation ladders (synthetic corpora, trivial vocabulary). **Measured (six
+  corpora, small/medium/large base size, two seeds each; metric `d_I^⊥`):**
+  ≈80% of per-ladder steps are monotone; mean `d_I^⊥` increment per Qin budget
+  step grows from 3.2 (n = 5 base) to 11.7 (n = 12 base); all six ladders
+  globally increasing. This near-monotone trend is the
   smoothness evidence for neighbourhood methods (A2/A3).
 - **Contrast:** the same `s(e)` measurement on the nauty-Levi canonical-string
   distance. **Measured:** IQR_nauty = 10.0–20.0 across all seven regimes

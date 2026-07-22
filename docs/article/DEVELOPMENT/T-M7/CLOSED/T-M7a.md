@@ -121,3 +121,65 @@ canonical encoder.
   timeout; emits JSON + admitted-catalog table.
 - `artifacts/feasibility_pilot/feasibility_pilot_stratum_a.json` +
   `artifacts/feasibility_pilot/admitted_catalog.txt`: pilot artifacts.
+
+---
+**Addendum — 2026-07-22 (coordinator defect fix, same branch)**
+
+Two defects identified by the coordinator were fixed and appended here (no
+rewrite of the first closing note):
+
+**Defect 1 — corpus not delivered.** The first round closed the static catalog
+and the feasibility pilot but left no integration with `PlantedFamilyDataset`.
+Fixed:
+
+- `src/isalhg/datasets/synthetic/planted_families.py`: added `family_labels:
+  list[str] | None` parameter; label propagated to each item's
+  `extra["family_label"]`; `RealizedParams.compute()` called in
+  `_make_metadata()` so `metadata.realized_params` is always populated;
+  `seed()` method carries labels through.
+- `src/isalhg/datasets/synthetic/known_design_catalog.py`: added
+  `build_stratum_a_corpus()` factory (feeds admitted catalog seeds +
+  family-label strings into `PlantedFamilyDataset`); registered as
+  `"stratum_a_corpus"` dataset; `_stratum_a_factory()` accepts
+  `admitted_ids` override for test isolation.
+- `src/isalhg/datasets/registry.py`: lazy-module entry for
+  `"stratum_a_corpus"` added.
+- `tests/unit/datasets/test_stratum_a_corpus.py`: 18 corpus-level tests
+  (AC-CORPUS 1–6): return type, determinism, family-label propagation,
+  `RealizedParams` in metadata (all_connected, seed recorded, n_vals
+  length), design-status tristate, registry round-trip. All 18 pass.
+
+**Defect 2 — DROPPED should be PENDING_CLUSTER.** A workstation DNF at
+30 s is a local finding, not a paper-citable exclusion; heavy compute goes
+to Picasso. Fixed:
+
+- `src/isalhg/datasets/synthetic/known_design_catalog.py`: added
+  `STATUS_ADMITTED / STATUS_PENDING_CLUSTER / STATUS_EXCLUDED` constants,
+  `_PENDING_CLUSTER_IDS` module global, updated `set_admitted_ids()` to
+  accept `pending_ids: frozenset[str] = frozenset()`, added
+  `design_status(item_id)` tristate accessor.
+- `scripts/feasibility_pilot_stratum_a.py`: DNF path now emits
+  `"PENDING_CLUSTER"` (not `"DROPPED"`); JSON field `n_dropped` renamed
+  `n_pending_cluster`; table section header updated.
+- `artifacts/feasibility_pilot/feasibility_pilot_stratum_a.json` +
+  `artifacts/feasibility_pilot/admitted_catalog.txt`: reclassified
+  sts13_0, sts13_1, sts15_0, ag24, pg23, pg24 from DROPPED →
+  PENDING_CLUSTER with reason "deferred to cluster pilot (T-M7h)".
+  Final admission (300 s budget, A100) owned by T-M7h — do not modify
+  T-M7h from this worktree.
+
+**Addendum closing checks:**
+
+```
+pytest tests/unit/datasets/test_stratum_a_corpus.py -m unit -q
+18 passed in 0.25s
+
+pytest tests/unit/datasets/test_known_design_catalog.py -m "not slow" -q
+53 passed, 1 deselected in 0.39s
+
+pytest tests/unit/ -m "not slow" -q
+998 passed, 5 skipped, 13 deselected, 1 warning in 35.81s
+
+ruff check src/ tests/  → 3 errors (all pre-existing baseline; 0 new)
+mypy src/isalhg/        → 21 errors (all pre-existing baseline; 0 new)
+```

@@ -35,7 +35,12 @@ from typing import Any
 from isalhg.core.sparse_hypergraph import SparseHypergraph, random_edit
 from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
-from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabulary
+from isalhg.datasets.schemas import (
+    DatasetItem,
+    DatasetMetadata,
+    LabelVocabulary,
+    RealizedParams,
+)
 from isalhg.datasets.synthetic._random_hg import random_hypergraph
 from isalhg.types import DatasetName, Seed
 
@@ -94,6 +99,12 @@ class PlantedFamilyDataset(HypergraphDataset):
         Maximum hyperedge arity for randomly-generated seeds.  Default ``3``.
     n_edges : int, optional
         Edge-insertion attempts for random seed generation.  Default ``5``.
+    family_labels : list[str] | None, optional
+        Human-readable label for each family (one per seed / per family).
+        When provided, ``len(family_labels)`` must equal ``len(seeds)`` if
+        ``seeds`` is not ``None``.  Labels are stored in each item's
+        ``extra["family_label"]``.  When ``None``, items carry no
+        ``"family_label"`` key.  Default ``None``.
     """
 
     def __init__(
@@ -110,6 +121,7 @@ class PlantedFamilyDataset(HypergraphDataset):
         n_nodes: int = 6,
         k: int = 3,
         n_edges: int = 5,
+        family_labels: list[str] | None = None,
     ) -> None:
         if members_per_family < 1:
             raise ValueError(f"members_per_family must be >= 1, got {members_per_family}")
@@ -138,6 +150,14 @@ class PlantedFamilyDataset(HypergraphDataset):
             self._seeds: list[SparseHypergraph] = list(seeds)
         else:
             self._seeds = self._generate_seeds(n_families)
+
+        # Validate and store family labels.
+        if family_labels is not None and len(family_labels) != len(self._seeds):
+            raise ValueError(
+                f"family_labels length ({len(family_labels)}) must match"
+                f" number of families ({len(self._seeds)})"
+            )
+        self._family_labels: list[str] | None = family_labels
 
         self._items: list[DatasetItem] = self._build()
         self._metadata: DatasetMetadata = self._make_metadata()
@@ -254,17 +274,20 @@ class PlantedFamilyDataset(HypergraphDataset):
 
             for member_idx, H in enumerate(family_hgs):
                 item_id = f"f{fam_idx:04d}_m{member_idx:04d}"
+                extra: dict[str, Any] = {
+                    "class_label": fam_idx,
+                    "family_index": fam_idx,
+                    "member_index": member_idx,
+                    "is_seed": member_idx == 0,
+                }
+                if self._family_labels is not None:
+                    extra["family_label"] = self._family_labels[fam_idx]
                 items.append(
                     DatasetItem(
                         item_id=item_id,
                         hypergraph=H,
                         iso_class=None,
-                        extra={
-                            "class_label": fam_idx,
-                            "family_index": fam_idx,
-                            "member_index": member_idx,
-                            "is_seed": member_idx == 0,
-                        },
+                        extra=extra,
                     )
                 )
 
@@ -273,6 +296,8 @@ class PlantedFamilyDataset(HypergraphDataset):
     def _make_metadata(self) -> DatasetMetadata:
         n_nodes_vals = [item.hypergraph.n_nodes for item in self._items]
         n_families = len(self._seeds)
+        hypergraphs = [item.hypergraph for item in self._items]
+        rp = RealizedParams.compute(hypergraphs, seeds=(self._seed_value,))
         return DatasetMetadata(
             name="planted_families",
             n_items=len(self._items),
@@ -286,6 +311,7 @@ class PlantedFamilyDataset(HypergraphDataset):
                 f" seed_value={self._seed_value})"
             ),
             label_vocabulary=LabelVocabulary.trivial(),
+            realized_params=rp,
         )
 
     # ------------------------------------------------------------------
@@ -315,6 +341,7 @@ class PlantedFamilyDataset(HypergraphDataset):
             max_retries=self._max_retries,
             seed_value=int(seed),
             dedup_backend=self._dedup_backend,
+            family_labels=self._family_labels,
         )
 
 

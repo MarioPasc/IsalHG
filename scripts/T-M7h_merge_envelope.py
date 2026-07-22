@@ -38,6 +38,40 @@ import shutil
 from pathlib import Path
 
 # ---------------------------------------------------------------------------
+# Block key normalisation
+# ---------------------------------------------------------------------------
+
+# Maps canonical enumerator prefixes to the legacy abbreviated form used in
+# stratum_b_feasibility_envelope.json (written by T-M7b before naming settled).
+# When cluster result JSONs carry enumerator-style keys (full prefix) but the
+# envelope has the short form, _shorten_block_key() lets the merge find the
+# existing entry rather than appending a duplicate.
+_KEY_SHORTENINGS: dict[str, str] = {
+    "erdos_renyi_uniform_": "er_uniform_",
+}
+
+
+def _shorten_block_key(bkey: str) -> str:
+    """Map an enumerator-style long block key to the legacy envelope short form.
+
+    Parameters
+    ----------
+    bkey : str
+        Block key as written by ``feasibility_pilot.py`` (enumerator naming).
+
+    Returns
+    -------
+    str
+        The abbreviated form used in ``stratum_b_feasibility_envelope.json``,
+        or ``bkey`` unchanged if no shortening rule matches.
+    """
+    for full, short in _KEY_SHORTENINGS.items():
+        if bkey.startswith(full):
+            return short + bkey[len(full) :]
+    return bkey
+
+
+# ---------------------------------------------------------------------------
 # Stratum B merge
 # ---------------------------------------------------------------------------
 
@@ -88,31 +122,39 @@ def _merge_stratum_b(
                 print(f"  [skip] entry without block_key in {jpath.name}")
                 continue
 
-            if bkey not in by_key:
+            # Cluster result JSONs carry the enumerator's long key form
+            # (e.g. "erdos_renyi_uniform_k3_n24_rho1") while the envelope was
+            # written with abbreviated keys ("er_uniform_k3_n24_rho1").
+            # Try the short form as a fallback so the existing entry is patched
+            # rather than a duplicate appended.
+            lookup_key = bkey if bkey in by_key else _shorten_block_key(bkey)
+
+            if lookup_key not in by_key:
                 print(f"  [new]  {bkey}: not in envelope, appending")
                 by_key[bkey] = result
                 patched += 1
                 continue
 
-            old = by_key[bkey]
+            old = by_key[lookup_key]
             old_status = old.get("local_status", "unknown")
             new_admitted = result.get("admitted", False)
             new_status = "admitted" if new_admitted else "cluster_excluded"
 
             if dry_run:
                 print(
-                    f"  [dry]  {bkey}: {old_status} → {new_status} "
+                    f"  [dry]  {lookup_key}: {old_status} → {new_status} "
                     f"(p50={result.get('p50_ms')} p90={result.get('p90_ms')} "
                     f"n_pilot={result.get('n_pilot')})"
                 )
             else:
                 print(
-                    f"  [patch] {bkey}: {old_status} → {new_status} "
+                    f"  [patch] {lookup_key}: {old_status} → {new_status} "
                     f"(p50={result.get('p50_ms')} p90={result.get('p90_ms')} "
                     f"n_pilot={result.get('n_pilot')})"
                 )
 
-            # Merge cluster measurements into the existing entry.
+            # Merge cluster measurements into the existing entry, keeping the
+            # envelope's original block_key (which may be the short form).
             merged = dict(old)
             merged.update(
                 {
@@ -128,7 +170,7 @@ def _merge_stratum_b(
                     "cluster_reason": result.get("reason", ""),
                 }
             )
-            by_key[bkey] = merged
+            by_key[lookup_key] = merged
             patched += 1
 
     if dry_run:

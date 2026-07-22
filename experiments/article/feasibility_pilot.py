@@ -446,6 +446,81 @@ def run_pilot(
 
 
 # ---------------------------------------------------------------------------
+# Envelope key normalisation (legacy alias support)
+# ---------------------------------------------------------------------------
+
+# Maps legacy abbreviated prefixes (as written in stratum_b_feasibility_envelope.json
+# by earlier pilots) to the canonical enumerator prefix.  Used by list_blocks() so
+# --pending-envelope filtering works even when the envelope was written with the
+# short "er_uniform_" form and the enumerator now emits "erdos_renyi_uniform_".
+_ENVELOPE_KEY_ALIASES: dict[str, str] = {
+    "er_uniform_": "erdos_renyi_uniform_",
+}
+
+
+def _expand_envelope_key(bkey: str) -> str:
+    """Expand a legacy abbreviated envelope key to the enumerator's full key form.
+
+    Parameters
+    ----------
+    bkey : str
+        Block key as stored in ``stratum_b_feasibility_envelope.json``.
+
+    Returns
+    -------
+    str
+        The canonical block key that the enumerator would generate, or
+        ``bkey`` unchanged if no alias matches.
+    """
+    for short, full in _ENVELOPE_KEY_ALIASES.items():
+        if bkey.startswith(short):
+            return full + bkey[len(short) :]
+    return bkey
+
+
+def list_blocks(
+    config_path: Path,
+    pending_envelope_path: Path | None = None,
+) -> list[str]:
+    """Return the runnable block keys from a Stratum B recipe config.
+
+    This is the single source of truth for block keys: callers that previously
+    hard-coded the key list should call this function (or the ``--list-blocks``
+    CLI mode) instead, so the list stays in sync with the enumerator.
+
+    Parameters
+    ----------
+    config_path : Path
+        Path to the Stratum B recipe YAML.
+    pending_envelope_path : Path or None
+        If provided, restrict the returned keys to blocks whose corresponding
+        legacy key appears in the envelope's ``pending_cluster`` list.  The
+        function handles the abbreviated ↔ canonical key mapping automatically.
+
+    Returns
+    -------
+    list[str]
+        Runnable block keys in enumerator order.  If ``pending_envelope_path``
+        is set, only keys with a pending entry in the envelope are included.
+    """
+    cfg = StratumBConfig.from_yaml(config_path)
+    blocks = unique_blocks(cfg, runnable_only=True)
+    keys = [b.block_key for b in blocks]
+
+    if pending_envelope_path is not None:
+        with pending_envelope_path.open() as fh:
+            envelope: dict[str, Any] = json.load(fh)
+        pending_raw: list[dict[str, Any]] = envelope.get("pending_cluster", [])
+        # Expand legacy keys to the enumerator's canonical form for comparison.
+        pending_canonical: set[str] = {
+            _expand_envelope_key(entry["block_key"]) for entry in pending_raw
+        }
+        keys = [k for k in keys if k in pending_canonical]
+
+    return keys
+
+
+# ---------------------------------------------------------------------------
 # CLI entry point
 # ---------------------------------------------------------------------------
 
@@ -453,7 +528,25 @@ def run_pilot(
 def _parse_args() -> argparse.Namespace:
     p = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     p.add_argument("--config", type=Path, required=True, help="Stratum B recipe YAML")
-    p.add_argument("--output", type=Path, required=True, help="Output JSON path")
+    p.add_argument(
+        "--list-blocks",
+        action="store_true",
+        help=(
+            "Print runnable block keys (one per line) and exit. "
+            "If --pending-envelope is also set, restrict to pending_cluster blocks only. "
+            "In this mode --output is not required."
+        ),
+    )
+    p.add_argument(
+        "--pending-envelope",
+        type=Path,
+        default=None,
+        help=(
+            "Envelope JSON path. Used with --list-blocks to filter output to "
+            "blocks whose legacy key appears in the envelope's pending_cluster list."
+        ),
+    )
+    p.add_argument("--output", type=Path, default=None, help="Output JSON path")
     p.add_argument("--n-pilot", type=int, default=None, help="Pilot instance count override")
     p.add_argument("--budget", type=float, default=None, help="Admission budget (s) override")
     p.add_argument("--timeout", type=float, default=None, help="Per-instance timeout (s)")
@@ -473,6 +566,17 @@ def main() -> int:
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
     )
+
+    if args.list_blocks:
+        keys = list_blocks(args.config, pending_envelope_path=args.pending_envelope)
+        for k in keys:
+            print(k)
+        return 0
+
+    if args.output is None:
+        logger.error("--output is required when not using --list-blocks")
+        return 1
+
     try:
         run_pilot(
             config_path=args.config,

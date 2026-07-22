@@ -109,8 +109,10 @@ paper reports the spectral `D̂` and cites the distortion bracket rather than
 selecting `D` from it.
 
 **Measured — `D̂` is corpus-dependent, and a single small corpus under-resolves
-it.** Estimated on the planted family corpus at four sizes and cross-checked on
-two real HIC genre corpora (`d_I` only; `w*_c` is fast on these instances, so
+it.** Estimated on the planted family corpus at four sizes (metric `d_I^⊥`;
+trivial vocabulary) and cross-checked on two real HIC genre corpora (metric
+`d_I^Σ`; non-trivial IMDB vocabulary — see the Remark in `stability.md` §1);
+`w*_c` is fast on these instances, so
 the corpus size `N` is cheap to scale — only the per-instance node count `n`
 drives cost):
 
@@ -149,13 +151,13 @@ with its `N`-dependence stated, never as a bare number.
   competitors WL and HPD do not concentrate at all — their CV error rides to the
   search cap, so their `D̂` is reported as censored, itself a contrast).
 
-**Structural-faithfulness check (HGED-free).** Because the intrinsic dimension
-and the embedding are only as meaningful as the distances they preserve, we
-verify that the `d_I`-MDS map tracks *true* structural distance without the HGED
-oracle: along perturbation ladders the accumulated Qin edit budget `t` is known
-by construction, and both the raw metric and its embedding increase with it —
-Spearman `ρ(t, d_I) = 0.636` and `ρ(t, embedding distance) = 0.649` on a
-165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
+**Structural-faithfulness check (HGED-free; metric `d_I^⊥`).** Because the
+intrinsic dimension and the embedding are only as meaningful as the distances
+they preserve, we verify that the `d_I^⊥`-MDS map tracks *true* structural
+distance without the HGED oracle: along perturbation ladders the accumulated
+Qin edit budget `t` is known by construction, and both the raw metric and its
+embedding increase with it — Spearman `ρ(t, d_I^⊥) = 0.636` and
+`ρ(t, embedding distance) = 0.649` on a 165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
 faithfulness statement about known edits, not an HGED-proxy claim.
 
 ## 4. Embeddability and distortion
@@ -231,7 +233,7 @@ records the measured numbers and the candidate explanations. Nauty-Levi contrast
 confirmed: IQR_nauty = 10.0–20.0 across all regimes (ratio 1.25–9.5× ours),
 rendering the per-regime and per-fixture contrast figures. **Ladder response**
 (six corpora, small/medium/large base size, two seeds each): ≈80% of per-ladder
-steps are monotone; mean `d_I` increment per Qin budget step grows from 3.2
+steps are monotone; mean `d_I^⊥` increment per Qin budget step grows from 3.2
 (n = 5 base) to 11.7 (n = 12 base); all six ladders globally increasing, with
 local one-step regressions within ladder variance.
 

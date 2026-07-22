@@ -1,42 +1,38 @@
-"""Tier 2 dataset: Chung-Lu hypergraphs (parametric single-item generator).
+"""Tier 2 dataset: mixed-arity Erdos-Renyi hypergraphs.
 
-Wraps ``xgi.generators.random.chung_lu_hypergraph`` (Chodrow, 2020,
-arXiv:1902.09302). Generates one connected hypergraph per instance from a
-bipartite Chung-Lu model with a harmonic node-degree distribution and
-uniform target edge arity ``k``.
-
-Interface mirrors :class:`~isalhg.datasets.synthetic.erdos_renyi.UniformErdosRenyiHypergraphs`
-so that the Stratum B sweep can drive both generators from the same (n, k, c,
-seed) parameter triple.
+Wraps ``xgi.generators.random.random_hypergraph`` (Dewar et al. arXiv:1703.07686;
+Landry et al. 2023 JOSS 8(85):5162).  Unlike
+:class:`~isalhg.datasets.synthetic.erdos_renyi.UniformErdosRenyiHypergraphs`
+where every hyperedge has exactly ``r`` vertices, here each hyperedge's arity is
+drawn uniformly over the integer range ``[2, k]``.
 
 Model
 -----
-Given (n, k, c):
-- Expected number of edges: ``m = max(1, round(c * n))``.
-- Edge-size sequence (k2): every edge has expected arity ``k``, so
-  ``k2 = {j: k  for j in range(m)}``.
-- Node-degree sequence (k1): harmonic weights
-  ``w_i = 1 / (i + 1)`` for ``i = 0…n-1``, scaled to sum ``m * k``, then
-  rounded to non-negative integers with the exact sum enforced.
-- ``xgi.chung_lu_hypergraph(k1, k2, seed=seed)`` assigns each node ``i`` to
-  each edge ``j`` independently with probability ``k1[i] * k2[j] / S`` where
-  ``S = sum(k1) = sum(k2) = m * k``.
+Given (n, k, c) with ``k ≥ 2``:
 
-Because the model is probabilistic, realized edge arities deviate from ``k``;
-the arity histogram is part of the realized-parameter record.
+- For each arity ``a ∈ {2, 3, …, k}`` and each a-subset of the ``n`` vertices,
+  include the subset as a hyperedge with the same probability ``p``.
+- ``p`` is chosen so that the expected total number of edges satisfies
+  ``E[m] = p · Σ_{a=2}^{k} C(n, a) = c · n``, i.e.
+  ``p = c · n / Σ_{a=2}^{k} C(n, a)``.
+- Realised arity distribution is approximately uniform over ``{2, …, k}``
+  (each arity-``a`` slot contributes ``p · C(n, a)`` expected edges, so the
+  distribution is weighted by the binomial coefficients).
+
+Because ``p`` is shared across arities, denser binomial-coefficient arities
+(typically mid-range) contribute more edges.  The arity histogram is recorded
+in the realized-parameter extra field.
 
 Connectivity policy
 -------------------
-By default the generator rejects disconnected samples and redraws with a
-deterministic seed walk ``seed, seed + 1_000_003, seed + 2·1_000_003, …``
-(same stride as :class:`~isalhg.datasets.synthetic.erdos_renyi.UniformErdosRenyiHypergraphs`).
-Set ``require_connected=False`` to skip the connectivity check.
+Same deterministic seed-walk reject-resample as the uniform ER generator
+(prime stride 1 000 003).  Set ``require_connected=False`` to skip.
 """
 
 from __future__ import annotations
 
 import logging
-import warnings
+import math
 from collections.abc import Iterator
 from typing import Any
 
@@ -49,72 +45,60 @@ from isalhg.types import DatasetName, Seed
 
 logger = logging.getLogger(__name__)
 
-_SEED_STRIDE = 1_000_003  # prime, same as ER reject-resample stride
+_SEED_STRIDE = 1_000_003  # prime, same as uniform ER and CL reject-resample stride
 
 
-def _harmonic_degree_sequence(n: int, total_degree: int) -> list[int]:
-    """Harmonic node-degree sequence summing exactly to *total_degree*.
+def _p_from_c_mixed(c: float, n: int, k: int) -> float:
+    """Convert density ``c = E[m] / n`` to inclusion probability ``p``.
 
-    Node ``i`` gets weight ``1 / (i + 1)``, scaled to ``total_degree``.  The
-    result is rounded to non-negative integers and adjusted so that
-    ``sum(result) == total_degree`` exactly.
+    For mixed arity ``[2, k]`` the universe size is
+    ``Σ_{a=2}^{k} C(n, a)`` and ``E[m] = p · universe = c · n``.
 
     Parameters
     ----------
+    c : float
+        Target density (expected edges per vertex).
     n : int
-        Number of nodes.
-    total_degree : int
-        Required sum of the degree sequence.
+        Number of vertices.
+    k : int
+        Maximum arity.
 
     Returns
     -------
-    list[int]
-        Integer degree sequence of length ``n`` summing to ``total_degree``.
+    float
+        Inclusion probability clamped to ``[0, 1]``.
     """
-    if n == 0 or total_degree == 0:
-        return [0] * n
-
-    weights = [1.0 / (i + 1) for i in range(n)]
-    wsum = sum(weights)
-    raw = [w * total_degree / wsum for w in weights]
-    degrees = [max(0, int(d)) for d in raw]
-
-    current = sum(degrees)
-    diff = total_degree - current
-
-    if diff > 0:
-        # Increment nodes with the largest fractional remainder first.
-        fracs = sorted(range(n), key=lambda i: raw[i] - int(raw[i]), reverse=True)
-        for i in fracs[:diff]:
-            degrees[i] += 1
-    elif diff < 0:
-        # Decrement nodes with the largest degree first.
-        for _ in range(-diff):
-            idx = max(range(n), key=lambda i: degrees[i])
-            if degrees[idx] > 0:
-                degrees[idx] -= 1
-
-    return degrees
+    universe = sum(math.comb(n, a) for a in range(2, k + 1))
+    if universe == 0:
+        raise DatasetError(
+            f"empty edge universe for mixed arity (n={n}, k={k}); need k >= 2 and n >= 2"
+        )
+    p = c * n / universe
+    if p > 1.0:
+        logger.warning("c=%.3g on (n=%d, k=%d) yields p=%.3g > 1; clamping to 1.0", c, n, k, p)
+        return 1.0
+    return p
 
 
-class ChungLuHypergraphs(HypergraphDataset):
-    """Single-item parametric Chung-Lu hypergraph generator.
+class MixedArityErdosRenyiHypergraphs(HypergraphDataset):
+    """Single-item mixed-arity Erdos-Renyi hypergraph generator.
+
+    Each hyperedge's arity is drawn uniformly from ``{2, 3, …, k}`` with the
+    same inclusion probability ``p = c·n / Σ_{a=2}^{k} C(n,a)``.
 
     Yields exactly one :class:`~isalhg.datasets.schemas.DatasetItem` per
-    instance; the Stratum B sweep addresses each ``(n, k, c, seed)`` cell as a
-    separate :class:`~experiments.schemas.CellSpec`.
+    instance.
 
     Parameters
     ----------
     n : int
-        Number of vertices.  Must be ``≥ 1``.
+        Number of vertices.  Must be ``≥ 2`` (need at least arity-2 edges).
     k : int
-        Target uniform edge arity (expected arity per hyperedge).
-        Must satisfy ``2 ≤ k ≤ n``.
+        Maximum arity.  Must satisfy ``2 ≤ k ≤ n``.
     c : float
-        Target density ``m / n`` (expected edges per vertex).  Must be ``≥ 0``.
+        Target density ``E[m] / n``.  Must be ``≥ 0``.
     seed : Seed
-        PRNG seed forwarded to ``xgi.chung_lu_hypergraph``.
+        PRNG seed forwarded to ``xgi.random_hypergraph``.
     require_connected : bool
         If ``True`` (default), reject disconnected samples and redraw using
         the deterministic seed walk.
@@ -136,7 +120,7 @@ class ChungLuHypergraphs(HypergraphDataset):
         if n < 1:
             raise ValueError(f"n must be >= 1, got {n}")
         if k < 2 or k > n:
-            raise ValueError(f"k must satisfy 2 <= k <= n; got k={k}, n={n}")
+            raise ValueError(f"k must be >= 2 and <= n; got k={k}, n={n}")
         if c < 0:
             raise ValueError(f"c must be >= 0; got {c}")
         if connected_max_attempts < 1:
@@ -145,6 +129,7 @@ class ChungLuHypergraphs(HypergraphDataset):
         self._n = int(n)
         self._k = int(k)
         self._c = float(c)
+        self._p = _p_from_c_mixed(float(c), int(n), int(k))
         self._seed: Seed = int(seed)
         self._require_connected = bool(require_connected)
         self._connected_max_attempts = int(connected_max_attempts)
@@ -157,24 +142,19 @@ class ChungLuHypergraphs(HypergraphDataset):
 
     @property
     def name(self) -> DatasetName:
-        return "chung_lu"
+        return "random_erdos_renyi_mixed"
 
     @property
     def metadata(self) -> DatasetMetadata:
         if self._cached_metadata is None:
-            item = self._materialise()
-            h = item.hypergraph
-            arities = [len(members) for _, members, _ in h.iter_edges()]
-            lo = min(arities) if arities else self._k
-            hi = max(arities) if arities else self._k
             self._cached_metadata = DatasetMetadata(
                 name=self.name,
                 n_items=1,
-                arity_range=(lo, hi),
+                arity_range=(2, self._k),
                 n_nodes_range=(self._n, self._n),
                 has_iso_labels=False,
-                source="xgi.generators.random.chung_lu_hypergraph",
-                citation="Chodrow 2020 arXiv:1902.09302",
+                source="xgi.generators.random.random_hypergraph",
+                citation=("Dewar et al. arXiv:1703.07686; Landry et al. 2023 JOSS 8(85):5162"),
                 label_vocabulary=LabelVocabulary.trivial(),
             )
         return self._cached_metadata
@@ -189,7 +169,7 @@ class ChungLuHypergraphs(HypergraphDataset):
     def __len__(self) -> int:
         return 1
 
-    def seed(self, seed: Seed) -> ChungLuHypergraphs:
+    def seed(self, seed: Seed) -> MixedArityErdosRenyiHypergraphs:
         """Return a copy of this dataset bound to *seed*.
 
         Parameters
@@ -199,9 +179,9 @@ class ChungLuHypergraphs(HypergraphDataset):
 
         Returns
         -------
-        ChungLuHypergraphs
+        MixedArityErdosRenyiHypergraphs
         """
-        return ChungLuHypergraphs(
+        return MixedArityErdosRenyiHypergraphs(
             n=self._n,
             k=self._k,
             c=self._c,
@@ -222,15 +202,13 @@ class ChungLuHypergraphs(HypergraphDataset):
             import xgi
         except ImportError as exc:  # pragma: no cover
             raise DatasetError(
-                "ChungLuHypergraphs requires xgi; install via `pip install xgi`"
+                "MixedArityErdosRenyiHypergraphs requires xgi; install via `pip install xgi`"
             ) from exc
 
-        m = max(1, round(self._c * self._n))
-        total_degree = m * self._k
-        node_degrees = _harmonic_degree_sequence(self._n, total_degree)
-
-        k1 = {i: node_degrees[i] for i in range(self._n)}
-        k2 = {j: self._k for j in range(m)}
+        # XGI order convention: order d means arity d+1.
+        # For arities {2..k} we need orders {1..k-1}.
+        orders = list(range(1, self._k))
+        ps = [self._p] * len(orders)
 
         attempt = 0
         effective_seed = int(self._seed)
@@ -240,32 +218,17 @@ class ChungLuHypergraphs(HypergraphDataset):
             attempt += 1
             effective_seed = int(self._seed) + (attempt - 1) * _SEED_STRIDE
 
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore")
-                xgi_H = xgi.chung_lu_hypergraph(k1, k2, seed=effective_seed)  # type: ignore[no-untyped-call]
-
-            # Remove degenerate hyperedges (size < 2); the Chung-Lu model is
-            # probabilistic and can produce singletons which SparseHypergraph
-            # forbids.
-            valid_edges = [
-                list(xgi_H.edges.members(eid))
-                for eid in xgi_H.edges
-                if len(xgi_H.edges.members(eid)) >= 2
-            ]
-            xgi_H_clean = xgi.Hypergraph(valid_edges)  # type: ignore[no-untyped-call]
-            # Restore all n node IDs: filtering edges may drop isolated nodes
-            # from the XGI node set, causing the downstream SparseHypergraph
-            # to have fewer than n_nodes vertices.
-            xgi_H_clean.add_nodes_from(range(self._n))  # type: ignore[no-untyped-call]
-
-            H = XGIAdapter().from_external(xgi_H_clean)
+            xgi_H = xgi.random_hypergraph(  # type: ignore[no-untyped-call]
+                self._n, ps, order=orders, seed=effective_seed
+            )
+            H = XGIAdapter().from_external(xgi_H)
             last_n_edges = H.n_edges
 
             if not self._require_connected or H.is_connected():
                 break
             if attempt >= self._connected_max_attempts:
                 raise DatasetError(
-                    "ChungLuHypergraphs: exhausted "
+                    "MixedArityErdosRenyiHypergraphs: exhausted "
                     f"{self._connected_max_attempts} attempts trying to draw a "
                     f"connected hypergraph at (n={self._n}, k={self._k}, "
                     f"c={self._c:.3g}, seed={self._seed}). Increase "
@@ -275,7 +238,7 @@ class ChungLuHypergraphs(HypergraphDataset):
 
         if attempt > 1:
             logger.info(
-                "CL reject-resample: connected sample on attempt %d "
+                "mixed-arity ER reject-resample: connected sample on attempt %d "
                 "(n=%d, k=%d, c=%.3g, base seed=%d, effective seed=%d, "
                 "n_edges=%d)",
                 attempt,
@@ -288,12 +251,13 @@ class ChungLuHypergraphs(HypergraphDataset):
             )
 
         c_repr = f"{self._c:g}"
-        item_id = f"cl_n{self._n}_k{self._k}_c{c_repr}_s{self._seed}"
+        item_id = f"er_mixed_n{self._n}_k{self._k}_c{c_repr}_s{self._seed}"
         extra: dict[str, Any] = {
-            "source": "xgi.chung_lu_hypergraph",
+            "source": "xgi.random_hypergraph",
             "n": self._n,
             "k": self._k,
             "c": self._c,
+            "p": self._p,
             "seed": self._seed,
             "effective_seed": effective_seed,
             "connected_attempts": attempt,
@@ -316,7 +280,7 @@ class ChungLuHypergraphs(HypergraphDataset):
 
 
 def _factory(params: dict[str, Any]) -> HypergraphDataset:
-    return ChungLuHypergraphs(
+    return MixedArityErdosRenyiHypergraphs(
         n=int(params["n"]),
         k=int(params["k"]),
         c=float(params["c"]),
@@ -326,4 +290,4 @@ def _factory(params: dict[str, Any]) -> HypergraphDataset:
     )
 
 
-register_dataset("chung_lu", _factory)
+register_dataset("random_erdos_renyi_mixed", _factory)

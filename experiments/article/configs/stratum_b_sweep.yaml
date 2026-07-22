@@ -20,9 +20,9 @@
 #                  UniformErdosRenyiHypergraphs(n, r, c, ...).  Uniform arity r.
 #   chung_lu     : ChungLuHypergraphs raises NotImplementedError everywhere.
 #                  Cells declared but skip_reason="generator_not_implemented".
-#                  Will be unblocked when T-M7a (or equivalent) fills the stub.
+#                  Unblocked by T-M7i (implements ChungLuHypergraphs + mixed-arity ER).
 #   mixed_arity  : No package generator; declared with
-#                  skip_reason="mode_not_implemented".  Requires a new generator.
+#                  skip_reason="mode_not_implemented".  Unblocked by T-M7i.
 #
 # Connectivity: require_connected=true (T-M2c, D-CONN1).
 # The ER generator enforces connectivity via rejection-sampling (connected_max_attempts).

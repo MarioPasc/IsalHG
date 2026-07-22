@@ -127,3 +127,31 @@ Two issues found and fixed before commit:
 - `E501` long line in `test_stratum_b_cells.py` → broken across two f-strings
 
 Baseline `ruff check src/ tests/`: 3 errors (pre-existing, unchanged).
+
+---
+
+## Correction note (2026-07-22, coordinator review)
+
+Three defects identified and fixed after initial close:
+
+**Defect 1 — Missing handoffs.** Two follow-up tasks were omitted from the
+initial HANDOFFS field. Filed:
+- `T-M7h` (`docs/article/DEVELOPMENT/T-M7/OPEN/T-M7h.md`): Picasso full
+  feasibility pilot for the 19 non-admitted Stratum B blocks. Gates T-M7d.
+- `T-M7i` (`docs/article/DEVELOPMENT/T-M7/OPEN/T-M7i.md`): Implement
+  `ChungLuHypergraphs` and mixed-arity ER generator (must not run concurrently
+  with T-M7a). Gates the CL/mixed cells.
+
+**Defect 2 — Overstatement of exclusions.** `summary.n_excluded_confirmed_infeasible=5`
+in the original artifact overstated the evidence: k=5 n=16 was extrapolated
+(n_pilot=0), and k=7/k=10 each rested on a single local 35s timeout (n_pilot=1).
+Fixed: all 19 non-admitted blocks are now `local_status="pending_cluster"` with
+distinct reason strings; `summary.n_pending_cluster_measurement=19`. Local
+findings are explicitly labelled local; final exclusion deferred to T-M7h
+(Picasso, 300s/instance, 30 instances/block).
+
+**Defect 3 — YAML misattribution.** The comment "Will be unblocked when T-M7a
+(or equivalent)" was wrong — T-M7a is the design seed catalog, not the CL
+generator. Fixed: both stub comments now point to T-M7i.
+
+Checks after corrections: pytest 25/0, ruff src/tests 3 (baseline), mypy 21.

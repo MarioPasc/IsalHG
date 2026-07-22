@@ -112,3 +112,67 @@ artifacts, then change status to DONE and move to CLOSED/.
 
 **T-M7d gate:** remains gated until cluster-measured admission decisions are
 committed to `stratum_b_feasibility_envelope.json`.
+
+---
+
+## Blocking note 2 (2026-07-22 — agent, commit c4bb27e)
+
+### Stratum A — HARVESTED (job 1629487 COMPLETED, 36m38s)
+
+Six designs that were PENDING_CLUSTER are now cluster-measured and committed to
+`artifacts/feasibility_pilot/`. All six are EXCLUDED:
+
+| design  | arity | result   | p90     | reason                                |
+|---------|-------|----------|---------|---------------------------------------|
+| sts13_0 | 3     | EXCLUDED | 165.6 s | p90 > 30 s threshold                  |
+| sts13_1 | 3     | EXCLUDED | 158.9 s | p90 > 30 s threshold                  |
+| sts15_0 | 3     | EXCLUDED | 300 s   | DNF at 300 s measurement ceiling      |
+| ag24    | 4     | EXCLUDED | 300 s   | DNF at 300 s ceiling (arity-4 design) |
+| pg23    | 4     | EXCLUDED | 300 s   | DNF at 300 s ceiling (arity-4 design) |
+| pg24    | 5     | EXCLUDED | 300 s   | DNF at 300 s ceiling (arity-5 design) |
+
+**Final Stratum A catalog: 17 ADMITTED / 23 total.** `artifacts/feasibility_pilot/`
+updated with cluster JSON and regenerated `admitted_catalog.txt`.
+
+**T-M7e implication:** ag24/pg23/pg24 are confirmed infeasible. T-M7e's §4.2
+re-scoring for arity-4/5 must use only the 17 locally-admitted designs (structured
+arity-4/5 instances are absent from the Stratum A admitted envelope).
+
+### Stratum B — naming-drift fix committed
+
+Stratum B array (job 1629486) failed because the launcher hard-coded `er_uniform_*`
+keys while `feasibility_pilot.py` generates `erdos_renyi_uniform_*` from the
+enumerator. Three-part fix in this commit:
+
+1. `feasibility_pilot.py`: `list_blocks()` + `--list-blocks` / `--pending-envelope`
+   — single source of truth for block keys; includes `_expand_envelope_key()` for
+   legacy key aliasing.
+2. `slurm/T-M7h_stratum_b_launcher.sh`: `BLOCK_KEYS` now derived dynamically via
+   `--list-blocks --pending-envelope`; the array is always consistent with what the
+   pilot will accept.
+3. `scripts/T-M7h_merge_envelope.py`: `_shorten_block_key()` normalises
+   `erdos_renyi_uniform_*` → `er_uniform_*` when patching the envelope's existing
+   short-key entries.
+
+8 new unit tests in `tests/unit/experiments/test_feasibility_pilot_list_blocks.py`
+cover all three variants (list_blocks output, pending filter, merge normalisation).
+
+**Regression check (2026-07-22, commit c4bb27e):**
+- pytest tests/unit/ (not slow): 1051 passed, 5 skipped
+- ruff check src/ tests/: 3 errors (baseline, unchanged)
+- mypy src/isalhg/: 21 errors (baseline, unchanged)
+
+**Waiting on:** Stratum B resubmit. After rsync of this branch to Picasso, run:
+```bash
+bash slurm/T-M7h_stratum_b_launcher.sh
+```
+The launcher will now derive the 19 correct enumerator-style block keys from
+`--list-blocks --pending-envelope` automatically. After results land:
+```bash
+rsync -av picasso:.../results/T-M7h/stratum_b/ /media/.../results/T-M7h/stratum_b/
+python scripts/T-M7h_merge_envelope.py \
+    --stratum-b-dir /media/.../results/T-M7h/stratum_b/per_block/ \
+    --envelope experiments/article/stratum_b_feasibility_envelope.json
+```
+
+**T-M7d gate:** still gated pending Stratum B results. Stratum A is done.

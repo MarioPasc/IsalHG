@@ -33,6 +33,7 @@ _LAZY_MODULES: dict[DatasetName, str] = {
     "perturbation_ladder": "isalhg.datasets.synthetic.perturbation_ladder",
     "correlation_corpus": "isalhg.datasets.synthetic.correlation_corpus",
     "planted_families": "isalhg.datasets.synthetic.planted_families",
+    "known_design_catalog": "isalhg.datasets.synthetic.known_design_catalog",
     "arb_benson": "isalhg.datasets.arb_benson",
     "hic_atlas": "isalhg.datasets.hic_atlas",
 }

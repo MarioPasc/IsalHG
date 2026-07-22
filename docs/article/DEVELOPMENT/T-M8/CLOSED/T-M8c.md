@@ -96,3 +96,25 @@ Acceptance check — all items verified against the task's Acceptance field:
 Checks: documentation-only task — pytest/ruff/mypy not run (no source code changed;
 per agent instructions no conda env needed for docs/ work). ruff and mypy baselines
 unaffected.
+
+**Verification addendum (2026-07-22 — coordinator-directed re-check):**
+
+All 7 citations re-verified by fetching each DOI from the CrossRef API
+(`api.crossref.org/works/<DOI>` via Python urllib; polite User-Agent header
+with contact email). Results matched field by field:
+
+| Key | DOI | Title match | Authors match | Container | Year/Vol/Issue/Pages |
+|---|---|---|---|---|---|
+| Klamt 2009 | 10.1371/journal.pcbi.1000385 | ✓ exact | ✓ Steffen Klamt / Utz-Uwe Haus / Fabian Theis | PLoS Computational Biology | 2009-05 / 5 / 5 / e1000385 |
+| Benson 2016 | 10.1126/science.aad9029 | ✓ exact | ✓ Austin R. Benson / David F. Gleich / Jure Leskovec | Science | 2016-07 / 353 / 6295 / 163–166 |
+| Milo 2002 | 10.1126/science.298.5594.824 | ✓ CrossRef caps: "Network Motifs: Simple Building Blocks of Complex Networks" — entry corrected | ✓ 6 authors: R.Milo/S.Shen-Orr/S.Itzkovitz/N.Kashtan/D.Chklovskii/U.Alon | Science | 2002-10 / 298 / 5594 / 824–827 |
+| Newman 2001 | 10.1073/pnas.98.2.404 | ✓ exact | ✓ "M. Newman" (CrossRef abbreviates; full name M. E. J. Newman — standard form) | PNAS | 2001-01 / 98 / 2 / 404–409 |
+| Chodrow 2021 | 10.1126/sciadv.abh1303 | ✓ exact | ✓ Philip S. Chodrow / Nate Veldt / Austin R. Benson | Science Advances | 2021-07 / 7 / 28 / eabh1303 (article-id only; no page range) |
+| Holme 2012 | 10.1016/j.physrep.2012.03.001 | ✓ exact | ✓ Petter Holme / Jari Saramäki | Physics Reports | 2012-10 / 519 / 3 / 97–125 |
+| Battiston 2020 | 10.1016/j.physrep.2020.05.004 | ✓ exact | ✓ all 8: Federico Battiston / Giulia Cencetti / Iacopo Iacopini / Vito Latora / Maxime Lucas / Alice Patania / Jean-Gabriel Young / Giovanni Petri | Physics Reports | 2020-08 / 874 / — / 1–92 |
+
+One correction applied: Milo 2002 title capitalization updated in RELATED_WORK.md
+to match the CrossRef canonical form ("Network Motifs: Simple Building Blocks of
+Complex Networks"). The verification notes in RELATED_WORK.md were also rewritten
+to replace "agent knowledge / confidence" language with CrossRef-fetched field
+values. No citation was replaced; all 7 resolved cleanly.

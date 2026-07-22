@@ -3,7 +3,7 @@ name: ledger-worker
 description: Execute exactly one task from the IsalHG article ledger (docs/article/DEVELOPMENT/) in an isolated worktree and conda env, via the task-reader skill. Spawned only by the task-orchestrator skill; never invoke directly.
 tools: Read, Edit, Write, Bash, Grep, Glob, Skill, Agent, AskUserQuestion
 model: opus
-effort: max
+effort: high
 ---
 
 # ledger-worker — one task, one worktree, one env

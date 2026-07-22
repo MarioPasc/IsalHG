@@ -1,0 +1,58 @@
+# T-M7e G2 — catalog-design sensitivity profiles (Stratum A admitted designs).
+#
+# Runs the dual s(e) measurement (IsalHG + nauty) on all 17 admitted catalog
+# designs, auto-detecting max_arity = design_arity per design so arity-4/5
+# designs receive arity-diverse edits.  This is the key test of the §4.2
+# heavy-tail prediction at higher arities: the admitted arity-4/5 designs are
+# structurally regular (complete uniforms, paths, cycles) → predicted unimodal.
+#
+# Wall-clock budget (estimated from T-M7a feasibility pilot timings):
+#   sts7    (arity-3, p50=0.005s): 50 edits ×  0.005s ≈  0.25s
+#   sts9    (arity-3, p50=0.102s): 50 edits ×  0.102s ≈  5.1s
+#   gq22    (arity-3, p50=1.255s): 30 edits ×  1.255s ≈ 37.7s
+#   paths/cycles (arity-3/4/5, p50≈0.001–0.030s): 50 edits → <2s each
+#   complete_k4_n6 (p50=0.022s):  50 edits ×  0.022s ≈  1.1s
+#   tight_cycle_k5 (p50=0.155s): 50 edits ×  0.155s ≈  7.8s
+#   complete_k5_n6 (p50=0.068s): 50 edits ×  0.068s ≈  3.4s
+#   Total ≈ 3–4 min local (all arity-3/4/5 admitted; gq22 dominates)
+#
+# Analysis: experiments.article.analysis.g2.confront_regime_predictions
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/g2_catalog_sensitivity
+
+cells:
+  # All 17 admitted catalog designs in one cell (auto-selects max_arity per design)
+  - type: g2_catalog_sensitivity
+    dataset: ""
+    seed: 42
+    label: catalog_all_s0
+    dataset_params:
+      # item_ids: null means "all admitted"
+      n_edits_per_design: 50
+      # max_arity: null means auto-detect from design_arity
+
+  # Second seed for stability
+  - type: g2_catalog_sensitivity
+    dataset: ""
+    seed: 43
+    label: catalog_all_s1
+    dataset_params:
+      n_edits_per_design: 50
+
+  # Arity-4/5 only — focused subset for the regime-confrontation analysis
+  - type: g2_catalog_sensitivity
+    dataset: ""
+    seed: 42
+    label: catalog_k45_s0
+    dataset_params:
+      item_ids:
+        - loose_path_k4
+        - tight_path_k4
+        - loose_cycle_k4
+        - tight_cycle_k4
+        - complete_k4_n6
+        - loose_path_k5
+        - tight_path_k5
+        - tight_cycle_k5
+        - complete_k5_n6
+      n_edits_per_design: 50

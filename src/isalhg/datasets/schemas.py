@@ -11,6 +11,86 @@ from isalhg.types import DatasetName, IsoClassId
 
 
 @dataclass(frozen=True)
+class RealizedParams:
+    """Per-corpus realized distribution of structural parameters (T-M7a).
+
+    Stores the *measured* structural properties of a dataset after generation,
+    as opposed to the requested generator parameters. Required by the strict
+    data spec (``REVIEW/DATA.md`` §5 reporting rules).
+
+    Attributes
+    ----------
+    n_vals : tuple[int, ...]
+        Vertex count for each item, in iteration order.
+    m_vals : tuple[int, ...]
+        Edge count for each item, in iteration order.
+    density_vals : tuple[float, ...]
+        Density ``m/n`` for each item (0.0 when ``n == 0``).
+    arity_hist : dict[int, int]
+        Arity → total number of edges of that arity, pooled across all items.
+    all_connected : bool
+        ``True`` iff every item passed the connectivity check (D-CONN1).
+    seeds : tuple[int, ...]
+        PRNG seeds used during stochastic generation.  Empty for deterministic
+        datasets.
+    """
+
+    n_vals: tuple[int, ...]
+    m_vals: tuple[int, ...]
+    density_vals: tuple[float, ...]
+    arity_hist: dict[int, int]
+    all_connected: bool
+    seeds: tuple[int, ...]
+
+    @classmethod
+    def compute(
+        cls,
+        hypergraphs: list[SparseHypergraph],
+        seeds: tuple[int, ...] = (),
+    ) -> RealizedParams:
+        """Compute realized params from a list of hypergraphs.
+
+        Parameters
+        ----------
+        hypergraphs : list[SparseHypergraph]
+            The corpus items, in iteration order.
+        seeds : tuple[int, ...]
+            PRNG seeds used during generation; empty for deterministic datasets.
+
+        Returns
+        -------
+        RealizedParams
+            Populated realized-parameter record.
+        """
+        n_vals: list[int] = []
+        m_vals: list[int] = []
+        density_vals: list[float] = []
+        arity_hist: dict[int, int] = {}
+        all_connected = True
+
+        for H in hypergraphs:
+            n = H.n_nodes
+            m = H.n_edges
+            n_vals.append(n)
+            m_vals.append(m)
+            density_vals.append(m / n if n > 0 else 0.0)
+            if not H.is_connected():
+                all_connected = False
+            for _, members, _ in H.iter_edges():
+                a = len(members)
+                arity_hist[a] = arity_hist.get(a, 0) + 1
+
+        return cls(
+            n_vals=tuple(n_vals),
+            m_vals=tuple(m_vals),
+            density_vals=tuple(density_vals),
+            arity_hist=dict(sorted(arity_hist.items())),
+            all_connected=all_connected,
+            seeds=seeds,
+        )
+
+
+@dataclass(frozen=True)
 class LabelVocabulary:
     """Per-dataset semantic-string → int-ID vocabulary (decision I45).
 
@@ -136,3 +216,4 @@ class DatasetMetadata:
     source: str
     citation: str = ""
     label_vocabulary: LabelVocabulary = field(default_factory=LabelVocabulary.trivial)
+    realized_params: RealizedParams | None = None

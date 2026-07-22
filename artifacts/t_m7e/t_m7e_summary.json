@@ -1,0 +1,206 @@
+{
+  "type": "T-M7e_summary",
+  "g2_sensitivity": {
+    "n_designs": 17,
+    "n_edits_total": 1700,
+    "arities_covered": [
+      3,
+      4,
+      5
+    ],
+    "confrontation_n_confirmed": 16,
+    "confrontation_n_falsified": 1,
+    "acceptance_rate": 0.9412,
+    "falsified_regimes": [
+      "tight_path_k4"
+    ],
+    "confrontation_rows": [
+      {
+        "regime": "sts7",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 4.25,
+        "iqr_nauty": 17.75,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "sts9",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 6.0,
+        "iqr_nauty": 7.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "gq22",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.23,
+        "iqr_isalhg": 1.0,
+        "iqr_nauty": 0.0,
+        "prediction": "heavy-tailed",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "loose_path_k3",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.03,
+        "iqr_isalhg": 2.0,
+        "iqr_nauty": 3.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_path_k3",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 4.0,
+        "iqr_nauty": 14.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "loose_cycle_k3",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.03,
+        "iqr_isalhg": 0.0,
+        "iqr_nauty": 9.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_cycle_k3",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 4.0,
+        "iqr_nauty": 10.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "complete_k3_n5",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 6.0,
+        "iqr_nauty": 18.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "loose_path_k4",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 2.0,
+        "iqr_nauty": 0.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_path_k4",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.21,
+        "iqr_isalhg": 0.0,
+        "iqr_nauty": 17.0,
+        "prediction": "unimodal",
+        "outcome": "falsified"
+      },
+      {
+        "regime": "loose_cycle_k4",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 1.0,
+        "iqr_nauty": 9.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_cycle_k4",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 4.0,
+        "iqr_nauty": 29.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "complete_k4_n6",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 8.5,
+        "iqr_nauty": 14.5,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "loose_path_k5",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.04,
+        "iqr_isalhg": 1.0,
+        "iqr_nauty": 0.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_path_k5",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.01,
+        "iqr_isalhg": 2.0,
+        "iqr_nauty": 16.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "tight_cycle_k5",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.02,
+        "iqr_isalhg": 1.0,
+        "iqr_nauty": 12.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      },
+      {
+        "regime": "complete_k5_n6",
+        "n_edits": 100,
+        "heavy_tail_frac": 0.0,
+        "iqr_isalhg": 7.0,
+        "iqr_nauty": 20.0,
+        "prediction": "unimodal",
+        "outcome": "confirmed"
+      }
+    ]
+  },
+  "g2_ladder": {
+    "n_cells": 14,
+    "arities_covered": [
+      3,
+      4,
+      5
+    ],
+    "n_increments_total": 560,
+    "mean_d_I_increment": 9.5625,
+    "median_d_I_increment": 8.0
+  },
+  "a4_design": {
+    "n_cells": 11,
+    "arities_covered": [
+      3,
+      4,
+      5
+    ],
+    "n_all_valid": 11,
+    "n_monotone_1": 11,
+    "n_ge3_decoded": 3,
+    "acceptance_rate_valid": 1.0,
+    "acceptance_rate_monotone": 1.0
+  },
+  "pending_cluster_designs": [
+    "sts13_0",
+    "sts13_1",
+    "sts15_0",
+    "ag24",
+    "pg23",
+    "pg24"
+  ],
+  "note": "Seed ladders from ADMITTED Stratum A designs only. PENDING_CLUSTER designs (sts13_0, sts13_1, sts15_0, ag24, pg23, pg24) not run \u2014 noted per T-M7e constraints."
+}

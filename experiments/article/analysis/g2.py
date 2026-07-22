@@ -42,11 +42,33 @@ _REGIME_PREDICTION: dict[str, str] = {
     "sparse": "unimodal",
     "medium": "unimodal",
     "dense": "unimodal",
-    # design fixtures
+    # design fixtures (hand-built, T-M5g keys)
     "fano_plane": "unimodal",  # small, coherent ties
     "sts_9": "unimodal",  # medium, coherent ties
     "cyclic_triple_orbit_13": "heavy-tailed",  # incoherent ties (C13)
     "gq_2_2_doily": "heavy-tailed",  # incoherent ties (GQ(2,2))
+    # Stratum A catalog designs (T-M7e; key = item_id from admitted_catalog.txt)
+    # arity-3: same regime as T-M5g fixtures
+    "sts7": "unimodal",  # Fano plane; max_arity=3, coherent STS(7)
+    "sts9": "unimodal",  # coherent STS(9)
+    "gq22": "heavy-tailed",  # GQ(2,2); incoherent ties — was falsified at k=3
+    "loose_path_k3": "unimodal",  # path-like, low tie diversity
+    "tight_path_k3": "unimodal",
+    "loose_cycle_k3": "unimodal",
+    "tight_cycle_k3": "unimodal",
+    "complete_k3_n5": "unimodal",  # complete 3-uniform; maximum symmetry
+    # arity-4: all structurally regular — predicted unimodal even at max_arity=4
+    # (heavy-tail requires incoherent ties, not just higher arity)
+    "loose_path_k4": "unimodal",
+    "tight_path_k4": "unimodal",
+    "loose_cycle_k4": "unimodal",
+    "tight_cycle_k4": "unimodal",
+    "complete_k4_n6": "unimodal",  # complete 4-uniform; all vertex-perms are automorphisms
+    # arity-5: same reasoning
+    "loose_path_k5": "unimodal",
+    "tight_path_k5": "unimodal",
+    "tight_cycle_k5": "unimodal",
+    "complete_k5_n6": "unimodal",  # complete 5-uniform on 6 nodes
 }
 
 

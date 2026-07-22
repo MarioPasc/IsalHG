@@ -1,0 +1,411 @@
+{
+  "budget_s": 30.0,
+  "n_runs": 3,
+  "n_designs": 23,
+  "n_admitted": 17,
+  "n_pending_cluster": 6,
+  "designs": {
+    "sts7": {
+      "item_id": "sts7",
+      "family_label": "STS7",
+      "arity": 3,
+      "n": 7,
+      "m": 7,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.005907567003305303,
+        0.005392088998632971,
+        0.00546353900062968
+      ],
+      "p50_s": 0.00546353900062968,
+      "p90_s": 0.00546353900062968,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "sts9": {
+      "item_id": "sts9",
+      "family_label": "STS9",
+      "arity": 3,
+      "n": 9,
+      "m": 12,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.10249766299966723,
+        0.1090430699987337,
+        0.10137649199896259
+      ],
+      "p50_s": 0.10249766299966723,
+      "p90_s": 0.10249766299966723,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "sts13_0": {
+      "item_id": "sts13_0",
+      "family_label": "STS13-A",
+      "arity": 3,
+      "n": 13,
+      "m": 26,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "sts13_1": {
+      "item_id": "sts13_1",
+      "family_label": "STS13-B",
+      "arity": 3,
+      "n": 13,
+      "m": 26,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "sts15_0": {
+      "item_id": "sts15_0",
+      "family_label": "STS15-A",
+      "arity": 3,
+      "n": 15,
+      "m": 35,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "gq22": {
+      "item_id": "gq22",
+      "family_label": "GQ22",
+      "arity": 3,
+      "n": 15,
+      "m": 15,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        1.2219433079990267,
+        1.263935663002485,
+        1.2545659790011996
+      ],
+      "p50_s": 1.2545659790011996,
+      "p90_s": 1.2545659790011996,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "loose_path_k3": {
+      "item_id": "loose_path_k3",
+      "family_label": "LoosePath3",
+      "arity": 3,
+      "n": 9,
+      "m": 4,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0005210970011830796,
+        0.0005275959993014112,
+        0.0005109760022605769
+      ],
+      "p50_s": 0.0005210970011830796,
+      "p90_s": 0.0005210970011830796,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_path_k3": {
+      "item_id": "tight_path_k3",
+      "family_label": "TightPath3",
+      "arity": 3,
+      "n": 6,
+      "m": 4,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0005504769978870172,
+        0.0006713049988320563,
+        0.0006473270004789811
+      ],
+      "p50_s": 0.0006473270004789811,
+      "p90_s": 0.0006473270004789811,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "loose_cycle_k3": {
+      "item_id": "loose_cycle_k3",
+      "family_label": "LooseCycle3",
+      "arity": 3,
+      "n": 8,
+      "m": 4,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0010907360010605771,
+        0.0016104019996419083,
+        0.0008614420003141277
+      ],
+      "p50_s": 0.0010907360010605771,
+      "p90_s": 0.0010907360010605771,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_cycle_k3": {
+      "item_id": "tight_cycle_k3",
+      "family_label": "TightCycle3",
+      "arity": 3,
+      "n": 5,
+      "m": 5,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0013095859976601787,
+        0.0011863469990203157,
+        0.001171575000626035
+      ],
+      "p50_s": 0.0011863469990203157,
+      "p90_s": 0.0011863469990203157,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "complete_k3_n5": {
+      "item_id": "complete_k3_n5",
+      "family_label": "Complete3-5",
+      "arity": 3,
+      "n": 5,
+      "m": 10,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0018334249980398454,
+        0.0017961679986910895,
+        0.0030659719996037893
+      ],
+      "p50_s": 0.0018334249980398454,
+      "p90_s": 0.0018334249980398454,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "ag24": {
+      "item_id": "ag24",
+      "family_label": "AG24",
+      "arity": 4,
+      "n": 16,
+      "m": 20,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "pg23": {
+      "item_id": "pg23",
+      "family_label": "PG23",
+      "arity": 4,
+      "n": 13,
+      "m": 13,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "loose_path_k4": {
+      "item_id": "loose_path_k4",
+      "family_label": "LoosePath4",
+      "arity": 4,
+      "n": 10,
+      "m": 3,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0009634039997763466,
+        0.0008952320022217464,
+        0.0012372329983918462
+      ],
+      "p50_s": 0.0009634039997763466,
+      "p90_s": 0.0009634039997763466,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_path_k4": {
+      "item_id": "tight_path_k4",
+      "family_label": "TightPath4",
+      "arity": 4,
+      "n": 6,
+      "m": 3,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.0020730329997604713,
+        0.001886553000076674,
+        0.0019062179999309592
+      ],
+      "p50_s": 0.0019062179999309592,
+      "p90_s": 0.0019062179999309592,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "loose_cycle_k4": {
+      "item_id": "loose_cycle_k4",
+      "family_label": "LooseCycle4",
+      "arity": 4,
+      "n": 12,
+      "m": 4,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.028854105999926105,
+        0.028450854002585402,
+        0.03784135400201194
+      ],
+      "p50_s": 0.028854105999926105,
+      "p90_s": 0.028854105999926105,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_cycle_k4": {
+      "item_id": "tight_cycle_k4",
+      "family_label": "TightCycle4",
+      "arity": 4,
+      "n": 5,
+      "m": 5,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.001498277997598052,
+        0.0024099290021695197,
+        0.0021028720002504997
+      ],
+      "p50_s": 0.0021028720002504997,
+      "p90_s": 0.0021028720002504997,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "complete_k4_n6": {
+      "item_id": "complete_k4_n6",
+      "family_label": "Complete4-6",
+      "arity": 4,
+      "n": 6,
+      "m": 15,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.021439866999571677,
+        0.022775949000788387,
+        0.021884252997551812
+      ],
+      "p50_s": 0.021884252997551812,
+      "p90_s": 0.021884252997551812,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "pg24": {
+      "item_id": "pg24",
+      "family_label": "PG24",
+      "arity": 5,
+      "n": 21,
+      "m": 21,
+      "n_runs_completed": 1,
+      "dnf": true,
+      "timings_s": [
+        30.0
+      ],
+      "p50_s": 30.0,
+      "p90_s": 30.0,
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
+    },
+    "loose_path_k5": {
+      "item_id": "loose_path_k5",
+      "family_label": "LoosePath5",
+      "arity": 5,
+      "n": 13,
+      "m": 3,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.026258310001139762,
+        0.022099138997873524,
+        0.022906842998054344
+      ],
+      "p50_s": 0.022906842998054344,
+      "p90_s": 0.022906842998054344,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_path_k5": {
+      "item_id": "tight_path_k5",
+      "family_label": "TightPath5",
+      "arity": 5,
+      "n": 7,
+      "m": 3,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.03493432399773155,
+        0.0296444400009932,
+        0.02447930700145662
+      ],
+      "p50_s": 0.0296444400009932,
+      "p90_s": 0.0296444400009932,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "tight_cycle_k5": {
+      "item_id": "tight_cycle_k5",
+      "family_label": "TightCycle5",
+      "arity": 5,
+      "n": 7,
+      "m": 7,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.16849732100308756,
+        0.15455543999996735,
+        0.1534906509987195
+      ],
+      "p50_s": 0.15455543999996735,
+      "p90_s": 0.15455543999996735,
+      "status": "ADMITTED",
+      "reason": ""
+    },
+    "complete_k5_n6": {
+      "item_id": "complete_k5_n6",
+      "family_label": "Complete5-6",
+      "arity": 5,
+      "n": 6,
+      "m": 6,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.06652446199950646,
+        0.06809736200011685,
+        0.06864400599806686
+      ],
+      "p50_s": 0.06809736200011685,
+      "p90_s": 0.06809736200011685,
+      "status": "ADMITTED",
+      "reason": ""
+    }
+  }
+}

@@ -114,14 +114,14 @@ two real HIC genre corpora (`d_I` only; `w*_c` is fast on these instances, so
 the corpus size `N` is cheap to scale — only the per-instance node count `n`
 drives cost):
 
-| corpus | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
-|---|---|---|---|---|---|
-| planted | 60 | 0.123 | 21 | 3 | 0.982 |
-| planted | 120 | 0.193 | 23 | 5 | 0.966 |
-| planted | 240 | 0.250 | 26 | 8 | 0.954 |
-| planted | 480 | 0.300 | 26 | 12 | 0.949 |
-| HIC IMDB-Wri-Genre-M | 266 | 0.160 | 10 | 1 | 0.993 |
-| HIC IMDB-Wri-Genre | 833 | 0.200 | 11 | 1 | 0.992 |
+| corpus | metric | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
+|---|---|---|---|---|---|---|
+| planted | `d_I^⊥` | 60 | 0.123 | 21 | 3 | 0.982 |
+| planted | `d_I^⊥` | 120 | 0.193 | 23 | 5 | 0.966 |
+| planted | `d_I^⊥` | 240 | 0.250 | 26 | 8 | 0.954 |
+| planted | `d_I^⊥` | 480 | 0.300 | 26 | 12 | 0.949 |
+| HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 | 0.993 |
+| HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 | 0.992 |
 
 The CV estimate on the synthetic corpus climbs from 21 at `N = 60` and
 **plateaus at 26 for `N ≥ 240`**: the widely-quoted `D̂ = 21` is a lower bound
@@ -133,8 +133,14 @@ corpus diversity (0.12 → 0.30), consistent with more structurally varied
 families departing further from Euclidean geometry. **Real genre hypergraphs are
 markedly lower-dimensional** (`D̂ ≈ 10–11`, Horn ≈ 1) than the synthetic
 families — a substantive finding, reported as a censored-subset measurement (the
-HIC caveat, `../DATA.md` §2). The estimate is thus reported as a bracket with its
-`N`-dependence stated, never as a bare number.
+HIC caveat, `../DATA.md` §2). The planted rows use the structural member
+`d_I^⊥` (trivial vocabulary); the HIC rows use the label-aware member
+`d_I^Σ` (non-trivial `LabelVocabulary` from IMDB metadata). These are members
+of different families (the Remark in `stability.md` §1), measuring isomorphism
+in different domains; they are read as two objects rather than one continuous
+series, which is a candidate explanation for the lower real-data `D̂` beyond the
+usual "real data is different" appeal. The estimate is thus reported as a bracket
+with its `N`-dependence stated, never as a bare number.
 
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis
   independent of any oracle — a *lower faithful* `D̂` than a competitor

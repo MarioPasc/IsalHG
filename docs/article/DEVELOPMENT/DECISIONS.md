@@ -1,5 +1,20 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
+- **OD7** — **[PENDING PI]** Label-stripped HIC re-run: should the HIC genre
+  corpora additionally be run with `LabelVocabulary.trivial()` (labels stripped)
+  to produce a structural-only real-data row `d_I^⊥` per dataset? One extra
+  `D.npy` per HIC dataset; makes the synthetic↔real geometry comparison
+  apples-to-apples (`d_I^⊥` vs `d_I^⊥`, isolating the structural contribution
+  from the vocabulary effect). As established in `theoretical/geometry.md` §3
+  (and the Remark in `stability.md` §1), the HIC rows currently measure `d_I^Σ`
+  (label-aware member) while the planted rows measure `d_I^⊥` (structural
+  member); these are incomparable family members and the lower HIC `D̂ ≈ 10–11`
+  may partly reflect the vocabulary rather than purely structural differences.
+  Recommended if the wall-clock is acceptable — the `w*_c` cost does not change
+  when labels are trivialised (same instances run; the per-instance censoring
+  budget applies identically). Not gating on any article claim. Execution owned
+  by T-M7g if adopted.
+
 - **OD6** — **[RESOLVED 2026-07-20, PI (Mario) directed: INCLUDE]** The
   *secondary* censored-subset HIC exhibit is adopted: run A1 (MDS + geometry
   table), A2 (clustering), A3 (kNN) on real HIC data **alongside** the planted

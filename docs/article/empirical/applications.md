@@ -46,18 +46,21 @@ On every corpus, before any application: the pairwise-distance histogram of
   strong concentration predict degraded kNN); competitors get the same table —
   whose metric concentrates less is itself a head-to-head axis.
 
-**Measured (planted corpus, N = 240, twenty families).** The hubness signatures
-separate the representations sharply. `d_I` is moderately hub-prone (`N_10`
-skewness 1.280) with moderate concentration (diameter-to-median 1.75); the WL
-histogram distance is extremely hub-prone (skewness 4.586), while NetLSD is
-hubness-neutral (0.121) but strongly concentrated (diameter-to-median 5.03).
-This ordering is the precondition the A3 result is read against: the
-extreme-hubness representation is predicted to lose most under kNN. (On the
-smaller N = 60 corpus the same ordering holds at milder values — `d_I` 0.231,
-WL 1.777, NetLSD −0.551 — the k-occurrence skew sharpens as the corpus grows.)
+**Measured (planted corpus, N = 240, twenty families; metric `d_I^⊥`).** The
+hubness signatures separate the representations sharply. `d_I^⊥` is moderately
+hub-prone (`N_10` skewness 1.280) with moderate concentration
+(diameter-to-median 1.75); the WL histogram distance is extremely hub-prone
+(skewness 4.586), while NetLSD is hubness-neutral (0.121) but strongly
+concentrated (diameter-to-median 5.03). This ordering is the precondition the
+A3 result is read against: the extreme-hubness representation is predicted to
+lose most under kNN. (On the smaller N = 60 corpus the same ordering holds at
+milder values — `d_I^⊥` 0.231, WL 1.777, NetLSD −0.551 — the k-occurrence skew
+sharpens as the corpus grows.)
 The same profile recomputed on the real HIC genre corpora preserves the
-contrast — WL hubness is 4.5–7.4 there, `d_I` stays moderate (1.1–1.8) — so
-the prediction transfers to real data.
+contrast — WL hubness is 4.5–7.4 there, `d_I^Σ` stays moderate (1.1–1.8) — so
+the prediction transfers to real data (real-data entries use the label-aware
+`d_I^Σ`; the contrast with WL hubness is structural and survives the vocabulary
+shift).
 
 ## G2 — Local sensitivity + ladder response (geometry, the smoothness evidence)
 
@@ -120,12 +123,17 @@ under-resolves it: the `N`-scaling sweep in `../theoretical/geometry.md` §3 sho
 `D̂` climbing from 21 at N = 60 and plateauing at 26 for N ≥ 240, corroborated by
 an independent Horn parallel-analysis bracket of [12, 26]; the applications
 below are run on this same N = 240 corpus so geometry and usefulness are
-measured on one object.) `d_I` is **genuinely non-Euclidean**: the double-centred
+measured on one object.) All IsalHG entries in this table use `d_I^⊥` — the
+structural member of the metric family (trivial vocabulary; `stability.md` §1
+Remark). `d_I^⊥` is **genuinely non-Euclidean**: the double-centred
 Gram matrix is indefinite (not PSD) with non-Euclidean mass `ν = 0.250` — a
 quarter of the distance mass in negative eigenvalues — and cross-validated
 intrinsic dimension `D̂ = 26` at low residual distortion (Kruskal stress-1 =
-0.062). Real HIC genre hypergraphs are markedly lower-dimensional (`D̂ ≈ 10`,
-`../theoretical/geometry.md` §3). The nauty-Levi canonical-string distance is
+0.062). Real HIC genre hypergraphs yield `D̂ ≈ 10` under `d_I^Σ` (label-aware member;
+non-trivial IMDB vocabulary; `../theoretical/geometry.md` §3); these rows
+measure a different family member than the synthetic `d_I^⊥` rows, and are
+read as a separate object — the lower `D̂` is consistent with a vocabulary
+effect as well as with structural differences in real data. The nauty-Levi canonical-string distance is
 also non-Euclidean and less compressible (`ν = 0.133`, `D̂` censored at the cap).
 The three vector representations are, by construction, Euclidean (`ν = 0`):
 NetLSD sits in a genuinely low dimension (`D̂ = 5`), whereas the WL histogram and
@@ -137,11 +145,14 @@ centroid), and the per-representation `D̂` is itself a comparison axis.
 
 | Representation | PSD | `ν` | `D̂` | stress@`D̂` | diam/med | `N_10` skew |
 |---|---|---|---|---|---|---|
-| IsalHG (`d_I`) | no | 0.250 | 26 | 0.062 | 1.75 | 1.280 |
+| IsalHG (`d_I^⊥`) | no | 0.250 | 26 | 0.062 | 1.75 | 1.280 |
 | WL histogram | yes | 0.000 | ≥40 (censored) | 0.636 | 1.10 | 4.586 |
 | NetLSD | yes | 0.000 | 5 | 0.000 | 5.03 | 0.121 |
 | HPD | yes | 0.000 | ≥40 (censored) | 0.038 | 1.55 | 1.081 |
 | nauty-Levi edit | no | 0.133 | ≥40 (censored) | 0.080 | 1.79 | 0.330 |
+
+All IsalHG entries above use `d_I^⊥` — the structural member of the metric
+family (planted corpus, trivial vocabulary; `stability.md` §1 Remark).
 
 The theory brackets the distortion: Bourgain (1985) guarantees an `O(log N)`
 embedding exists (so MDS is justified) and Khot–Naor (2006) prove string-edit
@@ -164,21 +175,21 @@ perturbations ⇒ known membership; `../DATA.md` §1).
 - Competitor comparison: same metrics on each `D_rep`; report metrics vs
   corpus density so the sparse/dense behaviour is visible.
 
-**Measured (planted corpus, N = 240, twenty families).** Recovering twenty
-planted families from structure alone is a hard task, and recovery is modest for
-every representation — but the relative ordering is stable and `d_I` is a close
-second. Adjusted Rand Index is 0.102 for `d_I` (NMI 0.407), just behind HPD (ARI
-0.120, NMI 0.445), then NetLSD (ARI 0.051, NMI 0.364), while the nauty-Levi and
-WL distances essentially fail (ARI 0.018 and ≈ 0.00). PAM is the correct
-estimator here precisely because the space is non-Euclidean (A1). The conclusion
-carries over from the smaller five-family corpus: on raw clustering quality `d_I`
-sits mid-pack (a close second behind HPD); the paper's claim is *licensed*
-usefulness, not benchmark dominance.
+**Measured (planted corpus, N = 240, twenty families; metric `d_I^⊥`).** Recovering
+twenty planted families from structure alone is a hard task, and recovery is modest
+for every representation — but the relative ordering is stable and `d_I^⊥` is a
+close second. Adjusted Rand Index is 0.102 for `d_I^⊥` (NMI 0.407), just behind
+HPD (ARI 0.120, NMI 0.445), then NetLSD (ARI 0.051, NMI 0.364), while the
+nauty-Levi and WL distances essentially fail (ARI 0.018 and ≈ 0.00). PAM is the
+correct estimator here precisely because the space is non-Euclidean (A1). The
+conclusion carries over from the smaller five-family corpus: on raw clustering
+quality `d_I^⊥` sits mid-pack (a close second behind HPD); the paper's claim is
+*licensed* usefulness, not benchmark dominance.
 
-**Measured (real HIC genre, censored subset).** On the two cleanly computable
-IMDB genre datasets (`w*_c`-yield 92.5% and 91.7%), genre is near-unclusterable
-from structure alone: **every** representation scores ARI < 0.10, including
-`d_I`. No representation leads meaningfully — an honest negative result. The four
+**Measured (real HIC genre, censored subset; metric `d_I^Σ`).** On the two
+cleanly computable IMDB genre datasets (`w*_c`-yield 92.5% and 91.7%), genre is
+near-unclusterable from structure alone: **every** representation scores ARI < 0.10,
+including `d_I^Σ`. No representation leads meaningfully — an honest negative result. The four
 remaining IMDB genre datasets are retained at only 34–43% under the `w*_c`
 budget, with label-correlated censoring (some genres below 20% retention); their
 clustering numbers are reported for completeness but are not used for
@@ -195,11 +206,11 @@ Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
 - Metrics: accuracy, macro-F1, AUC (one-vs-rest). Report vs `k`.
 - Competitor comparison: k-NN on each `D_rep`, same folds.
 
-**Measured (planted corpus, N = 240, twenty families).** The G1 hubness profile
-predicts the kNN ordering, and the prediction sharpens at this corpus size: the
-WL histogram's hubness rises to 4.586 and its AUC-OvR **collapses to chance
-(0.49)** — the clearest confirmation of the licence. The benign-hubness
-representations classify above chance: HPD leads (AUC 0.83), `d_I` is second
+**Measured (planted corpus, N = 240, twenty families; metric `d_I^⊥`).** The G1
+hubness profile predicts the kNN ordering, and the prediction sharpens at this
+corpus size: the WL histogram's hubness rises to 4.586 and its AUC-OvR **collapses
+to chance (0.49)** — the clearest confirmation of the licence. The benign-hubness
+representations classify above chance: HPD leads (AUC 0.83), `d_I^⊥` is second
 (0.73), then NetLSD (0.66) and the nauty-Levi distance (0.61, held down by its
 avalanche sensitivity). The strong-hubness→failure prediction holds decisively at
 the extreme (WL); among the benign-hubness representations the residual ordering
@@ -210,9 +221,10 @@ classifier is run, and the forecast is stable between N = 60 and N = 240.
 
 **Measured (real HIC genre, censored subset).** The same hubness contrast recurs
 on real data. On the two clean IMDB genre datasets the mean AUC-OvR at k = 9 is
-0.673 for `d_I`, followed by NetLSD and the nauty-Levi edit distance (both
-0.654), against 0.624 for the WL histogram, which again trails in line with its
-elevated real-data hubness (skewness 4.5–7.4). The agreement of the hubness→kNN prediction across synthetic
+0.673 for `d_I^Σ` (label-aware member; non-trivial IMDB vocabulary), followed
+by NetLSD and the nauty-Levi edit distance (both 0.654), against 0.624 for the
+WL histogram, which again trails in line with its elevated real-data hubness
+(skewness 4.5–7.4). The agreement of the hubness→kNN prediction across synthetic
 *and* real corpora is the empirical spine of the geometric characterization. (HPD
 is not conclusive on the clean datasets: its vendored hyperedge-portrait
 construction raises an index error on a third of the real instances, so it is
@@ -242,16 +254,16 @@ to an actual hypergraph via S2H.
 - Competitor comparison: (i)–(ii) for vector competitors where a path is
   computable at all; the capability matrix records who cannot run this.
 
-**Measured (ladder pool of 44 hypergraphs).** Accumulated path length is
-**monotone in the ladder budget for every representation** (monotone fraction
-1.00) — the ladder response of G2 read along shortest paths. Exact recovery of
-the specific ladder intermediates, by contrast, is essentially null for all
-representations (0.00 for `d_I`, WL and NetLSD; 0.33 for HPD): the `d_I` geodesic
-routes through same-budget alternatives rather than retracing the exact edit
-sequence. We report this as a feature, not a failure — it is a direct empirical
-illustration of the closing discussion's point that `d_I` is not an edit-distance
-proxy. The **decodability differentiator is the categorical result**: only `d_I`
-exhibits the intermediate hypergraphs along the path — three intermediate
+**Measured (ladder pool of 44 hypergraphs; metric `d_I^⊥`).** Accumulated path
+length is **monotone in the ladder budget for every representation** (monotone
+fraction 1.00) — the ladder response of G2 read along shortest paths. Exact
+recovery of the specific ladder intermediates, by contrast, is essentially null
+for all representations (0.00 for `d_I^⊥`, WL and NetLSD; 0.33 for HPD): the
+`d_I^⊥` geodesic routes through same-budget alternatives rather than retracing
+the exact edit sequence. We report this as a feature, not a failure — it is a
+direct empirical illustration of the closing discussion's point that `d_I` is not
+an edit-distance proxy. The **decodability differentiator is the categorical
+result**: only `d_I^⊥` exhibits the intermediate hypergraphs along the path — three intermediate
 strings decoded via S2H to valid hypergraphs, whereas the WL path collapses to a
 direct two-node hop, NetLSD and HPD have no decoder, and the nauty-Levi distance
 cannot navigate at all (its avalanche profile). The capability matrix below
@@ -282,20 +294,20 @@ competing representation possesses.
 HyperCOT's `O(n³)`-per-pair cost restricts it to the small/mid corpora; its
 rows state the limit rather than hide it (`../COMPETITORS.md` §2).
 
-## Runtime — the cost axis (and the `d_I` compromise)
+## Runtime — the cost axis (and the `d_I^⊥` compromise)
 
 Every representation's pairwise matrix is timed (wall-clock, per the reporting
 standard). On the N = 240 planted corpus (28,680 pairs) the `D`-matrix
-wall-clock is: nauty-Levi 0.05 s, WL 0.09 s, **`d_I` 0.18 s**, NetLSD 0.27 s, HPD
-0.88 s; HyperCOT is `O(n³)` per pair (tractable only on tiny instances). `d_I`
-is the **compromise the other axes point to**: the two representations faster
-than it are disqualified on quality — nauty's geometry is avalanche-unusable
-(G2) and WL's hubness forces chance-level kNN (A3) — while the one that edges it
-on task metrics, HPD, costs ~5× the wall-clock, has *no decoder* (cannot run
-A4), and fails on a third of real HIC instances (its vendored portrait). `d_I`
-is the only representation that is simultaneously fast, competitive on task
-metrics (a close second on A2 and A3), decodable, and geometrically
-characterizable.
+wall-clock is: nauty-Levi 0.05 s, WL 0.09 s, **`d_I^⊥` 0.18 s**, NetLSD 0.27 s,
+HPD 0.88 s; HyperCOT is `O(n³)` per pair (tractable only on tiny instances).
+`d_I^⊥` is the **compromise the other axes point to**: the two representations
+faster than it are disqualified on quality — nauty's geometry is
+avalanche-unusable (G2) and WL's hubness forces chance-level kNN (A3) — while
+the one that edges it on task metrics, HPD, costs ~5× the wall-clock, has *no
+decoder* (cannot run A4), and fails on a third of real HIC instances (its
+vendored portrait). `d_I^⊥` is the only representation that is simultaneously
+fast, competitive on task metrics (a close second on A2 and A3), decodable, and
+geometrically characterizable.
 
 The one honesty caveat: the runtime advantage is **per-instance-size dependent**.
 `w*_c` cost scales with hypergraph size and tie-symmetry, so `d_I` is fast on

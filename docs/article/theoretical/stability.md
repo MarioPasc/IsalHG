@@ -98,6 +98,22 @@ one-sided heuristic: equal strings still certify isomorphism, and it is exact
 on edge-order-preserving pipelines and on automorphism-coherent-tie inputs
 like the design fixtures — Fano verified `w*_greedy = w*_c`).
 
+**Remark (Label-conditional metric family).** For each fixed `k`, `h`, and
+vocabulary `Σ = (Σ_V, Σ_E)`, the metric `d_I^{k,h,Σ}` is a metric on
+isomorphism classes of connected `Σ`-labelled hypergraphs of arity ≤ k, where
+isomorphism means *label-preserving* isomorphism — a bijection on vertices that
+simultaneously preserves all hyperedges and all vertex and edge labels. The
+proof is immediate from Theorem A: Theorem A is stated for arbitrary `Σ` (the
+augmented fingerprint `F(H) = (ℓ_seed, w*_c(H))` is computed under any
+`LabelVocabulary`), and the three metric axioms of Corollary A carry through
+per fixed `(k, h, Σ)` with label-preserving isomorphism in place of plain
+isomorphism. Under the trivial vocabulary `Σ = (⊥, ⊥)`, label-preserving
+isomorphism reduces to plain structural isomorphism, and `d_I^{k,h,⊥}` is the
+structural metric on unlabelled hypergraphs. Members from different vocabularies
+are metrics on different isomorphism-class domains and are therefore
+incomparable: their values must not be pooled or directly compared in one
+distance matrix or MDS embedding.
+
 **Index family.** The metric `d_I` depends on the pointer count `k` (which
 caps the maximum supported arity), the structural-tuple depth `h` (depth of
 the `xi`/`eta` tuples, default 3), and the vertex and edge vocabulary sizes

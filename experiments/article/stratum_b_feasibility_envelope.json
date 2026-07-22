@@ -1,0 +1,722 @@
+{
+  "schema_version": "1.1",
+  "task": "T-M7b",
+  "config": {
+    "yaml": "experiments/article/configs/stratum_b_sweep.yaml",
+    "budget_s": 30.0,
+    "n_pilot_target": 30,
+    "local_n_pilot": 5,
+    "local_timeout_per_instance_s": 35,
+    "measurement_date": "2026-07-22",
+    "note": "Local pilot (\u22645 instances/block, 35s timeout). Final admission decisions for the 19 pending-cluster blocks are deferred to T-M7h (Picasso, 300s/instance, 30 instances/block)."
+  },
+  "summary": {
+    "n_locally_measured_blocks": 22,
+    "n_locally_admitted": 6,
+    "n_pending_cluster_measurement": 19,
+    "n_not_implemented": 0
+  },
+  "findings": {
+    "k3_n8_16": "LOCALLY_ADMITTED: all 6 (n x density) blocks at k=3, n in {8,16} are within budget (p90 <= 10.9s). Final paper-citable admission.",
+    "k3_n_ge_24": "PENDING_CLUSTER: each instance exceeded 35s local timeout (n_pilot_local=3 timeouts). Cluster pilot required (T-M7h, 300s/instance).",
+    "k5_n8": "PENDING_CLUSTER: single local sample within 30s budget (p50=3.6s rho=1, 7.4s rho=2); provisional only. Full 30-instance cluster pilot required (T-M7h) before admission is paper-citable.",
+    "k5_n_ge_16": "PENDING_CLUSTER: not locally measured (n_pilot_local=0); inferred likely infeasible from k5_n8_p50. One extrapolated data point is not a measurement. Cluster pilot required (T-M7h).",
+    "k7": "PENDING_CLUSTER: local vm_complexity_timeout at 35s budget, n_pilot_local=1 sample. One local timeout is not a confirmed finding. Cluster pilot at 300s/instance required (T-M7h) before exclusion is paper-citable.",
+    "k10": "PENDING_CLUSTER: local vm_complexity_timeout at 35s budget, n_pilot_local=1 sample. One local timeout is not a confirmed finding. Cluster pilot at 300s/instance required (T-M7h) before exclusion is paper-citable.",
+    "chung_lu": "NOT_IMPLEMENTED: ChungLuHypergraphs.{metadata,__iter__} raise NotImplementedError. Unblocked by T-M7i.",
+    "mixed_arity": "NOT_IMPLEMENTED: no mixed-arity generator in the package. Unblocked by T-M7i.",
+    "final_exclusion_deferred": "Local findings are LOCAL FINDINGS only. Final exclusion of any block from the paper requires cluster-measured p50/p90 (T-M7h). The paper will cite T-M7h results, not these local estimates."
+  },
+  "hpc_escalation": {
+    "needed": true,
+    "task": "T-M7h",
+    "scope": "all 19 pending-cluster blocks (see pending_cluster list below)",
+    "tool": "picasso-sbatch skill",
+    "instance_budget_s": 300,
+    "n_pilot": 30,
+    "note": "T-M7d may only run on Picasso-pilot-ADMITTED cells; T-M7h must close first."
+  },
+  "admitted_block_keys": [
+    "er_uniform_k3_n8_rho1",
+    "er_uniform_k3_n8_rho2",
+    "er_uniform_k3_n8_rho4",
+    "er_uniform_k3_n16_rho1",
+    "er_uniform_k3_n16_rho2",
+    "er_uniform_k3_n16_rho4"
+  ],
+  "pending_cluster": [
+    {
+      "block_key": "er_uniform_k3_n24_rho1",
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho2",
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho4",
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho1",
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho2",
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho4",
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho1",
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho2",
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho4",
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho1",
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho2",
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho4",
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho1",
+      "reason": "pending_cluster_pilot:k=5_n=8_rho=1_provisional_single_sample_p50=3605ms",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho2",
+      "reason": "pending_cluster_pilot:k=5_n=8_rho=2_provisional_single_sample_p50=7410ms",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho1",
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=1_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho2",
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=2_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho4",
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=4_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k7_n8_rho1",
+      "reason": "pending_cluster_pilot:k=7_n=8_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+    },
+    {
+      "block_key": "er_uniform_k10_n16_rho1",
+      "reason": "pending_cluster_pilot:k=10_n=16_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+    }
+  ],
+  "block_results": [
+    {
+      "block_key": "er_uniform_k3_n8_rho1",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 5,
+      "n_ok_local": 5,
+      "n_timeout_local": 0,
+      "p50_ms": 2.2,
+      "p90_ms": 43.9,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho2",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 5,
+      "n_ok_local": 5,
+      "n_timeout_local": 0,
+      "p50_ms": 10.3,
+      "p90_ms": 36.2,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho4",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 5,
+      "n_ok_local": 5,
+      "n_timeout_local": 0,
+      "p50_ms": 1328.2,
+      "p90_ms": 2716.6,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho1",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 5,
+      "n_ok_local": 5,
+      "n_timeout_local": 0,
+      "p50_ms": 174.9,
+      "p90_ms": 234.1,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho2",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 5,
+      "n_ok_local": 5,
+      "n_timeout_local": 0,
+      "p50_ms": 659.3,
+      "p90_ms": 2388.3,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": ""
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho4",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 4,
+      "n_ok_local": 4,
+      "n_timeout_local": 0,
+      "p50_ms": 6249.8,
+      "p90_ms": 10878.4,
+      "local_status": "admitted",
+      "admitted": true,
+      "reason": "",
+      "note": "1_of_5_instances_exceeded_35s_per_instance_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho1",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho2",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho4",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=24_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho1",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho2",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho4",
+      "n": 32,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho1",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho2",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n48_rho4",
+      "n": 48,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho1",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 1,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=1_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho2",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 2,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=2_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k3_n64_rho4",
+      "n": 64,
+      "k": 3,
+      "density_ratio": 4,
+      "n_pilot_local": 3,
+      "n_ok_local": 0,
+      "n_timeout_local": 3,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=4_local_timeout_cluster_pilot_required",
+      "note": "each_instance_exceeded_35s_local_timeout"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho1",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 1,
+      "n_pilot_local": 1,
+      "n_ok_local": 1,
+      "n_timeout_local": 0,
+      "p50_ms": 3605.1,
+      "p90_ms": 3605.1,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=5_n=8_rho=1_provisional_single_sample_p50=3605ms",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho2",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 2,
+      "n_pilot_local": 1,
+      "n_ok_local": 1,
+      "n_timeout_local": 0,
+      "p50_ms": 7410.0,
+      "p90_ms": 7410.0,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=5_n=8_rho=2_provisional_single_sample_p50=7410ms",
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho1",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 1,
+      "n_pilot_local": 0,
+      "n_ok_local": 0,
+      "n_timeout_local": 0,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=1_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho2",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 2,
+      "n_pilot_local": 0,
+      "n_ok_local": 0,
+      "n_timeout_local": 0,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=2_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k5_n16_rho4",
+      "n": 16,
+      "k": 5,
+      "density_ratio": 4,
+      "n_pilot_local": 0,
+      "n_ok_local": 0,
+      "n_timeout_local": 0,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=4_not_locally_measured_cluster_pilot_required",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+    },
+    {
+      "block_key": "er_uniform_k7_n8_rho1",
+      "n": 8,
+      "k": 7,
+      "density_ratio": 1,
+      "n_pilot_local": 1,
+      "n_ok_local": 0,
+      "n_timeout_local": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=7_n=8_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+    },
+    {
+      "block_key": "er_uniform_k10_n16_rho1",
+      "n": 16,
+      "k": 10,
+      "density_ratio": 1,
+      "n_pilot_local": 1,
+      "n_ok_local": 0,
+      "n_timeout_local": 1,
+      "p50_ms": null,
+      "p90_ms": null,
+      "local_status": "pending_cluster",
+      "admitted": false,
+      "reason": "pending_cluster_pilot:k=10_n=16_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+    }
+  ],
+  "figure_data": {
+    "k3_rho1": {
+      "k": 3,
+      "density_ratio": 1,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        2.2,
+        174.9,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        43.9,
+        234.1,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "local_status": [
+        "admitted",
+        "admitted",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster"
+      ]
+    },
+    "k3_rho2": {
+      "k": 3,
+      "density_ratio": 2,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        10.3,
+        659.3,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        36.2,
+        2388.3,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "local_status": [
+        "admitted",
+        "admitted",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster"
+      ]
+    },
+    "k3_rho4": {
+      "k": 3,
+      "density_ratio": 4,
+      "n_values": [
+        8,
+        16,
+        24,
+        32,
+        48,
+        64
+      ],
+      "p50_ms": [
+        1328.2,
+        6249.8,
+        null,
+        null,
+        null,
+        null
+      ],
+      "p90_ms": [
+        2716.6,
+        10878.4,
+        null,
+        null,
+        null,
+        null
+      ],
+      "admitted": [
+        true,
+        true,
+        false,
+        false,
+        false,
+        false
+      ],
+      "local_status": [
+        "admitted",
+        "admitted",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster",
+        "pending_cluster"
+      ]
+    },
+    "k5_rho1": {
+      "k": 5,
+      "density_ratio": 1,
+      "n_values": [
+        8,
+        16
+      ],
+      "p50_ms": [
+        3605.1,
+        null
+      ],
+      "p90_ms": [
+        3605.1,
+        null
+      ],
+      "admitted": [
+        false,
+        false
+      ],
+      "local_status": [
+        "pending_cluster",
+        "pending_cluster"
+      ]
+    },
+    "k5_rho2": {
+      "k": 5,
+      "density_ratio": 2,
+      "n_values": [
+        8,
+        16
+      ],
+      "p50_ms": [
+        7410.0,
+        null
+      ],
+      "p90_ms": [
+        7410.0,
+        null
+      ],
+      "admitted": [
+        false,
+        false
+      ],
+      "local_status": [
+        "pending_cluster",
+        "pending_cluster"
+      ]
+    },
+    "k5_rho4": {
+      "k": 5,
+      "density_ratio": 4,
+      "n_values": [
+        16
+      ],
+      "p50_ms": [
+        null
+      ],
+      "p90_ms": [
+        null
+      ],
+      "admitted": [
+        false
+      ],
+      "local_status": [
+        "pending_cluster"
+      ]
+    }
+  }
+}

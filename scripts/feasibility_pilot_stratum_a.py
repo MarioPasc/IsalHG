@@ -122,23 +122,33 @@ def run_pilot(
     budget_s: float = 30.0,
     n_runs: int = 3,
     outdir: Path | None = None,
+    threshold_s: float | None = None,
 ) -> dict[str, object]:
     """Run the Stratum A feasibility pilot.
 
     Parameters
     ----------
     budget_s : float
-        Per-instance wall-clock budget in seconds.
+        Per-instance wall-clock timeout in seconds.  On cluster runs this
+        is raised (e.g. 300 s) while ``threshold_s`` stays at 30 s.
     n_runs : int
         Number of timing repetitions per design (early-exit on first DNF).
     outdir : Path | None
         If given, write JSON + table to this directory.
+    threshold_s : float | None
+        Admission threshold: p90 must be ≤ this value (seconds) to admit.
+        Defaults to ``budget_s`` (preserves the original single-parameter
+        behaviour for local runs with ``--budget 30``).
 
     Returns
     -------
     dict
         Full result record keyed by design item_id.
     """
+    # When budget_s is raised for cluster use, threshold_s stays at 30 s
+    # (the DATA.md §4 admission criterion).
+    admit_threshold_s = threshold_s if threshold_s is not None else budget_s
+
     from isalhg.datasets.synthetic.known_design_catalog import KnownDesignCatalog
 
     ds = KnownDesignCatalog()
@@ -174,31 +184,49 @@ def run_pilot(
             timings.append(elapsed)
 
         if dnf:
-            # Local workstation DNF is not a final exclusion — heavy compute
-            # goes to Picasso (T-M7h, 300s ceiling).  Classify as
-            # PENDING_CLUSTER so the artifact does not lie.
-            status = "PENDING_CLUSTER"
-            reason = (
-                f"w*_c DNF on local workstation ({budget_s:.0f}s budget)"
-                f" — deferred to cluster pilot (T-M7h)"
-            )
+            # DNF at budget_s: classified by context.
+            # On local (budget_s == admit_threshold_s == 30s): PENDING_CLUSTER.
+            # On cluster (budget_s=300s > admit_threshold_s=30s): EXCLUDED.
             p50 = statistics.median(timings)
             p90 = budget_s
+            if budget_s > admit_threshold_s:
+                # Cluster run: timeout at 300s means definitely > 30s threshold.
+                status = "EXCLUDED"
+                reason = (
+                    f"w*_c DNF at cluster budget ({budget_s:.0f}s); "
+                    f"confirmed infeasible (p90 >> threshold {admit_threshold_s:.0f}s)"
+                )
+            else:
+                status = "PENDING_CLUSTER"
+                reason = (
+                    f"w*_c DNF on local workstation ({budget_s:.0f}s budget)"
+                    f" — deferred to cluster pilot (T-M7h)"
+                )
         else:
             p50 = statistics.median(timings)
             sorted_t = sorted(timings)
             # p90 index: for N=3, position 2 (the max); for N=1, position 0.
             idx90 = max(0, int(len(sorted_t) * 0.9) - 1)
             p90 = sorted_t[idx90] if len(sorted_t) > 1 else sorted_t[0]
-            if p90 <= budget_s:
+            if p90 <= admit_threshold_s:
                 status = "ADMITTED"
                 reason = ""
             else:
-                # p90 > budget but no single DNF: still a local finding.
-                status = "PENDING_CLUSTER"
-                reason = (
-                    f"p90={p90:.2f}s > budget {budget_s:.0f}s — deferred to cluster pilot (T-M7h)"
-                )
+                # p90 > threshold but no DNF.
+                if budget_s > admit_threshold_s:
+                    # Cluster run: measured exclusion.
+                    status = "EXCLUDED"
+                    reason = (
+                        f"p90={p90:.2f}s > threshold {admit_threshold_s:.0f}s "
+                        f"(cluster-measured at {budget_s:.0f}s timeout)"
+                    )
+                else:
+                    # Local run: still deferred.
+                    status = "PENDING_CLUSTER"
+                    reason = (
+                        f"p90={p90:.2f}s > budget {budget_s:.0f}s"
+                        " — deferred to cluster pilot (T-M7h)"
+                    )
 
         rec = {
             "item_id": iid,
@@ -224,8 +252,10 @@ def run_pilot(
     print(sep, flush=True)
     admitted = [r for r in results.values() if r["status"] == "ADMITTED"]
     pending = [r for r in results.values() if r["status"] == "PENDING_CLUSTER"]
+    excluded = [r for r in results.values() if r["status"] == "EXCLUDED"]
     print(
-        f"Admitted: {len(admitted)} / {len(results)}  Pending-cluster: {len(pending)}",
+        f"Admitted: {len(admitted)} / {len(results)}  "
+        f"Pending-cluster: {len(pending)}  Excluded: {len(excluded)}",
         flush=True,
     )
 
@@ -236,10 +266,12 @@ def run_pilot(
             json.dump(
                 {
                     "budget_s": budget_s,
+                    "threshold_s": admit_threshold_s,
                     "n_runs": n_runs,
                     "n_designs": len(results),
                     "n_admitted": len(admitted),
                     "n_pending_cluster": len(pending),
+                    "n_excluded": len(excluded),
                     "designs": results,
                 },
                 fh,
@@ -249,8 +281,12 @@ def run_pilot(
 
         table_path = outdir / "admitted_catalog.txt"
         with table_path.open("w") as fh:
-            fh.write("# Admitted Stratum A catalog (T-M7a feasibility pilot)\n")
-            fh.write(f"# Budget: {budget_s}s  Runs per design: {n_runs}\n\n")
+            fh.write("# Admitted Stratum A catalog (T-M7h cluster feasibility pilot)\n")
+            fh.write(
+                f"# Budget (timeout): {budget_s}s  "
+                f"Admission threshold: {admit_threshold_s}s  "
+                f"Runs per design: {n_runs}\n\n"
+            )
             fh.write(header_cols + "\n")
             fh.write(sep + "\n")
             for r in admitted:
@@ -260,8 +296,14 @@ def run_pilot(
                 )
             fh.write(sep + "\n")
             fh.write(f"Total admitted: {len(admitted)} / {len(results)}\n\n")
+            if excluded:
+                fh.write("# Cluster-excluded designs (confirmed infeasible at 300s timeout)\n")
+                fh.write(f"{'item_id':<20}  reason\n")
+                for r in excluded:
+                    fh.write(f"{r['item_id']:<20}  {r['reason']}\n")
+                fh.write("\n")
             if pending:
-                fh.write("# Pending-cluster designs (local DNF — deferred to T-M7h)\n")
+                fh.write("# Still pending-cluster designs\n")
                 fh.write(f"{'item_id':<20}  reason\n")
                 for r in pending:
                     fh.write(f"{r['item_id']:<20}  {r['reason']}\n")
@@ -283,7 +325,15 @@ def main() -> None:
         "--budget",
         type=float,
         default=30.0,
-        help="Per-instance w*_c budget in seconds (default: 30).",
+        help="Per-instance w*_c timeout in seconds (default: 30). "
+        "Raise to 300 for cluster runs; pair with --threshold 30.",
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=None,
+        help="Admission threshold in seconds (default: same as --budget). "
+        "Set to 30 when --budget is raised to 300 for cluster runs.",
     )
     parser.add_argument(
         "--runs",
@@ -300,7 +350,12 @@ def main() -> None:
     args = parser.parse_args()
 
     multiprocessing.set_start_method("fork", force=True)
-    run_pilot(budget_s=args.budget, n_runs=args.runs, outdir=args.output)
+    run_pilot(
+        budget_s=args.budget,
+        n_runs=args.runs,
+        outdir=args.output,
+        threshold_s=args.threshold,
+    )
 
 
 if __name__ == "__main__":

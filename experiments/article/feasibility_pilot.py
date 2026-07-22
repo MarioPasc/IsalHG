@@ -296,6 +296,7 @@ def run_pilot(
     n_pilot_override: int | None = None,
     budget_override: float | None = None,
     timeout_override: float | None = None,
+    block_key_filter: str | None = None,
 ) -> dict[str, Any]:
     """Run the full Stratum B feasibility pilot.
 
@@ -311,6 +312,10 @@ def run_pilot(
         If set, override the YAML ``budget_s``.
     timeout_override : float or None
         Per-instance timeout; defaults to ``budget_s + 5``.
+    block_key_filter : str or None
+        If set, run the pilot for only this block key and write a
+        single-block output.  Used by SLURM array jobs so each task
+        handles exactly one (arity_cfg, n, density) block.
 
     Returns
     -------
@@ -324,6 +329,17 @@ def run_pilot(
 
     all_cells = enumerate_cells(cfg)
     blocks = unique_blocks(cfg, runnable_only=True)
+
+    # When a specific block key is requested (SLURM per-task mode), filter
+    # to that single block so the job does not run all 69 runnable blocks.
+    if block_key_filter is not None:
+        matched = [b for b in blocks if b.block_key == block_key_filter]
+        if not matched:
+            raise ValueError(
+                f"block_key_filter={block_key_filter!r} not found among "
+                f"runnable blocks. Available: {[b.block_key for b in blocks]}"
+            )
+        blocks = matched
 
     # Non-runnable blocks (declared but skipped)
     non_runnable_blocks: list[dict[str, Any]] = []
@@ -441,6 +457,12 @@ def _parse_args() -> argparse.Namespace:
     p.add_argument("--n-pilot", type=int, default=None, help="Pilot instance count override")
     p.add_argument("--budget", type=float, default=None, help="Admission budget (s) override")
     p.add_argument("--timeout", type=float, default=None, help="Per-instance timeout (s)")
+    p.add_argument(
+        "--block-key",
+        type=str,
+        default=None,
+        help="If set, run the pilot for only this block key (SLURM array task mode).",
+    )
     p.add_argument("--verbose", action="store_true")
     return p.parse_args()
 
@@ -458,6 +480,7 @@ def main() -> int:
             n_pilot_override=args.n_pilot,
             budget_override=args.budget,
             timeout_override=args.timeout,
+            block_key_filter=args.block_key,
         )
     except Exception:
         logger.exception("Fatal error in feasibility pilot")

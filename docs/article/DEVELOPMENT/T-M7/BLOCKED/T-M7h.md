@@ -1,6 +1,6 @@
 # T-M7h — Picasso full feasibility pilot for the non-admitted Stratum B region
 **Declared:** 2026-07-22 15:40 CEST
-**Status:** OPEN
+**Status:** BLOCKED
 **Depends on:** T-M7b (local pilot artifact + config complete)
 **Delegation:** agent
 **Why out of scope:** T-M7b ran a local 5-instance pilot (35 s timeout); all heavy
@@ -59,3 +59,56 @@ changes to `src/isalhg/`; generating new SLURM configs beyond what `feasibility_
 
 **Gates T-M7d:** T-M7d's sweep may only run on Picasso-pilot-ADMITTED cells.
 This task must be DONE and the updated envelope committed before T-M7d begins.
+
+---
+
+## Blocking note (2026-07-22 — agent)
+
+SLURM scripts prepared and ready to submit. Blocking on Picasso job results.
+
+**What was done (pre-submission):**
+
+- `experiments/article/feasibility_pilot.py`: added `--block-key` CLI flag and
+  `block_key_filter` parameter to `run_pilot()`. Without this flag, one run
+  processes all 69 runnable blocks (≈9 000 s × 69 = days); the SLURM array job
+  uses it to process exactly one block per task.
+- `scripts/feasibility_pilot_stratum_a.py`: added `--threshold` CLI flag and
+  `threshold_s` parameter, separating the per-instance timeout (`budget_s`) from
+  the admission threshold. Cluster runs use `--budget 300 --threshold 30`.
+- `scripts/T-M7h_merge_envelope.py`: post-processing script that reads per-block
+  JSONs from Picasso and patches `stratum_b_feasibility_envelope.json`, and
+  copies the Stratum A cluster result JSON and regenerates `admitted_catalog.txt`.
+- `slurm/T-M7h_stratum_b_launcher.sh` + `slurm/T-M7h_stratum_b_worker.sh`:
+  SLURM array job (19 tasks, 10 concurrent max) for the 19 pending Stratum B
+  blocks; each task: 4 CPUs, 16 GB, 3 h, `--constraint=cpu`.
+- `slurm/T-M7h_stratum_a_launcher.sh` + `slurm/T-M7h_stratum_a_worker.sh`:
+  single SLURM job for the 6 PENDING_CLUSTER Stratum A designs; 4 CPUs, 16 GB,
+  2 h, `--constraint=cpu`; uses `--budget 300 --threshold 30 --runs 3`.
+- `tests/unit/experiments/test_feasibility_pilot_block_key_filter.py`: 4 unit
+  tests verifying the filter (including a pre-fix baseline test demonstrating
+  that without the filter all blocks are processed).
+
+**Regression check (2026-07-22):**
+- pytest tests/unit/experiments/ tests/unit/analysis/: 88 passed
+- ruff check src/ tests/: 3 errors (baseline, unchanged)
+- mypy src/isalhg/: 21 errors (baseline, unchanged)
+
+**Waiting on:** Picasso job completions. Submit from Picasso login node:
+```bash
+# Sync worktree to Picasso
+rsync -av /path/to/worktree/ \
+    /mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG/
+
+# Submit Stratum B array (19 tasks)
+bash slurm/T-M7h_stratum_b_launcher.sh
+
+# Submit Stratum A single job (6 designs)
+bash slurm/T-M7h_stratum_a_launcher.sh
+```
+
+After results land, run `scripts/T-M7h_merge_envelope.py` to produce the
+updated `stratum_b_feasibility_envelope.json` and `artifacts/feasibility_pilot/`
+artifacts, then change status to DONE and move to CLOSED/.
+
+**T-M7d gate:** remains gated until cluster-measured admission decisions are
+committed to `stratum_b_feasibility_envelope.json`.

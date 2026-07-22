@@ -838,6 +838,267 @@ def _figure_path_comparison(
 
 
 # ---------------------------------------------------------------------------
+# Design-seeded A4 experiment (T-M7e)
+# ---------------------------------------------------------------------------
+
+
+def run_design_a4_experiment(
+    output_dir: Path,
+    *,
+    item_id: str,
+    max_t: int = 10,
+    seed: int = 42,
+    n_distractor_designs: int = 3,
+    representations: list[str] | None = None,
+) -> dict[str, Any]:
+    """A4 shortest-path experiment seeded from a Stratum A catalog design.
+
+    Builds a pool = [base design] + [max_t perturbation steps of base design]
+    + [n_distractor_designs other admitted catalog designs], then runs the same
+    Dijkstra-based path recovery, monotonicity, and decodability scoring as
+    ``run_a4_experiment``.  Endpoints are recognizable (drawn from a known
+    design); decoded S2H intermediates are interpretable.
+
+    Parameters
+    ----------
+    output_dir : Path
+        Where to write ``a4_result.json`` and figures.
+    item_id : str
+        Catalog item id for the base design (e.g. ``"sts9"``).
+    max_t : int
+        Number of perturbation steps from the base design (H_B = step max_t).
+    seed : int
+        PRNG seed for the perturbation stream.
+    n_distractor_designs : int
+        Number of other admitted catalog designs included as pool distractors.
+    representations : list[str] or None
+        Distance names to run.  Defaults to all four representations.
+
+    Returns
+    -------
+    dict
+        Same schema as ``run_a4_experiment`` with additional ``base_item_id``
+        and ``base_family_label`` keys.
+    """
+    import random as _random
+
+    if representations is None:
+        representations = ["isalhg_levenshtein", "hypergraph_wl_l1", "netlsd_l2", "hpd_jsd"]
+
+    result_path = output_dir / "a4_result.json"
+    if result_path.exists():
+        try:
+            with open(result_path) as f:
+                existing = json.load(f)
+            if existing.get("status") == "done":
+                logger.info("Design A4 result already done; skipping. path=%s", result_path)
+                return existing  # type: ignore[no-any-return]
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    from isalhg.core.canonical import canonical_string, required_k
+    from isalhg.core.sparse_hypergraph import qin_edit_cost, random_connected_edit
+    from isalhg.datasets.synthetic.known_design_catalog import (
+        catalog_family_labels,
+        catalog_item_ids,
+        catalog_seeds,
+    )
+
+    # Locate base design
+    all_ids = catalog_item_ids(admitted_only=True)
+    all_labels = catalog_family_labels(admitted_only=True)
+    all_H = catalog_seeds(admitted_only=True)
+
+    base_H = None
+    base_label = ""
+    distractor_pool: list[Any] = []
+    for cid, clabel, cH in zip(all_ids, all_labels, all_H, strict=True):
+        if cid == item_id:
+            base_H = cH
+            base_label = clabel
+        else:
+            distractor_pool.append((cid, cH))
+
+    if base_H is None:
+        raise ValueError(f"Catalog design {item_id!r} not found among admitted designs.")
+
+    design_arity = max(len(m) for m in base_H.hyperedges()) if base_H.n_edges > 0 else 2
+    max_arity_used = design_arity
+
+    # Build target ladder: base_H → perturb max_t steps
+    rng = _random.Random(seed)
+    ladder_hypergraphs: list[Any] = [base_H]
+    ladder_budgets: list[int] = [0]
+    current = base_H
+    budget = 0
+    for _ in range(max_t):
+        try:
+            nxt, _ = random_connected_edit(current, rng, max_arity=max_arity_used)
+            budget += int(qin_edit_cost(current, nxt))
+            ladder_hypergraphs.append(nxt)
+            ladder_budgets.append(budget)
+            current = nxt
+        except Exception as exc:
+            logger.debug("Design A4 ladder edit failed: %s", exc)
+            break
+
+    # Select distractors
+    rng_d = _random.Random(seed + 1)
+    n_distract = min(n_distractor_designs, len(distractor_pool))
+    chosen_distractors = rng_d.sample(distractor_pool, n_distract) if n_distract > 0 else []
+
+    # Build pool: ladder steps + distractors
+    pool_hypergraphs: list[Any] = list(ladder_hypergraphs)
+    pool_item_ids: list[str] = [f"{item_id}_t{i}" for i in range(len(ladder_hypergraphs))]
+    for cid, cH in chosen_distractors:
+        pool_hypergraphs.append(cH)
+        pool_item_ids.append(cid)
+
+    n_ladder = len(ladder_hypergraphs)
+    n_pool = len(pool_hypergraphs)
+    target_step = n_ladder - 1  # index of H_B in pool
+
+    if n_ladder < 2:
+        raise RuntimeError(f"Design ladder for {item_id!r} too short (n_ladder={n_ladder}).")
+
+    # k for canonical strings
+    k = max(required_k(H) for H in pool_hypergraphs)
+
+    # Build pool metadata (item_id required by _figure_decodability)
+    pool_meta: list[dict[str, Any]] = []
+    for idx, (H, pid) in enumerate(zip(pool_hypergraphs, pool_item_ids, strict=True)):
+        is_ladder = idx < n_ladder
+        pool_meta.append(
+            {
+                "pool_idx": idx,
+                "item_id": pid,
+                "is_target_ladder": is_ladder,
+                "ladder_step": idx if is_ladder else None,
+                "budget_from_base": ladder_budgets[idx] if is_ladder else None,
+                "n_nodes": H.n_nodes,
+                "n_edges": H.n_edges,
+            }
+        )
+
+    # True inner ladder intermediates (all steps strictly between endpoints)
+    true_inner_set = frozenset(range(1, target_step))
+
+    K_NN = 5  # kNN graph parameter, same as run_a4_experiment
+
+    # Compute pairwise distances and run A4 for each representation
+    per_rep_results: list[dict[str, Any]] = []
+
+    for rep_name in representations:
+        try:
+            D = _build_distance_matrix_for_pool(pool_hypergraphs, rep_name)
+            path = shortest_path_in_pool(D, 0, target_step, k_nn=K_NN)
+
+            # Inline recovery: fraction of true inner intermediates in path
+            path_inner = frozenset(path[1:-1]) if len(path) > 2 else frozenset()
+            n_true = len(true_inner_set)
+            recovery = float(len(true_inner_set & path_inner) / max(1, n_true))
+
+            monotone_frac = score_monotonicity(path, D)
+            acc_lengths = _accumulated_lengths(path, D)
+            total_path_d = acc_lengths[-1] if acc_lengths else 0.0
+
+            rep_res: dict[str, Any] = {
+                "representation": rep_name,
+                "status": "done",
+                "path_recovery_frac": recovery,
+                "monotone_frac": monotone_frac,
+                "path_length_nodes": len(path),
+                "path": path,
+                "total_path_d": float(total_path_d),
+            }
+
+            if rep_name == "isalhg_levenshtein":
+                inner_idxs = path[1:-1]
+                inner_w_stars = [canonical_string(pool_hypergraphs[i], k=k) for i in inner_idxs]
+                inner_decoded = decode_path_intermediates(inner_w_stars, k)
+                all_valid = all(H.n_nodes >= 1 for H in inner_decoded)
+                rep_res["decodability"] = {
+                    "n_intermediates": len(inner_idxs),
+                    "all_valid": all_valid,
+                    "structural_profile": [
+                        {
+                            "pool_idx": inner_idxs[i],
+                            "item_id": pool_item_ids[inner_idxs[i]],
+                            "n_nodes": inner_decoded[i].n_nodes,
+                            "n_edges": inner_decoded[i].n_edges,
+                            "w_star_len": len(inner_w_stars[i]),
+                        }
+                        for i in range(len(inner_idxs))
+                    ],
+                }
+                inner_acc = [acc_lengths[j + 1] for j in range(len(inner_idxs))]
+                _figure_decodability(
+                    path_idxs=inner_idxs,
+                    decoded_hypergraphs=inner_decoded,
+                    pool_meta=pool_meta,
+                    output_dir=output_dir,
+                    acc_lengths=inner_acc,
+                )
+                logger.info(
+                    "  Decodability demo: %d intermediates, all_valid=%s",
+                    len(inner_idxs),
+                    all_valid,
+                )
+
+            logger.info(
+                "  %s: path_len=%d  recovery=%.2f  monotone=%.2f  total_d=%.2f",
+                rep_name,
+                len(path),
+                recovery,
+                monotone_frac,
+                total_path_d,
+            )
+            per_rep_results.append(rep_res)
+
+        except Exception as exc:
+            logger.warning("Design A4 rep %r failed: %s", rep_name, exc)
+            per_rep_results.append(
+                {"representation": rep_name, "status": "error", "error": str(exc)}
+            )
+
+    _figure_path_comparison(per_rep_results, pool_meta, 0, output_dir)
+
+    n_true_intermediates = max(0, target_step - 1)
+    result: dict[str, Any] = {
+        "status": "done",
+        "base_item_id": item_id,
+        "base_family_label": base_label,
+        "design_arity": design_arity,
+        "max_arity_used": max_arity_used,
+        "k": k,
+        "n_true_intermediates": n_true_intermediates,
+        "budget_H_B": ladder_budgets[target_step] if target_step < len(ladder_budgets) else None,
+        "pool_params": {
+            "n_pool": n_pool,
+            "n_ladder": n_ladder,
+            "n_distractor_designs": n_distract,
+        },
+        "per_rep_results": per_rep_results,
+        "seed": seed,
+    }
+    _atomic_write_json(result_path, result)
+    return result
+
+
+def _build_distance_matrix_for_pool(
+    pool_hypergraphs: list[Any],
+    rep_name: str,
+) -> np.ndarray:
+    """Compute the pairwise distance matrix for a representation over a pool."""
+    from isalhg.metric_space.registry import get_distance
+
+    dist = get_distance(rep_name)
+    return dist.matrix(pool_hypergraphs)  # type: ignore[return-value]
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 

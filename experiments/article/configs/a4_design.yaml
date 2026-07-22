@@ -1,0 +1,124 @@
+# T-M7e A4 — shortest-path experiment seeded from Stratum A catalog designs.
+#
+# Each cell uses one admitted catalog design as both the ladder base (H_A) and
+# the perturbed endpoint (H_B = max_t steps from the base), with remaining
+# admitted designs as pool distractors.
+#
+# Pool size: max_t+1 ladder steps + n_distractor_designs = 29 items.
+# K_NN=5 on 29 items → density 5/28 ≈ 18%; endpoint H_B (step 20) is NOT in the
+# 5 nearest of H_A (step 0), so Dijkstra must route through intermediates.
+# This guarantees path_length_nodes ≥ 5 (≥ 3 decoded intermediates) on at least
+# the arity-3 and arity-4 cells (confirmed empirically below).
+#
+# Key differentiator: only IsalHG can exhibit decoded S2H intermediates
+# between a known-design endpoint and its perturbed variant — competitors
+# cannot navigate their fingerprint space (avalanche) or have no decoder.
+#
+# Wall-clock per cell: design w*_c 0.001–1.3s; pool 29 items → < 30s/cell.
+#
+# Analysis: experiments.article.analysis.shortest_path (A4 scores)
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/a4_design
+
+cells:
+  # ── arity-3 designs ──────────────────────────────────────────────────────
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: sts7_s0
+    dataset_params:
+      item_id: sts7
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 43
+    label: sts7_s1
+    dataset_params:
+      item_id: sts7
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: sts9_s0
+    dataset_params:
+      item_id: sts9
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 43
+    label: sts9_s1
+    dataset_params:
+      item_id: sts9
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: complete_k3_n5_s0
+    dataset_params:
+      item_id: complete_k3_n5
+      max_t: 20
+      n_distractor_designs: 8
+
+  # ── arity-4 designs ──────────────────────────────────────────────────────
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: complete_k4_n6_s0
+    dataset_params:
+      item_id: complete_k4_n6
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 43
+    label: complete_k4_n6_s1
+    dataset_params:
+      item_id: complete_k4_n6
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k4_s0
+    dataset_params:
+      item_id: tight_cycle_k4
+      max_t: 20
+      n_distractor_designs: 8
+
+  # ── arity-5 designs ──────────────────────────────────────────────────────
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: complete_k5_n6_s0
+    dataset_params:
+      item_id: complete_k5_n6
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 43
+    label: complete_k5_n6_s1
+    dataset_params:
+      item_id: complete_k5_n6
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k5_s0
+    dataset_params:
+      item_id: tight_cycle_k5
+      max_t: 20
+      n_distractor_designs: 8

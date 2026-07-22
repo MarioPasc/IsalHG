@@ -1,0 +1,143 @@
+# T-M7e G2 — design-seeded perturbation ladders (Stratum A admitted designs).
+#
+# Each cell uses one admitted catalog design as the ladder base, then applies
+# max_arity = design_arity (auto-detected) for connectivity-preserving edits.
+# This produces HGED-free ladder-response curves where the endpoints are
+# recognizable (the known design) and intermediate steps are interpretable.
+#
+# Coverage: one cell per design family, two PRNG seeds each.
+# Wall-clock: all admitted designs ≤1.3s w*_c → fast local (< 2 min total).
+#
+# Analysis: experiments.article.analysis.g2 ladder-response (budget-Shepard)
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/g2_design_ladder
+
+cells:
+  # ── arity-3 designs ──────────────────────────────────────────────────────
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: sts7_s0
+    dataset_params:
+      item_id: sts7
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: sts7_s1
+    dataset_params:
+      item_id: sts7
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: sts9_s0
+    dataset_params:
+      item_id: sts9
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: sts9_s1
+    dataset_params:
+      item_id: sts9
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: complete_k3_n5_s0
+    dataset_params:
+      item_id: complete_k3_n5
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: complete_k3_n5_s1
+    dataset_params:
+      item_id: complete_k3_n5
+      max_t: 10
+      n_ladders: 4
+
+  # ── arity-4 designs ──────────────────────────────────────────────────────
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: complete_k4_n6_s0
+    dataset_params:
+      item_id: complete_k4_n6
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: complete_k4_n6_s1
+    dataset_params:
+      item_id: complete_k4_n6
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k4_s0
+    dataset_params:
+      item_id: tight_cycle_k4
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: tight_cycle_k4_s1
+    dataset_params:
+      item_id: tight_cycle_k4
+      max_t: 10
+      n_ladders: 4
+
+  # ── arity-5 designs ──────────────────────────────────────────────────────
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: complete_k5_n6_s0
+    dataset_params:
+      item_id: complete_k5_n6
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: complete_k5_n6_s1
+    dataset_params:
+      item_id: complete_k5_n6
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k5_s0
+    dataset_params:
+      item_id: tight_cycle_k5
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: tight_cycle_k5_s1
+    dataset_params:
+      item_id: tight_cycle_k5
+      max_t: 10
+      n_ladders: 4

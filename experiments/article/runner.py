@@ -782,6 +782,378 @@ def run_g2_design_sensitivity_cell(cell: CellSpec, output_dir: Path) -> dict[str
 
 
 # ---------------------------------------------------------------------------
+# Catalog helpers (T-M7e)
+# ---------------------------------------------------------------------------
+
+#: Absolute path to the feasibility pilot artifact (T-M7a).
+_ADMITTED_PILOT_JSON: Path = (
+    Path(__file__).parent.parent.parent
+    / "artifacts"
+    / "feasibility_pilot"
+    / "feasibility_pilot_stratum_a.json"
+)
+
+_CATALOG_INITIALIZED: bool = False
+
+
+def _ensure_catalog_admitted() -> None:
+    """Load admitted set from T-M7a pilot artifact and call set_admitted_ids.
+
+    Idempotent: runs at most once per process.
+    """
+    global _CATALOG_INITIALIZED
+    if _CATALOG_INITIALIZED:
+        return
+    from isalhg.datasets.synthetic.known_design_catalog import (
+        STATUS_ADMITTED,
+        STATUS_PENDING_CLUSTER,
+        set_admitted_ids,
+    )
+
+    if not _ADMITTED_PILOT_JSON.exists():
+        logger.warning(
+            "Feasibility pilot artifact not found: %s; using all catalog entries.",
+            _ADMITTED_PILOT_JSON,
+        )
+        _CATALOG_INITIALIZED = True
+        return
+
+    with open(_ADMITTED_PILOT_JSON) as f:
+        pilot = json.load(f)
+
+    designs: dict[str, dict[str, Any]] = pilot.get("designs", {})
+    admitted: frozenset[str] = frozenset(
+        item_id for item_id, d in designs.items() if d.get("status") == STATUS_ADMITTED
+    )
+    pending: frozenset[str] = frozenset(
+        item_id for item_id, d in designs.items() if d.get("status") == STATUS_PENDING_CLUSTER
+    )
+    set_admitted_ids(admitted, pending_ids=pending)
+    logger.info("Catalog admission: %d admitted, %d pending.", len(admitted), len(pending))
+    _CATALOG_INITIALIZED = True
+
+
+def _catalog_design_max_arity(H: Any) -> int:
+    """Return the maximum hyperedge arity of *H*."""
+    arities = [len(m) for m in H.hyperedges()]
+    return max(arities) if arities else 2
+
+
+# ---------------------------------------------------------------------------
+# Cell runner: G2 catalog-design sensitivity (T-M7e)
+# ---------------------------------------------------------------------------
+
+
+def run_g2_catalog_sensitivity_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
+    """G2 sensitivity on admitted Stratum A catalog designs (T-M7e re-seed).
+
+    Runs the dual-distance s(e) measurement on each admitted catalog design.
+    Unlike ``run_g2_design_sensitivity_cell`` (which uses hand-built fixtures
+    with a fixed ``max_arity=3``), this cell:
+
+    - Loads designs from ``KnownDesignCatalog`` (admitted only, from the
+      T-M7a feasibility pilot).
+    - Auto-detects ``max_arity = max(|e| for e in H.hyperedges())`` per
+      design, so arity-4/5 designs receive arity-diverse edits.
+    - Optionally overrides ``max_arity`` via ``dataset_params.max_arity``.
+    - Logs ``design_arity``, ``max_arity_used``, ``item_id``, ``family_label``
+      per record for the regime confrontation.
+
+    ``dataset_params``:
+    - ``item_ids`` (list[str] | None): restrict to this subset of catalog ids.
+      Default: all admitted.
+    - ``n_edits_per_design`` (int): edit count per design. Default 50.
+    - ``max_arity`` (int | None): override auto-detected max_arity. Default: auto.
+
+    Output: ``{output_dir}/g2_catalog_sensitivity.json``.
+    """
+    result_path = output_dir / "g2_catalog_sensitivity.json"
+    if _is_done(output_dir, "g2_catalog_sensitivity"):
+        logger.info("  skip %s g2_catalog_sensitivity (done)", cell.output_key())
+        with open(result_path) as f:
+            return json.load(f)
+
+    _ensure_catalog_admitted()
+
+    from isalhg.datasets.synthetic.known_design_catalog import (
+        catalog_family_labels,
+        catalog_item_ids,
+        catalog_seeds,
+    )
+    from isalhg.metric_space.distances.isalhg_levenshtein import IsalHGLevenshtein
+    from isalhg.metric_space.representations.nauty_levi_edit import NautyLeviEditDistance
+
+    dist_params = cell.distance_params.get("isalhg_levenshtein", {})
+    distance_isalhg = IsalHGLevenshtein(**dist_params)
+    distance_nauty = NautyLeviEditDistance()
+
+    # Load admitted designs
+    all_ids = catalog_item_ids(admitted_only=True)
+    all_labels = catalog_family_labels(admitted_only=True)
+    all_seeds = catalog_seeds(admitted_only=True)
+
+    requested_ids: list[str] | None = cell.dataset_params.get("item_ids", None)
+    n_edits = int(cell.dataset_params.get("n_edits_per_design", 50))
+    max_arity_override: int | None = cell.dataset_params.get("max_arity", None)
+
+    rng = random.Random(cell.seed)
+    records: list[dict[str, Any]] = []
+
+    for item_id, family_label, H in zip(all_ids, all_labels, all_seeds, strict=True):
+        if requested_ids is not None and item_id not in requested_ids:
+            continue
+
+        design_arity = _catalog_design_max_arity(H)
+        max_arity_used = max_arity_override if max_arity_override is not None else design_arity
+
+        edits: list[dict[str, Any]] = []
+        for _ in range(n_edits):
+            try:
+                edits.append(
+                    _g2_edit_record(H, rng, distance_isalhg, distance_nauty, max_arity_used)
+                )
+            except Exception as exc:
+                logger.debug(
+                    "g2 catalog edit failed %s (max_arity=%d): %s",
+                    item_id,
+                    max_arity_used,
+                    exc,
+                )
+
+        records.append(
+            {
+                "source_id": item_id,
+                "source_type": "catalog_design",
+                "regime": item_id,
+                "design_name": item_id,
+                "family_label": family_label,
+                "item_id": item_id,
+                "design_arity": design_arity,
+                "max_arity_used": max_arity_used,
+                "n_nodes": H.n_nodes,
+                "n_edges": H.n_edges,
+                "edits": edits,
+            }
+        )
+        logger.info(
+            "  %s (arity=%d, max_arity=%d): %d edits",
+            item_id,
+            design_arity,
+            max_arity_used,
+            len(edits),
+        )
+
+    all_s_e = [e["s_e_isalhg"] for r in records for e in r["edits"]]
+    all_nauty = [e["s_e_nauty"] for r in records for e in r["edits"]]
+
+    result: dict[str, Any] = {
+        "status": "done",
+        "type": "g2_catalog_sensitivity",
+        "n_designs": len(records),
+        "n_edits_total": len(all_s_e),
+        "mean_s_e_isalhg": float(np.mean(all_s_e)) if all_s_e else 0.0,
+        "median_s_e_isalhg": float(np.median(all_s_e)) if all_s_e else 0.0,
+        "mean_s_e_nauty": float(np.mean(all_nauty)) if all_nauty else 0.0,
+        "median_s_e_nauty": float(np.median(all_nauty)) if all_nauty else 0.0,
+        "records": records,
+        "seed": cell.seed,
+        "max_arity_override": max_arity_override,
+    }
+    _atomic_write_json(result_path, result)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Cell runner: design-seeded perturbation ladder (T-M7e)
+# ---------------------------------------------------------------------------
+
+
+def run_design_ladder_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
+    """Perturbation ladder seeded from a Stratum A catalog design (T-M7e re-seed).
+
+    Starts from a known catalog design as the fixed base and applies
+    ``max_t`` connectivity-preserving edits, recording d_I vs known Qin budget.
+    Two seeds produce independent perturbation streams from the same design base.
+
+    Unlike ``run_ladder_cell`` (random base), this cell:
+    - Uses a fixed known design as the ladder base (interpretable + drawable).
+    - Auto-detects ``max_arity = design_arity`` (arity-diverse edits for k=4/5).
+    - Records ``base_item_id``, ``base_family_label``, ``design_arity`` in output.
+
+    ``dataset_params``:
+    - ``item_id`` (str): catalog design id (e.g. ``"sts7"``). Required.
+    - ``max_t`` (int): ladder steps. Default 10.
+    - ``n_ladders`` (int): independent perturbation streams per cell. Default 4.
+    - ``max_arity`` (int | None): override auto-detected arity. Default: auto.
+
+    Output: ``{output_dir}/design_ladder.json``.
+    """
+    result_path = output_dir / "design_ladder.json"
+    if _is_done(output_dir, "design_ladder"):
+        logger.info("  skip %s design_ladder (done)", cell.output_key())
+        with open(result_path) as f:
+            return json.load(f)
+
+    _ensure_catalog_admitted()
+
+    from isalhg.core.sparse_hypergraph import qin_edit_cost, random_connected_edit
+    from isalhg.datasets.synthetic.known_design_catalog import (
+        catalog_family_labels,
+        catalog_item_ids,
+        catalog_seeds,
+    )
+    from isalhg.metric_space.distances.isalhg_levenshtein import IsalHGLevenshtein
+
+    dist_params = cell.distance_params.get("isalhg_levenshtein", {})
+    distance = IsalHGLevenshtein(**dist_params)
+
+    item_id: str = cell.dataset_params.get("item_id", "")
+    if not item_id:
+        raise ValueError("design_ladder cell requires dataset_params.item_id")
+
+    max_t = int(cell.dataset_params.get("max_t", 10))
+    n_ladders = int(cell.dataset_params.get("n_ladders", 4))
+    max_arity_override: int | None = cell.dataset_params.get("max_arity", None)
+
+    # Locate the catalog entry
+    all_ids = catalog_item_ids(admitted_only=True)
+    all_labels = catalog_family_labels(admitted_only=True)
+    all_seeds = catalog_seeds(admitted_only=True)
+
+    base_H = None
+    base_label = ""
+    for cid, clabel, cH in zip(all_ids, all_labels, all_seeds, strict=True):
+        if cid == item_id:
+            base_H = cH
+            base_label = clabel
+            break
+
+    if base_H is None:
+        raise ValueError(
+            f"Catalog design {item_id!r} not found among admitted designs. Admitted: {all_ids}"
+        )
+
+    design_arity = _catalog_design_max_arity(base_H)
+    max_arity_used = max_arity_override if max_arity_override is not None else design_arity
+
+    ladders_data: list[dict[str, Any]] = []
+    all_increments: list[float] = []
+
+    for ladder_idx in range(n_ladders):
+        # Each ladder: independent PRNG stream from cell seed + ladder offset.
+        rng = random.Random(cell.seed + ladder_idx * 1_000_003)
+        current = base_H
+        prev_H = base_H
+        budget = 0
+        steps: list[dict[str, Any]] = []
+
+        for step in range(1, max_t + 1):
+            try:
+                nxt, op = random_connected_edit(current, rng, max_arity=max_arity_used)
+            except Exception as exc:
+                logger.debug("design_ladder edit failed step=%d: %s", step, exc)
+                break
+            budget += int(qin_edit_cost(current, nxt))
+            d_I_from_base = float(distance.pairwise(base_H, nxt))
+            d_I_increment = float(distance.pairwise(prev_H, nxt))
+            all_increments.append(d_I_increment)
+            steps.append(
+                {
+                    "step": step,
+                    "budget_from_base": budget,
+                    "d_I_from_base": d_I_from_base,
+                    "d_I_increment": d_I_increment,
+                    "op": op,
+                }
+            )
+            prev_H = nxt
+            current = nxt
+
+        ladders_data.append(
+            {
+                "ladder_id": ladder_idx,
+                "n_steps": len(steps),
+                "steps": steps,
+            }
+        )
+
+    result: dict[str, Any] = {
+        "status": "done",
+        "type": "design_ladder",
+        "base_item_id": item_id,
+        "base_family_label": base_label,
+        "design_arity": design_arity,
+        "max_arity_used": max_arity_used,
+        "n_nodes": base_H.n_nodes,
+        "n_edges": base_H.n_edges,
+        "n_ladders": len(ladders_data),
+        "all_increments": all_increments,
+        "mean_d_I_increment": float(np.mean(all_increments)) if all_increments else 0.0,
+        "median_d_I_increment": float(np.median(all_increments)) if all_increments else 0.0,
+        "ladders": ladders_data,
+        "seed": cell.seed,
+    }
+    _atomic_write_json(result_path, result)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Cell runner: A4 shortest path with design-seeded pool (T-M7e)
+# ---------------------------------------------------------------------------
+
+
+def run_design_a4_cell(cell: CellSpec, output_dir: Path) -> dict[str, Any]:
+    """A4 shortest path experiment seeded from a Stratum A catalog design (T-M7e).
+
+    Builds a pool = [design_base] + [max_t ladder perturbations of design_base]
+    + [distractors from other admitted designs], then runs Dijkstra-based
+    shortest path from H_A=design_base to H_B=last ladder step, scores
+    monotonicity, path recovery, and decodes intermediates via S2H.
+
+    ``dataset_params``:
+    - ``item_id`` (str): target design id. Required.
+    - ``max_t`` (int): ladder steps for the target design. Default 10.
+    - ``n_distractor_designs`` (int): how many other admitted designs to include
+      as distractors. Default 3.
+    - ``seed`` (int): PRNG seed for distractor selection and ladder perturbations
+      (also cell.seed if omitted).
+
+    Output: ``{output_dir}/a4_result.json`` + figures.
+    """
+    result_path = output_dir / "a4_result.json"
+    if result_path.exists():
+        try:
+            with open(result_path) as f:
+                existing = json.load(f)
+            if existing.get("status") == "done":
+                logger.info("  skip %s design_a4 (done)", cell.output_key())
+                return existing
+        except (json.JSONDecodeError, KeyError):
+            pass
+
+    _ensure_catalog_admitted()
+
+    from experiments.article.analysis.shortest_path import run_design_a4_experiment
+
+    item_id: str = cell.dataset_params.get("item_id", "")
+    if not item_id:
+        raise ValueError("design_a4 cell requires dataset_params.item_id")
+
+    max_t = int(cell.dataset_params.get("max_t", 10))
+    n_distractor_designs = int(cell.dataset_params.get("n_distractor_designs", 3))
+    representations: list[str] | None = cell.dataset_params.get("representations", None)
+
+    return run_design_a4_experiment(
+        output_dir=output_dir,
+        item_id=item_id,
+        max_t=max_t,
+        seed=cell.seed,
+        n_distractor_designs=n_distractor_designs,
+        representations=representations,
+    )
+
+
+# ---------------------------------------------------------------------------
 # Dispatch
 # ---------------------------------------------------------------------------
 
@@ -792,6 +1164,9 @@ _CELL_RUNNERS: dict[str, Any] = {
     "info_content": run_info_content_cell,
     "g2_sensitivity": run_g2_sensitivity_cell,
     "g2_design_sensitivity": run_g2_design_sensitivity_cell,
+    "g2_catalog_sensitivity": run_g2_catalog_sensitivity_cell,
+    "design_ladder": run_design_ladder_cell,
+    "design_a4": run_design_a4_cell,
 }
 
 

@@ -60,6 +60,8 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
 | [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked) | 12 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
+| [`T-M7`](T-M7/) | Pre-writing revision, code: strict corpora + sweep/stats harness + baselines + G3 + real anchor | 7 | 0 |
+| [`T-M8`](T-M8/) | Pre-writing revision, docs: label-family Remark, capability matrix, motivation, repro artifact | 4 | 0 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |
@@ -191,10 +193,21 @@ hubness→kNN story on real data. Discussion evidence (final): bits r>1 on
 11-block corpus (N = 6,921 pairs; the hardest completed cells sit at the top
 of the per-cell range; the twelfth block excluded whole-block at the measured
 oracle ceiling — DATA.md §4). **T-M5a is CLOSED (2026-07-21) and S1–S5 are
-complete: no article-critical work remains.**
+complete.**
 
-**Runnable now:** S6 only (optional stretch — T-M4a ∥ T-TBe, then T-M6;
-explicit human opt-in).
+**S7 (declared 2026-07-22, Mario-directed) reopens the article-critical path**:
+the `docs/article/REVIEW/` audit found the body is a single-point study (random
+planted seeds at n=10, k=3; arity ≤3 in effect; no CIs or significance tests on
+A1–A3). S7 rebuilds the evidence base on the strict master corpus
+(`REVIEW/DATA.md`: known-design Stratum A + parametric Stratum B sweep +
+design-seeded ladders), adds the stats harness, the naive baseline, the G3
+geometry-response experiment, the broadened real anchor, and the framing docs.
+Scopes T-M7 (code, 7 tasks) and T-M8 (docs, 4 tasks); structure in
+`SESSIONS.md` S7. **S7 supersedes the N=240 headline numbers** (they remain on
+the drive as the superseded record, per the N=60→240 precedent).
+
+**Runnable now:** S7 (article-gating). S6 remains optional stretch (T-M4a ∥
+T-TBe, then T-M6; explicit human opt-in; after S7 if both are wanted).
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

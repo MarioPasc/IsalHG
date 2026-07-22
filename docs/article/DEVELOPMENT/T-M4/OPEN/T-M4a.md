@@ -4,6 +4,15 @@
 **Note (D-ART2, 2026-07-18):** optional, non-blocking. The article's bits
 subsection (PROPOSAL §4) uses the fixed-width estimator; this task is the
 entropy-coded upgrade, run only if time permits or the PI asks.
+**Note (2026-07-21, directed by Mario — S6 refinement):** the "Gray magnitude"
+variant now has a published, citable instrument — López-Rubio, *A Variable-Length
+Gray Code for the Natural Numbers*, arXiv 2607.16088 (2026); its §5.3 names IsalHG
+and proposes this integration. Use `V` for the universal-code column: sign +
+`V`(|δ|), ≈ 1 + ⌊log₂(|δ|+1)⌋ bits/displacement; model-free (no training corpus),
+reuses the cached `w*_c` (no re-canonicalization). **Bits axis only** — the metric
+substrate is T-TBc (parked, D-ART2 (d)). Cite the preprint in the PROPOSAL-§4 bits
+subsection and add it to `docs/article/RELATED_WORK.md`. Execution plan:
+`docs/article/DEVELOPMENT/SESSIONS.md` S6.
 **Depends on:** T-M4 (scoring primitives; the fixed-width estimator this extends). Shares the movement-block parser with T-TBc — coordinate, do not duplicate.
 **Why out of scope:** PI email 2026-07-17 (Ezequiel): replace pointer-movement runs by arithmetic coding of the per-pointer displacement tuple, frequencies trained on a held-out random corpus; sign-bit + Gray-coded magnitude as the topology-preserving variant. Filed from the 2026-07-17 stability discussion; the metric-substrate half of the idea is T-TBc.
 **Context to read first:**

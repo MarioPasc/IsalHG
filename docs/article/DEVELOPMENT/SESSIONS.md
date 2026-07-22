@@ -33,7 +33,8 @@ optional small task to fill a freed slot; never blocks the session.
 | ☑ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☑ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
 | ☑ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
-| ☐ | **S6** — Optional & stretch | Only if wanted after everything article-critical is closed | { T-M4a ∥ T-TBe } (either or none) → T-M6 | S1–S5 done; explicit human opt-in |
+| ☐ | **S7** — Pre-writing revision (data + stats + framing) | Strict master corpus (known designs + parametric sweep); CIs + paired tests on the whole body; naive baseline; G3; real anchor; framing docs | { T-M7a ∥ T-M7b ∥ T-M7c } → { T-M7d ∥ T-M7e ∥ T-M8a } → { T-M7f ∥ T-M7g ∥ T-M8c } → T-M8b → `[O]` T-M8d | S1–S5 merged; `REVIEW/` specs on file (Mario-directed 2026-07-22); PI notified that S7 supersedes the N=240 headline numbers |
+| ☐ | **S6** — Optional & stretch | Optional, post-article: fold the published Gray code into the bits axis; stretch theory + reparent | { T-M4a (incl. Gray-code bits column) ∥ T-TBe } (either/none) → T-M6 | S1–S5 done; explicit human opt-in; runs after S7 if both are wanted |
 
 ---
 
@@ -575,14 +576,149 @@ paper; `DECISIONS.md` has no silently-unresolved entry.
 
 ---
 
+## S7 — Pre-writing revision: data, statistics, framing
+
+*Declared 2026-07-22 11:56 CEST, directed by Mario, from the `docs/article/REVIEW/`
+audit (walkthrough + data-rigor + strict-data spec + stats plan + approach
+rigor). Purpose: close the two co-equal evidence gaps found there — (1) the body
+is a single-point study (planted random-seed families at n=10, k=3; no measured
+result at k∈{5..10}) and (2) no A1–A3 result carries a CI or significance test —
+plus the selected framing items (naive baseline, label-family Remark,
+capability-matrix figure, practitioner motivation, reproducibility artifact) and
+the G3 geometry-response experiment. Scopes: **T-M7 = code**, **T-M8 = docs**.
+The task files are the authority on acceptance; the REVIEW specs are their
+context, not their replacement.*
+
+**Gates.** S1–S5 merged green; the seven `REVIEW/` files on file; the PI is
+aware that S7 **supersedes the N=240 headline numbers** (geometry table and
+A1–A3 move to the master corpus with CIs — the N=240 artifacts remain on the
+drive as the superseded record, per the T-M5l precedent for the N=60→240
+regime change). **All gates satisfied — PI approved S7 (relayed by Mario,
+2026-07-22).** The T-M7g optional label-stripped HIC run remains an in-session
+PI/human call (non-gating), not covered by this blanket approval.
+
+**Sequence.**
+
+Wave 1 — foundations, disjoint lanes:
+{ **T-M7a** (known-design seed catalog + Stratum A + realized-parameter
+logging + feasibility pilot) ∥ **T-M7b** (Stratum B factorial sweep configs +
+feasibility envelope; the k=10 cells exercised or their exclusion measured) ∥
+**T-M7c** (naive baseline degree-sequence L1 — must merge before T-M7d so its
+row rides the harness) }
+
+Wave 2 — the heavy re-run + independent lanes:
+{ **T-M7d** (combined sweep + statistics harness: G1/A1/A2/A3/bits over
+Strata A+B, seven representations, S≥20 seeds/cell, BCa CIs + Holm-corrected
+paired Wilcoxon + effect sizes; geometry-vs-axis curves; **landmine:** bits
+through the bracket-aware parser, T15 pins) ∥ **T-M7e** (Stratum C design-seeded
+ladders; G2 + A4 re-run; arity-≥4 cells re-score the §4.2 three-regime
+confrontation) ∥ **T-M8a** (label-conditional metric family Remark +
+`d_I^⊥`/`d_I^Σ` table annotations — doc lane) }
+
+Wave 3 — consumers of the harness + writing lane:
+{ **T-M7f** (G3 OFAT geometry response: five move axes, response curves, MDS
+trajectories, ν-contribution, decoded+drawn filmstrips, competitor contrast) ∥
+**T-M7g** (real anchor: designs-catalog exhibit through the harness +
+gate-first real-world corpus, ≥85% yield + label-independent censoring;
+optional label-stripped HIC per PI) ∥ **T-M8c** (A1–A4 practitioner motivation,
+verified citations — writing lane) }
+
+Wave 4 — synthesis, then closure:
+**T-M8b** (capability-matrix main figure + §Usefulness reframing; needs
+T-M7c's row and T-M7d's final numbers) → `[O]` **T-M8d** (reproducibility
+artifact + `REPRODUCING.md` + deposit — orchestrator-only, last, after all
+caches are final).
+
+**Worker cautions.** (a) The `(k, h, vocabulary)` triple is an index family:
+never pool raw `d_I` across `k` — compare dimensionless descriptors and
+within-`k` rankings only (T-M7b/d/f all touch this). (b) One rendering
+convention for every drawn hypergraph (G3 filmstrips, A4 intermediates,
+capability-matrix-adjacent figures) — stated once, used everywhere. (c) The
+conda-env hazard applies as always: cloned env per worker, never the shared
+one. (d) E1′ stays closed — no task re-opens the oracle.
+
+**Exit criteria.** Every A1/A2/A3/G1/bits table cell on the master corpus
+carries a 95% CI; every competitor-vs-IsalHG claim carries a Holm-corrected p +
+effect size; geometry-vs-axis curves exist for ≥3 values per axis (n, density,
+arity) with error bands; the feasibility envelope is an artifact; the
+naive-baseline row is on every surface; G2/A4 run on design-seeded ladders and
+the three-regime confrontation is re-scored; G3 ships five filmstrip artifacts
+with monotone fractions and trajectory-continuity statistics; the real-anchor
+gate records exist (promoted corpus or measured no-go); the Remark and metric
+annotations are in the reasoning prose; the capability matrix is a figure and
+§Usefulness leads with it; the artifact dry-run reproduces bits + geometry +
+one application figure from `REPRODUCING.md`. Ledger truthful; baselines
+re-recorded; `main` pushed.
+
+**Orchestrator notes (append-only).**
+
+- _(empty)_
+
+---
+
 ## S6 — Optional & stretch (explicit human opt-in)
 
-**Sequence.** { T-M4a ∥ T-TBe } — entropy-coded bits estimator; crossing-peak
-conjecture — either or none, per the human's call → T-M6 (the `isomorphisms/`
-reparent) last, only if the symmetry is wanted.
+*Refined 2026-07-21 (directed by Mario): fold the now-published variable-length
+Gray code into S6 on the **bits axis only**. Ezequiel's displacement-coding idea
+(email 2026-07-17, analysed in `../theoretical/stability_reformulations.md` §4)
+is now a proved, citable primitive — López-Rubio, *A Variable-Length Gray Code
+for the Natural Numbers*, arXiv 2607.16088 (2026); its §5.3 names IsalHG and
+proposes this integration. `V : ℕ → {0,1}*` is bijective/complete (Thm 4.1),
+Gray — consecutive integers one edit apart (Thm 4.2) — and near-log compact
+(`L(V(n)) = ⌊log₂(n+1)⌋`, Thm 4.3). **Placement holds with D-ART1/D-ART2:** `V`
+enters the information-content (bits) estimator (T-M4a), not the `d_I` metric
+substrate. For IsalHG the only unbounded operand — the pointer displacement — is
+already unit-edit-local under the unary `P/N` encoding (`../H2S_S2H.md` §3), so
+`V` buys **compactness, not new locality**; re-metrizing `d_I` is a different
+object that re-opens the geometry pillar (measured on raw `d_I`, N=240) and
+targets drift, which the avalanche dominates and D-ART2 de-scoped. The
+metric-substrate integration stays parked (T-TBc), as follow-up-paper material:
+the preprint's §5.3(b) program — encoder integration + correlation effect +
+downstream LM processing — is that sequel, and `V` is its admissible metric
+instrument there (Thm 4.2 ⇒ no code-level avalanche, unlike arithmetic coding).*
 
-**Exit criteria.** Whatever ran is green and merged; nothing here ever blocks
-the paper.
+**Sequence.** { T-M4a ∥ T-TBe } — either or none, per the human's call → T-M6
+last, only if the symmetry is wanted.
+
+1. **T-M4a — bits estimators, now including the Gray code `V`.** Emit the
+   PROPOSAL-§4 compression table under **three** estimators as side-by-side
+   columns, never substituting one for another (a coded IsalHG side against the
+   naive incidence-list competitor would stack the deck):
+   - (i) **fixed-width** `B = |w|·log₂|Σ_HG(k)|` — the shipped, reviewer-tested
+     baseline (median r = 1.441 on 320/320, Wilcoxon p = 1.6e-54); the honest
+     floor, kept.
+   - (ii) **universal / model-free — the Gray column** — sign bit + `V`(|δ|) per
+     displacement, ≈ `1 + ⌊log₂(|δ|+1)⌋` bits; replaces the unary `Θ(|δ|)`
+     accounting so bits scale with structure, not layout. **Model-free ⇒ no
+     training corpus and no `w*_c` recomputation** — re-render the cached
+     move-blocks and recount. Expect `r` to rise (Gray shortens the operand),
+     strengthening "a hypergraph is a compact word".
+   - (iii) **arithmetic-coded** — static frequencies on a random corpus
+     **disjoint from every experiment corpus** (`../DATA.md`). Compression-only:
+     an AC bitstream must never be a distance substrate (code-level avalanche,
+     `../theoretical/stability_reformulations.md` §4).
+   - **Landmine:** count tokens/bits through the bracket-aware parser — a raw
+     `w.split(";")` overcounts ≈2× and *reversed* the bits conclusion twice in
+     S5; reuse the pinned regression tests.
+   - **Doc touch (with the run):** cite the preprint in the §4 bits subsection,
+     add it to `../RELATED_WORK.md`, and drop a one-line future-work pointer in
+     `../PROPOSAL.md` §5 / `../empirical/correlation.md` naming `V` as the
+     published instrument for the deferred displacement transcoding.
+2. **T-TBe** — crossing-peak conjecture (stretch theory; raw-metric drift).
+   Unchanged, non-blocking.
+3. **T-M6** — the `isomorphisms/` reparent, last, only if the symmetry is wanted
+   (OD1 reopens only along this path).
+
+**T-TBc stays BLOCKED — S6 does not reopen it.** It moves only on an explicit
+PI decision to run the metric-substrate ablation or to open the follow-up paper
+(D-ART2 point (d)).
+
+**Exit criteria.** Whatever ran is green and merged; nothing here ever blocks the
+paper. If T-M4a ran: the §4 table carries all three estimator columns on the body
+corpora with the Wilcoxon test rerun per estimator; the Gray/`V` column reuses the
+cached `w*_c` (no re-canonicalization) and is counted through the bracket-aware
+parser + its regression tests; the preprint is cited in the bits subsection and
+listed in `../RELATED_WORK.md`.
 
 **Orchestrator notes (append-only).**
 

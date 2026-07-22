@@ -1,6 +1,6 @@
 # T-M8a — Label-conditional metric family: Remark + per-corpus metric annotation
 **Declared:** 2026-07-22 11:56 CEST
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** nothing code-side (doc task; Theorem A already covers arbitrary
 vocabularies). The optional label-stripped HIC computation lives in T-M7g, not
 here.
@@ -45,3 +45,40 @@ DECISIONS.md entry exists; process artifacts (task ids, dates) stay out of the
 reasoning prose per the doc-split convention.
 **Out of scope here:** computing the label-stripped HIC row (T-M7g); any
 encoder or `w*_c` change; extending the proof volume.
+
+---
+
+**Closing note (2026-07-22).**
+
+Acceptance checks:
+
+1. **Remark placed** in `stability.md` §1 immediately after Corollary A, before
+   the existing Index family paragraph. Proved-by-Corollary-A status stated
+   explicitly (Theorem A holds for arbitrary Σ; augmented fingerprint F(H)
+   computed under any LabelVocabulary; Corollary A's three axioms carry through
+   per fixed (k,h,Σ) with label-preserving isomorphism). Comparison clause
+   omitted: the canonical form w*_c itself changes across vocabularies (labels
+   enter seed cascade and tie-breaking), so no simple monotone relation between
+   d_I^Σ and d_I^⊥ holds in general — not a one-liner.
+
+2. **Metric column added** to geometry.md §3 table: `d_I^⊥` for all four
+   planted rows, `d_I^Σ` for both HIC rows. Every reported d_I value in
+   applications.md annotated: G1 planted section (d_I^⊥), A1 intro + table
+   header row (d_I^⊥), A2 planted (d_I^⊥) and HIC (d_I^Σ) sections, A3
+   planted (d_I^⊥) and HIC (d_I^Σ), A4 ladder pool (d_I^⊥), Runtime
+   section (d_I^⊥).
+
+3. **Two-objects sentence** added in geometry.md §3 after the planted/HIC
+   D̂ comparison: planted rows use d_I^⊥, HIC rows use d_I^Σ; these are
+   different family members and are read as two objects; lower real-data D̂
+   is consistent with a vocabulary effect as well as structural differences.
+   Also stated in applications.md A1 (HIC sentence).
+
+4. **DECISIONS.md OD7 filed**: label-stripped HIC re-run pending PI; execution
+   owned by T-M7g if adopted.
+
+5. **No process artifacts** in the reasoning prose (stability.md, geometry.md,
+   applications.md): citations reference documents and section names only.
+   No task ids or dates appear in those files.
+
+No code changes. No pytest run (doc-only task). No ruff/mypy (no Python changed).

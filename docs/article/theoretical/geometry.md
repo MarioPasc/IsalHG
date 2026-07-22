@@ -109,19 +109,21 @@ paper reports the spectral `D̂` and cites the distortion bracket rather than
 selecting `D` from it.
 
 **Measured — `D̂` is corpus-dependent, and a single small corpus under-resolves
-it.** Estimated on the planted family corpus at four sizes and cross-checked on
-two real HIC genre corpora (`d_I` only; `w*_c` is fast on these instances, so
+it.** Estimated on the planted family corpus at four sizes (metric `d_I^⊥`;
+trivial vocabulary) and cross-checked on two real HIC genre corpora (metric
+`d_I^Σ`; non-trivial IMDB vocabulary — see the Remark in `stability.md` §1);
+`w*_c` is fast on these instances, so
 the corpus size `N` is cheap to scale — only the per-instance node count `n`
 drives cost):
 
-| corpus | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
-|---|---|---|---|---|---|
-| planted | 60 | 0.123 | 21 | 3 | 0.982 |
-| planted | 120 | 0.193 | 23 | 5 | 0.966 |
-| planted | 240 | 0.250 | 26 | 8 | 0.954 |
-| planted | 480 | 0.300 | 26 | 12 | 0.949 |
-| HIC IMDB-Wri-Genre-M | 266 | 0.160 | 10 | 1 | 0.993 |
-| HIC IMDB-Wri-Genre | 833 | 0.200 | 11 | 1 | 0.992 |
+| corpus | metric | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
+|---|---|---|---|---|---|---|
+| planted | `d_I^⊥` | 60 | 0.123 | 21 | 3 | 0.982 |
+| planted | `d_I^⊥` | 120 | 0.193 | 23 | 5 | 0.966 |
+| planted | `d_I^⊥` | 240 | 0.250 | 26 | 8 | 0.954 |
+| planted | `d_I^⊥` | 480 | 0.300 | 26 | 12 | 0.949 |
+| HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 | 0.993 |
+| HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 | 0.992 |
 
 The CV estimate on the synthetic corpus climbs from 21 at `N = 60` and
 **plateaus at 26 for `N ≥ 240`**: the widely-quoted `D̂ = 21` is a lower bound
@@ -133,8 +135,14 @@ corpus diversity (0.12 → 0.30), consistent with more structurally varied
 families departing further from Euclidean geometry. **Real genre hypergraphs are
 markedly lower-dimensional** (`D̂ ≈ 10–11`, Horn ≈ 1) than the synthetic
 families — a substantive finding, reported as a censored-subset measurement (the
-HIC caveat, `../DATA.md` §2). The estimate is thus reported as a bracket with its
-`N`-dependence stated, never as a bare number.
+HIC caveat, `../DATA.md` §2). The planted rows use the structural member
+`d_I^⊥` (trivial vocabulary); the HIC rows use the label-aware member
+`d_I^Σ` (non-trivial `LabelVocabulary` from IMDB metadata). These are members
+of different families (the Remark in `stability.md` §1), measuring isomorphism
+in different domains; they are read as two objects rather than one continuous
+series, which is a candidate explanation for the lower real-data `D̂` beyond the
+usual "real data is different" appeal. The estimate is thus reported as a bracket
+with its `N`-dependence stated, never as a bare number.
 
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis
   independent of any oracle — a *lower faithful* `D̂` than a competitor
@@ -143,13 +151,13 @@ HIC caveat, `../DATA.md` §2). The estimate is thus reported as a bracket with i
   competitors WL and HPD do not concentrate at all — their CV error rides to the
   search cap, so their `D̂` is reported as censored, itself a contrast).
 
-**Structural-faithfulness check (HGED-free).** Because the intrinsic dimension
-and the embedding are only as meaningful as the distances they preserve, we
-verify that the `d_I`-MDS map tracks *true* structural distance without the HGED
-oracle: along perturbation ladders the accumulated Qin edit budget `t` is known
-by construction, and both the raw metric and its embedding increase with it —
-Spearman `ρ(t, d_I) = 0.636` and `ρ(t, embedding distance) = 0.649` on a
-165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
+**Structural-faithfulness check (HGED-free; metric `d_I^⊥`).** Because the
+intrinsic dimension and the embedding are only as meaningful as the distances
+they preserve, we verify that the `d_I^⊥`-MDS map tracks *true* structural
+distance without the HGED oracle: along perturbation ladders the accumulated
+Qin edit budget `t` is known by construction, and both the raw metric and its
+embedding increase with it — Spearman `ρ(t, d_I^⊥) = 0.636` and
+`ρ(t, embedding distance) = 0.649` on a 165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
 faithfulness statement about known edits, not an HGED-proxy claim.
 
 ## 4. Embeddability and distortion
@@ -225,7 +233,7 @@ records the measured numbers and the candidate explanations. Nauty-Levi contrast
 confirmed: IQR_nauty = 10.0–20.0 across all regimes (ratio 1.25–9.5× ours),
 rendering the per-regime and per-fixture contrast figures. **Ladder response**
 (six corpora, small/medium/large base size, two seeds each): ≈80% of per-ladder
-steps are monotone; mean `d_I` increment per Qin budget step grows from 3.2
+steps are monotone; mean `d_I^⊥` increment per Qin budget step grows from 3.2
 (n = 5 base) to 11.7 (n = 12 base); all six ladders globally increasing, with
 local one-step regressions within ladder variance.
 

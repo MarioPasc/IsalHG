@@ -494,25 +494,64 @@ _ENTRY_BY_ID: dict[str, tuple[_CatalogEntry, SparseHypergraph]] = {
     e.item_id: (e, H) for e, H in _ALL_ENTRIES
 }
 
-# Subset that is declared "admitted" after feasibility gating.
-# Populated by ``set_admitted_ids``; when None, all entries are admitted.
+# ---------------------------------------------------------------------------
+# Feasibility tristate
+# ---------------------------------------------------------------------------
+
+# Admitted set: populated by set_admitted_ids().  None = all entries admitted.
 _ADMITTED_IDS: frozenset[str] | None = None
+# Pending-cluster set: local DNF at 30s budget; final admission deferred to
+# the Picasso cluster pilot (T-M7h, 300s ceiling).
+_PENDING_CLUSTER_IDS: frozenset[str] = frozenset()
+
+# Status constants (string literals, not an Enum, to stay serialisation-neutral).
+STATUS_ADMITTED = "ADMITTED"
+STATUS_PENDING_CLUSTER = "PENDING_CLUSTER"
+STATUS_EXCLUDED = "EXCLUDED"
 
 
-def set_admitted_ids(ids: frozenset[str]) -> None:
-    """Override the admitted subset for downstream use by the pilot.
+def set_admitted_ids(
+    ids: frozenset[str],
+    *,
+    pending_ids: frozenset[str] = frozenset(),
+) -> None:
+    """Override the admitted and pending subsets after the feasibility pilot.
 
-    Call this after running the feasibility pilot to restrict
-    ``KnownDesignCatalog`` and ``catalog_seeds`` to only admitted entries.
-    The module default (``None``) treats all entries as admitted.
+    Populates the module-level gate used by ``KnownDesignCatalog``,
+    ``catalog_seeds``, and ``design_status``.  The module default
+    (``_ADMITTED_IDS is None``) treats all entries as admitted.
 
     Parameters
     ----------
     ids : frozenset[str]
-        Set of item_ids that passed the feasibility gate.
+        item_ids that passed the feasibility gate (ADMITTED).
+    pending_ids : frozenset[str]
+        item_ids whose final admission is deferred to the cluster pilot
+        (PENDING_CLUSTER).  These are *not* included in
+        ``catalog_seeds(admitted_only=True)``.
     """
-    global _ADMITTED_IDS
+    global _ADMITTED_IDS, _PENDING_CLUSTER_IDS
     _ADMITTED_IDS = ids
+    _PENDING_CLUSTER_IDS = pending_ids
+
+
+def design_status(item_id: str) -> str:
+    """Return the feasibility tristate for a catalog entry.
+
+    Returns
+    -------
+    str
+        One of ``STATUS_ADMITTED``, ``STATUS_PENDING_CLUSTER``,
+        ``STATUS_EXCLUDED``.  When ``set_admitted_ids`` has not been called,
+        all entries return ``STATUS_ADMITTED`` (module default).
+    """
+    if _ADMITTED_IDS is None:
+        return STATUS_ADMITTED  # default: everything admitted
+    if item_id in _ADMITTED_IDS:
+        return STATUS_ADMITTED
+    if item_id in _PENDING_CLUSTER_IDS:
+        return STATUS_PENDING_CLUSTER
+    return STATUS_EXCLUDED
 
 
 def catalog_seeds(
@@ -685,3 +724,84 @@ def _factory(params: dict[str, Any]) -> HypergraphDataset:
 
 
 register_dataset("known_design_catalog", _factory)
+
+
+# ---------------------------------------------------------------------------
+# Stratum A labeled corpus
+# ---------------------------------------------------------------------------
+
+
+def build_stratum_a_corpus(
+    *,
+    members_per_family: int = 3,
+    n_edits: int = 2,
+    max_retries: int = 200,
+    seed_value: int = 0,
+    dedup_backend: str = "isalhg",
+    admitted_ids: frozenset[str] | None = None,
+) -> HypergraphDataset:
+    """Build the Stratum A labeled corpus from admitted catalog seeds.
+
+    Feeds admitted known-design seeds into :class:`PlantedFamilyDataset`
+    with ``family_labels`` set to the catalog family-label strings.  Each
+    family contributes one seed plus ``members_per_family - 1`` non-isomorphic
+    perturbations (``n_edits`` Qin edits, iso-deduplicated).
+
+    Parameters
+    ----------
+    members_per_family : int
+        Total members per family including the seed.  Default ``3``.
+    n_edits : int
+        Random Qin edits per non-seed member.  Default ``2``.
+    max_retries : int
+        Maximum rejection-sampling attempts per member.  Default ``200``.
+    seed_value : int
+        Master PRNG seed; pinned for reproducibility.  Default ``0``.
+    dedup_backend : str
+        Iso backend for fingerprint deduplication.  Default ``"isalhg"``.
+    admitted_ids : frozenset[str] | None
+        Explicit admitted set override.  When ``None`` (default), uses the
+        module-level admitted set (set by :func:`set_admitted_ids`); if that
+        is also ``None``, uses all 23 catalog entries.
+
+    Returns
+    -------
+    PlantedFamilyDataset
+        Labeled corpus; ``metadata.realized_params`` is populated.
+    """
+    # Deferred import keeps the catalog importable without PlantedFamilyDataset.
+    from isalhg.datasets.synthetic.planted_families import PlantedFamilyDataset
+
+    # Override admitted set only for this call if explicitly provided.
+    if admitted_ids is not None:
+        seeds = [H for e, H in _ALL_ENTRIES if e.item_id in admitted_ids]
+        labels = [e.family_label for e, _ in _ALL_ENTRIES if e.item_id in admitted_ids]
+    else:
+        seeds = catalog_seeds(admitted_only=True)
+        labels = catalog_family_labels(admitted_only=True)
+
+    return PlantedFamilyDataset(
+        seeds=seeds,
+        family_labels=labels,
+        members_per_family=members_per_family,
+        n_edits=n_edits,
+        max_retries=max_retries,
+        seed_value=seed_value,
+        dedup_backend=dedup_backend,
+    )
+
+
+def _stratum_a_factory(params: dict[str, Any]) -> HypergraphDataset:
+    admitted_raw = params.get("admitted_ids")
+    admitted_ids = frozenset(admitted_raw) if admitted_raw is not None else None
+    return build_stratum_a_corpus(
+        members_per_family=params.get("members_per_family", 3),
+        n_edits=params.get("n_edits", 2),
+        max_retries=params.get("max_retries", 200),
+        seed_value=params.get("seed_value", 0),
+        dedup_backend=params.get("dedup_backend", "isalhg"),
+        admitted_ids=admitted_ids,
+    )
+
+
+register_dataset("stratum_a_corpus", _stratum_a_factory)

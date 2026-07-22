@@ -3,7 +3,7 @@
   "n_runs": 3,
   "n_designs": 23,
   "n_admitted": 17,
-  "n_dropped": 6,
+  "n_pending_cluster": 6,
   "designs": {
     "sts7": {
       "item_id": "sts7",
@@ -54,8 +54,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "sts13_1": {
       "item_id": "sts13_1",
@@ -70,8 +70,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "sts15_0": {
       "item_id": "sts15_0",
@@ -86,8 +86,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "gq22": {
       "item_id": "gq22",
@@ -210,8 +210,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "pg23": {
       "item_id": "pg23",
@@ -226,8 +226,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "loose_path_k4": {
       "item_id": "loose_path_k4",
@@ -332,8 +332,8 @@
       ],
       "p50_s": 30.0,
       "p90_s": 30.0,
-      "status": "DROPPED",
-      "reason": "w*_c DNF on run 1 (>30s budget)"
+      "status": "PENDING_CLUSTER",
+      "reason": "w*_c DNF on local workstation (30s budget) — deferred to cluster pilot (T-M7h)"
     },
     "loose_path_k5": {
       "item_id": "loose_path_k5",

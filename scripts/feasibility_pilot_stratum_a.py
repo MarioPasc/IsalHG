@@ -174,7 +174,14 @@ def run_pilot(
             timings.append(elapsed)
 
         if dnf:
-            status = "DROPPED"
+            # Local workstation DNF is not a final exclusion — heavy compute
+            # goes to Picasso (T-M7h, 300s ceiling).  Classify as
+            # PENDING_CLUSTER so the artifact does not lie.
+            status = "PENDING_CLUSTER"
+            reason = (
+                f"w*_c DNF on local workstation ({budget_s:.0f}s budget)"
+                f" — deferred to cluster pilot (T-M7h)"
+            )
             p50 = statistics.median(timings)
             p90 = budget_s
         else:
@@ -187,8 +194,11 @@ def run_pilot(
                 status = "ADMITTED"
                 reason = ""
             else:
-                status = "DROPPED"
-                reason = f"p90={p90:.2f}s > budget {budget_s:.0f}s"
+                # p90 > budget but no single DNF: still a local finding.
+                status = "PENDING_CLUSTER"
+                reason = (
+                    f"p90={p90:.2f}s > budget {budget_s:.0f}s — deferred to cluster pilot (T-M7h)"
+                )
 
         rec = {
             "item_id": iid,
@@ -213,9 +223,9 @@ def run_pilot(
 
     print(sep, flush=True)
     admitted = [r for r in results.values() if r["status"] == "ADMITTED"]
-    dropped = [r for r in results.values() if r["status"] == "DROPPED"]
+    pending = [r for r in results.values() if r["status"] == "PENDING_CLUSTER"]
     print(
-        f"Admitted: {len(admitted)} / {len(results)}  Dropped: {len(dropped)}",
+        f"Admitted: {len(admitted)} / {len(results)}  Pending-cluster: {len(pending)}",
         flush=True,
     )
 
@@ -229,7 +239,7 @@ def run_pilot(
                     "n_runs": n_runs,
                     "n_designs": len(results),
                     "n_admitted": len(admitted),
-                    "n_dropped": len(dropped),
+                    "n_pending_cluster": len(pending),
                     "designs": results,
                 },
                 fh,
@@ -250,10 +260,10 @@ def run_pilot(
                 )
             fh.write(sep + "\n")
             fh.write(f"Total admitted: {len(admitted)} / {len(results)}\n\n")
-            if dropped:
-                fh.write("# Dropped designs\n")
+            if pending:
+                fh.write("# Pending-cluster designs (local DNF — deferred to T-M7h)\n")
                 fh.write(f"{'item_id':<20}  reason\n")
-                for r in dropped:
+                for r in pending:
                     fh.write(f"{r['item_id']:<20}  {r['reason']}\n")
         print(f"Table written to:  {table_path}", flush=True)
 

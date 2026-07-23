@@ -1,0 +1,337 @@
+{
+  "meta": {
+    "task": "T-M7n",
+    "date": "2026-07-23",
+    "pilot_seeds": 6,
+    "pilot_reps": ["isalhg_levenshtein", "hypergraph_wl_l1", "netlsd_l2", "hpd_jsd", "nauty_levi_edit", "degree_seq_l1"],
+    "note": "HyperCOT excluded from pilot (O(n^3)/pair cost). Section 2 data collected from log output of the 6-seed run; numbers.json populated from logs."
+  },
+  "section1_census": {
+    "corpus": "Stratum A, 14 admitted families (KEPT_A_IDS minus EXCLUDED_SYMMETRIC), 5 members/family target, n_edits=2, max_retries=300, allow_partial=True",
+    "per_seed": [
+      {
+        "seed": 0, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      },
+      {
+        "seed": 1, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      },
+      {
+        "seed": 2, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      },
+      {
+        "seed": 3, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      },
+      {
+        "seed": 4, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      },
+      {
+        "seed": 5, "n_total": 42, "n_g1_a1": 42, "n_a2a3_k3": 35, "n_a2a3_k4": 0, "n_a2a3_k5": 0,
+        "multi_member_k3": 7, "multi_member_k4": 0, "multi_member_k5": 0,
+        "single_member_families": ["LooseCycle4", "LoosePath4", "LoosePath5", "TightCycle4", "TightCycle5", "TightPath4", "TightPath5"]
+      }
+    ],
+    "means": {
+      "n_total": 42.0, "n_g1_a1": 42.0, "n_a2a3_k3": 35.0, "n_a2a3_k4": 0.0, "n_a2a3_k5": 0.0,
+      "multi_member_k3": 7.0, "multi_member_k4": 0.0, "multi_member_k5": 0.0
+    },
+    "n_seeds_measured": 6,
+    "stability": "Identical across all 6 seeds — deterministic at these corpus parameters.",
+    "admitted_a_ids": [
+      "gq22", "loose_cycle_k3", "loose_cycle_k4", "loose_path_k3", "loose_path_k4", "loose_path_k5",
+      "sts7", "sts9", "tight_cycle_k3", "tight_cycle_k4", "tight_cycle_k5", "tight_path_k3", "tight_path_k4", "tight_path_k5"
+    ],
+    "arity3_ids": ["gq22", "loose_cycle_k3", "loose_path_k3", "sts7", "sts9", "tight_cycle_k3", "tight_path_k3"],
+    "arity4_ids": ["loose_cycle_k4", "loose_path_k4", "tight_cycle_k4", "tight_path_k4"],
+    "arity5_ids": ["loose_path_k5", "tight_cycle_k5", "tight_path_k5"],
+    "seed_sizes": {
+      "sts7": {"n": 7, "m": 7, "k": 3, "coarse_class": "design_k3"},
+      "sts9": {"n": 9, "m": 12, "k": 3, "coarse_class": "design_k3"},
+      "gq22": {"n": 15, "m": 15, "k": 3, "coarse_class": "design_k3"},
+      "loose_path_k3": {"n": 9, "m": 4, "k": 3, "coarse_class": "path_k3"},
+      "tight_path_k3": {"n": 6, "m": 4, "k": 3, "coarse_class": "path_k3"},
+      "loose_cycle_k3": {"n": 8, "m": 4, "k": 3, "coarse_class": "cycle_k3"},
+      "tight_cycle_k3": {"n": 5, "m": 5, "k": 3, "coarse_class": "cycle_k3"},
+      "loose_path_k4": {"n": 10, "m": 3, "k": 4, "coarse_class": "path_k4"},
+      "tight_path_k4": {"n": 6, "m": 3, "k": 4, "coarse_class": "path_k4"},
+      "loose_cycle_k4": {"n": 12, "m": 4, "k": 4, "coarse_class": "cycle_k4"},
+      "tight_cycle_k4": {"n": 5, "m": 5, "k": 4, "coarse_class": "cycle_k4"},
+      "loose_path_k5": {"n": 13, "m": 3, "k": 5, "coarse_class": "path_k5"},
+      "tight_path_k5": {"n": 7, "m": 3, "k": 5, "coarse_class": "path_k5"},
+      "tight_cycle_k5": {"n": 7, "m": 7, "k": 5, "coarse_class": "cycle_k5"}
+    }
+  },
+  "section2_power": {
+    "n_seeds": 6,
+    "n_k3_per_seed": 35,
+    "n_clusters_k3": 7,
+    "per_seed": [
+      {
+        "seed": 0,
+        "a2_ari_isalhg": 0.438, "a2_ari_hypergraph_wl_l1": -0.009, "a2_ari_netlsd_l2": 0.427,
+        "a2_ari_hpd_jsd": 0.158, "a2_ari_nauty_levi_edit": 0.424, "a2_ari_degree_seq_l1": 0.536,
+        "a3_auc_isalhg": 0.864, "a3_auc_hypergraph_wl_l1": 0.481, "a3_auc_netlsd_l2": 0.912,
+        "a3_auc_hpd_jsd": 0.840, "a3_auc_nauty_levi_edit": 0.840, "a3_auc_degree_seq_l1": 0.917,
+        "bits_median_r": 1.149
+      },
+      {
+        "seed": 1,
+        "a2_ari_isalhg": 0.342, "a2_ari_hypergraph_wl_l1": -0.003, "a2_ari_netlsd_l2": 0.469,
+        "a2_ari_hpd_jsd": 0.375, "a2_ari_nauty_levi_edit": 0.381, "a2_ari_degree_seq_l1": 0.503,
+        "a3_auc_isalhg": 0.855, "a3_auc_hypergraph_wl_l1": 0.481, "a3_auc_netlsd_l2": 0.933,
+        "a3_auc_hpd_jsd": 0.807, "a3_auc_nauty_levi_edit": 0.869, "a3_auc_degree_seq_l1": 0.974,
+        "bits_median_r": 1.191
+      },
+      {
+        "seed": 2,
+        "a2_ari_isalhg": 0.320, "a2_ari_hypergraph_wl_l1": 0.002, "a2_ari_netlsd_l2": 0.503,
+        "a2_ari_hpd_jsd": 0.273, "a2_ari_nauty_levi_edit": 0.367, "a2_ari_degree_seq_l1": 0.501,
+        "a3_auc_isalhg": 0.850, "a3_auc_hypergraph_wl_l1": 0.481, "a3_auc_netlsd_l2": 0.933,
+        "a3_auc_hpd_jsd": 0.817, "a3_auc_nauty_levi_edit": 0.898, "a3_auc_degree_seq_l1": 0.936,
+        "bits_median_r": 1.154
+      },
+      {
+        "seed": 3,
+        "a2_ari_isalhg": 0.351, "a2_ari_hypergraph_wl_l1": -0.009, "a2_ari_netlsd_l2": 0.332,
+        "a2_ari_hpd_jsd": 0.207, "a2_ari_nauty_levi_edit": 0.433, "a2_ari_degree_seq_l1": 0.342,
+        "a3_auc_isalhg": 0.831, "a3_auc_hypergraph_wl_l1": 0.467, "a3_auc_netlsd_l2": 0.910,
+        "a3_auc_hpd_jsd": 0.786, "a3_auc_nauty_levi_edit": 0.888, "a3_auc_degree_seq_l1": 0.964,
+        "bits_median_r": 1.191
+      },
+      {
+        "seed": 4,
+        "a2_ari_isalhg": 0.187, "a2_ari_hypergraph_wl_l1": -0.003, "a2_ari_netlsd_l2": 0.463,
+        "a2_ari_hpd_jsd": 0.074, "a2_ari_nauty_levi_edit": 0.476, "a2_ari_degree_seq_l1": 0.694,
+        "a3_auc_isalhg": 0.888, "a3_auc_hypergraph_wl_l1": 0.483, "a3_auc_netlsd_l2": 0.905,
+        "a3_auc_hpd_jsd": 0.826, "a3_auc_nauty_levi_edit": 0.926, "a3_auc_degree_seq_l1": 0.990,
+        "bits_median_r": 1.167
+      },
+      {
+        "seed": 5,
+        "a2_ari_isalhg": 0.146, "a2_ari_hypergraph_wl_l1": -0.003, "a2_ari_netlsd_l2": 0.486,
+        "a2_ari_hpd_jsd": 0.278, "a2_ari_nauty_levi_edit": 0.268, "a2_ari_degree_seq_l1": 0.316,
+        "a3_auc_isalhg": 0.864, "a3_auc_hypergraph_wl_l1": 0.462, "a3_auc_netlsd_l2": 0.910,
+        "a3_auc_hpd_jsd": 0.860, "a3_auc_nauty_levi_edit": 0.862, "a3_auc_degree_seq_l1": 0.962,
+        "bits_median_r": 1.223
+      }
+    ],
+    "means": {
+      "a2_ari_isalhg": 0.2973, "a2_ari_hypergraph_wl_l1": -0.0042, "a2_ari_netlsd_l2": 0.4467,
+      "a2_ari_hpd_jsd": 0.2275, "a2_ari_nauty_levi_edit": 0.3915, "a2_ari_degree_seq_l1": 0.4820,
+      "a3_auc_isalhg": 0.8587, "a3_auc_hypergraph_wl_l1": 0.4758, "a3_auc_netlsd_l2": 0.9172,
+      "a3_auc_hpd_jsd": 0.8227, "a3_auc_nauty_levi_edit": 0.8805, "a3_auc_degree_seq_l1": 0.9572,
+      "bits_median_r": 1.1792
+    },
+    "bits_range": [1.149, 1.223],
+    "power_table": [
+      {
+        "experiment": "A2-ARI", "baseline": "hypergraph_wl_l1",
+        "isalhg_mean": 0.2973, "baseline_mean": -0.0042,
+        "mean_diff": 0.3015, "cohens_d": 2.70, "rank_biserial_r": 1.00,
+        "pilot_wilcoxon_p": 0.016, "s_recommended": 8,
+        "isalhg_wins": true, "note": "WL near-random on this corpus; strong effect"
+      },
+      {
+        "experiment": "A2-ARI", "baseline": "netlsd_l2",
+        "isalhg_mean": 0.2973, "baseline_mean": 0.4467,
+        "mean_diff": -0.1494, "cohens_d": -1.02, "rank_biserial_r": -0.71,
+        "pilot_wilcoxon_p": 0.953, "s_recommended": 8,
+        "isalhg_wins": false, "note": "NetLSD leads A2-ARI; S=8 to confirm disadvantage"
+      },
+      {
+        "experiment": "A2-ARI", "baseline": "hpd_jsd",
+        "isalhg_mean": 0.2973, "baseline_mean": 0.2275,
+        "mean_diff": 0.0698, "cohens_d": 0.49, "rank_biserial_r": 0.52,
+        "pilot_wilcoxon_p": 0.156, "s_recommended": 27,
+        "isalhg_wins": true, "note": "Weak effect; drives S_max=27 for the sweep"
+      },
+      {
+        "experiment": "A2-ARI", "baseline": "nauty_levi_edit",
+        "isalhg_mean": 0.2973, "baseline_mean": 0.3915,
+        "mean_diff": -0.0942, "cohens_d": -0.89, "rank_biserial_r": -0.90,
+        "pilot_wilcoxon_p": 0.984, "s_recommended": 8,
+        "isalhg_wins": false, "note": "nauty-edit leads A2-ARI; S=8 to confirm disadvantage"
+      },
+      {
+        "experiment": "A2-ARI", "baseline": "degree_seq_l1",
+        "isalhg_mean": 0.2973, "baseline_mean": 0.4820,
+        "mean_diff": -0.1847, "cohens_d": -1.07, "rank_biserial_r": -0.90,
+        "pilot_wilcoxon_p": 0.984, "s_recommended": 8,
+        "isalhg_wins": false, "note": "degree_seq leads A2-ARI; signals family design issue (shared degree sequences between some k=3 families)"
+      },
+      {
+        "experiment": "A3-AUC", "baseline": "hypergraph_wl_l1",
+        "isalhg_mean": 0.8587, "baseline_mean": 0.4758,
+        "mean_diff": 0.3829, "cohens_d": 22.27, "rank_biserial_r": 1.00,
+        "pilot_wilcoxon_p": 0.016, "s_recommended": 8,
+        "isalhg_wins": true, "note": "Very large effect; WL collapses to near-chance"
+      },
+      {
+        "experiment": "A3-AUC", "baseline": "netlsd_l2",
+        "isalhg_mean": 0.8587, "baseline_mean": 0.9172,
+        "mean_diff": -0.0585, "cohens_d": -2.22, "rank_biserial_r": -1.00,
+        "pilot_wilcoxon_p": 1.000, "s_recommended": 8,
+        "isalhg_wins": false, "note": "NetLSD leads A3-AUC consistently"
+      },
+      {
+        "experiment": "A3-AUC", "baseline": "hpd_jsd",
+        "isalhg_mean": 0.8587, "baseline_mean": 0.8227,
+        "mean_diff": 0.0360, "cohens_d": 1.80, "rank_biserial_r": 1.00,
+        "pilot_wilcoxon_p": 0.016, "s_recommended": 8,
+        "isalhg_wins": true, "note": "Consistent win vs HPD on A3"
+      },
+      {
+        "experiment": "A3-AUC", "baseline": "nauty_levi_edit",
+        "isalhg_mean": 0.8587, "baseline_mean": 0.8805,
+        "mean_diff": -0.0218, "cohens_d": -0.70, "rank_biserial_r": -0.62,
+        "pilot_wilcoxon_p": 0.922, "s_recommended": 13,
+        "isalhg_wins": false, "note": "nauty-edit leads A3-AUC by a small margin; S=13 to confirm"
+      },
+      {
+        "experiment": "A3-AUC", "baseline": "degree_seq_l1",
+        "isalhg_mean": 0.8587, "baseline_mean": 0.9572,
+        "mean_diff": -0.0985, "cohens_d": -3.51, "rank_biserial_r": -1.00,
+        "pilot_wilcoxon_p": 1.000, "s_recommended": 8,
+        "isalhg_wins": false, "note": "degree_seq_l1 leads strongly on A3-AUC. WARNING: this naive baseline dominates, indicating k=3 families have discriminative degree sequences. S7 corpus design must address this."
+      }
+    ],
+    "s_recommended_max": 27,
+    "s_recommended_minimum_for_wins": 8,
+    "s_target_sweep": 27,
+    "corpus_concern": "degree_seq_l1 (naive baseline) leads on A3-AUC (mean 0.957 vs IsalHG 0.859). This signals that k=3 families have distinctive degree distributions. S7 sweep should include Stratum B cells that share degree distributions across families to prevent degree-sequence confounding."
+  },
+  "section3_recovery": {
+    "n_candidates_tested": 11,
+    "n_candidates_targeted_script": 9,
+    "n_candidates_main_pilot": 2,
+    "n_recovered": 0,
+    "results": [
+      {
+        "item_id": "loose_cycle_k4_L6", "n": 18, "m": 6, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 1.4, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 1.4, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 1.42, "wstarc_p90_s": 1.43, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "w*_c feasible; Qin fails regardless of edit depth"
+      },
+      {
+        "item_id": "loose_cycle_k4_L8", "n": 24, "m": 8, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 74.5, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 74.5, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 74.74, "wstarc_p90_s": 74.74, "wstarc_timed_out": true,
+        "recovers_a2a3": false, "note": "Both Qin (300 retries each exhausted in 74.5s) and w*_c infeasible"
+      },
+      {
+        "item_id": "tight_cycle_k4_L8", "n": 8, "m": 8, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 0.2, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 0.2, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 0.16, "wstarc_p90_s": 0.18, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "w*_c very fast; Qin universally fails"
+      },
+      {
+        "item_id": "tight_cycle_k4_L10", "n": 10, "m": 10, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 2.1, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 2.2, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 2.24, "wstarc_p90_s": 2.34, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "w*_c feasible; Qin fails"
+      },
+      {
+        "item_id": "tight_cycle_k4_L12", "n": 12, "m": 12, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 10.0, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 9.4, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 10.14, "wstarc_p90_s": 10.25, "wstarc_timed_out": true,
+        "recovers_a2a3": false, "note": "w*_c at budget boundary (3 instances, p90>30s); Qin fails"
+      },
+      {
+        "item_id": "tight_cycle_k5_L8", "n": 8, "m": 8, "k": 5,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 3.0, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 2.9, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 3.47, "wstarc_p90_s": 3.61, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "w*_c feasible; Qin fails"
+      },
+      {
+        "item_id": "tight_cycle_k5_L10", "n": 10, "m": 10, "k": 5,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 37.6, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": null, "qin_n_edits_3_elapsed_s": null, "qin_n_edits_3_timed_out": null,
+        "wstarc_p50_s": 39.65, "wstarc_p90_s": 39.65, "wstarc_timed_out": true,
+        "recovers_a2a3": false, "note": "Both Qin (slow at n_edits=2, n_edits=3 skipped) and w*_c infeasible"
+      },
+      {
+        "item_id": "loose_path_k4_L5", "n": 16, "m": 5, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 0.1, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 0.2, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 0.11, "wstarc_p90_s": 0.11, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "Loose path (low symmetry, |Aut|<=2); w*_c fast; Qin still fails. Dispels symmetry-only hypothesis."
+      },
+      {
+        "item_id": "loose_path_k4_L6", "n": 19, "m": 6, "k": 4,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 3.2, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 3.2, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 3.04, "wstarc_p90_s": 3.13, "wstarc_timed_out": false,
+        "recovers_a2a3": false, "note": "w*_c feasible; Qin fails"
+      },
+      {
+        "item_id": "loose_path_k5_L4", "n": 17, "m": 4, "k": 5,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 11.2, "qin_n_edits_2_timed_out": false,
+        "qin_n_edits_3_realized": 1, "qin_n_edits_3_elapsed_s": 11.2, "qin_n_edits_3_timed_out": false,
+        "wstarc_p50_s": 11.19, "wstarc_p90_s": 11.19, "wstarc_timed_out": true,
+        "recovers_a2a3": false, "note": "w*_c at budget boundary; Qin fails"
+      },
+      {
+        "item_id": "loose_path_k5_L5", "n": 21, "m": 5, "k": 5,
+        "qin_n_edits_2_realized": 1, "qin_n_edits_2_elapsed_s": 298.3, "qin_n_edits_2_timed_out": true,
+        "qin_n_edits_3_realized": null, "qin_n_edits_3_elapsed_s": null, "qin_n_edits_3_timed_out": null,
+        "wstarc_p50_s": 299.45, "wstarc_p90_s": 299.45, "wstarc_timed_out": true,
+        "recovers_a2a3": false, "note": "Both Qin (OOM-killed at 298s) and w*_c infeasible"
+      }
+    ],
+    "conclusion": "0/11 candidates recover arity-4/5 A2/A3 classes. Qin perturbation universally produces 1 non-iso family member for k>=4 seeds regardless of topology (loose cycle, tight cycle, loose path) or size. Hypothesis: PlantedFamilyDataset uses default k=3 edit operations on k>=4 seeds, constraining edits to add/remove 3-ary edges; the resulting mixed-arity hypergraphs are either disconnected (rejected) or iso-equivalent under the k>=4 canonical fingerprint. This is NOT a symmetry issue: loose_path_k4_L5 (|Aut|<=2) also fails. A2/A3 experiments must be restricted to k=3 (7 families, N=35 per seed).",
+    "recommendation": "Do NOT add k>=4 families to the A2/A3 corpus without first fixing PlantedFamilyDataset to use k=max_arity(seed) for edit operations. File a separate task for this. The k>=4 families (7 total) contribute exclusively to G1/A1 (geometry + MDS) where the full 42-item corpus is used."
+  },
+  "section4_cost": {
+    "s_target": 27,
+    "s_minimum_for_wins": 8,
+    "s_rationale": "S=27 driven by A2-ARI vs HPD (weak effect, r=0.52). For IsalHG-wins comparisons only, S=8 is sufficient. Recommend S=27 for the full S7 sweep to cover the weakest comparison.",
+    "corpus_sizes": {
+      "stratum_a_items_per_seed": 42,
+      "stratum_a_k3_items_per_seed": 35,
+      "stratum_b_admitted_cells": 10,
+      "stratum_b_items_per_cell": 30
+    },
+    "timing_estimates": {
+      "isalhg_k3_per_item_s": 1.0,
+      "isalhg_k4_per_item_s": 5.0,
+      "isalhg_k5_per_item_s": 10.0,
+      "other_reps_per_item_s": 0.01,
+      "hypercot_per_item_s": 150.0,
+      "hypercot_max_n": 12
+    },
+    "stratum_a_per_seed_isalhg_s": 62.0,
+    "stratum_a_per_seed_other_s": 5.04,
+    "stratum_a_total_isalhg_h": 0.465,
+    "stratum_a_total_other_h": 0.038,
+    "stratum_b_total_isalhg_h": 46.62,
+    "stratum_b_total_other_h": 2.25,
+    "hypercot_total_h": 13.13,
+    "total_sequential_h": 62.5,
+    "effective_h_32_a100s": 1.95,
+    "effective_h_with_g2g3_ladder_overhead_h": 2.34,
+    "notes": [
+      "S=27 (conservative: covers the HPD A2-ARI weak-effect comparison).",
+      "IsalHG stratum A per seed: 35 k3-items x 1s + 7 k4/k5-items x 5s = 70s ~= 0.02h.",
+      "Stratum B: 10 cells x 30 items x 27 seeds; k3_n24 cluster from feasibility envelope.",
+      "HyperCOT gated at n<=12; ~4 stratum B cells within gate at O(n^3)/pair.",
+      "G2/G3 ladder corpora: ~20% overhead on geometry experiments.",
+      "At S=8 (minimum for wins), total sequential = 18.5h, effective 32-A100 = 0.58h.",
+      "At S=16 (compromise), total sequential = 37h, effective 32-A100 = 1.16h."
+    ]
+  }
+}

@@ -1,0 +1,308 @@
+{
+  "results": [
+    {
+      "item_id": "tight_cycle_k4_L8",
+      "description": "tight_cycle(4,8): n=8, m=8",
+      "n": 8,
+      "m": 8,
+      "k": 4,
+      "aut_order_heuristic": 16,
+      "qin_n_edits_2": {
+        "item_id": "tight_cycle_k4_L8",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 0.20334720000028028,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "tight_cycle_k4_L8",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 0.23274399399815593,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 0.1586687589988287,
+        "p90_s": 0.1791501675015752,
+        "n_instances": 8,
+        "timed_out": false
+      },
+      "feasible_wstarc": true,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "tight_cycle_k4_L10",
+      "description": "tight_cycle(4,10): n=10, m=10",
+      "n": 10,
+      "m": 10,
+      "k": 4,
+      "aut_order_heuristic": 20,
+      "qin_n_edits_2": {
+        "item_id": "tight_cycle_k4_L10",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 2.0871999420014617,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "tight_cycle_k4_L10",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 2.153790674001357,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 2.2355999020001036,
+        "p90_s": 2.3427068369994233,
+        "n_instances": 8,
+        "timed_out": false
+      },
+      "feasible_wstarc": true,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "tight_cycle_k4_L12",
+      "description": "tight_cycle(4,12): n=12, m=12",
+      "n": 12,
+      "m": 12,
+      "k": 4,
+      "aut_order_heuristic": 24,
+      "qin_n_edits_2": {
+        "item_id": "tight_cycle_k4_L12",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 10.038923848002014,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "tight_cycle_k4_L12",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 9.371580442002596,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 10.13670796000224,
+        "p90_s": 10.250643580002361,
+        "n_instances": 3,
+        "timed_out": true
+      },
+      "feasible_wstarc": false,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "tight_cycle_k5_L8",
+      "description": "tight_cycle(5,8): n=8, m=8",
+      "n": 8,
+      "m": 8,
+      "k": 5,
+      "aut_order_heuristic": 16,
+      "qin_n_edits_2": {
+        "item_id": "tight_cycle_k5_L8",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 2.997511874000338,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "tight_cycle_k5_L8",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 2.9260543149976,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 3.4675892979994387,
+        "p90_s": 3.60710970890068,
+        "n_instances": 8,
+        "timed_out": false
+      },
+      "feasible_wstarc": true,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "tight_cycle_k5_L10",
+      "description": "tight_cycle(5,10): n=10, m=10",
+      "n": 10,
+      "m": 10,
+      "k": 5,
+      "aut_order_heuristic": 20,
+      "qin_n_edits_2": {
+        "item_id": "tight_cycle_k5_L10",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 37.563243873999454,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": null,
+      "wstarc_timing": {
+        "p50_s": 39.65223327700005,
+        "p90_s": 39.65223327700005,
+        "n_instances": 1,
+        "timed_out": true
+      },
+      "feasible_wstarc": false,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "loose_path_k4_L5",
+      "description": "loose_path(4,5): n=16, m=5",
+      "n": 16,
+      "m": 5,
+      "k": 4,
+      "aut_order_heuristic": 2,
+      "qin_n_edits_2": {
+        "item_id": "loose_path_k4_L5",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 0.13950655799999367,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "loose_path_k4_L5",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 0.15125378799712053,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 0.11340920649854525,
+        "p90_s": 0.11399876790055714,
+        "n_instances": 8,
+        "timed_out": false
+      },
+      "feasible_wstarc": true,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "loose_path_k4_L6",
+      "description": "loose_path(4,6): n=19, m=6",
+      "n": 19,
+      "m": 6,
+      "k": 4,
+      "aut_order_heuristic": 2,
+      "qin_n_edits_2": {
+        "item_id": "loose_path_k4_L6",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 3.1539960959999007,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "loose_path_k4_L6",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 3.156356087001768,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 3.0359060234986828,
+        "p90_s": 3.13142065329921,
+        "n_instances": 8,
+        "timed_out": false
+      },
+      "feasible_wstarc": true,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "loose_path_k5_L4",
+      "description": "loose_path(5,4): n=17, m=4",
+      "n": 17,
+      "m": 4,
+      "k": 5,
+      "aut_order_heuristic": 2,
+      "qin_n_edits_2": {
+        "item_id": "loose_path_k5_L4",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 11.20272388200101,
+        "timed_out": false,
+        "error": null
+      },
+      "qin_n_edits_3": {
+        "item_id": "loose_path_k5_L4",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 11.223793671000749,
+        "timed_out": false,
+        "error": null
+      },
+      "wstarc_timing": {
+        "p50_s": 11.18556919600087,
+        "p90_s": 11.186567472801835,
+        "n_instances": 3,
+        "timed_out": true
+      },
+      "feasible_wstarc": false,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    },
+    {
+      "item_id": "loose_path_k5_L5",
+      "description": "loose_path(5,5): n=21, m=5",
+      "n": 21,
+      "m": 5,
+      "k": 5,
+      "aut_order_heuristic": 2,
+      "qin_n_edits_2": {
+        "item_id": "loose_path_k5_L5",
+        "n_realized": 1,
+        "n_target": 7,
+        "reached_target": false,
+        "elapsed_s": 298.29303354700096,
+        "timed_out": true,
+        "error": null
+      },
+      "qin_n_edits_3": null,
+      "wstarc_timing": {
+        "p50_s": 299.44591255499836,
+        "p90_s": 299.44591255499836,
+        "n_instances": 1,
+        "timed_out": true
+      },
+      "feasible_wstarc": false,
+      "multi_member_5plus": false,
+      "recovers_a2a3": false
+    }
+  ],
+  "n_candidates": 9,
+  "n_recovered": 0,
+  "recovered_ids": [],
+  "loose_cycle_finding": "Excluded from targeted test: loose_cycle(k,L) has |Aut| >= 2L*(k-1)!^L (measured: loose_cycle(4,6) n=18 \u2192 1/7 members at n_edits=2,3; loose_cycle(4,8) n=24 \u2192 1/7 members + w*_c timeout 74.7s). The enormous internal automorphism group prevents Qin perturbation from finding non-iso family members regardless of cycle length.",
+  "total_elapsed_s": 869.8786410920002
+}

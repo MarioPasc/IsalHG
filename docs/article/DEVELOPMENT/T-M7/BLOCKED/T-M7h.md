@@ -176,3 +176,23 @@ python scripts/T-M7h_merge_envelope.py \
 ```
 
 **T-M7d gate:** still gated pending Stratum B results. Stratum A is done.
+
+### Stratum B — cluster harvest round 1 + resubmit (2026-07-23, orchestrator)
+
+First cluster submission (array 1629486, 3h walltime) resubmitted post-drift-fix;
+7 of 19 blocks completed and were harvested + merged into
+`stratum_b_feasibility_envelope.json`:
+- **admitted** (p90 ≤ 30 s over 30 instances @ 300 s budget): `k3_n24_rho1`
+  (p90 4.27 s), `k3_n24_rho2` (9.92 s), `k5_n8_rho1` (5.39 s), `k5_n8_rho2`
+  (12.80 s).
+- **cluster_excluded** (p90 ≫ 30 s): `k3_n24_rho4` (164.8 s), `k3_n32_rho1`
+  (146.2 s), `k3_n32_rho2` (188.9 s).
+
+The remaining 12 blocks (`k3_n32_rho4`, `k3_n48_{1,2,4}`, `k3_n64_{1,2,4}`,
+`k5_n16_{1,2,4}`, `k7_n8_rho1`, `k10_n16_rho1`) walltime-killed at 3 h (their
+instances mostly hit the 300 s per-instance timeout → total > 3 h, no JSON).
+Worker walltime bumped 3 h → 8 h and the 12 pending blocks **resubmitted as
+array 1631517** (launcher auto-derived the pending set from
+`--list-blocks --pending-envelope` reading the merged envelope). Monitoring in
+progress; on completion, harvest → `merge_envelope.py` → this task moves to
+CLOSED and unblocks T-M7d.

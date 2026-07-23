@@ -52,6 +52,16 @@ KEPT_14 = frozenset(
     }
 )
 
+# T-M7o (2026-07-23) added 3 longer arity-4/5 cycles to make cycle_k4 and
+# cycle_k5 coarse classes multi-member for A2/A3.
+KEPT_17 = KEPT_14 | frozenset(
+    {
+        "tight_cycle_k4_n8",  # tight_cycle(4, 8), n=8, m=8
+        "tight_cycle_k4_n10",  # tight_cycle(4, 10), n=10, m=10
+        "tight_cycle_k5_n8",  # tight_cycle(5, 8), n=8, m=8
+    }
+)
+
 # Coarse class mapping for the 14 kept families.
 EXPECTED_COARSE: dict[str, str] = {
     "sts7": "design_k3",
@@ -94,10 +104,11 @@ class TestExcludedSymmetric:
         from isalhg.datasets.synthetic.known_design_catalog import KEPT_A_IDS
 
         assert isinstance(KEPT_A_IDS, frozenset)
-        assert KEPT_A_IDS == KEPT_14
+        # T-M7o added 3 longer arity-4/5 cycles; KEPT_A_IDS is now 17.
+        assert KEPT_A_IDS == KEPT_17
 
-    def test_built_corpus_is_exactly_14_families(self) -> None:
-        """build_stratum_a_corpus() with default admitted_ids uses exactly KEPT_14."""
+    def test_built_corpus_is_exactly_17_families(self) -> None:
+        """build_stratum_a_corpus() with default admitted_ids uses exactly KEPT_17."""
         from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
 
         corpus = build_stratum_a_corpus(
@@ -115,7 +126,7 @@ class TestExcludedSymmetric:
 
         id_by_label = {e.family_label: e.item_id for e, _ in _ALL_ENTRIES}
         actual_ids = frozenset(id_by_label.get(lbl, lbl) for lbl in family_labels)
-        assert actual_ids == KEPT_14, f"Expected {KEPT_14}, got {actual_ids}"
+        assert actual_ids == KEPT_17, f"Expected {KEPT_17}, got {actual_ids}"
 
     def test_excluded_families_absent_from_built_corpus(self) -> None:
         from isalhg.datasets.synthetic.known_design_catalog import (
@@ -376,7 +387,8 @@ class TestDataManifest:
             ids = DATA_MANIFEST.get("stratum_a_ids") or DATA_MANIFEST.get("stratum_a")
         else:
             ids = DATA_MANIFEST.stratum_a_ids
-        assert frozenset(ids) == KEPT_14, f"Expected 14 ids, got {frozenset(ids)}"
+        # T-M7o: KEPT_A_IDS is now 17 (14 original + 3 arity-4/5 cycle additions).
+        assert frozenset(ids) == KEPT_17, f"Expected 17 ids, got {frozenset(ids)}"
 
 
 # ---------------------------------------------------------------------------
@@ -389,21 +401,23 @@ class TestDataManifest:
 
 
 class TestGracefulBuildAndRealizedCounts:
-    """Verify that the 14-family corpus builds without crashing and that
+    """Verify that the Stratum A corpus builds without crashing and that
     realized member counts are reported correctly.
 
-    Single-member path/cycle families (k=4 and k=5) exhaust the Qin-edit
-    retry budget; they must be accepted with 1 member instead of raising.
+    T-M7m fix: allow_partial=True prevents RuntimeError for high-symmetry
+    k4/k5 families.  T-M7o fix: per-family arity cap allows k=4/5 edges,
+    so cycle families now generate multiple members; path families may too.
+    The corpus now has 17 families (was 14 before T-M7o catalog additions).
     """
 
-    def test_full_14family_corpus_no_crash(self) -> None:
+    def test_full_17family_corpus_no_crash(self) -> None:
         """build_stratum_a_corpus at default params must not raise."""
         from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
 
-        # Pre-fix: RuntimeError from family 7 (loose_path_k4).
-        # Post-fix: completes gracefully with allow_partial=True.
+        # T-M7m fix: RuntimeError was raised for k4/k5 families.
+        # T-M7o: +3 arity-4/5 cycle entries → 17 families total.
         items = list(build_stratum_a_corpus(members_per_family=3, seed_value=0))
-        assert len(items) >= 14, f"Expected at least 14 items (1 per family), got {len(items)}"
+        assert len(items) >= 17, f"Expected at least 17 items (1 per family), got {len(items)}"
 
     def test_k3_families_reach_members_per_family(self) -> None:
         """k=3 families (design/path/cycle) should all reach members_per_family=3."""
@@ -427,19 +441,24 @@ class TestGracefulBuildAndRealizedCounts:
                 f"k=3 family {lbl!r} should have 3 realized members, got {counts[lbl]}"
             )
 
-    def test_path_families_k4_k5_realize_one_member(self) -> None:
-        """k=4/5 path families that exhaust retries must yield exactly 1 member."""
+    def test_path_families_k4_k5_realize_at_least_one_member(self) -> None:
+        """k=4/5 path families must yield at least 1 member (the seed).
+
+        Pre T-M7o: these families were stuck at 1 member because the arity-cap
+        bug rejected all perturbations (arity > self._k=3).  Post T-M7o: the
+        per-family k fix allows k=4/5 edges; families may now generate additional
+        members.  The invariant is at least 1 (the seed is always included).
+        """
         from collections import Counter
 
         from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
 
         items = list(build_stratum_a_corpus(members_per_family=3, seed_value=0))
         counts = Counter(item.extra["family_label"] for item in items)
-        # These families cannot produce iso-distinct Qin-edit perturbations.
-        expected_single = {"LoosePath4", "TightPath4", "LoosePath5", "TightPath5"}
-        for lbl in expected_single:
-            assert counts[lbl] == 1, (
-                f"Path family {lbl!r} expected 1 realized member, got {counts[lbl]}"
+        path_labels = {"LoosePath4", "TightPath4", "LoosePath5", "TightPath5"}
+        for lbl in path_labels:
+            assert counts[lbl] >= 1, (
+                f"Path family {lbl!r} expected >= 1 realized member, got {counts[lbl]}"
             )
 
     def test_runner_path_no_crash(self) -> None:

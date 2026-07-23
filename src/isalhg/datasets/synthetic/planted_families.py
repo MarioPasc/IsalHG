@@ -180,6 +180,13 @@ class PlantedFamilyDataset(HypergraphDataset):
             )
         self._coarse_class_labels: list[str] | None = coarse_class_labels
 
+        # Per-family arity cap: perturbations must not exceed the seed's max
+        # arity.  Using a single dataset-level k=3 default would reject every
+        # perturbation of a k=4/5 seed (T-M7o arity-cap bug fix).
+        self._family_k: list[int] = [
+            max((len(e) for e in H.hyperedges()), default=self._k) for H in self._seeds
+        ]
+
         self._items: list[DatasetItem] = self._build()
         self._metadata: DatasetMetadata = self._make_metadata()
 
@@ -258,17 +265,20 @@ class PlantedFamilyDataset(HypergraphDataset):
                             attempt,
                         )
                         continue
-                    # Arity gate: add_incidence can grow a hyperedge past k, violating
-                    # Σ_HG(k) membership and causing IsalHGError from the C++ encoder
-                    # when arity exceeds K_MAX=10 (sparse_hypergraph.py:462 — filtering
-                    # is the caller's responsibility, not the edit ops').
-                    if current.n_edges > 0 and max(len(e) for e in current.hyperedges()) > self._k:
+                    # Arity gate: add_incidence can grow a hyperedge past the
+                    # family's arity band, violating Σ_HG(k) membership and
+                    # causing IsalHGError from the C++ encoder when arity
+                    # exceeds K_MAX=10.  Use per-family k (seed's max arity)
+                    # so k=4/5 seeds are not rejected by a k=3 default
+                    # (T-M7o arity-cap bug fix).
+                    _fam_k = self._family_k[fam_idx]
+                    if current.n_edges > 0 and max(len(e) for e in current.hyperedges()) > _fam_k:
                         logger.debug(
                             "family %d member %d attempt %d arity > k=%d; retrying",
                             fam_idx,
                             needed,
                             attempt,
-                            self._k,
+                            _fam_k,
                         )
                         continue
                     fp = backend.fingerprint(current)
@@ -333,10 +343,11 @@ class PlantedFamilyDataset(HypergraphDataset):
         n_families = len(self._seeds)
         hypergraphs = [item.hypergraph for item in self._items]
         rp = RealizedParams.compute(hypergraphs, seeds=(self._seed_value,))
+        max_k = max(self._family_k) if self._family_k else self._k
         return DatasetMetadata(
             name="planted_families",
             n_items=len(self._items),
-            arity_range=(2, self._k),
+            arity_range=(2, max_k),
             n_nodes_range=(min(n_nodes_vals), max(n_nodes_vals)),
             has_iso_labels=False,
             source=(

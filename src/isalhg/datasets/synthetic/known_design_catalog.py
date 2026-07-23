@@ -6,19 +6,28 @@ mathematically defined structure (not a random sample), which makes the
 class labels interpretable and makes ARI/NMI against family labels a
 meaningful signal (``REVIEW/DATA.md`` §2A, Gap 3 fix).
 
-Article corpus (Stratum A, v2 — T-M7m pruning):
-  14 admitted families (KEPT_A_IDS), grouped into coarse classes by type × arity.
+Article corpus (Stratum A, v3 — T-M7m pruning + T-M7o arity-fix additions):
+  17 admitted families (KEPT_A_IDS), grouped into coarse classes by type × arity.
   9 families are permanently excluded (EXCLUDED_SYMMETRIC): AG(2,4), PG(2,3),
   PG(2,4), both STS(13) iso-classes, STS(15), and the three complete-uniform
   hypergraphs.  Exclusion reason: automorphism groups too large for bounded
   Qin-edit perturbation (≤ 300 retries exhaust without finding a non-isomorphic
   member).  Raw constructors remain importable for scripts and tests.
 
+  T-M7o (2026-07-23) added three longer arity-4/5 tight-cycle designs to make
+  cycle_k4 and cycle_k5 coarse classes multi-member for A2/A3 eligibility:
+  tight_cycle_k4_n8 (n=8,m=8), tight_cycle_k4_n10 (n=10,m=10),
+  tight_cycle_k5_n8 (n=8,m=8).  These are w*_c-feasible (p90 < 30 s per
+  artifacts/power_pilot/REPORT.md §3) once the arity-cap bug in
+  PlantedFamilyDataset is fixed (self._family_k per-seed instead of self._k=3).
+
 Coarse class scheme (type × arity, within-arity only — never pool d_I across k):
   k=3: design_k3 {sts7, sts9, gq22}, path_k3 {loose_path_k3, tight_path_k3},
         cycle_k3 {loose_cycle_k3, tight_cycle_k3}
-  k=4: path_k4 {loose_path_k4, tight_path_k4}, cycle_k4 {loose_cycle_k4, tight_cycle_k4}
-  k=5: path_k5 {loose_path_k5, tight_path_k5}, cycle_k5 {tight_cycle_k5}
+  k=4: path_k4 {loose_path_k4, tight_path_k4},
+        cycle_k4 {loose_cycle_k4, tight_cycle_k4, tight_cycle_k4_n8, tight_cycle_k4_n10}
+  k=5: path_k5 {loose_path_k5, tight_path_k5},
+        cycle_k5 {tight_cycle_k5, tight_cycle_k5_n8}
 
 Synthetic vs real roles (DATA_MANIFEST):
   Stratum A — known-design seeds + Qin-perturbation members (this module).
@@ -100,6 +109,8 @@ COARSE_CLASS_BY_ID: dict[str, str] = {
     "tight_path_k4": "path_k4",
     "loose_cycle_k4": "cycle_k4",
     "tight_cycle_k4": "cycle_k4",
+    "tight_cycle_k4_n8": "cycle_k4",  # n=8 m=8 w*_c p90=0.18 s (T-M7o)
+    "tight_cycle_k4_n10": "cycle_k4",  # n=10 m=10 w*_c p90=2.34 s (T-M7o)
     # Arity 4 — excluded
     "ag24": "excluded_k4",
     "pg23": "excluded_k4",
@@ -108,6 +119,7 @@ COARSE_CLASS_BY_ID: dict[str, str] = {
     "loose_path_k5": "path_k5",
     "tight_path_k5": "path_k5",
     "tight_cycle_k5": "cycle_k5",
+    "tight_cycle_k5_n8": "cycle_k5",  # n=8 m=8 w*_c p90=3.61 s (T-M7o)
     # Arity 5 — excluded
     "pg24": "excluded_k5",
     "complete_k5_n6": "excluded_k5",
@@ -526,6 +538,8 @@ def _make_all_designs() -> list[tuple[_CatalogEntry, SparseHypergraph]]:
     _add("tight_path_k4", "TightPath4", 4, tight_path(4, 3))
     _add("loose_cycle_k4", "LooseCycle4", 4, loose_cycle(4, 4))
     _add("tight_cycle_k4", "TightCycle4", 4, tight_cycle(4, 5))
+    _add("tight_cycle_k4_n8", "TightCycle4-8", 4, tight_cycle(4, 8))
+    _add("tight_cycle_k4_n10", "TightCycle4-10", 4, tight_cycle(4, 10))
     _add("complete_k4_n6", "Complete4-6", 4, complete_uniform(6, 4))
 
     # --- Arity 5 ---
@@ -533,6 +547,7 @@ def _make_all_designs() -> list[tuple[_CatalogEntry, SparseHypergraph]]:
     _add("loose_path_k5", "LoosePath5", 5, loose_path(5, 3))
     _add("tight_path_k5", "TightPath5", 5, tight_path(5, 3))
     _add("tight_cycle_k5", "TightCycle5", 5, tight_cycle(5, 7))
+    _add("tight_cycle_k5_n8", "TightCycle5-8", 5, tight_cycle(5, 8))
     _add("complete_k5_n6", "Complete5-6", 5, complete_uniform(6, 5))
 
     return entries

@@ -60,7 +60,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
 | [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked) | 12 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
-| [`T-M7`](T-M7/) | Pre-writing revision, code: strict corpora + sweep/stats harness + baselines + G3 + real anchor | 1 (+2 blocked) | 6 |
+| [`T-M7`](T-M7/) | Pre-writing revision, code: strict corpora + sweep/stats harness + baselines + G3 + real anchor | 1 (+2 blocked) | 7 |
 | [`T-M8`](T-M8/) | Pre-writing revision, docs: label-family Remark, capability matrix, motivation, repro artifact | 2 | 3 |
 | [`T-TA`](T-TA/) | Theorem A — completeness of `w*_c` | 1 | 9 |
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |

@@ -139,3 +139,44 @@ class TestRebind:
         assert item.extra["n"] == 12
         assert item.extra["k"] == 3
         assert item.extra["c"] == 2.0
+
+
+# ---------------------------------------------------------------------------
+# T-M7m regression: Chung-Lu arity must be capped at k (T-M7m AC-CL)
+# ---------------------------------------------------------------------------
+
+
+class TestArityCapRegression:
+    """Edge sizes must satisfy size ∈ [2, k] after generation.
+
+    Bug (pre-fix): k=3 generator was producing edges of size up to 6
+    because the Chung-Lu bipartite model produces variable-size edges
+    and the old code only filtered size < 2.
+    """
+
+    @pytest.mark.parametrize("k", [3, 4, 5])
+    def test_all_edges_within_arity_cap(self, k: int) -> None:
+        # Run several seeds to cover different random draws.
+        for seed in range(8):
+            ds = ChungLuHypergraphs(n=20, k=k, c=2.0, seed=seed, require_connected=False)
+            h = next(iter(ds)).hypergraph
+            for _, members, _ in h.iter_edges():
+                assert len(members) <= k, f"seed={seed}, k={k}: edge size {len(members)} > k"
+
+    @pytest.mark.parametrize("k", [3, 4, 5])
+    def test_all_edges_at_least_2(self, k: int) -> None:
+        for seed in range(4):
+            ds = ChungLuHypergraphs(n=20, k=k, c=2.0, seed=seed, require_connected=False)
+            h = next(iter(ds)).hypergraph
+            for _, members, _ in h.iter_edges():
+                assert len(members) >= 2, f"seed={seed}, k={k}: edge size {len(members)} < 2"
+
+    def test_k3_never_produces_arity_above_3(self) -> None:
+        """Pinned regression: k=3 was producing arity 4-6 before the fix."""
+        seen_arities: set[int] = set()
+        for seed in range(20):
+            ds = ChungLuHypergraphs(n=24, k=3, c=3.0, seed=seed, require_connected=False)
+            h = next(iter(ds)).hypergraph
+            for _, members, _ in h.iter_edges():
+                seen_arities.add(len(members))
+        assert max(seen_arities, default=2) <= 3, f"k=3 produced arity > 3: {seen_arities}"

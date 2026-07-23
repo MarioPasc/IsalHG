@@ -201,23 +201,22 @@ def test_load_admitted_blocks_missing_file_raises(tmp_path: Path) -> None:
 def test_build_stratum_a_seed_corpus_labels_align() -> None:
     """len(hypergraphs) == len(labels); labels in [0, n_families).
 
-    Uses ADMITTED_A_IDS_ARITY3 (arity-3 subset) because arity-4/5 designs
-    with m=3 hyperedges exhaust the member-generation retry budget (the Qin-edit
-    space is too small to find non-isomorphic perturbations).
+    Uses a small arity-3 subset of ADMITTED_A_IDS to keep the test fast.
+    (T-M7m: complete_k3_n5 removed from admitted set; all 14 families are
+    now feasible for Qin-edit perturbation within the standard retry budget.)
     """
-    from experiments.article.analysis.sweep_multi_seed import (
-        ADMITTED_A_IDS_ARITY3,
-        build_stratum_a_seed_corpus,
-    )
+    from experiments.article.analysis.sweep_multi_seed import build_stratum_a_seed_corpus
 
+    # Small subset of arity-3 admitted families — fast for CI.
+    fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
     hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
         seed=0,
-        admitted_ids=ADMITTED_A_IDS_ARITY3,
+        admitted_ids=fast_subset,
         members_per_family=5,
         n_edits=2,
         max_retries=300,
     )
-    n_families = len(ADMITTED_A_IDS_ARITY3)
+    n_families = len(fast_subset)
     assert len(hypergraphs) == len(labels), "hypergraphs and labels must align"
     assert len(labels) == len(label_strings), "labels and label_strings must align"
     for lbl in labels:
@@ -226,20 +225,15 @@ def test_build_stratum_a_seed_corpus_labels_align() -> None:
 
 @pytest.mark.slow
 def test_build_stratum_a_seed_corpus_different_seeds_differ() -> None:
-    """Different seeds produce different corpora (perturbation members vary).
+    """Different seeds produce different corpora (perturbation members vary)."""
+    from experiments.article.analysis.sweep_multi_seed import build_stratum_a_seed_corpus
 
-    Uses ADMITTED_A_IDS_ARITY3 — see test_build_stratum_a_seed_corpus_labels_align.
-    """
-    from experiments.article.analysis.sweep_multi_seed import (
-        ADMITTED_A_IDS_ARITY3,
-        build_stratum_a_seed_corpus,
-    )
-
+    fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
     H0, _, _ = build_stratum_a_seed_corpus(
-        seed=0, admitted_ids=ADMITTED_A_IDS_ARITY3, members_per_family=5, n_edits=2
+        seed=0, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
     H1, _, _ = build_stratum_a_seed_corpus(
-        seed=1, admitted_ids=ADMITTED_A_IDS_ARITY3, members_per_family=5, n_edits=2
+        seed=1, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
     # The corpora have the same size (same families × members_per_family).
     assert len(H0) == len(H1)
@@ -623,23 +617,33 @@ def test_compute_g1_a1_uncensored_flag() -> None:
 
 
 def test_admitted_a_ids_count() -> None:
-    """ADMITTED_A_IDS must contain exactly the 17 admitted designs from T-M7a."""
+    """ADMITTED_A_IDS must contain exactly the 14 admitted designs (pruned T-M7m)."""
     from experiments.article.analysis.sweep_multi_seed import ADMITTED_A_IDS
 
-    assert len(ADMITTED_A_IDS) == 17, (
-        f"Expected 17 admitted Stratum A IDs (from T-M7a pilot), got {len(ADMITTED_A_IDS)}"
+    assert len(ADMITTED_A_IDS) == 14, (
+        f"Expected 14 admitted Stratum A IDs (T-M7m pruned), got {len(ADMITTED_A_IDS)}"
     )
 
-    # Spot-check mandatory entries from T-M7a closing note.
-    mandatory = {"sts7", "sts9", "gq22", "loose_path_k3", "complete_k5_n6"}
+    # Spot-check mandatory entries (all 14 kept families).
+    mandatory = {"sts7", "sts9", "gq22", "loose_path_k3", "tight_cycle_k5"}
     missing = mandatory - ADMITTED_A_IDS
     assert not missing, f"Missing mandatory admitted IDs: {missing}"
 
-    # Spot-check dropped entries (must NOT be present).
-    dropped = {"sts13_0", "sts13_1", "ag24", "pg23", "pg24"}
-    present_but_should_be_dropped = dropped & ADMITTED_A_IDS
-    assert not present_but_should_be_dropped, (
-        f"Dropped designs should not be in ADMITTED_A_IDS: {present_but_should_be_dropped}"
+    # Spot-check excluded entries (must NOT be present — T-M7m EXCLUDED_SYMMETRIC).
+    excluded = {
+        "sts13_0",
+        "sts13_1",
+        "ag24",
+        "pg23",
+        "pg24",
+        "complete_k3_n5",
+        "complete_k4_n6",
+        "complete_k5_n6",
+        "sts15_0",
+    }
+    present_but_excluded = excluded & ADMITTED_A_IDS
+    assert not present_but_excluded, (
+        f"Excluded designs should not be in ADMITTED_A_IDS: {present_but_excluded}"
     )
 
 
@@ -661,25 +665,30 @@ def test_all_distances_has_naive_baseline() -> None:
     )
 
 
-def test_admitted_a_ids_arity3_count() -> None:
-    """ADMITTED_A_IDS_ARITY3 contains exactly 8 arity-3 designs.
+def test_coarse_classes_by_arity_structure() -> None:
+    """COARSE_CLASSES_BY_ARITY must cover arities 3, 4, 5 (T-M7m).
 
-    These are the designs feasible for PlantedFamilyDataset member generation.
-    Arity-4/5 designs with m=3 hyperedges cannot produce non-isomorphic
-    Qin-edit perturbations and are excluded from the fallback set.
+    ADMITTED_A_IDS_ARITY3 was removed at T-M7m (arity-3 fallback retired;
+    all 14 pruned families are feasible). This test replaces it with a check
+    that the coarse-class structure covers all three arity groups.
     """
     from experiments.article.analysis.sweep_multi_seed import (
         ADMITTED_A_IDS,
-        ADMITTED_A_IDS_ARITY3,
+        COARSE_CLASSES_BY_ARITY,
     )
 
-    assert len(ADMITTED_A_IDS_ARITY3) == 8, (
-        f"Expected 8 arity-3 admitted IDs; got {len(ADMITTED_A_IDS_ARITY3)}"
+    keys = set(COARSE_CLASSES_BY_ARITY.keys())
+    assert keys == {3, 4, 5}, f"COARSE_CLASSES_BY_ARITY must cover arities 3/4/5, got {keys}"
+    # Arity 3 must have 3 coarse classes (design, path, cycle).
+    assert len(COARSE_CLASSES_BY_ARITY[3]) == 3, (
+        f"Expected 3 arity-3 coarse classes, got {COARSE_CLASSES_BY_ARITY[3]}"
     )
-    # Arity-3 subset must be a subset of the full admitted set.
-    assert ADMITTED_A_IDS_ARITY3 <= ADMITTED_A_IDS, (
-        "ADMITTED_A_IDS_ARITY3 contains IDs not in ADMITTED_A_IDS"
-    )
-    mandatory_arity3 = {"sts7", "sts9", "gq22", "loose_path_k3", "complete_k3_n5"}
-    missing = mandatory_arity3 - ADMITTED_A_IDS_ARITY3
-    assert not missing, f"Missing arity-3 entries: {missing}"
+    # All arity-3 families in ADMITTED_A_IDS must map to arity-3 coarse classes.
+    from isalhg.datasets.synthetic.known_design_catalog import COARSE_CLASS_BY_ID
+
+    for iid in ADMITTED_A_IDS:
+        cc = COARSE_CLASS_BY_ID.get(iid, "")
+        if cc.endswith("_k3"):
+            assert cc in COARSE_CLASSES_BY_ARITY[3], (
+                f"{iid} has coarse class {cc!r} not in COARSE_CLASSES_BY_ARITY[3]"
+            )

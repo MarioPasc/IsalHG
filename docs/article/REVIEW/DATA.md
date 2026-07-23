@@ -78,29 +78,89 @@ asserted from one cell.
 targets for G2. Members are recognizable, drawable, and carry a *meaningful*
 family label (unlike the current random-seed families).
 
-**Seed catalog** (all standard, arity-controlled; feasibility-gated per §4):
+**Final admitted catalog (14 families).** Admission required (a) `w*_c` p90 ≤ 30 s
+under a 300 s cluster budget (Picasso A100, single instance each), and (b)
+successful Qin perturbation: at least one non-isomorphic connected member found
+within 300 bounded-budget attempts. Both conditions were verified in the T-M7h
+feasibility pilot (`artifacts/feasibility_pilot/feasibility_pilot_stratum_a.json`).
 
-| Family | Uniform arity `k` | Example orders `n` | Symmetry | Notes |
-|---|---|---|---|---|
-| Steiner triple system STS(v) | 3 | 7, 9, 13, 15 | high | `v ≡ 1,3 (mod 6)`; vendored catalog exists |
-| Affine plane AG(2,q) | q | 9 (q=3), 16 (q=4), 25 (q=5) | high | lines = arity `q`; gives arity 3–5 |
-| Projective plane PG(2,q) | q+1 | 7 (Fano), 13, 21 | high | lines = arity `q+1`; arity 3–5 (higher orders gate out) |
-| Steiner S(2,4,v) / S(2,5,v) | 4 / 5 | 13,16 / 21,25 | high | direct arity-4/5 designs |
-| Generalized quadrangle GQ(2,2) | 3 | 15 | very high | the doily; already a fixture |
-| Complete `k`-uniform K_n^(k) | k | small n | maximal | dense, symmetric stress test |
-| Loose / tight `k`-uniform path & cycle | k | any | low | sparse, easy to draw; contrast to designs |
+| Family | k | n | m | `w*_c` p50 (s) | Class | Notes |
+|---|---|---|---|---|---|---|
+| `sts7` | 3 | 7 | 7 | 0.024 | design | Fano plane STS(7) |
+| `sts9` | 3 | 9 | 12 | 0.299 | design | Steiner triple system STS(9) |
+| `gq22` | 3 | 15 | 15 | 3.045 | design | GQ(2,2) doily; the hardest admitted case |
+| `loose_path_k3` | 3 | 9 | 4 | 0.002 | path | sparse, drawable |
+| `tight_path_k3` | 3 | 6 | 4 | 0.003 | path | |
+| `loose_cycle_k3` | 3 | 8 | 4 | 0.003 | cycle | |
+| `tight_cycle_k3` | 3 | 5 | 5 | 0.004 | cycle | |
+| `loose_path_k4` | 4 | 10 | 3 | 0.003 | path | m=3: visual anchor only (see note) |
+| `tight_path_k4` | 4 | 6 | 3 | 0.007 | path | m=3: visual anchor only |
+| `loose_cycle_k4` | 4 | 12 | 4 | 0.056 | cycle | perturbable |
+| `tight_cycle_k4` | 4 | 5 | 5 | 0.007 | cycle | |
+| `loose_path_k5` | 5 | 13 | 3 | 0.043 | path | m=3: visual anchor only |
+| `tight_path_k5` | 5 | 7 | 3 | 0.046 | path | m=3: visual anchor only |
+| `tight_cycle_k5` | 5 | 7 | 7 | 0.356 | cycle | perturbable |
 
-**Class label = family type** (e.g. "STS", "projective-plane", "complete",
-"loose-path"). **Members per class** = the base design plus `r` *non-isomorphic,
-connectivity-preserving* Qin perturbations of bounded budget `t` (small enough
-that family identity is visually preserved — this is checkable *because* the
-instances are drawable). Permuted copies are the `d_I = 0` sanity anchor only,
-never class members.
+The m=3 path families (k=4,5) have too few hyperedges to generate non-isomorphic
+perturbations within a bounded budget; they serve as **single-instance visual and
+geometry anchors** in A1/A4/G3, not as A2/A3 classification targets.
 
-**Feasibility reality (important, and it works in our favor).** `w*_c` cost rises
-with *both* symmetry and `n`. Highly symmetric high-order designs (PG(2,5) n=31,
-PG(2,7) n=57) will gate out. So Stratum A delivers **interpretability and arity
-3–5 at small n**; it is *not* where high arity or large `n` come from.
+![Stratum A — 14 kept designs visualized with HyperNetX](../../../artifacts/synthetic_catalog/stratum_a_kept_hnx.png)
+
+*Stratum A admitted catalog (14 families). Top section: arity-3 designs and paths/cycles. Bottom section: arity-4/5 paths and cycles. Each hyperedge is drawn as a filled polygon; label = family id.*
+
+![Arity-4/5 kept members (detail)](../../../artifacts/synthetic_catalog/arity45_kept_hnx.png)
+
+*Arity-4 and arity-5 kept members in detail. The m=3 paths provide visual anchors; the k=4 and k=5 cycles are the perturbable arity-4/5 members in the article corpus.*
+
+**Excluded catalog (9 families).** All 23 candidate families were measured; 9 were
+rejected before entering the corpus. Reasons are mutually exclusive and categorical.
+
+| Family | k | n | m | Reason | Category |
+|---|---|---|---|---|---|
+| `ag24` | 4 | 9 | 12 | `w*_c` DNF at 300 s cluster budget | feasibility-DNF |
+| `pg23` | 4 | 13 | 13 | `w*_c` DNF at 300 s cluster budget | feasibility-DNF |
+| `pg24` | 5 | 21 | 21 | `w*_c` DNF at 300 s cluster budget | feasibility-DNF |
+| `sts13_0` | 3 | 13 | 26 | `w*_c` p90 = 166 s >> 30 s threshold | feasibility-DNF |
+| `sts13_1` | 3 | 13 | 26 | `w*_c` p90 = 159 s >> 30 s threshold | feasibility-DNF |
+| `sts15_0` | 3 | 15 | 35 | `w*_c` DNF at 300 s cluster budget | feasibility-DNF |
+| `complete_k3_n5` | 3 | 5 | 10 | Automorphism group `S_5` exhausts 300 Qin attempts without leaving iso-class | perturbation-failure |
+| `complete_k4_n6` | 4 | 6 | 15 | Automorphism group `S_6` exhausts 300 Qin attempts; all bounded edits stay in same iso-class | perturbation-failure |
+| `complete_k5_n6` | 5 | 6 | 6 | Same mechanism as `complete_k4_n6` | perturbation-failure |
+
+**Reason categories.** The two categories reflect distinct mechanisms:
+
+1. **Feasibility-DNF (6 families).** `w*_c` wall-clock exceeds the 30 s admission
+   threshold (or does not terminate within the 300 s cluster budget). Root cause:
+   symmetry-driven branch explosion in the tie-complete encoder at moderate `n`. The
+   affine/projective planes (ag24, pg23, pg24) are vertex-transitive with very large
+   automorphism groups; the large Steiner systems (sts13_0/1, sts15_0) are
+   3-uniform but `n ≥ 13` tips them into the exponential regime. These families are
+   not in the corpus; they are the measured boundary of the feasibility envelope.
+
+2. **Perturbation-failure (3 families).** `w*_c` is fast (p90 < 1 s) but the
+   automorphism group `S_n` of `K_n^{(k)}` is so large that every Qin edit within
+   the bounded budget (300 attempts, connectivity-preserving) maps back to the same
+   isomorphism class. No non-isomorphic Stratum-A member can be generated. These
+   families cannot serve as A2/A3 classification targets (a class of size 1 has no
+   intra-class variation to measure ARI/NMI against) and are excluded.
+
+**Coarse-class scheme for A2/A3.** Classification experiments (A2 clustering, A3 kNN)
+use **three coarse structural classes** — design, path, cycle — **within a single fixed
+arity `k`**. Raw `d_I` values are never pooled across `k` (the metric family triple
+`(k, h, Σ)` must be fixed; see §5 and `REVIEW/DATA.md` §0 principle 7).
+
+| Arity | Class: design | Class: path | Class: cycle |
+|---|---|---|---|
+| k=3 | sts7, sts9, gq22 | loose_path_k3, tight_path_k3 | loose_cycle_k3, tight_cycle_k3 |
+| k=4 | — | — (anchors only) | loose_cycle_k4, tight_cycle_k4 |
+| k=5 | — | — (anchors only) | tight_cycle_k5 |
+
+At k=4 and k=5, the path families are single-instance anchors (m=3 edges, not
+perturbable into a class). A2/A3 at k=4/5 therefore have only one non-singleton
+class (cycle); the k=4/5 analyses are power-limited and treated as supporting evidence
+rather than primary comparisons. Primary A2/A3 results come from k=3 (three classes,
+multiple perturbable members per class).
 
 ### Stratum B — Parametric random sweep (generalizability)
 
@@ -142,6 +202,72 @@ Per `REAL_DATA_CORPUS.md`: the **designs catalog** as a guaranteed-computable re
 anchor (it *is* Stratum A at full catalog scale), plus one **gate-first low-arity
 real-world corpus**. Replaces the single censored IMDB exhibit. Real data feeds
 A1 geometry (ν, `D̂`) and A2/A3 — same slots as now, broader source.
+
+---
+
+### Synthetic vs. real — proxy assessment
+
+**Finding (measured in T-M7h / S7 real-data exhibit).** Real HIC IMDB-genre
+hypergraphs are characterized by three properties that distinguish them sharply
+from Stratum A designs:
+
+1. **Mixed arity.** Hyperedge sizes vary within a single hypergraph (arity
+   histogram spans multiple values); there is no uniform `k`.
+2. **Sparse and small.** Median `n ≈ 7–12` vertices per hypergraph (tail to
+   ~270); median `m/n` well below 1 for the cleaner datasets.
+3. **Low structural symmetry.** Random and organic incidence structure, not
+   design-theoretic.
+
+![HIC IMDB Wri-Genre hypergraph sample](../../../artifacts/synthetic_catalog/hic_imdb_wri_genre.png)
+
+*Sample of HIC IMDB Wri-Genre hypergraphs (genre as hyperedge, movies as vertices). Mixed arity, sparse, small. Genre classes overlap heavily in structure — the near-unclusterable result (ARI < 0.10 for every representation) is visible from the drawing.*
+
+![HIC IMDB Dir-Genre hypergraph sample](../../../artifacts/synthetic_catalog/hic_imdb_dir_genre.png)
+
+*Sample of HIC IMDB Dir-Genre hypergraphs (genre as hyperedge, directors as vertices). Similar structural character: mixed arity, sparse, irregular.*
+
+**Two-purpose framing.** The Stratum A designs and the real HIC hypergraphs serve
+**complementary roles** — they are not in competition and Stratum A is **not** an
+arity proxy for real data:
+
+| Role | Stratum A designs | Real HIC hypergraphs |
+|---|---|---|
+| Arity | Uniform k=3/4/5, controlled | Mixed, uncontrolled |
+| Symmetry | High (design-theoretic) | Low (organic) |
+| Class labels | Structural family (design/path/cycle) | Domain label (genre) |
+| A2/A3 purpose | Primary: clean labels, multiple members per class | Supporting: cross-domain sanity check |
+| G2/G3 purpose | Symmetric-regime targets; drawable intermediates | Not used (w*_c DNF at corpus scale) |
+| A1 purpose | Labeled map (interpretable trajectories) | Geometry rows (ν, D̂ on real data) |
+
+**The genuine real-data proxy** — the generator whose structural character matches
+HIC hypergraphs — is the **mixed-arity Stratum B generator** (Erdős–Rényi and
+Chung–Lu with `arity ∈ [2, k]`), not Stratum A. Stratum B reaches the
+mixed-arity, sparse, low-symmetry regime that real data occupies. The Chung–Lu
+generator is a secondary proxy because it models degree heterogeneity; the
+plain Erdős–Rényi model is the null (structural) baseline.
+
+This two-purpose framing must be stated explicitly in the paper's methods section
+to forestall the misreading that "the designs corpus is representative of
+real-world hypergraphs."
+
+---
+
+### Sample size and power (pilot-determined)
+
+**Placeholder — numbers to be filled post-pilot.**
+
+The target sample sizes `N_corpus` (number of hypergraphs per corpus cell) and
+`S` (number of seeds per cell) for each experiment are determined by a power
+analysis: a pilot run estimates the within-cell variance, then `N` and `S` are
+set to achieve 80% power at a pre-declared minimum effect size (Cohen's d = 0.5
+for pairwise comparisons; ARI difference ≥ 0.10 for clustering). All pilot
+measurements and the resulting `(N, S)` targets will be recorded here before the
+production sweep runs.
+
+Current placeholder values (from the N-scaling sweep in T-M5l, superseded by the
+S7 redesign): `N = 240`, `S = 1` per cell (single seed). These are the pre-S7
+numbers and are **not valid** under the strict master corpus; they are retained
+only as a lower-bound reference.
 
 ---
 

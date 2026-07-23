@@ -276,13 +276,16 @@ def build_stratum_a_seed_corpus(
     members_per_family: int = _STRATUM_A_MEMBERS_PER_FAMILY,
     n_edits: int = _STRATUM_A_N_EDITS,
     max_retries: int = _STRATUM_A_MAX_RETRIES,
-) -> tuple[list[Any], list[int], list[str]]:
+) -> tuple[list[Any], list[int], list[str], list[str]]:
     """Build one Stratum A corpus sample under a given generator seed.
 
     Uses ``build_stratum_a_corpus(seed_value=seed, admitted_ids=admitted_ids)``
     which feeds the admitted known-design seeds into PlantedFamilyDataset.
     Different seeds yield different non-isomorphic perturbation members while
-    preserving family membership.
+    preserving family membership.  The corpus is always built with
+    ``allow_partial=True`` so high-symmetry families that exhaust the Qin-edit
+    retry budget are accepted with their seed as the single realized member
+    instead of crashing.
 
     Parameters
     ----------
@@ -305,6 +308,9 @@ def build_stratum_a_seed_corpus(
         ``hypergraphs``.
     family_label_strings : list[str]
         String family label (e.g. ``"STS7"``) for each hypergraph.
+    coarse_class_strings : list[str]
+        Coarse structural class label (e.g. ``"design_k3"``) for each
+        hypergraph; empty string when not present in item extras.
     """
     from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
 
@@ -315,12 +321,14 @@ def build_stratum_a_seed_corpus(
         seed_value=seed,
         dedup_backend="isalhg",
         admitted_ids=admitted_ids,
+        allow_partial=True,
     )
     items = list(dataset)
     hypergraphs = [item.hypergraph for item in items]
     labels = [int(item.extra.get("family_index", 0)) for item in items]
     family_label_strings = [str(item.extra.get("family_label", "")) for item in items]
-    return hypergraphs, labels, family_label_strings
+    coarse_class_strings = [str(item.extra.get("coarse_class", "")) for item in items]
+    return hypergraphs, labels, family_label_strings, coarse_class_strings
 
 
 def build_stratum_b_seed_corpus(
@@ -720,6 +728,14 @@ class SeedMetrics:
     # incomparable across arity groups, so A2/A3 must be reported per k.
     a2_per_arity: dict[int, dict[str, Any] | None] = field(default_factory=dict)
     a3_per_arity: dict[int, dict[int, float] | None] = field(default_factory=dict)
+    # Realized member counts (T-M7m): corpus-level, same for all representations.
+    # Single-member path/cycle families are excluded from A2/A3 but kept in G1/A1.
+    realized_counts_per_family: dict[str, int] = field(default_factory=dict)
+    realized_counts_per_coarse_class: dict[str, int] = field(default_factory=dict)
+    # Per-arity coarse classes dropped from A2/A3 because all their families
+    # have < 2 realized members.  Power analysis reads this to determine which
+    # k sub-corpora have usable clustering/kNN signals.
+    a2a3_dropped_coarse_classes: dict[int, list[str]] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -772,10 +788,14 @@ def run_stratum_a_seed(
     cache_root = output_root / "d_matrix" / "stratum_a" / f"seed{seed}"
 
     # Build corpus once (reused across all representations).
+    # allow_partial=True (threaded via build_stratum_a_seed_corpus) ensures
+    # high-symmetry families (k4/k5 paths, cycles) that exhaust the Qin-edit
+    # retry budget contribute their seed as a single realized member instead
+    # of crashing the run.
     logger.info("Stratum A seed %d: building corpus...", seed)
     t0 = time.perf_counter()
     try:
-        hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
+        hypergraphs, labels, label_strings, coarse_class_strings = build_stratum_a_seed_corpus(
             seed=seed,
             admitted_ids=admitted_ids,
             members_per_family=members_per_family,
@@ -795,6 +815,30 @@ def run_stratum_a_seed(
         n_families,
         time.perf_counter() - t0,
     )
+
+    # Realized member counts per family and per coarse class (corpus-level).
+    # These are the same for all representations; set on every SeedMetrics.
+    from collections import Counter
+
+    realized_counts_per_family: dict[str, int] = dict(Counter(label_strings))
+    realized_counts_per_coarse_class: dict[str, int] = {}
+    for lbl, cc in zip(label_strings, coarse_class_strings):
+        realized_counts_per_coarse_class[cc] = realized_counts_per_coarse_class.get(cc, 0) + 1
+    # Families with only 1 realized member: the seed design could not produce
+    # non-isomorphic Qin-edit perturbations (exhausted retry budget).
+    # These families are kept in G1/A1 geometry but EXCLUDED from A2/A3
+    # (k-medoids / kNN) because a single-member class contributes no pairwise
+    # signal for clustering or classification.
+    single_member_families: frozenset[str] = frozenset(
+        lbl for lbl, cnt in realized_counts_per_family.items() if cnt < 2
+    )
+    if single_member_families:
+        logger.info(
+            "Stratum A seed %d: %d single-member families (excluded from A2/A3, kept in G1/A1): %s",
+            seed,
+            len(single_member_families),
+            sorted(single_member_families),
+        )
 
     corpus_meta = {
         "stratum": "a",
@@ -852,6 +896,29 @@ def run_stratum_a_seed(
         k = _arity_of_H(H)
         arity_indices.setdefault(k, []).append(idx)
 
+    # Pre-compute which coarse classes are dropped from A2/A3 per arity.
+    # This is corpus-level (same for all representations).
+    # A coarse class is dropped from A2/A3 when all of its families have only
+    # 1 realized member (no pairwise iso-distinct neighbors to cluster/classify).
+    a2a3_dropped_coarse_classes: dict[int, list[str]] = {}
+    for k_arity, idx_list in arity_indices.items():
+        dropped = sorted(
+            {
+                coarse_class_strings[i]
+                for i in idx_list
+                if label_strings[i] in single_member_families
+            }
+        )
+        a2a3_dropped_coarse_classes[k_arity] = dropped
+        if dropped:
+            logger.info(
+                "Stratum A seed %d, k=%d: coarse classes dropped from A2/A3"
+                " (single-member families): %s",
+                seed,
+                k_arity,
+                dropped,
+            )
+
     results: list[SeedMetrics] = []
 
     for dist_name in dist_names:
@@ -870,6 +937,9 @@ def run_stratum_a_seed(
                     a2=None,
                     a3=None,
                     bits=None,
+                    realized_counts_per_family=realized_counts_per_family,
+                    realized_counts_per_coarse_class=realized_counts_per_coarse_class,
+                    a2a3_dropped_coarse_classes=a2a3_dropped_coarse_classes,
                 )
             )
             continue
@@ -888,29 +958,38 @@ def run_stratum_a_seed(
         a3_per_arity: dict[int, dict[int, float] | None] = {}
 
         for k_arity, idx_list in arity_indices.items():
-            if len(idx_list) < 2:
+            # Filter to families with >= 2 realized members.
+            # Single-member families contribute to G1/A1 (geometry) but are
+            # excluded here: a class with 1 item has no iso-distinct neighbors,
+            # making k-medoids and kNN degenerate for that class.
+            a2a3_idx = [i for i in idx_list if label_strings[i] not in single_member_families]
+
+            if len(a2a3_idx) < 2:
                 a2_per_arity[k_arity] = None
                 a3_per_arity[k_arity] = None
                 continue
 
-            # Validate: all items in this sub-corpus share one arity.
-            sub_hgs = [hypergraphs[i] for i in idx_list]
+            # Guard: all items must share one arity (should always hold here).
+            sub_hgs = [hypergraphs[i] for i in a2a3_idx]
             try:
                 assert_single_arity_group(sub_hgs)
             except ValueError as exc:
                 logger.warning(
-                    "Stratum A seed %d, k=%d: pooling guard fired: %s", seed, k_arity, exc
+                    "Stratum A seed %d, k=%d: pooling guard fired: %s",
+                    seed,
+                    k_arity,
+                    exc,
                 )
                 a2_per_arity[k_arity] = None
                 a3_per_arity[k_arity] = None
                 continue
 
-            sub_D = D[np.ix_(idx_list, idx_list)]
-            sub_labels = [labels[i] for i in idx_list]
-            # Remap labels to 0-based within the sub-corpus.
+            sub_D = D[np.ix_(a2a3_idx, a2a3_idx)]
+            sub_labels = [labels[i] for i in a2a3_idx]
+            # Remap labels to 0-based within the filtered sub-corpus.
             unique_sub = sorted(set(sub_labels))
             remap = {orig: new for new, orig in enumerate(unique_sub)}
-            sub_labels_remapped = [remap[l] for l in sub_labels]
+            sub_labels_remapped = [remap[lbl] for lbl in sub_labels]
             sub_n_families = len(unique_sub)
 
             a2_per_arity[k_arity] = compute_a2(
@@ -937,6 +1016,9 @@ def run_stratum_a_seed(
             bits=bits,
             a2_per_arity=a2_per_arity,
             a3_per_arity=a3_per_arity,
+            realized_counts_per_family=realized_counts_per_family,
+            realized_counts_per_coarse_class=realized_counts_per_coarse_class,
+            a2a3_dropped_coarse_classes=a2a3_dropped_coarse_classes,
         )
         results.append(sm)
         _cache_seed_metrics(sm, output_root)
@@ -1106,6 +1188,12 @@ def _cache_seed_metrics(sm: SeedMetrics, output_root: Path) -> None:
             str(k): ({str(kk): vv for kk, vv in v.items()} if v is not None else None)
             for k, v in sm.a3_per_arity.items()
         },
+        # Realized-count fields (T-M7m fix): corpus-level, same for all reps.
+        "realized_counts_per_family": sm.realized_counts_per_family,
+        "realized_counts_per_coarse_class": sm.realized_counts_per_coarse_class,
+        "a2a3_dropped_coarse_classes": {
+            str(k): v for k, v in sm.a2a3_dropped_coarse_classes.items()
+        },
     }
     _atomic_write_json(path, payload)
 
@@ -1135,6 +1223,12 @@ def _load_seed_metrics_cache(
         for k, v in a3_per_arity_raw.items()
     }
 
+    # Deserialize realized-count fields (T-M7m fix); absent in older caches.
+    a2a3_dropped_raw = data.get("a2a3_dropped_coarse_classes", {})
+    a2a3_dropped_coarse_classes: dict[int, list[str]] = {
+        int(k): v for k, v in a2a3_dropped_raw.items()
+    }
+
     return SeedMetrics(
         cell_key=data["cell_key"],
         stratum=data["stratum"],
@@ -1147,6 +1241,9 @@ def _load_seed_metrics_cache(
         bits=data.get("bits"),
         a2_per_arity=a2_per_arity,
         a3_per_arity=a3_per_arity,
+        realized_counts_per_family=data.get("realized_counts_per_family", {}),
+        realized_counts_per_coarse_class=data.get("realized_counts_per_coarse_class", {}),
+        a2a3_dropped_coarse_classes=a2a3_dropped_coarse_classes,
     )
 
 

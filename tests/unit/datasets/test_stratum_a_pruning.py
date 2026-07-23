@@ -377,3 +377,194 @@ class TestDataManifest:
         else:
             ids = DATA_MANIFEST.stratum_a_ids
         assert frozenset(ids) == KEPT_14, f"Expected 14 ids, got {frozenset(ids)}"
+
+
+# ---------------------------------------------------------------------------
+# Graceful build + realized-count report (T-M7m fix)
+# ---------------------------------------------------------------------------
+# These tests FAIL against the pre-fix commit (build_stratum_a_corpus without
+# allow_partial → RuntimeError on high-symmetry k4/k5 families) and PASS
+# after the fix (allow_partial=True default).
+# ---------------------------------------------------------------------------
+
+
+class TestGracefulBuildAndRealizedCounts:
+    """Verify that the 14-family corpus builds without crashing and that
+    realized member counts are reported correctly.
+
+    Single-member path/cycle families (k=4 and k=5) exhaust the Qin-edit
+    retry budget; they must be accepted with 1 member instead of raising.
+    """
+
+    def test_full_14family_corpus_no_crash(self) -> None:
+        """build_stratum_a_corpus at default params must not raise."""
+        from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
+
+        # Pre-fix: RuntimeError from family 7 (loose_path_k4).
+        # Post-fix: completes gracefully with allow_partial=True.
+        items = list(build_stratum_a_corpus(members_per_family=3, seed_value=0))
+        assert len(items) >= 14, f"Expected at least 14 items (1 per family), got {len(items)}"
+
+    def test_k3_families_reach_members_per_family(self) -> None:
+        """k=3 families (design/path/cycle) should all reach members_per_family=3."""
+        from collections import Counter
+
+        from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
+
+        items = list(build_stratum_a_corpus(members_per_family=3, seed_value=0))
+        counts = Counter(item.extra["family_label"] for item in items)
+        k3_labels = {
+            "STS7",
+            "STS9",
+            "GQ22",
+            "LoosePath3",
+            "TightPath3",
+            "LooseCycle3",
+            "TightCycle3",
+        }
+        for lbl in k3_labels:
+            assert counts[lbl] == 3, (
+                f"k=3 family {lbl!r} should have 3 realized members, got {counts[lbl]}"
+            )
+
+    def test_path_families_k4_k5_realize_one_member(self) -> None:
+        """k=4/5 path families that exhaust retries must yield exactly 1 member."""
+        from collections import Counter
+
+        from isalhg.datasets.synthetic.known_design_catalog import build_stratum_a_corpus
+
+        items = list(build_stratum_a_corpus(members_per_family=3, seed_value=0))
+        counts = Counter(item.extra["family_label"] for item in items)
+        # These families cannot produce iso-distinct Qin-edit perturbations.
+        expected_single = {"LoosePath4", "TightPath4", "LoosePath5", "TightPath5"}
+        for lbl in expected_single:
+            assert counts[lbl] == 1, (
+                f"Path family {lbl!r} expected 1 realized member, got {counts[lbl]}"
+            )
+
+    def test_runner_path_no_crash(self) -> None:
+        """build_stratum_a_seed_corpus (runner helper) must not raise."""
+        from experiments.article.analysis.sweep_multi_seed import (
+            ADMITTED_A_IDS,
+            build_stratum_a_seed_corpus,
+        )
+
+        hypergraphs, labels, label_strings, coarse_class_strings = build_stratum_a_seed_corpus(
+            seed=0,
+            admitted_ids=ADMITTED_A_IDS,
+            members_per_family=3,
+        )
+        assert len(hypergraphs) >= 14
+        assert len(hypergraphs) == len(labels) == len(label_strings) == len(coarse_class_strings)
+
+    def test_runner_path_returns_four_elements(self) -> None:
+        """build_stratum_a_seed_corpus must return (hgs, labels, fam_labels, cc_labels)."""
+        from experiments.article.analysis.sweep_multi_seed import (
+            ADMITTED_A_IDS,
+            build_stratum_a_seed_corpus,
+        )
+
+        result = build_stratum_a_seed_corpus(
+            seed=0,
+            admitted_ids=ADMITTED_A_IDS,
+            members_per_family=3,
+        )
+        assert len(result) == 4, (
+            "build_stratum_a_seed_corpus must return 4-tuple "
+            "(hypergraphs, labels, label_strings, coarse_class_strings)"
+        )
+
+    def test_coarse_class_strings_non_empty(self) -> None:
+        """Every item must carry a non-empty coarse_class string."""
+        from experiments.article.analysis.sweep_multi_seed import (
+            ADMITTED_A_IDS,
+            build_stratum_a_seed_corpus,
+        )
+
+        _, _, _, coarse_class_strings = build_stratum_a_seed_corpus(
+            seed=0,
+            admitted_ids=ADMITTED_A_IDS,
+            members_per_family=3,
+        )
+        assert all(cc != "" for cc in coarse_class_strings), (
+            "Every item must have a non-empty coarse_class string"
+        )
+
+    def test_realized_counts_per_family_structure(self) -> None:
+        """Realized counts per family must cover all 14 admitted families."""
+        from collections import Counter
+
+        from experiments.article.analysis.sweep_multi_seed import (
+            ADMITTED_A_IDS,
+            build_stratum_a_seed_corpus,
+        )
+
+        _, _, label_strings, _ = build_stratum_a_seed_corpus(
+            seed=0,
+            admitted_ids=ADMITTED_A_IDS,
+            members_per_family=3,
+        )
+        realized = dict(Counter(label_strings))
+        # 14 admitted families → 14 keys (one per family label).
+        assert len(realized) == 14, (
+            f"Expected 14 family labels in realized counts, got {len(realized)}"
+        )
+        # All values must be >= 1 (the seed is always accepted).
+        assert all(v >= 1 for v in realized.values()), (
+            "Every admitted family must have at least 1 realized member"
+        )
+
+    def test_realized_counts_per_coarse_class_structure(self) -> None:
+        """Realized counts per coarse class must cover all 9 admitted coarse classes."""
+
+        from experiments.article.analysis.sweep_multi_seed import (
+            ADMITTED_A_IDS,
+            build_stratum_a_seed_corpus,
+        )
+
+        _, _, label_strings, coarse_class_strings = build_stratum_a_seed_corpus(
+            seed=0,
+            admitted_ids=ADMITTED_A_IDS,
+            members_per_family=3,
+        )
+        realized_cc: dict[str, int] = {}
+        for _lbl, cc in zip(label_strings, coarse_class_strings, strict=False):
+            realized_cc[cc] = realized_cc.get(cc, 0) + 1
+        # Expected coarse classes for the 14 kept families:
+        # k3: design_k3, path_k3, cycle_k3  (3 classes)
+        # k4: path_k4, cycle_k4             (2 classes)
+        # k5: path_k5, cycle_k5             (2 classes)
+        # Total: 7 coarse classes (excluded_* classes are not in kept families).
+        assert len(realized_cc) >= 7, (
+            f"Expected >= 7 coarse classes in realized counts, got {len(realized_cc)}: "
+            f"{list(realized_cc)}"
+        )
+
+    def test_seedmetrics_realized_count_fields_serializable(self, tmp_path) -> None:
+        """SeedMetrics with realized count fields round-trips through the cache."""
+        from experiments.article.analysis.sweep_multi_seed import (
+            SeedMetrics,
+            _cache_seed_metrics,
+            _load_seed_metrics_cache,
+        )
+
+        sm = SeedMetrics(
+            cell_key="stratum_a",
+            stratum="a",
+            dist_name="isalhg_levenshtein",
+            seed=0,
+            n_corpus=28,
+            g1_a1=None,
+            a2=None,
+            a3=None,
+            bits=None,
+            realized_counts_per_family={"STS7": 3, "LoosePath4": 1},
+            realized_counts_per_coarse_class={"design_k3": 3, "path_k4": 1},
+            a2a3_dropped_coarse_classes={4: ["path_k4"], 5: ["path_k5", "cycle_k5"]},
+        )
+        _cache_seed_metrics(sm, tmp_path)
+        loaded = _load_seed_metrics_cache("stratum_a", "a", "isalhg_levenshtein", 0, tmp_path)
+        assert loaded is not None
+        assert loaded.realized_counts_per_family == {"STS7": 3, "LoosePath4": 1}
+        assert loaded.realized_counts_per_coarse_class == {"design_k3": 3, "path_k4": 1}
+        assert loaded.a2a3_dropped_coarse_classes == {4: ["path_k4"], 5: ["path_k5", "cycle_k5"]}

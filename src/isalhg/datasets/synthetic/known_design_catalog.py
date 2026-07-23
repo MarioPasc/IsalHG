@@ -847,6 +847,7 @@ def build_stratum_a_corpus(
     seed_value: int = 0,
     dedup_backend: str = "isalhg",
     admitted_ids: frozenset[str] | None = None,
+    allow_partial: bool = True,
 ) -> HypergraphDataset:
     """Build the Stratum A labeled corpus from admitted catalog seeds.
 
@@ -871,6 +872,11 @@ def build_stratum_a_corpus(
         Explicit admitted set override.  When ``None`` (default), uses the
         module-level admitted set (set by :func:`set_admitted_ids`); if that
         is also ``None``, uses all 23 catalog entries.
+    allow_partial : bool
+        When ``True`` (default), families that exhaust the retry budget are
+        accepted with however many members were found (at least the seed).
+        A warning is logged.  When ``False``, exhaustion raises
+        ``RuntimeError``.  Default ``True``.
 
     Returns
     -------
@@ -906,6 +912,7 @@ def build_stratum_a_corpus(
         max_retries=max_retries,
         seed_value=seed_value,
         dedup_backend=dedup_backend,
+        allow_partial=allow_partial,
     )
 
 
@@ -919,6 +926,7 @@ def _stratum_a_factory(params: dict[str, Any]) -> HypergraphDataset:
         seed_value=params.get("seed_value", 0),
         dedup_backend=params.get("dedup_backend", "isalhg"),
         admitted_ids=admitted_ids,
+        allow_partial=bool(params.get("allow_partial", True)),
     )
 
 

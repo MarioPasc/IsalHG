@@ -40,23 +40,40 @@ loose_path_k5, tight_path_k5, tight_cycle_k5.
 ---
 **Closing note:** 2026-07-23. All AC met.
 
+**Coordinator-directed fix applied (same session):** `build_stratum_a_corpus` was missing
+`allow_partial` thread-through, causing a `RuntimeError` on the first k4/k5 family (family 7,
+`loose_path_k4`). Fixed: `allow_partial=True` default added to `build_stratum_a_corpus` and
+`_stratum_a_factory`; `build_stratum_a_seed_corpus` extended to return 4-tuple (added
+`coarse_class_strings`); `SeedMetrics` gains `realized_counts_per_family`,
+`realized_counts_per_coarse_class`, `a2a3_dropped_coarse_classes`; per-arity A2/A3 in
+`run_stratum_a_seed` now filters single-member families (logged, kept in G1/A1 geometry);
+`_cache_seed_metrics`/`_load_seed_metrics_cache` updated; 9 regression tests added in
+`TestGracefulBuildAndRealizedCounts` (all fail against pre-fix commit, all pass after fix).
+
+Realized member counts at default params (members_per_family=3, seed_value=0):
+- k=3 families (7): all reach 3 realized members
+- k=4 families (4): all realize 1 member (retry budget exhausted)
+- k=5 families (3): all realize 1 member
+Total: 28 items; 7 single-member families excluded from per-arity A2/A3 (kept in G1/A1).
+
 Files changed:
 - `src/isalhg/datasets/synthetic/known_design_catalog.py`: added `EXCLUDED_SYMMETRIC`
   (9 ids), `COARSE_CLASS_BY_ID` (23 ids), `KEPT_A_IDS` (14 ids), `coarse_class` field
   on `_CatalogEntry`, `exclude_symmetric` param on catalog accessors, `catalog_coarse_classes()`,
   `assert_single_arity_group()`, `_DataManifest` + `DATA_MANIFEST`, updated
   `build_stratum_a_corpus` default path to exclude symmetric families and pass
-  `coarse_class_labels` to `PlantedFamilyDataset`.
+  `coarse_class_labels` + `allow_partial=True` to `PlantedFamilyDataset`.
 - `src/isalhg/datasets/synthetic/planted_families.py`: added `allow_partial: bool = False`
   and `coarse_class_labels: list[str] | None = None` params; `allow_partial` logs+breaks
   instead of raising on retry exhaustion; `coarse_class` propagated into item extra.
 - `src/isalhg/datasets/synthetic/chung_lu.py`: fixed arity-cap bug — edges now filtered
   to `2 <= size <= k` (was `>= 2` only, allowing size up to 7 for k=3 inputs).
 - `experiments/article/analysis/sweep_multi_seed.py`: pruned `ADMITTED_A_IDS` from 17 to
-  14 families (removed `complete_k3_n5`, `complete_k4_n6`, `complete_k5_n6`); removed
-  `ADMITTED_A_IDS_ARITY3`; added `COARSE_CLASSES_BY_ARITY` dict; added `a2_per_arity`
-  and `a3_per_arity` fields to `SeedMetrics`; rewrote per-arity A2/A3 logic in
-  `run_stratum_a_seed`.
+  14 families; removed `ADMITTED_A_IDS_ARITY3`; added `COARSE_CLASSES_BY_ARITY`;
+  `build_stratum_a_seed_corpus` returns 4-tuple (added coarse_class_strings);
+  `SeedMetrics` gains realized-count + dropped-class fields; `run_stratum_a_seed`
+  computes realized counts and applies single-member family filter in per-arity A2/A3;
+  `_cache_seed_metrics`/`_load_seed_metrics_cache` handle new fields.
 - `tests/unit/datasets/test_stratum_a_pruning.py` (new): 21 unit tests for all AC-1..6
   + DATA_MANIFEST.
 - `tests/unit/datasets/test_chung_lu.py`: added `TestArityCapRegression` (7 tests).

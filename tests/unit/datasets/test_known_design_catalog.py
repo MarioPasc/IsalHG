@@ -43,7 +43,7 @@ pytestmark = pytest.mark.unit
 # Helpers
 # ---------------------------------------------------------------------------
 
-TOTAL_ENTRIES = 23  # sum of all catalog entries (update if catalog grows)
+TOTAL_ENTRIES = 26  # sum of all catalog entries (updated T-M7o: +3 arity-4/5 cycles)
 
 
 def _pair_coverage(H):  # type: ignore[no-untyped-def]

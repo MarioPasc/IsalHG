@@ -105,6 +105,16 @@ class PlantedFamilyDataset(HypergraphDataset):
         ``seeds`` is not ``None``.  Labels are stored in each item's
         ``extra["family_label"]``.  When ``None``, items carry no
         ``"family_label"`` key.  Default ``None``.
+    allow_partial : bool, optional
+        When ``True``, a family that exhausts its retry budget is accepted
+        with however many members were found (at least the seed, so at least
+        one member per family) instead of raising ``RuntimeError``.  A
+        warning is logged with the shortfall.  Default ``False``.
+    coarse_class_labels : list[str] | None, optional
+        Coarse structural class label per family (e.g. ``"design_k3"``).
+        When provided, ``len(coarse_class_labels)`` must equal the number
+        of families.  Stored in each item's ``extra["coarse_class"]``.
+        When ``None``, items carry no ``"coarse_class"`` key.  Default ``None``.
     """
 
     def __init__(
@@ -122,6 +132,8 @@ class PlantedFamilyDataset(HypergraphDataset):
         k: int = 3,
         n_edges: int = 5,
         family_labels: list[str] | None = None,
+        allow_partial: bool = False,
+        coarse_class_labels: list[str] | None = None,
     ) -> None:
         if members_per_family < 1:
             raise ValueError(f"members_per_family must be >= 1, got {members_per_family}")
@@ -135,6 +147,7 @@ class PlantedFamilyDataset(HypergraphDataset):
         self._max_retries = max_retries
         self._seed_value: int = int(seed_value)
         self._dedup_backend = dedup_backend
+        self._allow_partial = allow_partial
 
         # Auto-generation parameters (only used when seeds is None)
         self._n_families_default = n_families
@@ -158,6 +171,14 @@ class PlantedFamilyDataset(HypergraphDataset):
                 f" number of families ({len(self._seeds)})"
             )
         self._family_labels: list[str] | None = family_labels
+
+        # Validate and store coarse class labels.
+        if coarse_class_labels is not None and len(coarse_class_labels) != len(self._seeds):
+            raise ValueError(
+                f"coarse_class_labels length ({len(coarse_class_labels)}) must match"
+                f" number of families ({len(self._seeds)})"
+            )
+        self._coarse_class_labels: list[str] | None = coarse_class_labels
 
         self._items: list[DatasetItem] = self._build()
         self._metadata: DatasetMetadata = self._make_metadata()
@@ -265,6 +286,18 @@ class PlantedFamilyDataset(HypergraphDataset):
                     break
 
                 if not found:
+                    if self._allow_partial:
+                        logger.warning(
+                            "family %d: exhausted %d attempts for member %d; "
+                            "accepting partial family with %d/%d members "
+                            "(allow_partial=True)",
+                            fam_idx,
+                            self._max_retries,
+                            needed,
+                            len(family_hgs),
+                            self._members_per_family,
+                        )
+                        break
                     raise RuntimeError(
                         f"exhausted {self._max_retries} attempts generating"
                         f" member {needed} of family {fam_idx}"
@@ -282,6 +315,8 @@ class PlantedFamilyDataset(HypergraphDataset):
                 }
                 if self._family_labels is not None:
                     extra["family_label"] = self._family_labels[fam_idx]
+                if self._coarse_class_labels is not None:
+                    extra["coarse_class"] = self._coarse_class_labels[fam_idx]
                 items.append(
                     DatasetItem(
                         item_id=item_id,

@@ -1,7 +1,8 @@
 """Multi-seed sweep runner — T-M7d.
 
 Runs G1 + A1 (geometry table) + A2 (clustering) + A3 (kNN) + bits over:
-  - Stratum A: the 17 admitted known-design seeds (``known_design_catalog``)
+  - Stratum A: the 14 admitted known-design seeds (``known_design_catalog``,
+    pruned at T-M7m — 9 high-symmetry families excluded)
     via ``build_stratum_a_corpus(seed_value=s)`` for S independent seeds.
   - Stratum B: every admitted ER block from ``stratum_b_feasibility_envelope.json``
     (read-only at runtime; a later-admitted cell needs no code change).
@@ -75,9 +76,13 @@ import numpy as np
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Admitted Stratum A IDs (fixed after T-M7a feasibility pilot)
+# Admitted Stratum A IDs (pruned at T-M7m — 9 symmetric families excluded)
 # ---------------------------------------------------------------------------
 
+# 14 kept families: 7 arity-3, 4 arity-4, 3 arity-5.
+# Excluded (EXCLUDED_SYMMETRIC in known_design_catalog):
+#   ag24, pg23, pg24, sts13_0, sts13_1, sts15_0,
+#   complete_k3_n5, complete_k4_n6, complete_k5_n6
 ADMITTED_A_IDS: frozenset[str] = frozenset(
     [
         # arity 3
@@ -88,37 +93,25 @@ ADMITTED_A_IDS: frozenset[str] = frozenset(
         "tight_path_k3",
         "loose_cycle_k3",
         "tight_cycle_k3",
-        "complete_k3_n5",
         # arity 4
         "loose_path_k4",
         "tight_path_k4",
         "loose_cycle_k4",
         "tight_cycle_k4",
-        "complete_k4_n6",
         # arity 5
         "loose_path_k5",
         "tight_path_k5",
         "tight_cycle_k5",
-        "complete_k5_n6",
     ]
 )
 
-# Arity-3 fallback (always feasible for PlantedFamilyDataset member generation).
-# Arity-4/5 designs with m=3 hyperedges cannot produce non-isomorphic Qin-edit
-# perturbations within the standard retry budget: the edit space is too small.
-# run_stratum_a_seed falls back to this subset when the full set fails.
-ADMITTED_A_IDS_ARITY3: frozenset[str] = frozenset(
-    [
-        "sts7",
-        "sts9",
-        "gq22",
-        "loose_path_k3",
-        "tight_path_k3",
-        "loose_cycle_k3",
-        "tight_cycle_k3",
-        "complete_k3_n5",
-    ]
-)
+# Coarse structural classes per arity group (type × arity).
+# Used to report per-arity A2/A3 breakdowns without pooling d_I across k.
+COARSE_CLASSES_BY_ARITY: dict[int, list[str]] = {
+    3: ["design_k3", "path_k3", "cycle_k3"],
+    4: ["path_k4", "cycle_k4"],
+    5: ["path_k5", "cycle_k5"],
+}
 
 # ---------------------------------------------------------------------------
 # Seven representations
@@ -720,9 +713,13 @@ class SeedMetrics:
     seed: int
     n_corpus: int
     g1_a1: dict[str, Any] | None  # G1 + A1 geometry
-    a2: dict[str, Any] | None  # A2 clustering (Stratum A only)
-    a3: dict[int, float] | None  # A3 kNN AUC per k (Stratum A only)
+    a2: dict[str, Any] | None  # A2 clustering (Stratum A only, pooled across k)
+    a3: dict[int, float] | None  # A3 kNN AUC per k (Stratum A only, pooled across k)
     bits: dict[str, Any] | None  # bits (isalhg_levenshtein only)
+    # Per-arity A2/A3 (T-M7m): within-k sub-corpora only; d_I values are
+    # incomparable across arity groups, so A2/A3 must be reported per k.
+    a2_per_arity: dict[int, dict[str, Any] | None] = field(default_factory=dict)
+    a3_per_arity: dict[int, dict[int, float] | None] = field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -766,13 +763,17 @@ def run_stratum_a_seed(
     list[SeedMetrics]
         One per representation.
     """
+    from isalhg.datasets.synthetic.known_design_catalog import (
+        COARSE_CLASS_BY_ID,
+        assert_single_arity_group,
+    )
+
     cell_key = "stratum_a"
     cache_root = output_root / "d_matrix" / "stratum_a" / f"seed{seed}"
 
     # Build corpus once (reused across all representations).
     logger.info("Stratum A seed %d: building corpus...", seed)
     t0 = time.perf_counter()
-    used_ids = admitted_ids
     try:
         hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
             seed=seed,
@@ -782,32 +783,11 @@ def run_stratum_a_seed(
             max_retries=max_retries,
         )
     except Exception as exc:
-        # Arity-4/5 designs with m=3 hyperedges exhaust the retry budget because
-        # the Qin-edit space is too small to find non-isomorphic members.
-        # Fall back to the arity-3 subset which is always feasible.
-        logger.warning(
-            "Stratum A seed %d: full corpus failed (%s). "
-            "Arity-4/5 designs with m=3 edges have no viable Qin-edit perturbations. "
-            "Retrying with arity-3 subset (%d designs).",
-            seed,
-            exc,
-            len(ADMITTED_A_IDS_ARITY3),
-        )
-        used_ids = ADMITTED_A_IDS_ARITY3
-        try:
-            hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
-                seed=seed,
-                admitted_ids=ADMITTED_A_IDS_ARITY3,
-                members_per_family=members_per_family,
-                n_edits=n_edits,
-                max_retries=max_retries,
-            )
-        except Exception as exc2:
-            logger.error("Stratum A seed %d: arity-3 fallback also failed: %s", seed, exc2)
-            return []
+        logger.error("Stratum A seed %d: corpus build failed: %s", seed, exc)
+        return []
 
     n = len(hypergraphs)
-    n_families = len(used_ids)
+    n_families = len(admitted_ids)
     logger.info(
         "Stratum A seed %d: N=%d items, %d families, %.2fs",
         seed,
@@ -823,9 +803,54 @@ def run_stratum_a_seed(
         "n_families": n_families,
         "members_per_family": members_per_family,
         "n_edits": n_edits,
-        "admitted_ids": sorted(used_ids),
-        "fallback_to_arity3": used_ids is not admitted_ids,
+        "admitted_ids": sorted(admitted_ids),
     }
+
+    # Build per-arity index maps (for per-arity A2/A3 sub-corpora).
+    # family_label_strings aligns with labels and hypergraphs.
+    # Determine arity per hypergraph from the family label → catalog arity.
+    def _arity_of_family_label(fl: str) -> int | None:
+        """Return catalog arity for a family label string, or None if unknown."""
+        for iid, cc in COARSE_CLASS_BY_ID.items():
+            if iid in admitted_ids:
+                # Look up family label from the catalog (labels match catalog order).
+                pass
+        # Faster: parse the coarse class suffix.
+        # All coarse classes end in "_k{arity}" for kept families.
+        cc = COARSE_CLASS_BY_ID.get(
+            next((iid for iid in admitted_ids if iid == fl.lower()), ""), ""
+        )
+        if cc and cc[-2] == "k":
+            try:
+                return int(cc[-1])
+            except ValueError:
+                pass
+        return None
+
+    # Map: family_index → arity (from catalog).
+    # We know the items in label_strings correspond to catalog family labels.
+    # Build the arity map from the catalog constants.
+    # item_id → arity from _ALL_ENTRIES is accessible via COARSE_CLASS_BY_ID.
+    def _arity_from_coarse_class(cc: str) -> int | None:
+        if cc.endswith("_k3"):
+            return 3
+        if cc.endswith("_k4"):
+            return 4
+        if cc.endswith("_k5"):
+            return 5
+        return None
+
+    # For each hypergraph, determine its arity group from its edges.
+    # (All catalog families are uniform; take the unique edge size.)
+    def _arity_of_H(H: Any) -> int:
+        arities = {len(members) for _, members, _ in H.iter_edges()}
+        return min(arities) if arities else 0
+
+    # Group item indices by arity.
+    arity_indices: dict[int, list[int]] = {}
+    for idx, H in enumerate(hypergraphs):
+        k = _arity_of_H(H)
+        arity_indices.setdefault(k, []).append(idx)
 
     results: list[SeedMetrics] = []
 
@@ -850,8 +875,50 @@ def run_stratum_a_seed(
             continue
 
         g1_a1 = compute_g1_a1(D, cell_key, dist_name, max_cv_dims=max_cv_dims)
+
+        # Pooled A2/A3 across all k (retained for backward compatibility with
+        # aggregation code; reported as "mixed k" in the paper tables).
         a2 = compute_a2(D, labels, n_families, rng_seed=seed)
         a3 = compute_a3_fold_aucs(D, labels, n_families, rng_seed=seed)
+
+        # Per-arity A2/A3 (T-M7m): within-arity sub-corpora only.
+        # Guard: pooling guard is applied per sub-corpus below; the pooled
+        # matrix above is intentionally mixed-k (for comparison).
+        a2_per_arity: dict[int, dict[str, Any] | None] = {}
+        a3_per_arity: dict[int, dict[int, float] | None] = {}
+
+        for k_arity, idx_list in arity_indices.items():
+            if len(idx_list) < 2:
+                a2_per_arity[k_arity] = None
+                a3_per_arity[k_arity] = None
+                continue
+
+            # Validate: all items in this sub-corpus share one arity.
+            sub_hgs = [hypergraphs[i] for i in idx_list]
+            try:
+                assert_single_arity_group(sub_hgs)
+            except ValueError as exc:
+                logger.warning(
+                    "Stratum A seed %d, k=%d: pooling guard fired: %s", seed, k_arity, exc
+                )
+                a2_per_arity[k_arity] = None
+                a3_per_arity[k_arity] = None
+                continue
+
+            sub_D = D[np.ix_(idx_list, idx_list)]
+            sub_labels = [labels[i] for i in idx_list]
+            # Remap labels to 0-based within the sub-corpus.
+            unique_sub = sorted(set(sub_labels))
+            remap = {orig: new for new, orig in enumerate(unique_sub)}
+            sub_labels_remapped = [remap[l] for l in sub_labels]
+            sub_n_families = len(unique_sub)
+
+            a2_per_arity[k_arity] = compute_a2(
+                sub_D, sub_labels_remapped, sub_n_families, rng_seed=seed
+            )
+            a3_per_arity[k_arity] = compute_a3_fold_aucs(
+                sub_D, sub_labels_remapped, sub_n_families, rng_seed=seed
+            )
 
         # Bits only for IsalHG (others don't produce canonical strings).
         bits: dict[str, Any] | None = None
@@ -868,6 +935,8 @@ def run_stratum_a_seed(
             a2=a2,
             a3=a3,
             bits=bits,
+            a2_per_arity=a2_per_arity,
+            a3_per_arity=a3_per_arity,
         )
         results.append(sm)
         _cache_seed_metrics(sm, output_root)
@@ -1031,6 +1100,12 @@ def _cache_seed_metrics(sm: SeedMetrics, output_root: Path) -> None:
         "a2": sm.a2,
         "a3": {str(k): v for k, v in sm.a3.items()} if sm.a3 else None,
         "bits": sm.bits,
+        # Per-arity fields (T-M7m): int keys serialized as strings for JSON.
+        "a2_per_arity": {str(k): v for k, v in sm.a2_per_arity.items()},
+        "a3_per_arity": {
+            str(k): ({str(kk): vv for kk, vv in v.items()} if v is not None else None)
+            for k, v in sm.a3_per_arity.items()
+        },
     }
     _atomic_write_json(path, payload)
 
@@ -1048,6 +1123,18 @@ def _load_seed_metrics_cache(
         return None
     a3_raw = data.get("a3")
     a3 = {int(k): float(v) for k, v in a3_raw.items()} if a3_raw else None
+
+    # Deserialize per-arity fields (T-M7m); absent in caches written before T-M7m.
+    a2_per_arity_raw = data.get("a2_per_arity", {})
+    a2_per_arity: dict[int, dict[str, Any] | None] = {
+        int(k): v for k, v in a2_per_arity_raw.items()
+    }
+    a3_per_arity_raw = data.get("a3_per_arity", {})
+    a3_per_arity: dict[int, dict[int, float] | None] = {
+        int(k): ({int(kk): float(vv) for kk, vv in v.items()} if v is not None else None)
+        for k, v in a3_per_arity_raw.items()
+    }
+
     return SeedMetrics(
         cell_key=data["cell_key"],
         stratum=data["stratum"],
@@ -1058,6 +1145,8 @@ def _load_seed_metrics_cache(
         a2=data.get("a2"),
         a3=a3,
         bits=data.get("bits"),
+        a2_per_arity=a2_per_arity,
+        a3_per_arity=a3_per_arity,
     )
 
 

@@ -1,4 +1,4 @@
-"""Known-design seed catalog for Stratum A (T-M7a).
+"""Known-design seed catalog for Stratum A (T-M7a, pruned T-M7m).
 
 Exposes a curated set of named combinatorial designs and uniform hypergraph
 families as a registered :class:`HypergraphDataset`.  Every entry is a
@@ -6,39 +6,24 @@ mathematically defined structure (not a random sample), which makes the
 class labels interpretable and makes ARI/NMI against family labels a
 meaningful signal (``REVIEW/DATA.md`` §2A, Gap 3 fix).
 
-Families provided (arities 3–5, all connected):
+Article corpus (Stratum A, v2 — T-M7m pruning):
+  14 admitted families (KEPT_A_IDS), grouped into coarse classes by type × arity.
+  9 families are permanently excluded (EXCLUDED_SYMMETRIC): AG(2,4), PG(2,3),
+  PG(2,4), both STS(13) iso-classes, STS(15), and the three complete-uniform
+  hypergraphs.  Exclusion reason: automorphism groups too large for bounded
+  Qin-edit perturbation (≤ 300 retries exhaust without finding a non-isomorphic
+  member).  Raw constructors remain importable for scripts and tests.
 
-  Arity 3
-  -------
-  STS7        : Fano plane STS(7) = PG(2,2)       n=7
-  STS9        : Unique STS(9) = AG(2,3)            n=9
-  STS13-A     : First iso-class of STS(13)         n=13
-  STS13-B     : Second iso-class of STS(13)        n=13
-  STS15-A     : STS(15) iso-class 0 (out of 80)   n=15  [slow]
-  GQ22        : Generalised quadrangle GQ(2,2)     n=15
-  LoosePath3  : Loose 3-uniform path, length 4     n=9
-  TightPath3  : Tight 3-uniform path, length 4     n=6
-  LooseCycle3 : Loose 3-uniform cycle, length 4    n=8
-  TightCycle3 : Tight 3-uniform cycle, length 5    n=5
-  Complete3-5 : Complete 3-uniform K_5^(3)         n=5
+Coarse class scheme (type × arity, within-arity only — never pool d_I across k):
+  k=3: design_k3 {sts7, sts9, gq22}, path_k3 {loose_path_k3, tight_path_k3},
+        cycle_k3 {loose_cycle_k3, tight_cycle_k3}
+  k=4: path_k4 {loose_path_k4, tight_path_k4}, cycle_k4 {loose_cycle_k4, tight_cycle_k4}
+  k=5: path_k5 {loose_path_k5, tight_path_k5}, cycle_k5 {tight_cycle_k5}
 
-  Arity 4
-  -------
-  AG24        : Affine plane AG(2,4) over GF(4)    n=16
-  PG23        : Projective plane PG(2,3) = S(2,4,13) n=13
-  LoosePath4  : Loose 4-uniform path, length 3     n=10
-  TightPath4  : Tight 4-uniform path, length 3     n=6
-  LooseCycle4 : Loose 4-uniform cycle, length 4    n=12
-  TightCycle4 : Tight 4-uniform cycle, length 5    n=5
-  Complete4-6 : Complete 4-uniform K_6^(4)         n=6
-
-  Arity 5
-  -------
-  PG24        : PG(2,4) = S(2,5,21)               n=21  [likely gates out]
-  LoosePath5  : Loose 5-uniform path, length 3     n=13
-  TightPath5  : Tight 5-uniform path, length 3     n=7
-  TightCycle5 : Tight 5-uniform cycle, length 7    n=7
-  Complete5-6 : Complete 5-uniform K_6^(5)         n=6
+Synthetic vs real roles (DATA_MANIFEST):
+  Stratum A — known-design seeds + Qin-perturbation members (this module).
+  Stratum B — parametric ER/Chung-Lu sweep (envelope JSON, read-only).
+  Real anchor — HIC IMDB genre sub-corpus (censored secondary exhibit).
 
 All designs are constructed from first principles or delegated to the
 vendored STS catalog.  No randomness; deterministic across Python versions.
@@ -56,6 +41,7 @@ References
 from __future__ import annotations
 
 import itertools
+import logging
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
@@ -67,6 +53,68 @@ from isalhg.datasets.schemas import DatasetItem, DatasetMetadata, LabelVocabular
 from isalhg.datasets.synthetic.designs import fano_plane, gq_2_2_doily, sts_9
 from isalhg.datasets.synthetic.sts_catalog import steiner_triple_system
 from isalhg.types import DatasetName, Seed
+
+logger = logging.getLogger(__name__)
+
+# ---------------------------------------------------------------------------
+# Pruning constants (T-M7m)
+# ---------------------------------------------------------------------------
+
+# Nine families excluded from the Stratum A article corpus: feasibility-DNF
+# planes/large-Steiner systems and complete uniforms whose automorphism groups
+# are so large that Qin-edit perturbation exhausts the retry budget (≤ 300
+# attempts) without producing a non-isomorphic member.
+EXCLUDED_SYMMETRIC: frozenset[str] = frozenset(
+    {
+        "ag24",  # AG(2,4): 20 edges, large aut group
+        "pg23",  # PG(2,3): 13 edges, large aut group
+        "pg24",  # PG(2,4): 21 edges, feasibility-DNF
+        "sts13_0",  # STS(13) iso-class 0, n=13 slow
+        "sts13_1",  # STS(13) iso-class 1, n=13 slow
+        "sts15_0",  # STS(15) iso-class 0, n=15 slow
+        "complete_k3_n5",  # K_5^(3): exhausts retries (perturbation space trivial)
+        "complete_k4_n6",  # K_6^(4): exhausts retries
+        "complete_k5_n6",  # K_6^(5): exhausts retries
+    }
+)
+
+# Coarse structural class per catalog item (type × arity).
+# Kept families only; excluded families get "excluded_<k>" as a placeholder.
+# CRITICAL: coarse classes are WITHIN a fixed arity — never pool d_I across k.
+COARSE_CLASS_BY_ID: dict[str, str] = {
+    # Arity 3 — kept
+    "sts7": "design_k3",
+    "sts9": "design_k3",
+    "gq22": "design_k3",
+    "loose_path_k3": "path_k3",
+    "tight_path_k3": "path_k3",
+    "loose_cycle_k3": "cycle_k3",
+    "tight_cycle_k3": "cycle_k3",
+    # Arity 3 — excluded (kept importable)
+    "sts13_0": "excluded_k3",
+    "sts13_1": "excluded_k3",
+    "sts15_0": "excluded_k3",
+    "complete_k3_n5": "excluded_k3",
+    # Arity 4 — kept
+    "loose_path_k4": "path_k4",
+    "tight_path_k4": "path_k4",
+    "loose_cycle_k4": "cycle_k4",
+    "tight_cycle_k4": "cycle_k4",
+    # Arity 4 — excluded
+    "ag24": "excluded_k4",
+    "pg23": "excluded_k4",
+    "complete_k4_n6": "excluded_k4",
+    # Arity 5 — kept
+    "loose_path_k5": "path_k5",
+    "tight_path_k5": "path_k5",
+    "tight_cycle_k5": "cycle_k5",
+    # Arity 5 — excluded
+    "pg24": "excluded_k5",
+    "complete_k5_n6": "excluded_k5",
+}
+
+# The 14 kept families (article Stratum A corpus).
+KEPT_A_IDS: frozenset[str] = frozenset(COARSE_CLASS_BY_ID) - EXCLUDED_SYMMETRIC
 
 # ---------------------------------------------------------------------------
 # GF(4) arithmetic (for AG(2,4) and PG(2,4))
@@ -447,6 +495,7 @@ class _CatalogEntry:
     item_id: str
     family_label: str
     arity: int
+    coarse_class: str
 
 
 def _make_all_designs() -> list[tuple[_CatalogEntry, SparseHypergraph]]:
@@ -454,7 +503,8 @@ def _make_all_designs() -> list[tuple[_CatalogEntry, SparseHypergraph]]:
     entries: list[tuple[_CatalogEntry, SparseHypergraph]] = []
 
     def _add(item_id: str, family_label: str, arity: int, H: SparseHypergraph) -> None:
-        entries.append((_CatalogEntry(item_id, family_label, arity), H))
+        cc = COARSE_CLASS_BY_ID.get(item_id, f"unknown_k{arity}")
+        entries.append((_CatalogEntry(item_id, family_label, arity, cc), H))
 
     # --- Arity 3 ---
     _add("sts7", "STS7", 3, fano_plane())
@@ -558,6 +608,7 @@ def catalog_seeds(
     *,
     admitted_only: bool = False,
     arities: tuple[int, ...] | None = None,
+    exclude_symmetric: bool = False,
 ) -> list[SparseHypergraph]:
     """Return one seed hypergraph per admitted catalog entry.
 
@@ -570,19 +621,30 @@ def catalog_seeds(
         :func:`set_admitted_ids`).  Default ``False`` (all entries).
     arities : tuple[int, ...] | None
         When not ``None``, restrict to entries with matching uniform arity.
+    exclude_symmetric : bool
+        When ``True``, exclude families in ``EXCLUDED_SYMMETRIC`` (the nine
+        permanently pruned high-symmetry families).  Default ``False``.
 
     Returns
     -------
     list[SparseHypergraph]
         Seed hypergraphs in catalog order.
     """
-    return [H for _, H in _filtered_entries(admitted_only=admitted_only, arities=arities)]
+    return [
+        H
+        for _, H in _filtered_entries(
+            admitted_only=admitted_only,
+            arities=arities,
+            exclude_symmetric=exclude_symmetric,
+        )
+    ]
 
 
 def catalog_family_labels(
     *,
     admitted_only: bool = False,
     arities: tuple[int, ...] | None = None,
+    exclude_symmetric: bool = False,
 ) -> list[str]:
     """Return family labels matching :func:`catalog_seeds` order.
 
@@ -592,6 +654,8 @@ def catalog_family_labels(
         Same as in :func:`catalog_seeds`.
     arities : tuple[int, ...] | None
         Same as in :func:`catalog_seeds`.
+    exclude_symmetric : bool
+        Same as in :func:`catalog_seeds`.
 
     Returns
     -------
@@ -599,7 +663,12 @@ def catalog_family_labels(
         Family label strings in catalog order.
     """
     return [
-        e.family_label for e, _ in _filtered_entries(admitted_only=admitted_only, arities=arities)
+        e.family_label
+        for e, _ in _filtered_entries(
+            admitted_only=admitted_only,
+            arities=arities,
+            exclude_symmetric=exclude_symmetric,
+        )
     ]
 
 
@@ -607,21 +676,49 @@ def catalog_item_ids(
     *,
     admitted_only: bool = False,
     arities: tuple[int, ...] | None = None,
+    exclude_symmetric: bool = False,
 ) -> list[str]:
     """Return item_ids matching :func:`catalog_seeds` order."""
-    return [e.item_id for e, _ in _filtered_entries(admitted_only=admitted_only, arities=arities)]
+    return [
+        e.item_id
+        for e, _ in _filtered_entries(
+            admitted_only=admitted_only,
+            arities=arities,
+            exclude_symmetric=exclude_symmetric,
+        )
+    ]
+
+
+def catalog_coarse_classes(
+    *,
+    admitted_only: bool = False,
+    arities: tuple[int, ...] | None = None,
+    exclude_symmetric: bool = False,
+) -> list[str]:
+    """Return coarse class labels matching :func:`catalog_seeds` order."""
+    return [
+        e.coarse_class
+        for e, _ in _filtered_entries(
+            admitted_only=admitted_only,
+            arities=arities,
+            exclude_symmetric=exclude_symmetric,
+        )
+    ]
 
 
 def _filtered_entries(
     *,
     admitted_only: bool,
     arities: tuple[int, ...] | None,
+    exclude_symmetric: bool = False,
 ) -> list[tuple[_CatalogEntry, SparseHypergraph]]:
     result: list[tuple[_CatalogEntry, SparseHypergraph]] = []
     for entry, H in _ALL_ENTRIES:
         if admitted_only and _ADMITTED_IDS is not None and entry.item_id not in _ADMITTED_IDS:
             continue
         if arities is not None and entry.arity not in arities:
+            continue
+        if exclude_symmetric and entry.item_id in EXCLUDED_SYMMETRIC:
             continue
         result.append((entry, H))
     return result
@@ -642,6 +739,7 @@ class KnownDesignCatalog(HypergraphDataset):
       non-isomorphic within their arity stratum by construction).
     - ``extra["family_label"]``: the family name string.
     - ``extra["arity"]``: uniform arity.
+    - ``extra["coarse_class"]``: type × arity label (e.g. ``"design_k3"``).
 
     Parameters
     ----------
@@ -650,6 +748,9 @@ class KnownDesignCatalog(HypergraphDataset):
         :func:`set_admitted_ids`.  Default ``False``.
     arities : tuple[int, ...] | None
         When not ``None``, include only designs of those arities.
+    exclude_symmetric : bool
+        When ``True``, exclude the nine permanently pruned high-symmetry
+        families (``EXCLUDED_SYMMETRIC``).  Default ``False``.
     """
 
     def __init__(
@@ -657,10 +758,16 @@ class KnownDesignCatalog(HypergraphDataset):
         *,
         admitted_only: bool = False,
         arities: tuple[int, ...] | None = None,
+        exclude_symmetric: bool = False,
     ) -> None:
         self._admitted_only = admitted_only
         self._arities = arities
-        self._entries = _filtered_entries(admitted_only=admitted_only, arities=arities)
+        self._exclude_symmetric = exclude_symmetric
+        self._entries = _filtered_entries(
+            admitted_only=admitted_only,
+            arities=arities,
+            exclude_symmetric=exclude_symmetric,
+        )
 
     @property
     def name(self) -> DatasetName:
@@ -704,6 +811,7 @@ class KnownDesignCatalog(HypergraphDataset):
                 extra={
                     "family_label": entry.family_label,
                     "arity": entry.arity,
+                    "coarse_class": entry.coarse_class,
                     "n_nodes": H.n_nodes,
                     "n_edges": H.n_edges,
                 },
@@ -774,15 +882,25 @@ def build_stratum_a_corpus(
 
     # Override admitted set only for this call if explicitly provided.
     if admitted_ids is not None:
-        seeds = [H for e, H in _ALL_ENTRIES if e.item_id in admitted_ids]
-        labels = [e.family_label for e, _ in _ALL_ENTRIES if e.item_id in admitted_ids]
+        filtered = [(e, H) for e, H in _ALL_ENTRIES if e.item_id in admitted_ids]
+        seeds = [H for _, H in filtered]
+        labels = [e.family_label for e, _ in filtered]
+        coarse_classes = [e.coarse_class for e, _ in filtered]
     else:
-        seeds = catalog_seeds(admitted_only=True)
-        labels = catalog_family_labels(admitted_only=True)
+        # Default path: the pruned 14-family corpus (exclude_symmetric=True).
+        # If set_admitted_ids() has been called, further restrict to that set.
+        _use_admitted = _ADMITTED_IDS is not None
+        entries = _filtered_entries(
+            admitted_only=_use_admitted, arities=None, exclude_symmetric=True
+        )
+        seeds = [H for _, H in entries]
+        labels = [e.family_label for e, _ in entries]
+        coarse_classes = [e.coarse_class for e, _ in entries]
 
     return PlantedFamilyDataset(
         seeds=seeds,
         family_labels=labels,
+        coarse_class_labels=coarse_classes,
         members_per_family=members_per_family,
         n_edits=n_edits,
         max_retries=max_retries,
@@ -805,3 +923,80 @@ def _stratum_a_factory(params: dict[str, Any]) -> HypergraphDataset:
 
 
 register_dataset("stratum_a_corpus", _stratum_a_factory)
+
+
+# ---------------------------------------------------------------------------
+# Per-arity pooling guard
+# ---------------------------------------------------------------------------
+
+
+def assert_single_arity_group(hypergraphs: list[SparseHypergraph]) -> None:
+    """Raise ``ValueError`` if the corpus spans more than one arity group.
+
+    ``d_I`` values are incomparable across arity groups (different k means
+    different alphabet sizes, different string lengths, incommensurable
+    distances).  Callers that run A2 (k-medoids) or A3 (kNN) on a pairwise
+    matrix must hold k fixed; this guard enforces that at corpus-build time.
+
+    Parameters
+    ----------
+    hypergraphs : list[SparseHypergraph]
+        The corpus to validate.  Uniform hypergraphs (all edges same size)
+        are the intended input.
+
+    Raises
+    ------
+    ValueError
+        When edges with two or more distinct sizes are found across the
+        corpus, meaning d_I across these objects is being pooled over
+        multiple k values.
+    """
+    if not hypergraphs:
+        return
+    arities: set[int] = set()
+    for H in hypergraphs:
+        for _, members, _ in H.iter_edges():
+            arities.add(len(members))
+    if len(arities) > 1:
+        raise ValueError(
+            f"Hypergraphs span multiple arity groups {sorted(arities)}. "
+            "d_I is incomparable across k; split into per-arity sub-corpora "
+            "before running A2/A3."
+        )
+
+
+# ---------------------------------------------------------------------------
+# Data manifest
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class _DataManifest:
+    """Enumerates the corpora the article uses.
+
+    Fields
+    ------
+    stratum_a_ids : frozenset[str]
+        The 14 kept known-design family ids (Stratum A corpus).
+    stratum_a_coarse_classes : dict[str, str]
+        Coarse structural class per kept family (type × arity).
+    stratum_b_envelope_path : str
+        Relative path to the Stratum B feasibility envelope JSON (read-only).
+    hic_real_corpora : tuple[str, ...]
+        HIC dataset identifiers used in the real-anchor exhibit.
+    """
+
+    stratum_a_ids: frozenset[str]
+    stratum_a_coarse_classes: dict[str, str]
+    stratum_b_envelope_path: str
+    hic_real_corpora: tuple[str, ...]
+
+
+DATA_MANIFEST = _DataManifest(
+    stratum_a_ids=KEPT_A_IDS,
+    stratum_a_coarse_classes={
+        item_id: cc for item_id, cc in COARSE_CLASS_BY_ID.items() if item_id in KEPT_A_IDS
+    },
+    stratum_b_envelope_path="experiments/article/stratum_b_feasibility_envelope.json",
+    hic_real_corpora=("imdb_genre",),
+)

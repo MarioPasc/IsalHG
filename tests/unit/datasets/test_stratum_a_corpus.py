@@ -35,7 +35,7 @@ _FAST_ADMITTED = frozenset(
     {
         "sts7",
         "tight_cycle_k3",
-        "complete_k3_n5",
+        "loose_path_k3",  # complete_k3_n5 removed (T-M7m: now in EXCLUDED_SYMMETRIC)
     }
 )
 _FAST_PENDING = frozenset(

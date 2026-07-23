@@ -244,13 +244,13 @@ class ChungLuHypergraphs(HypergraphDataset):
                 warnings.simplefilter("ignore")
                 xgi_H = xgi.chung_lu_hypergraph(k1, k2, seed=effective_seed)  # type: ignore[no-untyped-call]
 
-            # Remove degenerate hyperedges (size < 2); the Chung-Lu model is
-            # probabilistic and can produce singletons which SparseHypergraph
-            # forbids.
+            # Remove degenerate hyperedges: size < 2 (SparseHypergraph forbids
+            # singletons) and size > k (the Chung-Lu bipartite model is
+            # probabilistic and can produce edges beyond the arity cap).
             valid_edges = [
                 list(xgi_H.edges.members(eid))
                 for eid in xgi_H.edges
-                if len(xgi_H.edges.members(eid)) >= 2
+                if 2 <= len(xgi_H.edges.members(eid)) <= self._k
             ]
             xgi_H_clean = xgi.Hypergraph(valid_edges)  # type: ignore[no-untyped-call]
             # Restore all n node IDs: filtering edges may drop isolated nodes

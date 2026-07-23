@@ -12,9 +12,11 @@
   },
   "summary": {
     "n_locally_measured_blocks": 22,
-    "n_locally_admitted": 6,
-    "n_pending_cluster_measurement": 19,
-    "n_not_implemented": 0
+    "n_locally_admitted": 10,
+    "n_pending_cluster_measurement": 12,
+    "n_not_implemented": 0,
+    "n_cluster_admitted": 4,
+    "n_cluster_excluded": 3
   },
   "findings": {
     "k3_n8_16": "LOCALLY_ADMITTED: all 6 (n x density) blocks at k=3, n in {8,16} are within budget (p90 <= 10.9s). Final paper-citable admission.",
@@ -42,103 +44,60 @@
     "er_uniform_k3_n8_rho4",
     "er_uniform_k3_n16_rho1",
     "er_uniform_k3_n16_rho2",
-    "er_uniform_k3_n16_rho4"
+    "er_uniform_k3_n16_rho4",
+    "er_uniform_k3_n24_rho1",
+    "er_uniform_k3_n24_rho2",
+    "er_uniform_k5_n8_rho1",
+    "er_uniform_k5_n8_rho2"
   ],
   "pending_cluster": [
     {
-      "block_key": "er_uniform_k3_n24_rho1",
-      "reason": "pending_cluster_pilot:k=3_n=24_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
-      "block_key": "er_uniform_k3_n24_rho2",
-      "reason": "pending_cluster_pilot:k=3_n=24_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
-      "block_key": "er_uniform_k3_n24_rho4",
-      "reason": "pending_cluster_pilot:k=3_n=24_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
-      "block_key": "er_uniform_k3_n32_rho1",
-      "reason": "pending_cluster_pilot:k=3_n=32_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
-      "block_key": "er_uniform_k3_n32_rho2",
-      "reason": "pending_cluster_pilot:k=3_n=32_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
       "block_key": "er_uniform_k3_n32_rho4",
-      "reason": "pending_cluster_pilot:k=3_n=32_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=32_rho=4_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n48_rho1",
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=1_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n48_rho2",
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=2_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n48_rho4",
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=48_rho=4_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n64_rho1",
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=1_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n64_rho2",
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=2_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k3_n64_rho4",
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
-    },
-    {
-      "block_key": "er_uniform_k5_n8_rho1",
-      "reason": "pending_cluster_pilot:k=5_n=8_rho=1_provisional_single_sample_p50=3605ms",
-      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
-    },
-    {
-      "block_key": "er_uniform_k5_n8_rho2",
-      "reason": "pending_cluster_pilot:k=5_n=8_rho=2_provisional_single_sample_p50=7410ms",
-      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+      "reason": "pending_cluster_pilot:k=3_n=64_rho=4_local_timeout_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k5_n16_rho1",
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=1_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=1_not_locally_measured_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k5_n16_rho2",
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=2_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=2_not_locally_measured_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k5_n16_rho4",
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=4_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "pending_cluster_pilot:k=5_n=16_rho=4_not_locally_measured_cluster_pilot_required"
     },
     {
       "block_key": "er_uniform_k7_n8_rho1",
-      "reason": "pending_cluster_pilot:k=7_n=8_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
-      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+      "reason": "pending_cluster_pilot:k=7_n=8_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required"
     },
     {
       "block_key": "er_uniform_k10_n16_rho1",
-      "reason": "pending_cluster_pilot:k=10_n=16_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
-      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+      "reason": "pending_cluster_pilot:k=10_n=16_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required"
     }
   ],
   "block_results": [
@@ -242,10 +201,49 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
-      "admitted": false,
+      "local_status": "admitted",
+      "admitted": true,
       "reason": "pending_cluster_pilot:k=3_n=24_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_p50_ms": 1740.89,
+      "cluster_p90_ms": 4269.08,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 30,
+      "cluster_n_timeout": 0,
+      "cluster_times_ms": [
+        6941.07,
+        2420.06,
+        1151.92,
+        1524.24,
+        2313.52,
+        1161.34,
+        1609.64,
+        1591.95,
+        1041.14,
+        1046.91,
+        2994.42,
+        1244.65,
+        3333.51,
+        863.16,
+        1586.06,
+        3548.05,
+        806.25,
+        3704.07,
+        6265.65,
+        2167.52,
+        4070.29,
+        1573.56,
+        4269.08,
+        2663.32,
+        1656.11,
+        1791.29,
+        3338.26,
+        2910.36,
+        1538.59,
+        1690.49
+      ],
+      "cluster_status": "admitted",
+      "cluster_reason": ""
     },
     {
       "block_key": "er_uniform_k3_n24_rho2",
@@ -257,10 +255,49 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
-      "admitted": false,
+      "local_status": "admitted",
+      "admitted": true,
       "reason": "pending_cluster_pilot:k=3_n=24_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_p50_ms": 4216.86,
+      "cluster_p90_ms": 9915.47,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 30,
+      "cluster_n_timeout": 0,
+      "cluster_times_ms": [
+        5535.66,
+        5155.63,
+        8034.83,
+        3704.31,
+        3450.7,
+        7308.64,
+        5297.67,
+        14333.84,
+        6758.85,
+        7658.79,
+        9915.47,
+        3634.73,
+        1916.28,
+        3358.65,
+        2107.59,
+        2656.83,
+        6294.86,
+        2800.58,
+        4085.97,
+        3590.45,
+        1803.88,
+        33415.82,
+        2808.91,
+        3363.34,
+        6892.74,
+        1668.2,
+        4347.75,
+        7870.05,
+        5534.64,
+        2557.73
+      ],
+      "cluster_status": "admitted",
+      "cluster_reason": ""
     },
     {
       "block_key": "er_uniform_k3_n24_rho4",
@@ -272,10 +309,46 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
       "reason": "pending_cluster_pilot:k=3_n=24_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_p50_ms": 42131.86,
+      "cluster_p90_ms": 164790.37,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 27,
+      "cluster_n_timeout": 3,
+      "cluster_times_ms": [
+        28335.01,
+        37716.99,
+        21122.62,
+        19006.09,
+        39251.4,
+        22593.41,
+        56744.29,
+        72795.97,
+        8220.14,
+        72153.56,
+        10444.53,
+        24260.7,
+        56381.98,
+        191009.11,
+        131844.66,
+        231262.71,
+        62245.42,
+        7615.4,
+        155440.28,
+        26271.16,
+        42131.86,
+        31707.04,
+        60382.93,
+        47601.98,
+        164790.37,
+        66132.88,
+        21927.59
+      ],
+      "cluster_status": "cluster_excluded",
+      "cluster_reason": "timeout (3/30 instances exceeded 300s)"
     },
     {
       "block_key": "er_uniform_k3_n32_rho1",
@@ -287,10 +360,49 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
       "reason": "pending_cluster_pilot:k=3_n=32_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_p50_ms": 34293.38,
+      "cluster_p90_ms": 146150.89,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 30,
+      "cluster_n_timeout": 0,
+      "cluster_times_ms": [
+        251068.96,
+        38113.47,
+        18909.66,
+        20584.39,
+        41409.22,
+        17844.24,
+        23122.53,
+        28123.62,
+        26729.7,
+        13314.92,
+        229656.69,
+        96819.36,
+        56765.63,
+        23712.11,
+        146150.89,
+        13954.62,
+        47314.66,
+        45020.73,
+        76357.04,
+        25183.48,
+        26487.18,
+        58760.16,
+        73496.44,
+        10167.57,
+        35804.25,
+        22741.79,
+        56900.69,
+        22861.83,
+        47897.19,
+        32782.5
+      ],
+      "cluster_status": "cluster_excluded",
+      "cluster_reason": "p90=146.2s exceeds budget=30s"
     },
     {
       "block_key": "er_uniform_k3_n32_rho2",
@@ -302,10 +414,43 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
       "reason": "pending_cluster_pilot:k=3_n=32_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_p50_ms": 97265.12,
+      "cluster_p90_ms": 188851.01,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 24,
+      "cluster_n_timeout": 6,
+      "cluster_times_ms": [
+        79119.74,
+        80989.03,
+        98855.09,
+        85121.71,
+        52821.08,
+        188851.01,
+        294808.79,
+        96812.25,
+        45443.67,
+        81711.44,
+        110928.64,
+        82280.7,
+        115299.71,
+        118405.26,
+        63170.29,
+        69990.76,
+        97718.0,
+        95952.35,
+        114362.29,
+        101803.97,
+        272640.71,
+        79218.78,
+        149261.34,
+        159270.01
+      ],
+      "cluster_status": "cluster_excluded",
+      "cluster_reason": "timeout (6/30 instances exceeded 300s)"
     },
     {
       "block_key": "er_uniform_k3_n32_rho4",
@@ -422,10 +567,49 @@
       "n_timeout_local": 0,
       "p50_ms": 3605.1,
       "p90_ms": 3605.1,
-      "local_status": "pending_cluster",
-      "admitted": false,
+      "local_status": "admitted",
+      "admitted": true,
       "reason": "pending_cluster_pilot:k=5_n=8_rho=1_provisional_single_sample_p50=3605ms",
-      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso",
+      "cluster_p50_ms": 3297.12,
+      "cluster_p90_ms": 5386.89,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 30,
+      "cluster_n_timeout": 0,
+      "cluster_times_ms": [
+        4235.21,
+        1223.59,
+        4449.64,
+        5644.08,
+        1712.53,
+        4182.61,
+        4281.86,
+        4162.89,
+        1952.45,
+        5059.77,
+        5109.77,
+        4013.19,
+        4487.0,
+        2315.29,
+        1218.28,
+        5325.09,
+        1494.47,
+        2602.9,
+        2823.21,
+        4349.52,
+        1436.85,
+        3420.3,
+        7021.43,
+        2583.38,
+        2310.65,
+        709.61,
+        2300.4,
+        3173.94,
+        5386.89,
+        2176.08
+      ],
+      "cluster_status": "admitted",
+      "cluster_reason": ""
     },
     {
       "block_key": "er_uniform_k5_n8_rho2",
@@ -437,10 +621,49 @@
       "n_timeout_local": 0,
       "p50_ms": 7410.0,
       "p90_ms": 7410.0,
-      "local_status": "pending_cluster",
-      "admitted": false,
+      "local_status": "admitted",
+      "admitted": true,
       "reason": "pending_cluster_pilot:k=5_n=8_rho=2_provisional_single_sample_p50=7410ms",
-      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso"
+      "note": "single_sample_p90_provisional_needs_full_30instance_pilot_on_Picasso",
+      "cluster_p50_ms": 8946.46,
+      "cluster_p90_ms": 12795.74,
+      "cluster_n_pilot": 30,
+      "cluster_n_ok": 30,
+      "cluster_n_timeout": 0,
+      "cluster_times_ms": [
+        7628.49,
+        13206.71,
+        3725.46,
+        6002.64,
+        4743.71,
+        5820.41,
+        5321.59,
+        7939.44,
+        9416.92,
+        12047.76,
+        18651.56,
+        9443.41,
+        4262.93,
+        10038.89,
+        12795.74,
+        8650.3,
+        10363.83,
+        3685.96,
+        10145.43,
+        9242.62,
+        11523.96,
+        6750.7,
+        6372.26,
+        6148.85,
+        9716.07,
+        3306.96,
+        10791.03,
+        9572.09,
+        7583.72,
+        9282.86
+      ],
+      "cluster_status": "admitted",
+      "cluster_reason": ""
     },
     {
       "block_key": "er_uniform_k5_n16_rho1",
@@ -718,5 +941,19 @@
         "pending_cluster"
       ]
     }
-  }
+  },
+  "cluster_excluded": [
+    {
+      "block_key": "er_uniform_k3_n24_rho4",
+      "reason": "timeout (3/30 instances exceeded 300s)"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho1",
+      "reason": "p90=146.2s exceeds budget=30s"
+    },
+    {
+      "block_key": "er_uniform_k3_n32_rho2",
+      "reason": "timeout (6/30 instances exceeded 300s)"
+    }
+  ]
 }

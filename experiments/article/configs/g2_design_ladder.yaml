@@ -10,7 +10,7 @@
 #
 # Analysis: experiments.article.analysis.g2 ladder-response (budget-Shepard)
 
-output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/g2_design_ladder
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7q/g2_design_ladder
 
 cells:
   # ── arity-3 designs ──────────────────────────────────────────────────────
@@ -50,43 +50,9 @@ cells:
       max_t: 10
       n_ladders: 4
 
-  - type: design_ladder
-    dataset: ""
-    seed: 42
-    label: complete_k3_n5_s0
-    dataset_params:
-      item_id: complete_k3_n5
-      max_t: 10
-      n_ladders: 4
-
-  - type: design_ladder
-    dataset: ""
-    seed: 43
-    label: complete_k3_n5_s1
-    dataset_params:
-      item_id: complete_k3_n5
-      max_t: 10
-      n_ladders: 4
-
   # ── arity-4 designs ──────────────────────────────────────────────────────
-  - type: design_ladder
-    dataset: ""
-    seed: 42
-    label: complete_k4_n6_s0
-    dataset_params:
-      item_id: complete_k4_n6
-      max_t: 10
-      n_ladders: 4
-
-  - type: design_ladder
-    dataset: ""
-    seed: 43
-    label: complete_k4_n6_s1
-    dataset_params:
-      item_id: complete_k4_n6
-      max_t: 10
-      n_ladders: 4
-
+  # (T-M7q: complete_k3_n5/complete_k4_n6/complete_k5_n6 dropped (T-M7m prune);
+  #  tight_cycle_k4_n8/n10 and tight_cycle_k5_n8 added (T-M7o additions))
   - type: design_ladder
     dataset: ""
     seed: 42
@@ -105,25 +71,43 @@ cells:
       max_t: 10
       n_ladders: 4
 
-  # ── arity-5 designs ──────────────────────────────────────────────────────
   - type: design_ladder
     dataset: ""
     seed: 42
-    label: complete_k5_n6_s0
+    label: tight_cycle_k4_n8_s0
     dataset_params:
-      item_id: complete_k5_n6
+      item_id: tight_cycle_k4_n8
       max_t: 10
       n_ladders: 4
 
   - type: design_ladder
     dataset: ""
     seed: 43
-    label: complete_k5_n6_s1
+    label: tight_cycle_k4_n8_s1
     dataset_params:
-      item_id: complete_k5_n6
+      item_id: tight_cycle_k4_n8
       max_t: 10
       n_ladders: 4
 
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k4_n10_s0
+    dataset_params:
+      item_id: tight_cycle_k4_n10
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: tight_cycle_k4_n10_s1
+    dataset_params:
+      item_id: tight_cycle_k4_n10
+      max_t: 10
+      n_ladders: 4
+
+  # ── arity-5 designs ──────────────────────────────────────────────────────
   - type: design_ladder
     dataset: ""
     seed: 42
@@ -139,5 +123,23 @@ cells:
     label: tight_cycle_k5_s1
     dataset_params:
       item_id: tight_cycle_k5
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k5_n8_s0
+    dataset_params:
+      item_id: tight_cycle_k5_n8
+      max_t: 10
+      n_ladders: 4
+
+  - type: design_ladder
+    dataset: ""
+    seed: 43
+    label: tight_cycle_k5_n8_s1
+    dataset_params:
+      item_id: tight_cycle_k5_n8
       max_t: 10
       n_ladders: 4

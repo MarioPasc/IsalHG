@@ -16,16 +16,31 @@ AC-H5. verify_ac4_per_arity passes when all three expected arities (3, 4, 5)
 AC-H6. verify_ac5_axis_coverage correctly distinguishes the three axes (n,
        density, arity), reports arity-axis shortfall without gating the pass
        on it, and fails when a cell stats file is missing.
+AC-H9. verify_multi_rep_wilcoxon_populated catches the per-task aggregation
+       bug: a CellStats with ≥2 representations but empty wilcoxon fails.
+AC-H10. verify_excluded_cells_no_isalhg_comparison catches any exclusion
+        policy violation: an excluded cell with a non-empty wilcoxon fails.
+AC-H11. verify_ac3_wilcoxon_coverage catches a missing ``reverse`` sub-dict
+        (forward-only entry) and a missing/wrong ``alternative`` direction label.
 
 Teeth (tests observed failing before fix / against wrong data):
 - test_ac2_fails_on_nan_ci: fails if NaN CIs are accepted as valid.
 - test_ac2_fails_on_empty_cis: fails if empty CI dict returns pass=True.
 - test_ac3_fails_on_missing_p_holm: fails if missing p_holm is accepted.
 - test_ac3_fails_on_empty_wilcoxon: fails if empty Wilcoxon returns pass=True.
+- test_ac3_fails_on_missing_reverse_direction: fails if a forward-only entry
+  (no ``reverse`` sub-dict) is accepted as complete — the T-M7t/coordinator
+  addition: the article must cite both directions.
+- test_ac3_fails_on_missing_alternative_label: fails if an unlabelled entry
+  (missing ``alternative`` field) is accepted — direction must be explicit.
 - test_ac4_fails_on_missing_arity: fails if arity 4 is absent.
 - test_ac4_fails_on_phantom_arity: fails if phantom arity 7 appears.
 - test_ac5_arity_axis_shortfall_does_not_block_pass: k∈{3,5} alone does NOT
   trigger pass=False (the arity_axis_note records the shortfall).
+- test_multi_rep_wilcoxon_populated_fails_on_empty_wilcoxon: fails if a file
+  with ≥2 reps and empty wilcoxon is accepted as valid — the T-M7t regression.
+- test_excluded_cell_no_isalhg_comparison_fails_when_wilcoxon_nonempty: fails
+  if a wilcoxon entry is emitted for an excluded (timeout) cell.
 """
 
 from __future__ import annotations
@@ -52,6 +67,8 @@ from scripts.harvest_T_M7s import (
     verify_ac3_wilcoxon_coverage,
     verify_ac4_per_arity,
     verify_ac5_axis_coverage,
+    verify_excluded_cells_no_isalhg_comparison,
+    verify_multi_rep_wilcoxon_populated,
 )
 
 # ---------------------------------------------------------------------------
@@ -264,8 +281,20 @@ def test_ac2_fails_on_missing_ci_keys() -> None:
 
 
 def _make_wilcoxon_entry(
-    dist: str, metric: str, *, p_holm: float | None = 0.03, effect_size: float | None = 0.4
+    dist: str,
+    metric: str,
+    *,
+    p_holm: float | None = 0.03,
+    effect_size: float | None = 0.4,
+    include_alternative: bool = True,
+    include_reverse: bool = True,
 ) -> tuple[str, dict[str, Any]]:
+    """Build a wilcoxon entry for testing.
+
+    By default produces a fully-specified entry (both directions labelled).
+    Set ``include_alternative=False`` or ``include_reverse=False`` to produce
+    incomplete entries for TOOTH tests.
+    """
     row: dict[str, Any] = {
         "repr": dist,
         "metric": metric,
@@ -276,11 +305,22 @@ def _make_wilcoxon_entry(
         row["p_holm"] = p_holm
     if effect_size is not None:
         row["effect_size"] = effect_size
+    if include_alternative:
+        row["alternative"] = "isalhg_greater"
+    if include_reverse:
+        row["reverse"] = {
+            "alternative": "competitor_greater",
+            "p_holm": 1.0 - (p_holm or 0.0),
+            "effect_size": -(effect_size or 0.0),
+            "median_diff": -0.1,
+            "n_pairs": 27,
+            "family_size": 60,
+        }
     return f"{dist}::{metric}", row
 
 
 def test_ac3_passes_on_complete_wilcoxon() -> None:
-    """All entries have p_holm and effect_size → pass=True."""
+    """All entries have p_holm, effect_size, alternative, and reverse → pass=True."""
     cs = _FakeCellStats()
     cs.wilcoxon = dict(
         [
@@ -291,6 +331,8 @@ def test_ac3_passes_on_complete_wilcoxon() -> None:
     result = verify_ac3_wilcoxon_coverage(cs)
     assert result["pass"] is True
     assert result["n_complete"] == 2
+    assert result["missing_reverse"] == []
+    assert result["mislabelled"] == []
 
 
 def test_ac3_fails_on_missing_p_holm() -> None:
@@ -656,3 +698,219 @@ def test_compute_decision_clean_all_pass() -> None:
     )
     assert all_pass is True
     assert shortfalls == []
+
+
+# ---------------------------------------------------------------------------
+# AC-H9 — verify_multi_rep_wilcoxon_populated (T-M7t regression)
+# ---------------------------------------------------------------------------
+
+
+def _ci_row(repr_name: str, metric: str = "g1_a1::nu") -> dict[str, Any]:
+    """Minimal CIs row for one (repr, metric) pair."""
+    return {
+        "repr": repr_name,
+        "metric": metric,
+        "mean": 0.1,
+        "n_valid": 27,
+        "ci_lower": 0.08,
+        "ci_upper": 0.12,
+    }
+
+
+def test_multi_rep_wilcoxon_populated_fails_on_empty_wilcoxon() -> None:
+    """CellStats with ≥2 representations but empty wilcoxon → pass=False — TOOTH.
+
+    This is the pre-fix state produced by the S=27 SLURM array: each task
+    processed one representation at a time, so ``aggregate_cell_stats`` never
+    had both PRIMARY_REPR and a competitor in memory, and the Wilcoxon/Holm
+    block never fired.  The on-disk stats files had ``cis`` populated from one
+    dist but ``wilcoxon: {}``.  This test fails against that pre-fix state.
+    """
+    pre_fix_state = _FakeCellStats(
+        cell_key="stratum_a",
+        cis={
+            "isalhg_levenshtein::g1_a1::nu": _ci_row("isalhg_levenshtein"),
+            "hypergraph_wl_l1::g1_a1::nu": _ci_row("hypergraph_wl_l1"),
+        },
+        wilcoxon={},
+    )
+    result = verify_multi_rep_wilcoxon_populated(pre_fix_state)
+    assert result["pass"] is False, (
+        "≥2 representations with empty wilcoxon must fail; "
+        "this is exactly the pipeline bug T-M7t was filed to fix"
+    )
+    assert result["wilcoxon_empty"] is True
+    assert result["n_reps"] == 2
+
+
+def test_multi_rep_wilcoxon_populated_passes_when_wilcoxon_present() -> None:
+    """CellStats with ≥2 representations AND non-empty wilcoxon → pass=True."""
+    fixed_state = _FakeCellStats(
+        cell_key="stratum_a",
+        cis={
+            "isalhg_levenshtein::g1_a1::nu": _ci_row("isalhg_levenshtein"),
+            "hypergraph_wl_l1::g1_a1::nu": _ci_row("hypergraph_wl_l1"),
+        },
+        wilcoxon={
+            "hypergraph_wl_l1::g1_a1::nu": {
+                "repr": "hypergraph_wl_l1",
+                "metric": "g1_a1::nu",
+                "p_holm": 0.03,
+                "effect_size": 0.4,
+                "median_diff": 0.05,
+                "n_pairs": 27,
+            }
+        },
+    )
+    result = verify_multi_rep_wilcoxon_populated(fixed_state)
+    assert result["pass"] is True
+    assert result["wilcoxon_empty"] is False
+
+
+def test_multi_rep_wilcoxon_populated_passes_single_rep() -> None:
+    """Single-representation CellStats with empty wilcoxon is not a bug."""
+    single_rep = _FakeCellStats(
+        cell_key="stratum_a",
+        cis={"isalhg_levenshtein::g1_a1::nu": _ci_row("isalhg_levenshtein")},
+        wilcoxon={},
+    )
+    result = verify_multi_rep_wilcoxon_populated(single_rep)
+    # One rep → wilcoxon legitimately empty (no competitor to pair against).
+    assert result["pass"] is True
+    assert result["n_reps"] == 1
+
+
+# ---------------------------------------------------------------------------
+# AC-H10 — verify_excluded_cells_no_isalhg_comparison (T-M7t regression)
+# ---------------------------------------------------------------------------
+
+
+def test_excluded_cell_no_isalhg_comparison_fails_when_wilcoxon_nonempty() -> None:
+    """Excluded cell with non-empty wilcoxon → violations detected — TOOTH.
+
+    The three Stratum B cells where isalhg_levenshtein timed out must carry no
+    wilcoxon entries.  If PRIMARY_REPR were accidentally re-included in their
+    dist_names, the aggregate would emit entries from partial (< 27 seeds) data,
+    violating the whole-cell exclusion policy.  This test fails against that
+    scenario.
+    """
+    excluded = {"er_uniform_k3_n16_rho4"}
+    bug_state: dict[str, Any] = {
+        "er_uniform_k3_n16_rho4": _FakeCellStats(
+            cell_key="er_uniform_k3_n16_rho4",
+            wilcoxon={
+                "hypergraph_wl_l1::g1_a1::nu": {
+                    "repr": "hypergraph_wl_l1",
+                    "metric": "g1_a1::nu",
+                    "p_holm": 0.04,
+                    "effect_size": 0.3,
+                    "median_diff": 0.1,
+                    "n_pairs": 18,
+                }
+            },
+        )
+    }
+    result = verify_excluded_cells_no_isalhg_comparison(bug_state, excluded)
+    assert result["pass"] is False, (
+        "A wilcoxon entry for an excluded (timeout) cell must be flagged; "
+        "partial seed data (18/27 seeds) must not be used"
+    )
+    assert "er_uniform_k3_n16_rho4" in result["violations"]
+
+
+def test_excluded_cell_no_isalhg_comparison_passes_when_wilcoxon_empty() -> None:
+    """Excluded cell with empty wilcoxon → no violations (correct exclusion)."""
+    excluded = {"er_uniform_k3_n16_rho4"}
+    correct_state: dict[str, Any] = {
+        "er_uniform_k3_n16_rho4": _FakeCellStats(
+            cell_key="er_uniform_k3_n16_rho4",
+            cis={
+                "hypergraph_wl_l1::g1_a1::nu": _ci_row("hypergraph_wl_l1"),
+            },
+            wilcoxon={},
+        )
+    }
+    result = verify_excluded_cells_no_isalhg_comparison(correct_state, excluded)
+    assert result["pass"] is True
+    assert result["violations"] == []
+
+
+def test_excluded_cell_no_isalhg_comparison_non_excluded_cell_ignored() -> None:
+    """Non-excluded cells with wilcoxon entries are not flagged."""
+    excluded: set[str] = {"er_uniform_k3_n16_rho4"}
+    non_excluded_state: dict[str, Any] = {
+        "er_uniform_k3_n8_rho1": _FakeCellStats(
+            cell_key="er_uniform_k3_n8_rho1",
+            wilcoxon={
+                "hypergraph_wl_l1::g1_a1::nu": {
+                    "repr": "hypergraph_wl_l1",
+                    "metric": "g1_a1::nu",
+                    "p_holm": 0.01,
+                    "effect_size": 0.5,
+                    "median_diff": 0.2,
+                    "n_pairs": 27,
+                }
+            },
+        )
+    }
+    result = verify_excluded_cells_no_isalhg_comparison(non_excluded_state, excluded)
+    assert result["pass"] is True
+    assert result["violations"] == []
+
+
+# ---------------------------------------------------------------------------
+# AC-H11 — reverse direction labels (T-M7t coordinator addition)
+# ---------------------------------------------------------------------------
+
+
+def test_ac3_fails_on_missing_reverse_direction() -> None:
+    """Entry without a ``reverse`` sub-dict → missing_reverse non-empty, pass=False — TOOTH.
+
+    Before the coordinator addition, verify_ac3_wilcoxon_coverage only checked
+    for ``p_holm`` and ``effect_size`` in the forward direction.  A forward-only
+    entry was therefore accepted as complete.  But the article must cite BOTH
+    directions: a ``p_holm = 1.0`` from the forward test cannot be cited to say
+    the competitor beats IsalHG — that requires the reverse test's corrected p.
+    This test fails against the pre-addition verifier.
+    """
+    cs = _FakeCellStats()
+    cs.wilcoxon = dict(
+        [
+            _make_wilcoxon_entry(
+                "degree_seq_l1",
+                "a2::ari",
+                include_reverse=False,  # forward-only: pre-addition bug state
+            ),
+        ]
+    )
+    result = verify_ac3_wilcoxon_coverage(cs)
+    assert result["pass"] is False, (
+        "Forward-only entry (no 'reverse' sub-dict) must be rejected; "
+        "losses cannot be cited without the competitor_greater corrected p"
+    )
+    assert "degree_seq_l1::a2::ari" in result["missing_reverse"]
+
+
+def test_ac3_fails_on_missing_alternative_label() -> None:
+    """Entry without an ``alternative`` field → mislabelled non-empty, pass=False — TOOTH.
+
+    Direction ambiguity: a bare ``p_holm`` with no ``alternative`` field cannot
+    be attributed to either direction six months later.  This test fails against
+    the pre-addition verifier (which did not require direction labels).
+    """
+    cs = _FakeCellStats()
+    cs.wilcoxon = dict(
+        [
+            _make_wilcoxon_entry(
+                "netlsd_l2",
+                "a2::ari",
+                include_alternative=False,  # no direction label: pre-addition bug state
+            ),
+        ]
+    )
+    result = verify_ac3_wilcoxon_coverage(cs)
+    assert result["pass"] is False, (
+        "Entry without 'alternative' field must be rejected; "
+        "a bare p_holm is unattributable to a direction"
+    )
+    assert "netlsd_l2::a2::ari" in result["mislabelled"]

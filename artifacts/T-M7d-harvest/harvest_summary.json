@@ -1,0 +1,273 @@
+{
+  "array_id": 1640910,
+  "n_seeds_declared": 27,
+  "stratum_a_n_dist_reps": 7,
+  "stratum_b_n_cells": 10,
+  "stratum_b_n_cells_isalhg_complete": 7,
+  "stratum_b_blocks": [
+    {
+      "block_key": "er_uniform_k3_n8_rho1",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 1.0
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho2",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 2.0
+    },
+    {
+      "block_key": "er_uniform_k3_n8_rho4",
+      "n": 8,
+      "k": 3,
+      "density_ratio": 4.0
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho1",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 1.0
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho2",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 2.0
+    },
+    {
+      "block_key": "er_uniform_k3_n16_rho4",
+      "n": 16,
+      "k": 3,
+      "density_ratio": 4.0
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho1",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 1.0
+    },
+    {
+      "block_key": "er_uniform_k3_n24_rho2",
+      "n": 24,
+      "k": 3,
+      "density_ratio": 2.0
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho1",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 1.0
+    },
+    {
+      "block_key": "er_uniform_k5_n8_rho2",
+      "n": 8,
+      "k": 5,
+      "density_ratio": 2.0
+    }
+  ],
+  "census": {
+    "total": 77,
+    "completed": 74,
+    "timeout": 3,
+    "failed": 0,
+    "oom": 0,
+    "other": 0,
+    "non_completed_tasks": [
+      {
+        "task_idx": 42,
+        "task_id": "1640910_42",
+        "cell_key": "er_uniform_k3_n16_rho4",
+        "dist_name": "isalhg_levenshtein",
+        "state": "TIMEOUT"
+      },
+      {
+        "task_idx": 56,
+        "task_id": "1640910_56",
+        "cell_key": "er_uniform_k3_n24_rho2",
+        "dist_name": "isalhg_levenshtein",
+        "state": "TIMEOUT"
+      },
+      {
+        "task_idx": 70,
+        "task_id": "1640910_70",
+        "cell_key": "er_uniform_k5_n8_rho2",
+        "dist_name": "isalhg_levenshtein",
+        "state": "TIMEOUT"
+      }
+    ],
+    "has_non_terminal": false
+  },
+  "isalhg_timeout_b_cells": [
+    "er_uniform_k3_n16_rho4",
+    "er_uniform_k3_n24_rho2",
+    "er_uniform_k5_n8_rho2"
+  ],
+  "isalhg_timeout_note": "3 Stratum B cells timed out on isalhg_levenshtein at the 4-hour wall: er_uniform_k3_n16_rho4 (partial ~18/27 seeds), er_uniform_k3_n24_rho2 (partial ~9/27 seeds), er_uniform_k5_n8_rho2 (partial ~13/27 seeds).  All 6 competitors completed on these cells.  These cells are excluded from IsalHG comparative analysis (whole-cell exclusion; partial seed data not used).  This is the measured compute boundary of w*_c at n=16/rho=4 k3, n=24/rho=2 k3, and n=8/rho=2 k5 \u2014 not a failure to report, but the cost of the complete invariant.",
+  "ac2_ci_coverage": {
+    "n_ci_entries": 72,
+    "n_ci_valid": 72,
+    "n_reps_with_ci": 7,
+    "pass": true
+  },
+  "ac3_wilcoxon_coverage": {
+    "n_wilcoxon_entries": 60,
+    "n_complete": 60,
+    "competitors_found": [
+      "degree_seq_l1",
+      "hpd_jsd",
+      "hypercot",
+      "hypergraph_wl_l1",
+      "nauty_levi_edit",
+      "netlsd_l2"
+    ],
+    "pass": true
+  },
+  "ac4_per_arity": {
+    "a2_per_arity_keys": [
+      3,
+      4,
+      5
+    ],
+    "a3_per_arity_keys": [
+      3,
+      4,
+      5
+    ],
+    "phantom_arities": [],
+    "missing_arities": [],
+    "a2a3_dropped_coarse_classes_keys": [
+      3,
+      4,
+      5
+    ],
+    "pass": true
+  },
+  "ac5_axis_coverage": {
+    "n_values": [
+      8,
+      16,
+      24
+    ],
+    "density_values": [
+      1.0,
+      2.0,
+      4.0
+    ],
+    "arity_values": [
+      3,
+      5
+    ],
+    "n_axis_ok": true,
+    "density_axis_ok": true,
+    "arity_axis_ok": false,
+    "arity_axis_note": "Stratum B only admitted k\u2208{3,5}; k-axis has 2 points from Stratum B. Per-arity Stratum A breakdown covers k\u2208{3,4,5} (3 points) but applies to application metrics (A2/A3), not the geometry sweep curve.",
+    "all_cells_have_ci": true,
+    "pass": true
+  },
+  "ac5_isalhg_complete_cells": [
+    "er_uniform_k3_n8_rho1",
+    "er_uniform_k3_n8_rho2",
+    "er_uniform_k3_n8_rho4",
+    "er_uniform_k3_n16_rho1",
+    "er_uniform_k3_n16_rho2",
+    "er_uniform_k3_n24_rho1",
+    "er_uniform_k5_n8_rho1"
+  ],
+  "seed_gap_report": {
+    "stratum_a": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0,
+      "hypercot": 0
+    },
+    "er_uniform_k3_n8_rho1": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n8_rho2": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n8_rho4": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n16_rho1": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n16_rho2": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n16_rho4": {
+      "isalhg_levenshtein": 9,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n24_rho1": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k3_n24_rho2": {
+      "isalhg_levenshtein": 18,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k5_n8_rho1": {
+      "isalhg_levenshtein": 0,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    },
+    "er_uniform_k5_n8_rho2": {
+      "isalhg_levenshtein": 14,
+      "hypergraph_wl_l1": 0,
+      "netlsd_l2": 0,
+      "hpd_jsd": 0,
+      "nauty_levi_edit": 0,
+      "degree_seq_l1": 0
+    }
+  },
+  "all_acceptance_pass": false,
+  "acceptance_shortfalls": [
+    "ac5_arity_axis"
+  ],
+  "arity_axis_note": "Stratum B arity axis has only 2 points (k\u2208{3,5}); the \u22653 criterion is not met for the arity sweep curve from Stratum B alone.  The per-arity Stratum A breakdown (ac4) provides k\u2208{3,4,5} for A2/A3 application metrics.  The T-M7s closing note explicitly records this as a measured outcome of the Stratum B admission envelope (k=4 blocks timed out; k=7/10 were infeasible)."
+}

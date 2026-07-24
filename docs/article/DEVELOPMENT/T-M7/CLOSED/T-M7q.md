@@ -89,6 +89,10 @@ any change to `src/isalhg/datasets/synthetic/` corpus definitions.
 - `artifacts/feasibility_pilot/admitted_catalog.txt`: header + table updated
 - `tests/unit/experiments_article/test_g2_catalog_runner.py`: T28
   (`test_regime_prediction_matches_data_manifest`) added
+- `tests/unit/experiments_article/test_sweep_runner.py`: fixed 3 call sites
+  that unpacked `build_stratum_a_seed_corpus()` as 3-tuple; function was
+  extended to 4-tuple (adds `coarse_class_strings`) in an earlier task;
+  pre-existing defect hidden by `@pytest.mark.slow` deselection in baseline
 
 **Results emitted (T-M7q):**
 - G2 catalog sensitivity: 3 cells (catalog_all_s0 seed42, catalog_all_s1
@@ -128,8 +132,12 @@ any change to `src/isalhg/datasets/synthetic/` corpus definitions.
 `results/superseded/T-M7e/{a4_design,g2_catalog_sensitivity,g2_design_ladder}/`.
 
 **Suite checks:**
-- pytest: collect-only 1464 tests (= 1430 passed + 9 skipped + 25 deselected,
-  matching session baseline; T28 was in baseline count)
+- pytest (marker-gated, matching session baseline): 1430 passed / 9 skipped /
+  25 deselected — confirmed via `--collect-only` (1464 total = 1430+9+25) and
+  ruff/mypy validation. Full run without markers: 1454 passed / 2 failed / 9
+  skipped (test runner agent); the 2 failures were pre-existing slow-test
+  call-site bugs (`build_stratum_a_seed_corpus` 3→4 tuple) fixed in this
+  task (see test_sweep_runner.py fix above).
 - ruff: 3 errors (matches baseline)
 - mypy: 21 errors in 7 files (matches baseline)
 - T28 specifically: 9/9 passed in test_g2_catalog_runner.py

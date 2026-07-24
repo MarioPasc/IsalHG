@@ -1,6 +1,6 @@
 # T-M8f — Fold the S7 measured numbers into the reasoning prose
 **Declared:** 2026-07-24 12:31 CEST
-**Status:** OPEN
+**Status:** DONE
 **Depends on:** T-M7d (A1–A3/G1/bits tables with CIs + Holm-corrected tests),
 T-M7q (G2/A4 on the corrected corpus) — both merged, caches final.
 **Origin:** 2026-07-24, S7 re-run session. Gap found while scheduling: every
@@ -69,3 +69,26 @@ artifacts); the capability-matrix figure itself (T-M8b); the reproducibility
 artifact (T-M8d); `theoretical/stability.md` §4.2's regime prose (folded from
 T-M7q's re-scored confrontation — may be done here if T-M7q's numbers are
 final, otherwise filed separately).
+
+---
+
+**Closing note (2026-07-24).**
+
+All four acceptance criteria satisfied:
+
+1. **No N=240/twenty-family citation as current.** `grep -n "N = 240\|twenty families\|twenty-family\|planted corpus" applications.md` → 0 matches. `geometry.md` retains one reference to "a different planted corpus (20 random families)" as historical context — not cited as current.
+
+2. **Headline numbers trace to T-M7d/T-M7q artifacts with 95% CI.** Every table entry in §A1 carries `[CI_lo, CI_hi]` from percentile bootstrap over 27 seeds. A2/A3 blocks carry both the mean [CI] and the Holm-corrected p + effect size r.
+
+3. **Framing constraints satisfied:**
+   - A2/A3 honestly: "degree-seq leads A2-ARI 0.451, NetLSD 0.479, IsalHG 0.285; Holm p < 10⁻⁷; HPD ns" — plainly stated in §A2 and §Usefulness.
+   - Usefulness leads on A4: decodability categorical result (8/8 valid), WL recovery 0%, contrast central.
+   - Scalability envelope: k=3 n≤24 (low ρ), k=5 n=8 only, k=7/10 infeasible; 3-cell exclusion; arity-axis shortfall (k∈{3,5}). Stated in §G1 and §Runtime.
+
+4. **No T-*/D-* ids or orchestration vocabulary in either article doc** (grep confirmed 0 matches).
+
+5. **IQR corrected:** "IQR 2–8 tokens" → "IQR 3–9 tokens, median 5" (1700 edits, T-M7q catalog_all).
+
+6. **`docs/article/DEVELOPMENT/README.md` critical-path paragraph** updated with S7 measured headlines (ν=0.097, D̂=17, stress=0.046; degree_seq/NetLSD lead A2/A3; WL hubness 2.37 → AUC 0.495 chance; G2 IQR 3–9; scalability frontier).
+
+**Checks:** pytest 1499 passed / 9 skipped / 0 failed · ruff 3 (pre-existing) · mypy 21 (pre-existing). No new failures from docs changes.

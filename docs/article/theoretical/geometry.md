@@ -108,41 +108,40 @@ budget* rather than a spectral one — is available if isometry is not required
 paper reports the spectral `D̂` and cites the distortion bracket rather than
 selecting `D` from it.
 
-**Measured — `D̂` is corpus-dependent, and a single small corpus under-resolves
-it.** Estimated on the planted family corpus at four sizes (metric `d_I^⊥`;
-trivial vocabulary) and cross-checked on two real HIC genre corpora (metric
-`d_I^Σ`; non-trivial IMDB vocabulary — see the Remark in `stability.md` §1);
-`w*_c` is fast on these instances, so
-the corpus size `N` is cheap to scale — only the per-instance node count `n`
-drives cost):
+**Measured — `D̂` is corpus-dependent.** The current measurement uses 85 items
+drawn from 17 non-isomorphic design families spanning arities 3, 4, and 5 (five
+members per family; metric `d_I^⊥`, trivial vocabulary); results averaged over
+27 independent seeds. The real-data cross-check uses two HIC genre corpora
+(metric `d_I^Σ`; non-trivial IMDB vocabulary — see the Remark in `stability.md`
+§1), reported as a censored secondary exhibit (`../DATA.md` §2):
 
-| corpus | metric | `N` | `ν` | `D̂` (CV) | `D̂` (Horn) | Mardia `P^(2)` |
+| corpus | metric | `N` | `ν` [95% CI] | `D̂` (CV) [95% CI] | `D̂` (Horn) | Mardia `P^(2)` |
 |---|---|---|---|---|---|---|
-| planted | `d_I^⊥` | 60 | 0.123 | 21 | 3 | 0.982 |
-| planted | `d_I^⊥` | 120 | 0.193 | 23 | 5 | 0.966 |
-| planted | `d_I^⊥` | 240 | 0.250 | 26 | 8 | 0.954 |
-| planted | `d_I^⊥` | 480 | 0.300 | 26 | 12 | 0.949 |
+| 17 design families | `d_I^⊥` | 85 | 0.097 [0.092, 0.105] | 17 [15, 20] | — | — |
 | HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 | 0.993 |
 | HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 | 0.992 |
 
-The CV estimate on the synthetic corpus climbs from 21 at `N = 60` and
-**plateaus at 26 for `N ≥ 240`**: the widely-quoted `D̂ = 21` is a lower bound
-at small `N`, not the converged value. Horn brackets this conservatively from
-below (12 at `N = 480`), so the honest statement is that the planted-family
-geometry has intrinsic dimension in the range **[12, 26]**, converging near 26
-under the reconstruction criterion. The non-Euclidean mass `ν` itself grows with
-corpus diversity (0.12 → 0.30), consistent with more structurally varied
-families departing further from Euclidean geometry. **Real genre hypergraphs are
+On the 17-family design corpus `d_I^⊥` is **genuinely non-Euclidean**:
+`ν = 0.097` [0.092, 0.105] (mean over 27 seeds, 95% CI by percentile bootstrap),
+and the cross-validated intrinsic dimension is `D̂ = 17` [15, 20]. An earlier
+N-scaling study on a different planted corpus (20 random families, effective
+arity 3) showed the CV estimate climbing from 21 at `N = 60` and plateauing at
+26 for `N ≥ 240`, with Horn parallel-analysis bracketing it conservatively at
+[12, 26]; those measurements are from a superseded corpus and are
+not cited as current. The present design corpus yields a lower `D̂` — expected
+for a structurally homogeneous family set relative to a large random planted
+ensemble — and the non-Euclidean mass `ν = 0.097` is consistent with moderate
+negative-eigenvalue content in the Gram matrix. **Real genre hypergraphs are
 markedly lower-dimensional** (`D̂ ≈ 10–11`, Horn ≈ 1) than the synthetic
-families — a substantive finding, reported as a censored-subset measurement (the
-HIC caveat, `../DATA.md` §2). The planted rows use the structural member
-`d_I^⊥` (trivial vocabulary); the HIC rows use the label-aware member
-`d_I^Σ` (non-trivial `LabelVocabulary` from IMDB metadata). These are members
-of different families (the Remark in `stability.md` §1), measuring isomorphism
-in different domains; they are read as two objects rather than one continuous
-series, which is a candidate explanation for the lower real-data `D̂` beyond the
-usual "real data is different" appeal. The estimate is thus reported as a bracket
-with its `N`-dependence stated, never as a bare number.
+families — a substantive finding, reported as a censored-subset measurement.
+The design rows use the structural member `d_I^⊥` (trivial vocabulary); the HIC
+rows use the label-aware member `d_I^Σ` (non-trivial `LabelVocabulary` from
+IMDB metadata). These are members of different families (the Remark in
+`stability.md` §1), measuring isomorphism in different domains; they are read as
+two objects rather than one continuous series, which is a candidate explanation
+for the lower real-data `D̂` beyond structural differences alone. The estimate is
+reported as a bracketed range [15, 20] (bootstrap 95% CI on the CV optimum),
+not a bare number.
 
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis
   independent of any oracle — a *lower faithful* `D̂` than a competitor
@@ -154,11 +153,14 @@ with its `N`-dependence stated, never as a bare number.
 **Structural-faithfulness check (HGED-free; metric `d_I^⊥`).** Because the
 intrinsic dimension and the embedding are only as meaningful as the distances
 they preserve, we verify that the `d_I^⊥`-MDS map tracks *true* structural
-distance without the HGED oracle: along perturbation ladders the accumulated
-Qin edit budget `t` is known by construction, and both the raw metric and its
-embedding increase with it — Spearman `ρ(t, d_I^⊥) = 0.636` and
-`ρ(t, embedding distance) = 0.649` on a 165-point ladder corpus. The budget-coloured Shepard panel renders this. It is a
-faithfulness statement about known edits, not an HGED-proxy claim.
+distance without the HGED oracle: along perturbation ladders built from the
+design fixtures, the accumulated Qin edit budget `t` is known by construction,
+and `d_I^⊥` increases with it — Spearman `ρ(t, d_I^⊥) = 0.39` (56 ladders,
+560 steps; 7 design fixtures × 2 seeds × 4 ladders each; p < 10⁻²⁰). The
+budget-coloured Shepard panel renders this. It is a faithfulness statement about
+known edits, not an HGED-proxy claim; the moderate ρ reflects that equal-budget
+edits on distinct design families produce unequal `d_I` increments, as expected
+from the varying structural complexity of the designs.
 
 ## 4. Embeddability and distortion
 
@@ -220,22 +222,26 @@ because we apply the edits (Qin-cost accounting on the generator side).
   (c) the discussion's mechanism prose (drift/avalanche) points at these
   measured profiles instead of hypothetical worst cases.
 
-**Measured profile.** Seven regimes: sparse/medium/dense random corpora and
-four design fixtures (Fano, STS(9), cyclic C13 orbit, GQ(2,2)); connectivity-
-preserving single Qin edits at `max_arity = 3`. IQR of `s(e)` (IsalHG) ranges
-2.0–8.0 tokens, heavy_tail_frac = 0.000 throughout — the sensitivity profile
-is compact and near-unimodal across every tested configuration. The three-regime
-prediction in `stability.md` §4.2 is confirmed for the random corpora and the
-two coherent-tie designs (Fano, STS(9)), and **falsified** for the two
-incoherent-tie designs (cyclic C13, GQ(2,2)), which show compact profiles under
-single arity-3 edits rather than the predicted heavy tail; `stability.md` §4.2
-records the measured numbers and the candidate explanations. Nauty-Levi contrast
-confirmed: IQR_nauty = 10.0–20.0 across all regimes (ratio 1.25–9.5× ours),
+**Measured profile.** Seventeen regimes covering the full 17-family design
+corpus (STS7, STS9, GQ(2,2), loose/tight path families, loose/tight cycle
+families; arities 3, 4, 5; each regime 100 connectivity-preserving single Qin
+edits × 2 seeds = 1700 edits total). IQR of `s(e)` (IsalHG): Q1 = 3 tokens,
+median = 5, Q3 = 9 — the sensitivity profile is compact and near-unimodal
+across the tested configurations. The three-regime prediction in `stability.md`
+§4.2 is confirmed for 16 of 17 regimes and **falsified** for one (tight\_path
+arity-4, heavy_tail_frac = 0.210 against a unimodal prediction);
+`stability.md` §4.2 records the candidate explanation (incoherent ties in
+arity-4 tight-path families at the measured sizes). GQ(2,2) is now
+**confirmed** as the predicted heavy-tailed regime (heavy_tail_frac = 0.230,
+prediction = heavy-tailed, outcome = confirmed) — in agreement with the
+theoretical analysis. Nauty-Levi contrast confirmed: IQR_nauty ranges Q1 = 20
+to Q3 = 37 tokens across all regimes (overall 4–8× wider than IsalHG),
 rendering the per-regime and per-fixture contrast figures. **Ladder response**
-(six corpora, small/medium/large base size, two seeds each): ≈80% of per-ladder
-steps are monotone; mean `d_I^⊥` increment per Qin budget step grows from 3.2
-(n = 5 base) to 11.7 (n = 12 base); all six ladders globally increasing, with
-local one-step regressions within ladder variance.
+(7 design fixtures × 2 seeds × 4 ladders = 56 ladders, 560 steps): mean
+monotone fraction per ladder = 0.71 (local one-step regressions occur within
+ladder variance); mean `d_I^⊥` increment per Qin budget step: Q1 = 6,
+median = 12, Q3 = 18 tokens. All 56 ladders are globally increasing
+(cumulative `d_I^⊥` increases from start to end).
 
 ## 7. Mapping to experiments
 

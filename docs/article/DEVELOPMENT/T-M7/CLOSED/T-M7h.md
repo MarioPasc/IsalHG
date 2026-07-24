@@ -1,6 +1,6 @@
 # T-M7h — Picasso full feasibility pilot for the non-admitted Stratum B region
 **Declared:** 2026-07-22 15:40 CEST
-**Status:** BLOCKED
+**Status:** DONE
 **Depends on:** T-M7b (local pilot artifact + config complete)
 **Delegation:** agent
 **Why out of scope:** T-M7b ran a local 5-instance pilot (35 s timeout); all heavy
@@ -196,3 +196,34 @@ array 1631517** (launcher auto-derived the pending set from
 `--list-blocks --pending-envelope` reading the merged envelope). Monitoring in
 progress; on completion, harvest → `merge_envelope.py` → this task moves to
 CLOSED and unblocks T-M7d.
+
+---
+
+## Closing record — 2026-07-24 (orchestrator). Status: DONE
+
+**The Stratum B feasibility envelope is FINAL.** Two cluster rounds:
+
+- **Array 1629486** (3 h wall, post-drift-fix): 7 of 19 blocks completed and were
+  harvested → 4 **admitted** (`k3_n24_rho1` p90 4.27 s, `k3_n24_rho2` 9.92 s,
+  `k5_n8_rho1` 5.39 s, `k5_n8_rho2` 12.80 s) and 3 **cluster_excluded**
+  (`k3_n24_rho4` 164.8 s, `k3_n32_rho1` 146.2 s, `k3_n32_rho2` 188.9 s).
+- **Array 1631517** (8 h wall, the 12 remaining blocks — `k3_n32_rho4`,
+  `k3_n48_{1,2,4}`, `k3_n64_{1,2,4}`, `k5_n16_{1,2,4}`, `k7_n8_rho1`,
+  `k10_n16_rho1`): **all 12 tasks TIMEOUT at 08:00:23**, zero results. These
+  cells cannot complete a 30-instance pilot within 8 h even at a 300 s
+  per-instance cap → recorded as `cluster_excluded` with that measured reason.
+  This is a *stronger* exclusion than the earlier 3 h timeout, and it is a
+  measurement, not an assumption.
+
+**Final envelope:** 10 admitted, 15 cluster_excluded, 0 pending
+(`envelope_final: true`). Admitted Stratum B set = `k3_n8_{rho1,rho2,rho4}`,
+`k3_n16_{rho1,rho2,rho4}` (local) + `k3_n24_{rho1,rho2}`, `k5_n8_{rho1,rho2}`
+(cluster).
+
+**Paper consequence (honest, and it is a finding):** the `w*_c` feasibility
+frontier sits at **k=3 up to n≈24 (low density) and k=5 only at n=8**. The
+advertised arity cap of 10 is **not** reachable at any tested n — `k=7` and
+`k=10` are measured infeasible. This is the scalability envelope the article
+reports; it must not be presented as a hidden filter.
+
+**Unblocks T-M7d** (the sweep may now run on the final admitted-cell set).

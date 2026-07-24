@@ -13,10 +13,11 @@
   "summary": {
     "n_locally_measured_blocks": 22,
     "n_locally_admitted": 10,
-    "n_pending_cluster_measurement": 12,
+    "n_pending_cluster_measurement": 0,
     "n_not_implemented": 0,
     "n_cluster_admitted": 4,
-    "n_cluster_excluded": 3
+    "n_cluster_excluded": 15,
+    "envelope_final": true
   },
   "findings": {
     "k3_n8_16": "LOCALLY_ADMITTED: all 6 (n x density) blocks at k=3, n in {8,16} are within budget (p90 <= 10.9s). Final paper-citable admission.",
@@ -30,13 +31,8 @@
     "final_exclusion_deferred": "Local findings are LOCAL FINDINGS only. Final exclusion of any block from the paper requires cluster-measured p50/p90 (T-M7h). The paper will cite T-M7h results, not these local estimates."
   },
   "hpc_escalation": {
-    "needed": true,
-    "task": "T-M7h",
-    "scope": "all 19 pending-cluster blocks (see pending_cluster list below)",
-    "tool": "picasso-sbatch skill",
-    "instance_budget_s": 300,
-    "n_pilot": 30,
-    "note": "T-M7d may only run on Picasso-pilot-ADMITTED cells; T-M7h must close first."
+    "needed": false,
+    "note": "Complete. Array 1629486 (3h) partial -> 7 blocks harvested; array 1631517 (8h) all 12 remaining blocks TIMEOUT -> measured infeasible. Envelope FINAL."
   },
   "admitted_block_keys": [
     "er_uniform_k3_n8_rho1",
@@ -462,10 +458,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=32_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n48_rho1",
@@ -477,10 +474,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n48_rho2",
@@ -492,10 +490,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n48_rho4",
@@ -507,10 +506,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=48_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n64_rho1",
@@ -522,10 +522,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=1_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n64_rho2",
@@ -537,10 +538,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=2_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k3_n64_rho4",
@@ -552,10 +554,11 @@
       "n_timeout_local": 3,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=3_n=64_rho=4_local_timeout_cluster_pilot_required",
-      "note": "each_instance_exceeded_35s_local_timeout"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "each_instance_exceeded_35s_local_timeout",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k5_n8_rho1",
@@ -675,10 +678,11 @@
       "n_timeout_local": 0,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=1_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k5_n16_rho2",
@@ -690,10 +694,11 @@
       "n_timeout_local": 0,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=2_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k5_n16_rho4",
@@ -705,10 +710,11 @@
       "n_timeout_local": 0,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=5_n=16_rho=4_not_locally_measured_cluster_pilot_required",
-      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "not_locally_measured:inferred_likely_slower_than_k5_n8_p50_3605ms;_cluster_pilot_required",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k7_n8_rho1",
@@ -720,10 +726,11 @@
       "n_timeout_local": 1,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=7_n=8_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
-      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion",
+      "cluster_measured": "1631517_timeout_8h"
     },
     {
       "block_key": "er_uniform_k10_n16_rho1",
@@ -735,10 +742,11 @@
       "n_timeout_local": 1,
       "p50_ms": null,
       "p90_ms": null,
-      "local_status": "pending_cluster",
+      "local_status": "cluster_excluded",
       "admitted": false,
-      "reason": "pending_cluster_pilot:k=10_n=16_rho=1_local_vm_complexity_timeout_1sample_cluster_budget_300s_required",
-      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion"
+      "reason": "cluster walltime TIMEOUT: 30-instance pilot did not complete within 8 h at 300 s/instance (SLURM array 1631517, all 12 tasks TIMEOUT at 08:00:23); measured infeasible",
+      "note": "local_vm_complexity_timeout_at_35s;_cluster_pilot_required_at_300s_budget_before_final_exclusion",
+      "cluster_measured": "1631517_timeout_8h"
     }
   ],
   "figure_data": {

@@ -405,7 +405,16 @@ def verify_ac3_wilcoxon_coverage(
     cell_stats: CellStats,
     expected_competitors: list[str] | None = None,
 ) -> dict[str, Any]:
-    """AC3 — every competitor vs IsalHG has Holm-corrected p and effect size.
+    """AC3 — every competitor vs IsalHG has Holm-corrected p, effect size, and reverse direction.
+
+    Checks for three properties per entry:
+    1. Forward direction: ``p_holm``, ``effect_size``, ``median_diff``,
+       and ``alternative == "isalhg_greater"`` are present.
+    2. Reverse direction: a ``reverse`` sub-dict with ``p_holm``,
+       ``effect_size``, ``median_diff``, and
+       ``alternative == "competitor_greater"`` is present.
+    3. The two Holm families have distinct family-size fields (separate
+       corrections, not folded).
 
     Parameters
     ----------
@@ -418,8 +427,11 @@ def verify_ac3_wilcoxon_coverage(
     Returns
     -------
     dict
-        Keys: ``n_wilcoxon_entries``, ``n_complete`` (have p_holm +
-        effect_size), ``competitors_found``, ``pass``.
+        Keys: ``n_wilcoxon_entries``, ``n_complete`` (all required fields
+        present), ``competitors_found``, ``missing_reverse`` (list of keys
+        where the ``reverse`` sub-dict is absent or incomplete),
+        ``mislabelled`` (list of keys where ``alternative`` is wrong),
+        ``pass``.
     """
     wilcoxon = cell_stats.wilcoxon
     if expected_competitors is None:
@@ -434,15 +446,44 @@ def verify_ac3_wilcoxon_coverage(
         competitors_found = list(expected_competitors)
 
     complete_count = 0
-    for _key, row in wilcoxon.items():
-        if "p_holm" in row and "effect_size" in row:
+    missing_reverse: list[str] = []
+    mislabelled: list[str] = []
+
+    for key, row in wilcoxon.items():
+        fwd_ok = "p_holm" in row and "effect_size" in row and "median_diff" in row
+        # Direction label must be explicit and correct.
+        if row.get("alternative") != "isalhg_greater":
+            mislabelled.append(key)
+            fwd_ok = False
+        # Reverse sub-dict must be present with required fields.
+        rev = row.get("reverse")
+        if not isinstance(rev, dict):
+            missing_reverse.append(key)
+            rev_ok = False
+        else:
+            rev_ok = (
+                "p_holm" in rev
+                and "effect_size" in rev
+                and "median_diff" in rev
+                and rev.get("alternative") == "competitor_greater"
+            )
+            if not rev_ok:
+                missing_reverse.append(key)
+        if fwd_ok and rev_ok:
             complete_count += 1
 
-    ok = len(wilcoxon) > 0 and complete_count == len(wilcoxon)
+    ok = (
+        len(wilcoxon) > 0
+        and complete_count == len(wilcoxon)
+        and not missing_reverse
+        and not mislabelled
+    )
     return {
         "n_wilcoxon_entries": len(wilcoxon),
         "n_complete": complete_count,
         "competitors_found": competitors_found,
+        "missing_reverse": missing_reverse,
+        "mislabelled": mislabelled,
         "pass": ok,
     }
 

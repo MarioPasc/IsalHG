@@ -1327,6 +1327,7 @@ def aggregate_cell_stats(
         Fully populated with CIs and Wilcoxon tests.
     """
     from experiments.analysis.stats import (
+        PairedTestResult,
         bca_bootstrap_ci,
         holm_bonferroni,
         wilcoxon_one_sided,
@@ -1459,25 +1460,43 @@ def aggregate_cell_stats(
                 cs.cis[f"{dist_name}::{mid}"] = row
 
     # --- Wilcoxon + Holm across (competitor × metric) family ---
+    # Two separate Holm families:
+    #   Forward  (alternative="isalhg_greater"):  IsalHG > competitor
+    #   Reverse  (alternative="competitor_greater"):  competitor > IsalHG
+    # The families have the same multiplicity (competitors × metrics) but are
+    # corrected independently — folding them into one 2N-test family would
+    # inflate the correction for both directions without any interpretive gain.
     competitors = [d for d in dist_names if d != PRIMARY_REPR]
     if PRIMARY_REPR not in all_seed_metrics or not competitors:
         return cs
 
     primary_seeds = all_seed_metrics[PRIMARY_REPR]
 
-    # Build the list of (competitor, metric_id) pairs.
+    # Build the list of metric ids to test.
     all_metrics: list[str] = [_metric_id("g1_a1", m) for m in geom_metrics]
     if stratum == "a":
         all_metrics += [_metric_id("a2", m) for m in a2_metrics]
         all_metrics += [_metric_id("a3", "auc", k) for k in _KNN_K_VALUES]
 
-    raw_p_values: list[float] = []
-    wilcoxon_todo: list[tuple[str, str]] = []  # (competitor, metric_id)
+    # Single pass: extract paired samples and run both Wilcoxon directions.
+    # Each (comp, mid) pair is extracted once; both wres_fwd and wres_rev are
+    # computed before any Holm correction so the full family is known.
+    # (comp, mid, pairs, wres_fwd, wres_rev)
+    entries: list[
+        tuple[
+            str,
+            str,
+            list[tuple[float, float]],
+            PairedTestResult | None,
+            PairedTestResult | None,
+        ]
+    ] = []
+    raw_p_fwd: list[float] = []
+    raw_p_rev: list[float] = []
 
     for comp in competitors:
         comp_seeds = all_seed_metrics[comp]
         for mid in all_metrics:
-            # Determine family and key.
             family, _, key_or_k = mid.partition("::")
 
             if family == "g1_a1":
@@ -1491,8 +1510,9 @@ def aggregate_cell_stats(
                 prim_raw = _extract_a3_scores(primary_seeds, k_val)
                 comp_raw = _extract_a3_scores(comp_seeds, k_val)
             else:
-                raw_p_values.append(1.0)
-                wilcoxon_todo.append((comp, mid))
+                raw_p_fwd.append(1.0)
+                raw_p_rev.append(1.0)
+                entries.append((comp, mid, [], None, None))
                 continue
 
             pairs = [
@@ -1501,77 +1521,88 @@ def aggregate_cell_stats(
                 if p is not None and c is not None
             ]
             if len(pairs) < 3:
-                raw_p_values.append(1.0)
-                wilcoxon_todo.append((comp, mid))
+                raw_p_fwd.append(1.0)
+                raw_p_rev.append(1.0)
+                entries.append((comp, mid, pairs, None, None))
                 continue
 
+            wres_fwd: PairedTestResult | None = None
+            wres_rev: PairedTestResult | None = None
             try:
-                wres = wilcoxon_one_sided(
-                    [p for p, _ in pairs],
-                    [c for _, c in pairs],
-                )
-                raw_p_values.append(wres.p_value)
+                wres_fwd = wilcoxon_one_sided([p for p, _ in pairs], [c for _, c in pairs])
+                raw_p_fwd.append(wres_fwd.p_value)
             except Exception:
-                raw_p_values.append(1.0)
-                wres = None  # type: ignore[assignment]
-            wilcoxon_todo.append((comp, mid))
-
-    # Holm correction.
-    if raw_p_values:
-        holm_res = holm_bonferroni(raw_p_values)
-        adj_p = holm_res.adjusted_p_values
-
-        for idx, (comp, mid) in enumerate(wilcoxon_todo):
-            comp_seeds = all_seed_metrics[comp]
-            family, _, key_or_k = mid.partition("::")
-
-            if family == "g1_a1":
-                prim_raw = _extract_metric_scores(primary_seeds, "g1_a1", key_or_k)
-                comp_raw = _extract_metric_scores(comp_seeds, "g1_a1", key_or_k)
-            elif family == "a2":
-                prim_raw = _extract_metric_scores(primary_seeds, "a2", key_or_k)
-                comp_raw = _extract_metric_scores(comp_seeds, "a2", key_or_k)
-            elif family == "a3":
-                k_val = int(key_or_k.replace("auc_k", ""))
-                prim_raw = _extract_a3_scores(primary_seeds, k_val)
-                comp_raw = _extract_a3_scores(comp_seeds, k_val)
-            else:
-                continue
-
-            pairs = [
-                (p, c)
-                for p, c in zip(prim_raw, comp_raw, strict=False)
-                if p is not None and c is not None
-            ]
-            if len(pairs) < 3:
-                cs.wilcoxon[f"{comp}::{mid}"] = {
-                    "repr": comp,
-                    "metric": mid,
-                    "p_holm": float(adj_p[idx]),
-                    "effect_size": float("nan"),
-                    "median_diff": float("nan"),
-                    "n_pairs": 0,
-                }
-                continue
-
+                raw_p_fwd.append(1.0)
             try:
-                wres = wilcoxon_one_sided(
-                    [p for p, _ in pairs],
-                    [c for _, c in pairs],
-                )
-                cs.wilcoxon[f"{comp}::{mid}"] = {
-                    "repr": comp,
-                    "metric": mid,
-                    "p_holm": float(adj_p[idx]),
-                    "p_raw": float(wres.p_value),
-                    "effect_size": float(wres.effect_size),
-                    "median_diff": float(wres.median_diff),
-                    "test_used": wres.test_used,
-                    "n_pairs": len(pairs),
-                    "family_size": len(raw_p_values),
-                }
-            except Exception as exc:
-                logger.warning("Wilcoxon failed (%s, %s): %s", comp, mid, exc)
+                wres_rev = wilcoxon_one_sided([c for _, c in pairs], [p for p, _ in pairs])
+                raw_p_rev.append(wres_rev.p_value)
+            except Exception:
+                raw_p_rev.append(1.0)
+            entries.append((comp, mid, pairs, wres_fwd, wres_rev))
+
+    if not entries:
+        return cs
+
+    # Apply separate Holm corrections — one per direction.
+    adj_p_fwd = holm_bonferroni(raw_p_fwd).adjusted_p_values
+    adj_p_rev = holm_bonferroni(raw_p_rev).adjusted_p_values
+    fwd_family_size = len(raw_p_fwd)  # = rev_family_size by construction
+    rev_family_size = len(raw_p_rev)
+
+    # Write both directions into cs.wilcoxon.
+    for idx, (comp, mid, pairs, wres_fwd, wres_rev) in enumerate(entries):
+        n_pairs = len(pairs)
+
+        # Forward direction: H1 = IsalHG > competitor.
+        if n_pairs < 3 or wres_fwd is None:
+            fwd_dict: dict[str, Any] = {
+                "repr": comp,
+                "metric": mid,
+                "alternative": "isalhg_greater",
+                "p_holm": float(adj_p_fwd[idx]),
+                "effect_size": float("nan"),
+                "median_diff": float("nan"),
+                "n_pairs": n_pairs,
+                "family_size": fwd_family_size,
+            }
+        else:
+            fwd_dict = {
+                "repr": comp,
+                "metric": mid,
+                "alternative": "isalhg_greater",
+                "p_holm": float(adj_p_fwd[idx]),
+                "p_raw": float(wres_fwd.p_value),
+                "effect_size": float(wres_fwd.effect_size),
+                "median_diff": float(wres_fwd.median_diff),
+                "test_used": wres_fwd.test_used,
+                "n_pairs": n_pairs,
+                "family_size": fwd_family_size,
+            }
+
+        # Reverse direction: H1 = competitor > IsalHG.
+        # Separate Holm family — not folded into the forward 60-test family.
+        if n_pairs < 3 or wres_rev is None:
+            rev_dict: dict[str, Any] = {
+                "alternative": "competitor_greater",
+                "p_holm": float(adj_p_rev[idx]),
+                "effect_size": float("nan"),
+                "median_diff": float("nan"),
+                "n_pairs": n_pairs,
+                "family_size": rev_family_size,
+            }
+        else:
+            rev_dict = {
+                "alternative": "competitor_greater",
+                "p_holm": float(adj_p_rev[idx]),
+                "p_raw": float(wres_rev.p_value),
+                "effect_size": float(wres_rev.effect_size),
+                "median_diff": float(wres_rev.median_diff),
+                "n_pairs": n_pairs,
+                "family_size": rev_family_size,
+            }
+
+        fwd_dict["reverse"] = rev_dict
+        cs.wilcoxon[f"{comp}::{mid}"] = fwd_dict
 
     return cs
 

@@ -101,7 +101,7 @@ memory but fictitious on disk.
      cell has non-empty wilcoxon entries (exclusion policy violation).
 
 3. `tests/unit/experiments_article/test_harvest_t_m7s.py`:
-   - Added 6 new tests (30 total, all pass):
+   - Added 6 new tests (30 total after initial fix):
      `test_multi_rep_wilcoxon_populated_fails_on_empty_wilcoxon` (TOOTH — fails
      against pre-fix state);
      `test_multi_rep_wilcoxon_populated_passes_when_wilcoxon_present`;
@@ -125,20 +125,60 @@ memory but fictitious on disk.
 - IsalHG-complete Stratum B cells (7): wilcoxon non-empty per cell (20 entries
   each: 4 metrics × 5 competitors = 20).
 
-**Cross-check (from session dispatch):** `scipy.stats.wilcoxon(diff,
-alternative='greater')` for `degree_seq_l1 > isalhg` on A2-ARI gave
-`p_raw = 7.4506e-09`. Our pipeline tests `isalhg > degree_seq_l1` (one-sided),
-so our result is `p_raw = 1.0` — perfectly complementary. Mean ARIs confirmed:
-isalhg=0.2852, degree_seq=0.4513. The BCa-vs-percentile difference is
-immaterial for this pair (large effect size).
+**Coordinator addition (same task): bidirectional Wilcoxon.**
 
-**Checks:**
+The initial implementation emitted only the forward direction (H1: IsalHG >
+competitor). Where a competitor wins decisively the artifact therefore read
+`p_holm = 1.0` with `effect_size = -1.0` — unciteable for "competitor beats
+IsalHG" claims. The coordinator required:
+- Every entry explicitly labelled `"alternative": "isalhg_greater"`.
+- A `"reverse"` sub-dict per entry with `"alternative": "competitor_greater"`,
+  its own Holm-corrected p (separate 60-test family, not folded into the
+  forward family), effect size, median_diff, n_pairs, family_size.
+- `rev_effect_size = -fwd_effect_size` and `rev_median_diff = -fwd_median_diff`
+  by algebraic symmetry of rank-biserial and median differences.
+
+**Changes for the bidirectional addition:**
+
+1. `experiments/article/analysis/sweep_multi_seed.py` —
+   `aggregate_cell_stats()` Wilcoxon block refactored to a single pass: collects
+   `(comp, mid, pairs, wres_fwd, wres_rev)` tuples before Holm; applies two
+   separate `holm_bonferroni()` calls (60 tests each); writes `"alternative":
+   "isalhg_greater"` on every forward entry plus `"reverse": {"alternative":
+   "competitor_greater", "p_holm": ..., "effect_size": ..., "median_diff": ...,
+   "n_pairs": ..., "family_size": 60}` sub-dict. The old code ran pairs
+   extraction twice; the new code does it once.
+
+2. `scripts/harvest_T_M7s.py` — `verify_ac3_wilcoxon_coverage()` extended to
+   check `"alternative" == "isalhg_greater"` on every forward entry and
+   `"reverse"` sub-dict present with `"alternative" == "competitor_greater"`.
+   Returns new keys `"missing_reverse"` and `"mislabelled"`. Harvest re-run
+   after the change.
+
+3. `tests/unit/experiments_article/test_harvest_t_m7s.py` — two additional
+   TOOTH tests (32 total): `test_ac3_fails_on_missing_reverse_direction`
+   (forward-only entry rejected); `test_ac3_fails_on_missing_alternative_label`
+   (unlabelled entry rejected). The `_make_wilcoxon_entry` helper updated with
+   `include_alternative` and `include_reverse` parameters defaulting to True.
+
+4. `artifacts/T-M7d-harvest/harvest_summary.json`: regenerated again. Final
+   ac3 state: `n_wilcoxon_entries=60, n_complete=60, pass=True,
+   missing_reverse=[], mislabelled=[]`.
+
+**Cross-check (from coordinator dispatch):** reverse direction for
+`degree_seq_l1 > isalhg` on A2-ARI: `p_raw = 7.4506e-09`;
+`p_holm = 7.4506e-09 × 60 = 4.47e-07` (Holm on the most significant of 60
+reverse tests). Forward direction: `p_holm = 1.0`, `effect_size = -1.0`,
+`median_diff = -0.1677`. Reverse: `p_holm = 4.47e-07`, `effect_size = 1.0`,
+`median_diff = +0.1677`. Both directions confirmed in the on-disk stats file.
+
+**Checks (final, post bidirectional addition):**
 ```
-pytest tests/unit/experiments_article/test_harvest_t_m7s.py -v  → 30 passed
-pytest tests/ (no filter)                                        → 1505 passed, 9 skipped
-pytest tests/ -m "not slow"                                      → 1476 passed, 9 skipped, 29 deselected
+pytest tests/unit/experiments_article/test_harvest_t_m7s.py -v  → 32 passed
+pytest tests/ -m "not slow"                                      → 1478 passed, 9 skipped, 29 deselected
 ruff check src/ tests/                                           → 3 errors (baseline unchanged)
 mypy src/isalhg/                                                 → 21 errors (baseline unchanged)
 ```
 Pre-T-M7t session baseline was 1470 passed / 9 skipped / 29 deselected; T-M7t
-adds 6 new unit tests bringing the count to 1476 passed with the same filter.
+adds 8 unit tests total (6 for the fix + 2 for the bidirectional addition),
+bringing the count to 1478 passed with the same filter.

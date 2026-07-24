@@ -20,12 +20,19 @@ AC-H9. verify_multi_rep_wilcoxon_populated catches the per-task aggregation
        bug: a CellStats with ≥2 representations but empty wilcoxon fails.
 AC-H10. verify_excluded_cells_no_isalhg_comparison catches any exclusion
         policy violation: an excluded cell with a non-empty wilcoxon fails.
+AC-H11. verify_ac3_wilcoxon_coverage catches a missing ``reverse`` sub-dict
+        (forward-only entry) and a missing/wrong ``alternative`` direction label.
 
 Teeth (tests observed failing before fix / against wrong data):
 - test_ac2_fails_on_nan_ci: fails if NaN CIs are accepted as valid.
 - test_ac2_fails_on_empty_cis: fails if empty CI dict returns pass=True.
 - test_ac3_fails_on_missing_p_holm: fails if missing p_holm is accepted.
 - test_ac3_fails_on_empty_wilcoxon: fails if empty Wilcoxon returns pass=True.
+- test_ac3_fails_on_missing_reverse_direction: fails if a forward-only entry
+  (no ``reverse`` sub-dict) is accepted as complete — the T-M7t/coordinator
+  addition: the article must cite both directions.
+- test_ac3_fails_on_missing_alternative_label: fails if an unlabelled entry
+  (missing ``alternative`` field) is accepted — direction must be explicit.
 - test_ac4_fails_on_missing_arity: fails if arity 4 is absent.
 - test_ac4_fails_on_phantom_arity: fails if phantom arity 7 appears.
 - test_ac5_arity_axis_shortfall_does_not_block_pass: k∈{3,5} alone does NOT
@@ -274,8 +281,20 @@ def test_ac2_fails_on_missing_ci_keys() -> None:
 
 
 def _make_wilcoxon_entry(
-    dist: str, metric: str, *, p_holm: float | None = 0.03, effect_size: float | None = 0.4
+    dist: str,
+    metric: str,
+    *,
+    p_holm: float | None = 0.03,
+    effect_size: float | None = 0.4,
+    include_alternative: bool = True,
+    include_reverse: bool = True,
 ) -> tuple[str, dict[str, Any]]:
+    """Build a wilcoxon entry for testing.
+
+    By default produces a fully-specified entry (both directions labelled).
+    Set ``include_alternative=False`` or ``include_reverse=False`` to produce
+    incomplete entries for TOOTH tests.
+    """
     row: dict[str, Any] = {
         "repr": dist,
         "metric": metric,
@@ -286,11 +305,22 @@ def _make_wilcoxon_entry(
         row["p_holm"] = p_holm
     if effect_size is not None:
         row["effect_size"] = effect_size
+    if include_alternative:
+        row["alternative"] = "isalhg_greater"
+    if include_reverse:
+        row["reverse"] = {
+            "alternative": "competitor_greater",
+            "p_holm": 1.0 - (p_holm or 0.0),
+            "effect_size": -(effect_size or 0.0),
+            "median_diff": -0.1,
+            "n_pairs": 27,
+            "family_size": 60,
+        }
     return f"{dist}::{metric}", row
 
 
 def test_ac3_passes_on_complete_wilcoxon() -> None:
-    """All entries have p_holm and effect_size → pass=True."""
+    """All entries have p_holm, effect_size, alternative, and reverse → pass=True."""
     cs = _FakeCellStats()
     cs.wilcoxon = dict(
         [
@@ -301,6 +331,8 @@ def test_ac3_passes_on_complete_wilcoxon() -> None:
     result = verify_ac3_wilcoxon_coverage(cs)
     assert result["pass"] is True
     assert result["n_complete"] == 2
+    assert result["missing_reverse"] == []
+    assert result["mislabelled"] == []
 
 
 def test_ac3_fails_on_missing_p_holm() -> None:
@@ -824,3 +856,61 @@ def test_excluded_cell_no_isalhg_comparison_non_excluded_cell_ignored() -> None:
     result = verify_excluded_cells_no_isalhg_comparison(non_excluded_state, excluded)
     assert result["pass"] is True
     assert result["violations"] == []
+
+
+# ---------------------------------------------------------------------------
+# AC-H11 — reverse direction labels (T-M7t coordinator addition)
+# ---------------------------------------------------------------------------
+
+
+def test_ac3_fails_on_missing_reverse_direction() -> None:
+    """Entry without a ``reverse`` sub-dict → missing_reverse non-empty, pass=False — TOOTH.
+
+    Before the coordinator addition, verify_ac3_wilcoxon_coverage only checked
+    for ``p_holm`` and ``effect_size`` in the forward direction.  A forward-only
+    entry was therefore accepted as complete.  But the article must cite BOTH
+    directions: a ``p_holm = 1.0`` from the forward test cannot be cited to say
+    the competitor beats IsalHG — that requires the reverse test's corrected p.
+    This test fails against the pre-addition verifier.
+    """
+    cs = _FakeCellStats()
+    cs.wilcoxon = dict(
+        [
+            _make_wilcoxon_entry(
+                "degree_seq_l1",
+                "a2::ari",
+                include_reverse=False,  # forward-only: pre-addition bug state
+            ),
+        ]
+    )
+    result = verify_ac3_wilcoxon_coverage(cs)
+    assert result["pass"] is False, (
+        "Forward-only entry (no 'reverse' sub-dict) must be rejected; "
+        "losses cannot be cited without the competitor_greater corrected p"
+    )
+    assert "degree_seq_l1::a2::ari" in result["missing_reverse"]
+
+
+def test_ac3_fails_on_missing_alternative_label() -> None:
+    """Entry without an ``alternative`` field → mislabelled non-empty, pass=False — TOOTH.
+
+    Direction ambiguity: a bare ``p_holm`` with no ``alternative`` field cannot
+    be attributed to either direction six months later.  This test fails against
+    the pre-addition verifier (which did not require direction labels).
+    """
+    cs = _FakeCellStats()
+    cs.wilcoxon = dict(
+        [
+            _make_wilcoxon_entry(
+                "netlsd_l2",
+                "a2::ari",
+                include_alternative=False,  # no direction label: pre-addition bug state
+            ),
+        ]
+    )
+    result = verify_ac3_wilcoxon_coverage(cs)
+    assert result["pass"] is False, (
+        "Entry without 'alternative' field must be rejected; "
+        "a bare p_holm is unattributable to a direction"
+    )
+    assert "netlsd_l2::a2::ari" in result["mislabelled"]

@@ -93,6 +93,8 @@
       "nauty_levi_edit",
       "netlsd_l2"
     ],
+    "missing_reverse": [],
+    "mislabelled": [],
     "pass": true
   },
   "ac4_per_arity": {

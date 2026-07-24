@@ -51,7 +51,14 @@ export T_M7D_N_CORPUS=60
 LOGS_DIR="/mnt/home/users/tic_163_uma/mpascual/execs/T-M7d/logs"
 
 # ── Derive admitted Stratum B block keys from the envelope ────────────────────
-PYTHON_BIN="${HOME}/.conda/envs/${CONDA_ENV_NAME}/bin/python"
+# Conda env may live under fscratch (Picasso) or ~/.conda (local).
+if [[ -x "${HOME}/fscratch/conda_envs/${CONDA_ENV_NAME}/bin/python" ]]; then
+    PYTHON_BIN="${HOME}/fscratch/conda_envs/${CONDA_ENV_NAME}/bin/python"
+elif [[ -x "${HOME}/.conda/envs/${CONDA_ENV_NAME}/bin/python" ]]; then
+    PYTHON_BIN="${HOME}/.conda/envs/${CONDA_ENV_NAME}/bin/python"
+else
+    PYTHON_BIN="$(conda run -n ${CONDA_ENV_NAME} which python 2>/dev/null || which python)"
+fi
 
 mapfile -t B_BLOCK_KEYS < <(
     "${PYTHON_BIN}" -c "

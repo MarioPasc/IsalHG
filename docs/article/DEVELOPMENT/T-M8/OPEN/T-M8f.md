@@ -53,6 +53,17 @@ visibly satisfied in the text; the arity/feasibility frontier appears as a
 stated limit; no `T-*`/`D-*` ids, dates, or orchestration vocabulary appear in
 either document; `docs/article/DEVELOPMENT/README.md` critical-path paragraph
 updated to the S7 headline numbers.
+**Carried in from T-M8b (2026-07-24).** The §Usefulness framing section added
+at T-M8b was authored on a fork predating the T-M7q merge, so any *number* it
+contains predates the corrected corpus. One such claim is in the text — the
+single-edit sensitivity "IQR 2–8 tokens" attributed to G2. Re-derive it from
+the merged T-M7q G2 artifacts and correct or remove it; then sweep that section
+for any other numeric claim and check each against a current artifact. The
+qualitative content (three axes; IsalHG second to HPD-JSD on A2/A3; the
+degree-sequence floor; the completeness ∧ decodability ∧ navigability
+intersection; HPD's failure of the triangle inequality) is capability-based and
+stands.
+
 **Out of scope here:** producing any new measurement (this task only reads
 artifacts); the capability-matrix figure itself (T-M8b); the reproducibility
 artifact (T-M8d); `theoretical/stability.md` §4.2's regime prose (folded from

@@ -2,13 +2,14 @@
 # T-M7d multi-seed sweep — SLURM array launcher.
 #
 # Submits one array task per (cell_key, dist_name) combination.
-# cell_keys: "stratum_a" + 10 admitted Stratum B block keys = 11 cells.
+# cell_keys: "stratum_a" (17 families, T-M7m+T-M7o) + 10 admitted Stratum B
+#            block keys (envelope_final=true, array 1631517) = 11 cells.
 # dist_names: 7 representations (ALL_DISTANCES in sweep_multi_seed.py).
-# Total: 11 × 7 = 77 array tasks.
+# Total: 11 × 7 = 77 array tasks.  S=27 seeds per task (T-M7n power pilot).
 #
-# DO NOT SUBMIT until array 1631517 (T-M7h Stratum B pilot) finalises the
-# admitted set in stratum_b_feasibility_envelope.json.  The launcher derives
-# the Stratum B block keys live from the envelope, so it is always in sync.
+# Envelope is final (array 1631517 complete).  The launcher derives Stratum B
+# block keys live from the envelope JSON; the 17-family Stratum A membership is
+# read from DATA_MANIFEST.stratum_a_ids inside sweep_multi_seed.py.
 #
 # Usage:
 #   bash slurm/T-M7d_launcher.sh [--dry-run]
@@ -27,13 +28,13 @@
 #       picasso:${T_M7D_OUTPUT_DIR}/ \
 #       /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7d/
 #
-# Runtime estimate:
-#   - Stratum A × isalhg: 20 seeds × ~3s/seed ≈ 1 min per task
-#   - Stratum A × others: 20 seeds × ~2s/seed ≈ 1 min per task
-#   - Stratum B (n≤24) × fast dists: 20 seeds × ~2s/seed ≈ 1 min per task
-#   - Stratum B (n=24) × isalhg: 20 seeds × ~5s/seed ≈ 2 min per task
-#   - Wall time 1h per task is very conservative (5-10× safety margin).
-#   - 77 tasks at max_concurrent=20: ≈ 4 array waves ≈ 2 h total.
+# Runtime estimate (S=27):
+#   - Stratum A × isalhg: 27 seeds × ~3s/seed ≈ 1.4 min per task
+#   - Stratum A × others: 27 seeds × ~2s/seed ≈ 0.9 min per task
+#   - Stratum B (n≤24) × fast dists: 27 seeds × ~2s/seed ≈ 0.9 min per task
+#   - Stratum B (n=24) × isalhg: 27 seeds × ~5s/seed ≈ 2.3 min per task
+#   - Wall time 4h per task is very conservative (100× safety margin).
+#   - 77 tasks at max_concurrent=20: ≈ 4 array waves ≈ 3 h total.
 
 set -euo pipefail
 
@@ -44,7 +45,7 @@ export CONDA_ENV_NAME="isalhg"
 export REPO_DIR="/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG"
 export T_M7D_ENVELOPE="${REPO_DIR}/experiments/article/stratum_b_feasibility_envelope.json"
 export T_M7D_OUTPUT_DIR="/mnt/home/users/tic_163_uma/mpascual/fscratch/results/T-M7d"
-export T_M7D_N_SEEDS=20
+export T_M7D_N_SEEDS=27
 export T_M7D_N_CORPUS=60
 
 LOGS_DIR="/mnt/home/users/tic_163_uma/mpascual/execs/T-M7d/logs"

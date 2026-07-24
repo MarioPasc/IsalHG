@@ -202,14 +202,14 @@ def test_build_stratum_a_seed_corpus_labels_align() -> None:
     """len(hypergraphs) == len(labels); labels in [0, n_families).
 
     Uses a small arity-3 subset of ADMITTED_A_IDS to keep the test fast.
-    (T-M7m: complete_k3_n5 removed from admitted set; all 14 families are
-    now feasible for Qin-edit perturbation within the standard retry budget.)
+    (T-M7m: complete_k3_n5 removed from admitted set; T-M7o added 3 k4/k5
+    designs; all 17 admitted families are feasible post-T-M7o arity-cap fix.)
     """
     from experiments.article.analysis.sweep_multi_seed import build_stratum_a_seed_corpus
 
     # Small subset of arity-3 admitted families — fast for CI.
     fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
-    hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
+    hypergraphs, labels, label_strings, _coarse = build_stratum_a_seed_corpus(
         seed=0,
         admitted_ids=fast_subset,
         members_per_family=5,
@@ -229,10 +229,10 @@ def test_build_stratum_a_seed_corpus_different_seeds_differ() -> None:
     from experiments.article.analysis.sweep_multi_seed import build_stratum_a_seed_corpus
 
     fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
-    H0, _, _ = build_stratum_a_seed_corpus(
+    H0, _, _, _ = build_stratum_a_seed_corpus(
         seed=0, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
-    H1, _, _ = build_stratum_a_seed_corpus(
+    H1, _, _, _ = build_stratum_a_seed_corpus(
         seed=1, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
     # The corpora have the same size (same families × members_per_family).
@@ -617,15 +617,33 @@ def test_compute_g1_a1_uncensored_flag() -> None:
 
 
 def test_admitted_a_ids_count() -> None:
-    """ADMITTED_A_IDS must contain exactly the 14 admitted designs (pruned T-M7m)."""
+    """ADMITTED_A_IDS must contain exactly the 17 admitted designs (T-M7m pruned + T-M7o additions).
+
+    T-M7m removed 9 high-symmetry families from the original set.
+    T-M7o added 3 longer arity-4/5 tight-cycle designs:
+      tight_cycle_k4_n8, tight_cycle_k4_n10, tight_cycle_k5_n8.
+    Total: 17 kept families.
+
+    Tooth: this test was updated from 14 → 17 at T-M7d; before the fix
+    ADMITTED_A_IDS was hardcoded to 14 families and this assertion failed.
+    """
     from experiments.article.analysis.sweep_multi_seed import ADMITTED_A_IDS
 
-    assert len(ADMITTED_A_IDS) == 14, (
-        f"Expected 14 admitted Stratum A IDs (T-M7m pruned), got {len(ADMITTED_A_IDS)}"
+    assert len(ADMITTED_A_IDS) == 17, (
+        f"Expected 17 admitted Stratum A IDs (T-M7m+T-M7o), got {len(ADMITTED_A_IDS)}"
     )
 
-    # Spot-check mandatory entries (all 14 kept families).
-    mandatory = {"sts7", "sts9", "gq22", "loose_path_k3", "tight_cycle_k5"}
+    # Spot-check mandatory entries (all 17 kept families, including T-M7o additions).
+    mandatory = {
+        "sts7",
+        "sts9",
+        "gq22",
+        "loose_path_k3",
+        "tight_cycle_k5",
+        "tight_cycle_k4_n8",  # T-M7o
+        "tight_cycle_k4_n10",  # T-M7o
+        "tight_cycle_k5_n8",  # T-M7o
+    }
     missing = mandatory - ADMITTED_A_IDS
     assert not missing, f"Missing mandatory admitted IDs: {missing}"
 
@@ -644,6 +662,23 @@ def test_admitted_a_ids_count() -> None:
     present_but_excluded = excluded & ADMITTED_A_IDS
     assert not present_but_excluded, (
         f"Excluded designs should not be in ADMITTED_A_IDS: {present_but_excluded}"
+    )
+
+
+def test_admitted_a_ids_matches_manifest() -> None:
+    """ADMITTED_A_IDS must equal DATA_MANIFEST.stratum_a_ids — no parallel list.
+
+    Tooth: before the T-M7d fix, ADMITTED_A_IDS was a hardcoded 14-element set
+    that diverged from the manifest (which has 17 after T-M7o).  This assertion
+    failed on the pre-fix code.
+    """
+    from experiments.article.analysis.sweep_multi_seed import ADMITTED_A_IDS
+    from isalhg.datasets.synthetic.known_design_catalog import DATA_MANIFEST
+
+    assert DATA_MANIFEST.stratum_a_ids == ADMITTED_A_IDS, (
+        f"ADMITTED_A_IDS diverges from DATA_MANIFEST.stratum_a_ids.\n"
+        f"  In manifest but not ADMITTED_A_IDS: {DATA_MANIFEST.stratum_a_ids - ADMITTED_A_IDS}\n"
+        f"  In ADMITTED_A_IDS but not manifest:  {ADMITTED_A_IDS - DATA_MANIFEST.stratum_a_ids}"
     )
 
 
@@ -666,11 +701,12 @@ def test_all_distances_has_naive_baseline() -> None:
 
 
 def test_coarse_classes_by_arity_structure() -> None:
-    """COARSE_CLASSES_BY_ARITY must cover arities 3, 4, 5 (T-M7m).
+    """COARSE_CLASSES_BY_ARITY must cover arities 3, 4, 5 (T-M7m+T-M7o).
 
     ADMITTED_A_IDS_ARITY3 was removed at T-M7m (arity-3 fallback retired;
-    all 14 pruned families are feasible). This test replaces it with a check
-    that the coarse-class structure covers all three arity groups.
+    all 17 admitted families are feasible after T-M7o's arity-cap fix).
+    This test verifies the coarse-class structure covers all three arity groups
+    and that all 17 admitted families map to their correct arity class.
     """
     from experiments.article.analysis.sweep_multi_seed import (
         ADMITTED_A_IDS,

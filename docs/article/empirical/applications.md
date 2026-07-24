@@ -34,6 +34,55 @@ Competitors run the same pipeline off their own `D_rep`.
 
 ---
 
+## Usefulness framing and the capability matrix
+
+The section's organizing claim is not that `d_I` yields the best task-metric
+scores — on A2 (clustering) and A3 (kNN) IsalHG is a competitive second to
+HPD-JSD; on tasks whose discriminative signal is primarily first-order (degree
+structure), the naive degree-sequence baseline is competitive too. Usefulness
+rests on three axes jointly:
+
+1. **Licensed.** Each application is preceded by a measured geometric invariant
+   that justifies the method choice (the no-orphan-geometry rule;
+   `../theoretical/geometry.md`). No application runs speculatively: A1 is
+   licensed by the distortion brackets; A2 by `ν` (non-Euclidean mass makes
+   medoids the correct estimator) and the G2 ladder response; A3 by the G1
+   hubness profile; A4 by the G2 local sensitivity profile and the closed
+   alphabet.
+
+2. **Competitive.** On pure task metrics IsalHG places second to HPD-JSD on
+   A2 and A3. The naive degree-sequence baseline (`Deg-seq L1`,
+   `../COMPETITORS.md` §4) establishes the floor: where degree structure alone
+   discriminates the planted families, IsalHG does not earn its additional
+   complexity on that task metric alone. Relative standings are reported with
+   95% confidence intervals; no representation is declared dominant where
+   differences are not significant.
+
+3. **Uniquely capable.** The **capability matrix** (Fig. CAP; rendered by
+   `experiments/article/analysis/figures/capability_matrix.py`; place adjacent
+   to the A4 decoded-intermediates figure) expresses what each representation
+   *cannot* do. IsalHG is the only representation that is simultaneously a
+   **complete invariant**, **decodable** (S2H inverts every string in the
+   closed alphabet to an actual hypergraph), and **geometrically navigable**
+   (measured single-edit sensitivity IQR 2–8 tokens; G2). No other
+   representation possesses all three: nauty-edit is complete but neither
+   decodable nor navigable (avalanche-everywhere G2 profile); WL, NetLSD,
+   HyperCOT, and HPD are scalable embeddings but neither complete nor
+   decodable; the degree-sequence baseline is a metric but has no inverse. On
+   A4 the differentiator is categorical: only IsalHG exhibits intermediate
+   *hypergraphs* along a path — structurally impossible for every competing
+   representation (no decoder for vector fingerprints; avalanche geometry
+   blocks navigation for nauty).
+
+   **HPD and the metric axioms.** HPD uses Jensen–Shannon divergence, which
+   does not satisfy the triangle inequality (its square root does). Operations
+   that require a metric — classical MDS, PAM-medoids, kNN with
+   `metric='precomputed'` — are therefore only approximately licensed for HPD.
+   The True metric column of the capability matrix records this; every results
+   table where HPD appears flags it.
+
+---
+
 ## G1 — Concentration + hubness profile (geometry, precondition for A3)
 
 On every corpus, before any application: the pairwise-distance histogram of

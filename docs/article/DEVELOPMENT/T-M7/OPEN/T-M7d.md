@@ -1,6 +1,6 @@
 # T-M7d — Combined sweep + statistics harness: body re-run with CIs and paired tests
 **Declared:** 2026-07-22 11:56 CEST
-**Status:** BLOCKED
+**Status:** OPEN (unblocked 2026-07-24)
 **Depends on:** T-M7a (Stratum A corpus), T-M7b (Stratum B sweep + envelope),
 T-M7c (naive baseline registered), T-M5b/c/d (the existing A1/A2/A3 pipelines
 this re-drives), T-M5f (geometry helpers).
@@ -121,3 +121,47 @@ ruff: 3 errors (baseline unchanged). mypy: 21 errors (baseline unchanged).
   ~2.3 h; 4-hour per-task wall covers it). Most tasks finish in < 10 min.
 
 **Waiting on:** array 1631517 finalization → orchestrator submits.
+
+---
+
+## Unblocked — 2026-07-24 12:18 CEST (orchestrator)
+
+Array 1631517 finalized: all 12 hardest blocks TIMEOUT at 08:00:23 with zero
+results, recorded as measured-infeasible.
+`experiments/article/stratum_b_feasibility_envelope.json` now carries
+`envelope_final: true` — **10 admitted, 15 cluster-excluded, 0 pending**
+(`k3_n8_{rho1,rho2,rho4}`, `k3_n16_{rho1,rho2,rho4}`, `k3_n24_{rho1,rho2}`,
+`k5_n8_{rho1,rho2}`). The envelope is FINAL; do not re-derive or re-litigate
+it, and do not re-open the excluded cells.
+
+**What changed under the blocking note, and must be corrected before submit:**
+
+1. **Stratum A membership.** `sweep_multi_seed.py:ADMITTED_A_IDS` hardcodes
+   **14** families and its comment block names an exclusion set that T-M7m/T-M7o
+   superseded. The corpus is now **17** ids and the single source of truth is
+   `known_design_catalog.DATA_MANIFEST.stratum_a_ids`. Read the manifest; do not
+   maintain a parallel hardcoded list.
+2. **The arity-3 fallback is obsolete.** `ADMITTED_A_IDS_ARITY3` existed because
+   `PlantedFamilyDataset` hard-capped edit arity at `k=3`, so every perturbation
+   of a k=4/5 seed was rejected. **T-M7o fixed that** (per-family `k` = the
+   seed's max arity); all 17 families now realize 5 members across arity 3/4/5.
+   The fallback must not fire — if it does, that is a defect to report, not to
+   absorb.
+3. **Seeds.** `T_M7D_N_SEEDS=20` → **27** (T-M7n power pilot: S=27 covers the
+   weakest win, A2-ARI vs HPD, r=0.52, at 80% power). Validation pass at
+   **S=8** first (all wins reach power at S=8), then the full S=27.
+4. **Task lists.** `slurm/T-M7d_{launcher,worker}.sh` were generated pre-prune.
+   Regenerate against 17 Stratum A + the 10 admitted Stratum B cells × 7
+   representations.
+
+**Framing constraint (PI, handoff §3).** A2/A3 on the design families is
+degree-solvable: the naive degree-sequence baseline beats IsalHG on ARI
+(0.482 vs 0.297) and kNN AUC (0.957 vs 0.859), and NetLSD also beats it. Emit
+the numbers honestly; the tables must not be arranged to hide it. A
+degree-controlled corpus was proven impossible and dropped (T-M7p).
+
+**Frontier to report, not hide.** `w*_c` is feasible at k=3 up to n ≈ 24 and at
+k=5 only at n=8; k=7 and k=10 are measured infeasible. This is the article's
+scalability envelope.
+
+**Status:** unblocked, scheduled for execution.

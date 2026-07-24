@@ -1,0 +1,71 @@
+# T-M7g — Designs-catalog real anchor exhibit.
+#
+# The 17 admitted Stratum A designs (known combinatorial structures: STS(7),
+# STS(9), GQ(2,2), tight/loose paths and cycles in k=3/4/5) form the
+# guaranteed-computable real anchor for the article's geometry + applications
+# (A1–A3) claim.  They are "real" in the sense of mathematically known
+# non-synthetic objects, reproducible by construction, with w*_c computable
+# on each within the 30 s feasibility budget (p90 ≤ 5 s measured at T-M7h).
+#
+# Family-type labels (STS7, STS9, GQ22, path_k3, cycle_k3, …) serve as the
+# whole-hypergraph class labels for A2 (clustering ARI/NMI) and A3 (kNN
+# accuracy/AUC).  17 families × 5 non-isomorphic Qin-perturbed members = 85
+# items per seed.
+#
+# Exhibit route:
+#   - S=27 full exhibit: SLURM array 1640910 (T-M7d), harvested at T-M7s.
+#   - Local smoke (S=3): command below, ~2 min on the RTX 4060 workstation.
+#
+# LOCAL SMOKE (S=3, all distances except HyperCOT)::
+#
+#   python -m experiments.article.analysis.sweep_multi_seed \
+#       --envelope experiments/article/stratum_b_feasibility_envelope.json \
+#       --output-root /tmp/T-M7g-smoke \
+#       --n-seeds 3 \
+#       --stratum a \
+#       --distances isalhg_levenshtein hypergraph_wl_l1 netlsd_l2 \
+#                   hpd_jsd nauty_levi_edit degree_seq_l1
+#
+# FULL EXHIBIT (S=27, Picasso, already running as array 1640910)::
+#
+#   Results land in /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7d/
+#   cell_key = stratum_a, harvested by T-M7s.
+#
+# Design catalog source:
+#   src/isalhg/datasets/synthetic/known_design_catalog.py (DATA_MANIFEST.stratum_a_ids)
+#
+# Gate summary (T-M7g):
+#   - Designs corpus: PASS (17 families, max_arity ≤ 5 ≤ k_max=10, feasible)
+#   - ARB/Benson candidates: NO_GO (single large networks, not labeled collections)
+#   - XGI-DATA candidates: NO_GO (single large networks, not labeled collections)
+#   Gate artifact: artifacts/real_anchor_gate/candidate_gate_results.json
+
+stratum: a
+cell_key: stratum_a
+n_seeds: 27
+n_corpus: 5        # PlantedFamilyDataset members per seed design
+corpus_name: stratum_a_corpus
+
+# Seven representations scored in the full exhibit (per T-M7d harness):
+distances:
+  - isalhg_levenshtein
+  - hypergraph_wl_l1
+  - netlsd_l2
+  - hpd_jsd
+  - nauty_levi_edit
+  - degree_seq_l1
+  - hypercot   # gated at HYPERCOT_MAX_N=12 / HYPERCOT_MAX_CORPUS=20; skipped for n>12
+
+# Stats: BCa 95% CI (n_resample=9999), Holm–Bonferroni Wilcoxon vs IsalHG.
+# Output schema: D.npy (85×85 per seed), bca_ci.json, wilcoxon.json, geometry.json.
+
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7d
+
+# Feasibility record (T-M7a / T-M7h):
+feasibility:
+  n_admitted: 17
+  n_excluded_cluster: 6    # sts13_0/1, sts15_0, ag24, pg23, pg24
+  n_excluded_corpus: 3     # complete_k3/4/5 (Qin-edit DNF at 100%)
+  p90_budget_s: 30.0
+  worst_admitted_p90_s: 4.56   # tight_cycle_k5_n8
+  catalog_source: artifacts/feasibility_pilot/admitted_catalog.txt

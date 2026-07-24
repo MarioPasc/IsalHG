@@ -274,3 +274,43 @@ max 20 concurrent, 4-hour per-task wall, output to
 `/mnt/home/users/tic_163_uma/mpascual/fscratch/results/T-M7d/`.
 
 **Status: DONE.**
+
+---
+
+## Orchestrator verification — 2026-07-24 16:05 CEST
+
+Re-ran independently in the worker's own env and worktree, not taken on the
+closing note's word.
+
+- Full suite `~/.conda/envs/isalhg-T-M7d/bin/python -m pytest tests/unit
+  tests/property tests/integration -m "not slow" --hypothesis-seed=0 -q` →
+  **1431 passed, 9 skipped, 25 deselected**; ruff 3; mypy 21. Post-merge on
+  `main`: **1432 passed, 9 skipped, 25 deselected**, ruff 3, mypy 21 — no
+  baseline drift. The two slow-marked `test_sweep_runner` tests that were
+  broken on `main` since T-M7o's 4-tuple change now pass.
+- **Per-arity fix confirmed on live data, not on assertion.** `_arity_of_H`
+  (empirical min-edge-arity) is gone; grouping is by the family's catalog
+  arity. On the running array,
+  `seed_metrics/a/stratum_a/seed0/isalhg_levenshtein.json` (`n_corpus = 85`)
+  carries populated `a2_per_arity` and `a3_per_arity` for arities 3, 4 and 5
+  with `a2a3_dropped_coarse_classes = {3: [], 4: [], 5: []}`. The deployed
+  Picasso copy contains the fix (0 occurrences of `_arity_of_H`), so the
+  in-flight run is not contaminated.
+- Merge conflict with T-M7q in `test_sweep_runner.py` (both branches repaired
+  the same 4-tuple unpack) resolved by the orchestrator in favour of the named
+  `_coarse` binding.
+
+**Dedup-backend change — assessed and accepted.** Corpus dedup moved from the
+IsalHG canonical encoder to `pynauty_levi` because the tie-complete encoder
+hangs for hours on near-symmetric k=4/5 Qin-edit perturbations. Both are exact
+isomorphism tests, so the deduplicated corpus is unchanged; and building the
+corpus with an oracle independent of the representation under evaluation is
+methodologically preferable, not merely faster. The hang itself is a measured
+feasibility data point that belongs with the k = 3 → n ≈ 24 / k = 5 → n = 8
+frontier in the article's scalability statement — carried to T-M8f.
+
+**Acceptance boundary.** What is verified here is the corrected harness, the
+S=8 validation (array 1640880: 56/56 `D.npy`, 72 BCa CI entries across all 7
+representations, 60 Holm-corrected Wilcoxon entries), and the S=27 submission
+(array 1640910, running). The clauses stated over *emitted tables and curves*
+are verified at **T-M7s** once the array lands.

@@ -39,6 +39,18 @@ confrontation on the new membership and emit the updated
 numbers explicitly (which per-regime verdicts moved, and whether the
 `tight_path_k4` falsification survives). Realized-parameter logging
 throughout. Local compute (T-M7e ran locally); nothing here goes to Picasso.
+**Also in this lane — G3 verification (no re-run).** A T-M7r re-run of the
+T-M7f G3 experiment was declared and then **withdrawn on evidence**
+(2026-07-24): G3's six bases (`tight_cycle_k3_n5`, `loose_path_k3_n9`,
+`tight_path_k4_n6`, `tight_path_k5_n7`, `sts9_k3`, `gq22_k3`) all derive from
+families still in `DATA_MANIFEST`, and `g3_sequence.py` calls
+`random_connected_edit(..., max_arity=...)` directly rather than through
+`PlantedFamilyDataset`, so the T-M7o arity-cap bug never reached it. Confirm
+that mechanically — assert each G3 base's family is a member of
+`DATA_MANIFEST.stratum_a_ids`, and confirm no G3 code path constructs a
+`PlantedFamilyDataset` or a `PerturbationLadderHypergraphs` with a defaulted
+`arity_range=(2, 3)` — and record the result in the closing note. If either
+check fails, **stop and report**; do not re-run G3 inside this task.
 **Acceptance:** every G2/A4 cell id present in the emitted artifacts is a
 member of `DATA_MANIFEST.stratum_a_ids` and no dropped family appears
 anywhere; `_REGIME_PREDICTION` covers exactly the current 17; G2 profiles +
@@ -47,7 +59,8 @@ confrontation re-scored with a stated confirm/falsify count and an explicit
 diff vs T-M7e's 16/17; A4 re-emits monotonicity, recovery, and ≥3 decoded
 intermediates on a design-seeded path spanning arities 3/4/5; superseded
 T-M7e result dirs moved under the `results/superseded/` convention, not
-deleted; all prior G2/A4 pins that still apply stay green; suite matches the
+deleted; all prior G2/A4 pins that still apply stay green; the G3 verification
+above is recorded with its two checks and their outcomes; suite matches the
 session baselines (1430 passed / 9 skipped / 25 deselected, ruff 3, mypy 21).
 **Out of scope here:** the sweep/stats harness (T-M7d), G3 (T-M7r), E1′ (frozen
 — do not re-open the oracle), prose folding into `theoretical/stability.md`

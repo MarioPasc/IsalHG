@@ -108,3 +108,29 @@ distance only) to add a ν/D̂ comparison row. Cost: ~2 h Picasso for the
 2 clean HIC datasets. Benefit: apples-to-apples synthetic↔real geometry
 comparison in the paper's characterization section. Recommendation: YES if the
 synthetic↔real ν/D̂ contrast is mentioned in the paper body; defer if not.
+
+---
+
+## Orchestrator verification + PI decision — 2026-07-24
+
+Re-ran independently in the worker's env: full suite **1436 passed, 9 skipped,
+29 deselected** (the +4 deselected are this task's slow-marked tests), ruff 3,
+mypy 21. Post-merge on `main`: **1446 passed, 9 skipped, 29 deselected**, ruff
+3, mypy 21 — no baseline drift. Gate artifact independently read: 10 candidates,
+verdict `NO_GO` on all 10.
+
+**Part 3 — PI decision (relayed by Mario, 2026-07-24): DEFER to submission
+time.** The optional label-stripped HIC re-run is not executed in S7. Rationale
+on the record: the geometry characterization's claim concerns the canonical
+string's metric structure and is demonstrated on the planted + Stratum A/B
+corpora; the T-M5j censored HIC exhibit already supplies the real-data
+cross-check for the application rankings; and the re-run would add a `ν`/`D̂`
+row that still carries a "censored, label-stripped" caveat. The option stays
+open if a reviewer asks for a synthetic↔real geometry comparison.
+
+**What the negative result buys.** Part 2 is a *measured* no-go, not an absence
+of evidence: all 10 independent candidates fail the pre-gate for one structural
+reason — each is a single large hypergraph network rather than a collection of
+labeled instances, so there is no pairwise-embedding problem to pose. That
+replicates T-DQ3' on fresh candidates and is the honest form of the real-anchor
+statement the article makes.

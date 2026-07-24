@@ -173,38 +173,31 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, updated at the 2026-07-20 S5 sweep).** The
-canonical-form track is closed and the theory record needs no article-side
-work. **The whole HGED-free body is closed and now measured on the N = 240
-primary corpus** (the post-S4 regime change: the N-scaling sweep in T-M5l
-showed D̂ = 21 at N = 60 is an under-resolved lower bound plateauing at 26,
-Horn bracket [12, 26], so the body re-ran at N = 240 — geometry and
-applications on one object, plus a runtime axis). Measured headlines
-(N = 240): IsalHG is non-Euclidean (ν = 0.250, D̂ = 26, stress 0.062) while
-the vector competitors saturate the CV cap; the G1 hubness profile predicts
-the kNN ordering (WL hubness 4.586 → AUC ≈ 0.49 chance-level collapse);
-A4's decodability differentiator holds (only IsalHG exhibits decoded S2H
-intermediates; nauty cannot navigate). On task metrics IsalHG is a
-competitive second (HPD-JSD leads A2/A3) — reported honestly; the capability
-matrix (A4) and the speed/capability trade-off are the differentiators. The
-HIC censored exhibit (T-M5j ✔, tables repaired at T-M5k ✔) cross-checks the
-hubness→kNN story on real data. Discussion evidence (final): bits r>1 on
-320/320 (pooled median 1.441, p = 1.6e-54); E1' ρ = 0.622 on the final
-11-block corpus (N = 6,921 pairs; the hardest completed cells sit at the top
-of the per-cell range; the twelfth block excluded whole-block at the measured
-oracle ceiling — DATA.md §4). **T-M5a is CLOSED (2026-07-21) and S1–S5 are
-complete.**
-
-**S7 (declared 2026-07-22, Mario-directed) reopens the article-critical path**:
-the `docs/article/REVIEW/` audit found the body is a single-point study (random
-planted seeds at n=10, k=3; arity ≤3 in effect; no CIs or significance tests on
-A1–A3). S7 rebuilds the evidence base on the strict master corpus
-(`REVIEW/DATA.md`: known-design Stratum A + parametric Stratum B sweep +
-design-seeded ladders), adds the stats harness, the naive baseline, the G3
-geometry-response experiment, the broadened real anchor, and the framing docs.
-Scopes T-M7 (code, 7 tasks) and T-M8 (docs, 4 tasks); structure in
-`SESSIONS.md` S7. **S7 supersedes the N=240 headline numbers** (they remain on
-the drive as the superseded record, per the N=60→240 precedent).
+**Critical path (v3, updated at S7 close).** The canonical-form track is
+closed and the theory record needs no article-side work. The S1–S5 HGED-free
+body was measured on N = 240 twenty-family planted corpus (S5); those numbers
+are superseded by S7 (the drive retains them per the N=60→240 precedent).
+**S7 rebuilds the evidence base** on 17 known-design families + parametric
+random-instance sweep with per-arity ranges k ∈ {3,4,5} (design) and k ∈
+{3,5} (random), full stats harness (S=27 seeds, 95% BCa CIs, Holm-corrected
+Wilcoxon), and the naive degree-sequence baseline. **S7 measured headlines
+(17 design families, 85 items, 27 seeds):** IsalHG is non-Euclidean (ν = 0.097
+[0.092, 0.105], D̂ = 17 [15, 20], stress = 0.046 [0.042, 0.055]) while WL and
+HPD do not concentrate (D̂ censored); degree-seq and NetLSD lead A2-ARI
+(0.451 and 0.479 vs IsalHG 0.285; both Holm-significant p < 10⁻⁷) and A3-AUC
+(0.948 and 0.934 vs IsalHG 0.920; p_Holm = 2.0 × 10⁻⁶ and 1.3 × 10⁻³) —
+both beat IsalHG because degree structure is the dominant discriminative signal
+in the design families; HPD does not differ significantly from IsalHG on either
+task. The G1 hubness profile predicts the kNN ordering: WL hubness 2.37 →
+AUC 0.495 chance-level collapse. G2: sensitivity IQR 3–9 tokens (IsalHG) vs
+20–37 (nauty); 16/17 regime confrontations confirmed, 1 falsified (tight-path
+arity-4). A4's decodability differentiator holds (all 8/8 IsalHG paths decode
+to valid hypergraphs; WL recovery = 0). Scalability frontier: k = 3 feasible to
+n ≈ 24 (low density), k = 5 only at n = 8; k = 7 and k = 10 measured
+infeasible. Three random cells excluded (IsalHG TIMEOUT, all competitors
+complete). Discussion evidence (from earlier work, unaffected by S7): bits r>1
+on 320/320 (pooled median 1.441, p = 1.6e-54); E1' ρ = 0.622. **T-M8f
+(prose fold of S7 numbers) closes T-M8 and completes the article-gating path.**
 
 **Runnable now:** S7 (article-gating). S6 remains optional stretch (T-M4a ∥
 T-TBe, then T-M6; explicit human opt-in; after S7 if both are wanted).

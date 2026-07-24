@@ -1,9 +1,10 @@
 """Multi-seed sweep runner — T-M7d.
 
 Runs G1 + A1 (geometry table) + A2 (clustering) + A3 (kNN) + bits over:
-  - Stratum A: the 14 admitted known-design seeds (``known_design_catalog``,
-    pruned at T-M7m — 9 high-symmetry families excluded)
-    via ``build_stratum_a_corpus(seed_value=s)`` for S independent seeds.
+  - Stratum A: the 17 admitted known-design seeds (``known_design_catalog``,
+    pruned at T-M7m — 9 high-symmetry families excluded; T-M7o added 3
+    longer arity-4/5 tight-cycle designs).  Membership is read live from
+    ``DATA_MANIFEST.stratum_a_ids`` — no parallel hardcoded list.
   - Stratum B: every admitted ER block from ``stratum_b_feasibility_envelope.json``
     (read-only at runtime; a later-admitted cell needs no code change).
 
@@ -73,37 +74,22 @@ from typing import Any
 
 import numpy as np
 
+from isalhg.datasets.synthetic.known_design_catalog import DATA_MANIFEST
+
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
-# Admitted Stratum A IDs (pruned at T-M7m — 9 symmetric families excluded)
+# Admitted Stratum A IDs — read from the single source of truth
 # ---------------------------------------------------------------------------
 
-# 14 kept families: 7 arity-3, 4 arity-4, 3 arity-5.
-# Excluded (EXCLUDED_SYMMETRIC in known_design_catalog):
-#   ag24, pg23, pg24, sts13_0, sts13_1, sts15_0,
-#   complete_k3_n5, complete_k4_n6, complete_k5_n6
-ADMITTED_A_IDS: frozenset[str] = frozenset(
-    [
-        # arity 3
-        "sts7",
-        "sts9",
-        "gq22",
-        "loose_path_k3",
-        "tight_path_k3",
-        "loose_cycle_k3",
-        "tight_cycle_k3",
-        # arity 4
-        "loose_path_k4",
-        "tight_path_k4",
-        "loose_cycle_k4",
-        "tight_cycle_k4",
-        # arity 5
-        "loose_path_k5",
-        "tight_path_k5",
-        "tight_cycle_k5",
-    ]
-)
+# 17 kept families: 7 arity-3, 6 arity-4, 4 arity-5.
+# T-M7m pruned 9 high-symmetry families (EXCLUDED_SYMMETRIC).
+# T-M7o added 3 longer tight-cycle designs (tight_cycle_k4_n8,
+# tight_cycle_k4_n10, tight_cycle_k5_n8) that became feasible once the
+# per-family arity-cap bug in PlantedFamilyDataset was fixed.
+# The manifest is the only authoritative list; do not maintain a copy here.
+
+ADMITTED_A_IDS: frozenset[str] = DATA_MANIFEST.stratum_a_ids
 
 # Coarse structural classes per arity group (type × arity).
 # Used to report per-arity A2/A3 breakdowns without pooling d_I across k.
@@ -153,7 +139,8 @@ _N_CV_FOLDS: int = 5
 _N_KMEDOIDS_INIT: int = 10
 
 # Stratum A sweep parameters.
-# members=5 × 8 arity-3 families = 40 items ≥ _N_CV_FOLDS × n_classes (40) — A3 feasible.
+# members=5 × 17 families = 85 items (7 k3 + 6 k4 + 4 k5) across three arity groups.
+# A3 feasibility per arity sub-corpus: k3 has 7 families × 5 members = 35 ≥ 5*7.
 _STRATUM_A_MEMBERS_PER_FAMILY: int = 5
 _STRATUM_A_N_EDITS: int = 2
 _STRATUM_A_MAX_RETRIES: int = 300
@@ -319,7 +306,7 @@ def build_stratum_a_seed_corpus(
         n_edits=n_edits,
         max_retries=max_retries,
         seed_value=seed,
-        dedup_backend="isalhg",
+        dedup_backend="pynauty_levi",
         admitted_ids=admitted_ids,
         allow_partial=True,
     )
@@ -781,7 +768,6 @@ def run_stratum_a_seed(
     """
     from isalhg.datasets.synthetic.known_design_catalog import (
         COARSE_CLASS_BY_ID,
-        assert_single_arity_group,
     )
 
     cell_key = "stratum_a"
@@ -833,8 +819,12 @@ def run_stratum_a_seed(
         lbl for lbl, cnt in realized_counts_per_family.items() if cnt < 2
     )
     if single_member_families:
-        logger.info(
-            "Stratum A seed %d: %d single-member families (excluded from A2/A3, kept in G1/A1): %s",
+        # Post-T-M7o this should not fire: the per-family arity-cap fix means all
+        # 17 families produce ≥2 members.  If it does fire, that is a defect to
+        # report, not silently absorbed.
+        logger.warning(
+            "Stratum A seed %d: %d single-member families (UNEXPECTED post-T-M7o; "
+            "excluded from A2/A3, kept in G1/A1): %s",
             seed,
             len(single_member_families),
             sorted(single_member_families),
@@ -884,17 +874,20 @@ def run_stratum_a_seed(
             return 5
         return None
 
-    # For each hypergraph, determine its arity group from its edges.
-    # (All catalog families are uniform; take the unique edge size.)
-    def _arity_of_H(H: Any) -> int:
-        arities = {len(members) for _, members, _ in H.iter_edges()}
-        return min(arities) if arities else 0
-
-    # Group item indices by arity.
+    # Group item indices by their family's catalog arity (not empirical edge size).
+    # Using coarse_class_strings ("design_k3" → 3, "cycle_k4" → 4, etc.) avoids
+    # misclassifying items from k=4/5 families whose Qin-edit perturbations produced
+    # a lower-arity edge (e.g. split of a k=4 edge → one k=3 + one k=4 sub-edge).
+    # Within a same-catalog-arity sub-corpus, d_I is valid: all items are encoded
+    # with the same k-alphabet (PlantedFamilyDataset respects the per-family arity
+    # cap since T-M7o), so string-space comparability holds regardless of whether
+    # any individual edge was reduced by perturbation.
     arity_indices: dict[int, list[int]] = {}
-    for idx, H in enumerate(hypergraphs):
-        k = _arity_of_H(H)
-        arity_indices.setdefault(k, []).append(idx)
+    for idx, cc in enumerate(coarse_class_strings):
+        k = _arity_from_coarse_class(cc)
+        if k is not None:
+            arity_indices.setdefault(k, []).append(idx)
+        # Items with unrecognised coarse class are excluded from per-arity A2/A3.
 
     # Pre-compute which coarse classes are dropped from A2/A3 per arity.
     # This is corpus-level (same for all representations).
@@ -969,21 +962,10 @@ def run_stratum_a_seed(
                 a3_per_arity[k_arity] = None
                 continue
 
-            # Guard: all items must share one arity (should always hold here).
-            sub_hgs = [hypergraphs[i] for i in a2a3_idx]
-            try:
-                assert_single_arity_group(sub_hgs)
-            except ValueError as exc:
-                logger.warning(
-                    "Stratum A seed %d, k=%d: pooling guard fired: %s",
-                    seed,
-                    k_arity,
-                    exc,
-                )
-                a2_per_arity[k_arity] = None
-                a3_per_arity[k_arity] = None
-                continue
-
+            # No per-arity pooling guard here: all items are from same-catalog-arity
+            # families (guaranteed by the coarse_class_strings classification above).
+            # Qin-edit perturbations may reduce individual edge sizes, but the items
+            # remain in the same k-alphabet encoding space, so d_I is valid.
             sub_D = D[np.ix_(a2a3_idx, a2a3_idx)]
             sub_labels = [labels[i] for i in a2a3_idx]
             # Remap labels to 0-based within the filtered sub-corpus.

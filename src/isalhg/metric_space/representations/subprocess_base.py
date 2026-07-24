@@ -145,10 +145,25 @@ class SubprocessRepresentation(HypergraphDistance):
     # ------------------------------------------------------------------
 
     def _python_path(self) -> Path:
-        """Canonical path to the pinned env's Python executable."""
+        """Canonical path to the pinned env's Python executable.
+
+        Probes ``~/.conda/envs/<env>`` first (local convention), then
+        ``~/fscratch/conda_envs/<env>`` (Picasso convention, where conda
+        is configured to store envs on the fast scratch filesystem).
+        """
         if not self.PINNED_ENV:
             raise SubprocessRepresentationError(f"{type(self).__name__} did not set PINNED_ENV")
-        return Path.home() / ".conda" / "envs" / self.PINNED_ENV / "bin" / "python"
+        home = Path.home()
+        candidates = [
+            home / ".conda" / "envs" / self.PINNED_ENV / "bin" / "python",
+            home / "fscratch" / "conda_envs" / self.PINNED_ENV / "bin" / "python",
+        ]
+        for p in candidates:
+            if p.is_file() and os.access(p, os.X_OK):
+                return p
+        # None found — return the default path so _resolve_python raises a
+        # descriptive error referencing the conventional location.
+        return candidates[0]
 
     def _resolve_python(self) -> Path:
         """Locate the pinned env's Python, caching the result.

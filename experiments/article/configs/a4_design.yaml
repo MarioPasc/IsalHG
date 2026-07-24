@@ -18,7 +18,7 @@
 #
 # Analysis: experiments.article.analysis.shortest_path (A4 scores)
 
-output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/a4_design
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7q/a4_design
 
 cells:
   # ── arity-3 designs ──────────────────────────────────────────────────────
@@ -58,34 +58,9 @@ cells:
       max_t: 20
       n_distractor_designs: 8
 
-  - type: design_a4
-    dataset: ""
-    seed: 42
-    label: complete_k3_n5_s0
-    dataset_params:
-      item_id: complete_k3_n5
-      max_t: 20
-      n_distractor_designs: 8
-
   # ── arity-4 designs ──────────────────────────────────────────────────────
-  - type: design_a4
-    dataset: ""
-    seed: 42
-    label: complete_k4_n6_s0
-    dataset_params:
-      item_id: complete_k4_n6
-      max_t: 20
-      n_distractor_designs: 8
-
-  - type: design_a4
-    dataset: ""
-    seed: 43
-    label: complete_k4_n6_s1
-    dataset_params:
-      item_id: complete_k4_n6
-      max_t: 20
-      n_distractor_designs: 8
-
+  # (T-M7q: complete_k3_n5/complete_k4_n6/complete_k5_n6 dropped (T-M7m prune);
+  #  tight_cycle_k4_n8 and tight_cycle_k5_n8 added for the T-M7o new families)
   - type: design_a4
     dataset: ""
     seed: 42
@@ -95,30 +70,30 @@ cells:
       max_t: 20
       n_distractor_designs: 8
 
-  # ── arity-5 designs ──────────────────────────────────────────────────────
   - type: design_a4
     dataset: ""
     seed: 42
-    label: complete_k5_n6_s0
+    label: tight_cycle_k4_n8_s0
     dataset_params:
-      item_id: complete_k5_n6
+      item_id: tight_cycle_k4_n8
       max_t: 20
       n_distractor_designs: 8
 
-  - type: design_a4
-    dataset: ""
-    seed: 43
-    label: complete_k5_n6_s1
-    dataset_params:
-      item_id: complete_k5_n6
-      max_t: 20
-      n_distractor_designs: 8
-
+  # ── arity-5 designs ──────────────────────────────────────────────────────
   - type: design_a4
     dataset: ""
     seed: 42
     label: tight_cycle_k5_s0
     dataset_params:
       item_id: tight_cycle_k5
+      max_t: 20
+      n_distractor_designs: 8
+
+  - type: design_a4
+    dataset: ""
+    seed: 42
+    label: tight_cycle_k5_n8_s0
+    dataset_params:
+      item_id: tight_cycle_k5_n8
       max_t: 20
       n_distractor_designs: 8

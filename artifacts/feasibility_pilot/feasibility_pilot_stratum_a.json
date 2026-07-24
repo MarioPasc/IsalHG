@@ -2,10 +2,10 @@
   "budget_s": 300.0,
   "threshold_s": 30.0,
   "n_runs": 3,
-  "n_designs": 23,
+  "n_designs": 26,
   "n_admitted": 17,
   "n_pending_cluster": 0,
-  "n_excluded": 6,
+  "n_excluded": 9,
   "designs": {
     "sts7": {
       "item_id": "sts7",
@@ -200,8 +200,8 @@
       ],
       "p50_s": 0.006248721852898598,
       "p90_s": 0.006248721852898598,
-      "status": "ADMITTED",
-      "reason": ""
+      "status": "EXCLUDED",
+      "reason": "T-M7m corpus prune: automorphism group exhausts Qin-edit retry budget (100% DNF on edit sampling)"
     },
     "ag24": {
       "item_id": "ag24",
@@ -307,6 +307,42 @@
       "status": "ADMITTED",
       "reason": ""
     },
+    "tight_cycle_k4_n8": {
+      "item_id": "tight_cycle_k4_n8",
+      "family_label": "TightCycle4-8",
+      "arity": 4,
+      "n": 8,
+      "m": 8,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        0.28731,
+        0.28731,
+        0.29137
+      ],
+      "p50_s": 0.28731,
+      "p90_s": 0.29137,
+      "status": "ADMITTED",
+      "reason": "T-M7o addition: arity-cap fix added longer tight cycles; p50=0.287s < threshold 30s (measured T-M7q)"
+    },
+    "tight_cycle_k4_n10": {
+      "item_id": "tight_cycle_k4_n10",
+      "family_label": "TightCycle4-10",
+      "arity": 4,
+      "n": 10,
+      "m": 10,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        2.84153,
+        2.84153,
+        2.93316
+      ],
+      "p50_s": 2.84153,
+      "p90_s": 2.93316,
+      "status": "ADMITTED",
+      "reason": "T-M7o addition: arity-cap fix added longer tight cycles; p50=2.84s < threshold 30s (measured T-M7q)"
+    },
     "complete_k4_n6": {
       "item_id": "complete_k4_n6",
       "family_label": "Complete4-6",
@@ -322,8 +358,8 @@
       ],
       "p50_s": 0.04824319016188383,
       "p90_s": 0.04824319016188383,
-      "status": "ADMITTED",
-      "reason": ""
+      "status": "EXCLUDED",
+      "reason": "T-M7m corpus prune: automorphism group exhausts Qin-edit retry budget (100% DNF on edit sampling)"
     },
     "pg24": {
       "item_id": "pg24",
@@ -395,6 +431,24 @@
       "status": "ADMITTED",
       "reason": ""
     },
+    "tight_cycle_k5_n8": {
+      "item_id": "tight_cycle_k5_n8",
+      "family_label": "TightCycle5-8",
+      "arity": 5,
+      "n": 8,
+      "m": 8,
+      "n_runs_completed": 3,
+      "dnf": false,
+      "timings_s": [
+        3.97132,
+        3.97132,
+        4.56014
+      ],
+      "p50_s": 3.97132,
+      "p90_s": 4.56014,
+      "status": "ADMITTED",
+      "reason": "T-M7o addition: arity-cap fix added longer tight cycles; p50=3.97s < threshold 30s (measured T-M7q)"
+    },
     "complete_k5_n6": {
       "item_id": "complete_k5_n6",
       "family_label": "Complete5-6",
@@ -410,8 +464,8 @@
       ],
       "p50_s": 0.14095229096710682,
       "p90_s": 0.14095229096710682,
-      "status": "ADMITTED",
-      "reason": ""
+      "status": "EXCLUDED",
+      "reason": "T-M7m corpus prune: automorphism group exhausts Qin-edit retry budget (100% DNF on edit sampling)"
     }
   }
 }

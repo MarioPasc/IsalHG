@@ -18,16 +18,34 @@
 #
 # Analysis: experiments.article.analysis.g2.confront_regime_predictions
 
-output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7e/g2_catalog_sensitivity
+output_root: /media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/T-M7q/g2_catalog_sensitivity
 
 cells:
-  # All 17 admitted catalog designs in one cell (auto-selects max_arity per design)
+  # All 17 admitted catalog designs in one cell (explicit list = DATA_MANIFEST.stratum_a_ids;
+  # item_ids: null would pull from the T-M7a pilot artifact which predates T-M7m/T-M7o)
   - type: g2_catalog_sensitivity
     dataset: ""
     seed: 42
     label: catalog_all_s0
     dataset_params:
-      # item_ids: null means "all admitted"
+      item_ids:
+        - gq22
+        - loose_cycle_k3
+        - loose_cycle_k4
+        - loose_path_k3
+        - loose_path_k4
+        - loose_path_k5
+        - sts7
+        - sts9
+        - tight_cycle_k3
+        - tight_cycle_k4
+        - tight_cycle_k4_n10
+        - tight_cycle_k4_n8
+        - tight_cycle_k5
+        - tight_cycle_k5_n8
+        - tight_path_k3
+        - tight_path_k4
+        - tight_path_k5
       n_edits_per_design: 50
       # max_arity: null means auto-detect from design_arity
 
@@ -37,9 +55,28 @@ cells:
     seed: 43
     label: catalog_all_s1
     dataset_params:
+      item_ids:
+        - gq22
+        - loose_cycle_k3
+        - loose_cycle_k4
+        - loose_path_k3
+        - loose_path_k4
+        - loose_path_k5
+        - sts7
+        - sts9
+        - tight_cycle_k3
+        - tight_cycle_k4
+        - tight_cycle_k4_n10
+        - tight_cycle_k4_n8
+        - tight_cycle_k5
+        - tight_cycle_k5_n8
+        - tight_path_k3
+        - tight_path_k4
+        - tight_path_k5
       n_edits_per_design: 50
 
   # Arity-4/5 only — focused subset for the regime-confrontation analysis
+  # (T-M7q: replaced complete_k4_n6/complete_k5_n6 with the T-M7o tight cycles)
   - type: g2_catalog_sensitivity
     dataset: ""
     seed: 42
@@ -50,9 +87,10 @@ cells:
         - tight_path_k4
         - loose_cycle_k4
         - tight_cycle_k4
-        - complete_k4_n6
+        - tight_cycle_k4_n8
+        - tight_cycle_k4_n10
         - loose_path_k5
         - tight_path_k5
         - tight_cycle_k5
-        - complete_k5_n6
+        - tight_cycle_k5_n8
       n_edits_per_design: 50

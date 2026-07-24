@@ -1,27 +1,29 @@
-# Admitted Stratum A catalog (T-M7h cluster feasibility pilot)
+# Admitted Stratum A catalog (T-M7h cluster feasibility pilot; updated T-M7q)
 # Budget (timeout): 300.0s  Threshold: 30.0s  Runs: 3
+# T-M7m: complete_k3_n5 / complete_k4_n6 / complete_k5_n6 moved to EXCLUDED (Qin-edit DNF)
+# T-M7o: tight_cycle_k4_n8 / tight_cycle_k4_n10 / tight_cycle_k5_n8 added (timings measured T-M7q)
 
 item_id              arity    n    m   p50(s)   p90(s)     status  reason
 -------------------------------------------------------------------------
-sts7                     3    7    7    0.024    0.024   ADMITTED  
-sts9                     3    9   12    0.299    0.299   ADMITTED  
-gq22                     3   15   15    3.045    3.045   ADMITTED  
-loose_path_k3            3    9    4    0.002    0.002   ADMITTED  
-tight_path_k3            3    6    4    0.003    0.003   ADMITTED  
-loose_cycle_k3           3    8    4    0.003    0.003   ADMITTED  
-tight_cycle_k3           3    5    5    0.004    0.004   ADMITTED  
-complete_k3_n5           3    5   10    0.006    0.006   ADMITTED  
-loose_path_k4            4   10    3    0.003    0.003   ADMITTED  
-tight_path_k4            4    6    3    0.007    0.007   ADMITTED  
-loose_cycle_k4           4   12    4    0.056    0.056   ADMITTED  
-tight_cycle_k4           4    5    5    0.007    0.007   ADMITTED  
-complete_k4_n6           4    6   15    0.048    0.048   ADMITTED  
-loose_path_k5            5   13    3    0.043    0.043   ADMITTED  
-tight_path_k5            5    7    3    0.046    0.046   ADMITTED  
-tight_cycle_k5           5    7    7    0.356    0.356   ADMITTED  
-complete_k5_n6           5    6    6    0.141    0.141   ADMITTED  
+sts7                     3    7    7    0.024    0.024   ADMITTED
+sts9                     3    9   12    0.299    0.299   ADMITTED
+gq22                     3   15   15    3.045    3.045   ADMITTED
+loose_path_k3            3    9    4    0.002    0.002   ADMITTED
+tight_path_k3            3    6    4    0.003    0.003   ADMITTED
+loose_cycle_k3           3    8    4    0.003    0.003   ADMITTED
+tight_cycle_k3           3    5    5    0.004    0.004   ADMITTED
+loose_path_k4            4   10    3    0.003    0.003   ADMITTED
+tight_path_k4            4    6    3    0.007    0.007   ADMITTED
+loose_cycle_k4           4   12    4    0.056    0.056   ADMITTED
+tight_cycle_k4           4    5    5    0.007    0.007   ADMITTED
+tight_cycle_k4_n8        4    8    8    0.287    0.291   ADMITTED  T-M7o addition (measured T-M7q)
+tight_cycle_k4_n10       4   10   10    2.842    2.933   ADMITTED  T-M7o addition (measured T-M7q)
+loose_path_k5            5   13    3    0.043    0.043   ADMITTED
+tight_path_k5            5    7    3    0.046    0.046   ADMITTED
+tight_cycle_k5           5    7    7    0.356    0.356   ADMITTED
+tight_cycle_k5_n8        5    8    8    3.971    4.560   ADMITTED  T-M7o addition (measured T-M7q)
 -------------------------------------------------------------------------
-Total admitted: 17 / 23
+Total admitted: 17 / 26
 
 # Cluster-excluded (confirmed infeasible at 300s timeout)
 item_id               reason
@@ -31,4 +33,10 @@ sts15_0               w*_c DNF at cluster budget (300s); confirmed infeasible (p
 ag24                  w*_c DNF at cluster budget (300s); confirmed infeasible (p90 >> threshold 30s)
 pg23                  w*_c DNF at cluster budget (300s); confirmed infeasible (p90 >> threshold 30s)
 pg24                  w*_c DNF at cluster budget (300s); confirmed infeasible (p90 >> threshold 30s)
+
+# Corpus-excluded (T-M7m prune: automorphism group exhausts Qin-edit retry budget)
+item_id               reason
+complete_k3_n5        T-M7m: Qin-edit 100% DNF (trivial automorphism group → all edits isomorphic to base)
+complete_k4_n6        T-M7m: Qin-edit 100% DNF (trivial automorphism group → all edits isomorphic to base)
+complete_k5_n6        T-M7m: Qin-edit 100% DNF (trivial automorphism group → all edits isomorphic to base)
 

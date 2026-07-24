@@ -247,6 +247,50 @@ def test_g2_catalog_sensitivity_source_type_required(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# T28 — _REGIME_PREDICTION covers exactly DATA_MANIFEST.stratum_a_ids
+# ---------------------------------------------------------------------------
+
+
+def test_regime_prediction_matches_data_manifest():
+    """T28: _REGIME_PREDICTION catalog keys must exactly match DATA_MANIFEST.stratum_a_ids.
+
+    Regression for T-M7q: T-M7e wrote _REGIME_PREDICTION against the old 17
+    families (with 3 complete uniforms); T-M7m/T-M7o changed the corpus to the
+    new 17 (completes dropped, 3 tight cycles added).  This test catches any
+    future drift between the two.
+    """
+    from experiments.article.analysis.g2 import _REGIME_PREDICTION
+    from isalhg.datasets.synthetic.known_design_catalog import DATA_MANIFEST
+
+    stratum_a_ids = DATA_MANIFEST.stratum_a_ids
+
+    # The non-catalog entries in _REGIME_PREDICTION (random corpora + legacy fixtures).
+    non_catalog_keys = {
+        "sparse",
+        "medium",
+        "dense",
+        "fano_plane",
+        "sts_9",
+        "cyclic_triple_orbit_13",
+        "gq_2_2_doily",
+    }
+
+    catalog_keys_in_prediction = set(_REGIME_PREDICTION.keys()) - non_catalog_keys
+
+    missing_from_prediction = stratum_a_ids - catalog_keys_in_prediction
+    extra_in_prediction = catalog_keys_in_prediction - stratum_a_ids
+
+    assert not missing_from_prediction, (
+        f"_REGIME_PREDICTION is missing Stratum A ids: {sorted(missing_from_prediction)}. "
+        "Update g2.py to add them."
+    )
+    assert not extra_in_prediction, (
+        f"_REGIME_PREDICTION contains dropped ids: {sorted(extra_in_prediction)}. "
+        "Update g2.py to remove them (check T-M7m/T-M7o for the current corpus)."
+    )
+
+
+# ---------------------------------------------------------------------------
 # T27 (TOOTH) — design_ladder fails if base_item_id missing
 # ---------------------------------------------------------------------------
 

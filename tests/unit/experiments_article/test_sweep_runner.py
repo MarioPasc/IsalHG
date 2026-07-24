@@ -209,7 +209,7 @@ def test_build_stratum_a_seed_corpus_labels_align() -> None:
 
     # Small subset of arity-3 admitted families — fast for CI.
     fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
-    hypergraphs, labels, label_strings = build_stratum_a_seed_corpus(
+    hypergraphs, labels, label_strings, _ = build_stratum_a_seed_corpus(
         seed=0,
         admitted_ids=fast_subset,
         members_per_family=5,
@@ -229,10 +229,10 @@ def test_build_stratum_a_seed_corpus_different_seeds_differ() -> None:
     from experiments.article.analysis.sweep_multi_seed import build_stratum_a_seed_corpus
 
     fast_subset = frozenset({"sts7", "sts9", "loose_path_k3", "tight_cycle_k3"})
-    H0, _, _ = build_stratum_a_seed_corpus(
+    H0, _, _, _ = build_stratum_a_seed_corpus(
         seed=0, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
-    H1, _, _ = build_stratum_a_seed_corpus(
+    H1, _, _, _ = build_stratum_a_seed_corpus(
         seed=1, admitted_ids=fast_subset, members_per_family=5, n_edits=2
     )
     # The corpora have the same size (same families × members_per_family).

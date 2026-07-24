@@ -306,7 +306,7 @@ def build_stratum_a_seed_corpus(
         n_edits=n_edits,
         max_retries=max_retries,
         seed_value=seed,
-        dedup_backend="nauty",
+        dedup_backend="pynauty_levi",
         admitted_ids=admitted_ids,
         allow_partial=True,
     )

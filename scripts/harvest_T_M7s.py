@@ -152,6 +152,11 @@ def build_task_census(
     return census
 
 
+_TERMINAL_STATES: frozenset[str] = frozenset(
+    {"COMPLETED", "TIMEOUT", "FAILED", "NODE_FAIL", "CANCELLED", "OUT_OF_MEMORY"}
+)
+
+
 def summarise_census(
     census: list[dict[str, Any]],
 ) -> dict[str, Any]:
@@ -166,10 +171,15 @@ def summarise_census(
     -------
     dict
         Keys: ``total``, ``completed``, ``timeout``, ``failed``,
-        ``oom``, ``other``, ``non_completed_tasks``.
+        ``oom``, ``other``, ``non_completed_tasks``, ``has_non_terminal``.
+
+        ``has_non_terminal`` is ``True`` when any task has a transient state
+        (RUNNING, COMPLETING, PENDING, …) that means the array has not yet
+        fully settled.  Harvest should only be final when this is ``False``.
     """
     counts: dict[str, int] = defaultdict(int)
     non_completed: list[dict[str, Any]] = []
+    has_non_terminal = False
 
     for entry in census:
         state = entry["state"]
@@ -185,8 +195,11 @@ def summarise_census(
             counts["oom"] += 1
             non_completed.append(entry)
         else:
+            # RUNNING, COMPLETING, PENDING, or unknown — not yet terminal.
             counts["other"] += 1
             non_completed.append(entry)
+            if state not in _TERMINAL_STATES:
+                has_non_terminal = True
 
     return {
         "total": len(census),
@@ -196,6 +209,7 @@ def summarise_census(
         "oom": counts["oom"],
         "other": counts["other"],
         "non_completed_tasks": non_completed,
+        "has_non_terminal": has_non_terminal,
     }
 
 
@@ -626,6 +640,65 @@ def _atomic_write_json(path: Path, data: object) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Harvest decision
+# ---------------------------------------------------------------------------
+
+
+def compute_harvest_decision(
+    ac2: dict[str, Any],
+    ac3: dict[str, Any],
+    ac4: dict[str, Any],
+    ac5: dict[str, Any],
+    census_summary: dict[str, Any],
+) -> tuple[bool, list[str]]:
+    """Compute the overall acceptance decision and enumerate shortfalls.
+
+    A shortfall is a named criterion that did not pass.  ``all_pass`` is
+    ``True`` only when ``shortfalls`` is empty and all per-AC ``pass``
+    sub-fields are ``True``.
+
+    The arity-axis shortfall (``ac5_arity_axis``) is real — it means the
+    geometry-vs-arity sweep has only 2 points from Stratum B, below the ≥3
+    requirement.  That is a consequence of the Stratum B admission envelope
+    (k=4 blocks timed out; k=7/10 measured infeasible), not an oversight to
+    paper over.  The Stratum A per-arity breakdown covers k∈{3,4,5} for A2/A3
+    but is not the geometry sweep curve; the two objects are distinct.
+
+    A non-terminal census (``census_non_terminal``) means the sacct snapshot
+    was captured while at least one task was still RUNNING/COMPLETING.  The
+    artifact must not claim finality when the array has not settled.
+
+    Parameters
+    ----------
+    ac2 : dict
+        Output of :func:`verify_ac2_ci_coverage`.
+    ac3 : dict
+        Output of :func:`verify_ac3_wilcoxon_coverage`.
+    ac4 : dict
+        Output of :func:`verify_ac4_per_arity`.
+    ac5 : dict
+        Output of :func:`verify_ac5_axis_coverage`.
+    census_summary : dict
+        Output of :func:`summarise_census`.
+
+    Returns
+    -------
+    tuple[bool, list[str]]
+        ``(all_pass, shortfalls)`` where ``shortfalls`` is a list of
+        criterion identifiers that did not pass.
+    """
+    shortfalls: list[str] = []
+
+    if census_summary.get("has_non_terminal", False):
+        shortfalls.append("census_non_terminal")
+    if not ac5.get("arity_axis_ok", True):
+        shortfalls.append("ac5_arity_axis")
+
+    all_pass = ac2["pass"] and ac3["pass"] and ac4["pass"] and ac5["pass"] and not shortfalls
+    return all_pass, shortfalls
+
+
+# ---------------------------------------------------------------------------
 # Main harvest orchestration
 # ---------------------------------------------------------------------------
 
@@ -848,7 +921,7 @@ def harvest(
     # ------------------------------------------------------------------ #
     # Assemble summary                                                    #
     # ------------------------------------------------------------------ #
-    all_pass = ac2["pass"] and ac3["pass"] and ac4["pass"] and ac5["pass"]
+    all_pass, shortfalls = compute_harvest_decision(ac2, ac3, ac4, ac5, census_summary)
 
     summary: dict[str, Any] = {
         "array_id": array_id,
@@ -885,6 +958,7 @@ def harvest(
         "seed_gap_report": gap_report,
         # Overall
         "all_acceptance_pass": all_pass,
+        "acceptance_shortfalls": shortfalls,
         # Note on arity axis
         "arity_axis_note": (
             "Stratum B arity axis has only 2 points (k∈{3,5}); the ≥3 criterion "

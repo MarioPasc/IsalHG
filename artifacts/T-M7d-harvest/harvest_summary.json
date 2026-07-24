@@ -69,10 +69,10 @@
   "census": {
     "total": 77,
     "completed": 74,
-    "timeout": 2,
+    "timeout": 3,
     "failed": 0,
     "oom": 0,
-    "other": 1,
+    "other": 0,
     "non_completed_tasks": [
       {
         "task_idx": 42,
@@ -93,9 +93,10 @@
         "task_id": "1640910_70",
         "cell_key": "er_uniform_k5_n8_rho2",
         "dist_name": "isalhg_levenshtein",
-        "state": "RUNNING"
+        "state": "TIMEOUT"
       }
-    ]
+    ],
+    "has_non_terminal": false
   },
   "isalhg_timeout_b_cells": [
     "er_uniform_k3_n16_rho4",
@@ -264,6 +265,9 @@
       "degree_seq_l1": 0
     }
   },
-  "all_acceptance_pass": true,
+  "all_acceptance_pass": false,
+  "acceptance_shortfalls": [
+    "ac5_arity_axis"
+  ],
   "arity_axis_note": "Stratum B arity axis has only 2 points (k\u2208{3,5}); the \u22653 criterion is not met for the arity sweep curve from Stratum B alone.  The per-arity Stratum A breakdown (ac4) provides k\u2208{3,4,5} for A2/A3 application metrics.  The T-M7s closing note explicitly records this as a measured outcome of the Stratum B admission envelope (k=4 blocks timed out; k=7/10 were infeasible)."
 }

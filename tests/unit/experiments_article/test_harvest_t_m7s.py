@@ -45,6 +45,7 @@ pytestmark = pytest.mark.unit
 # ---------------------------------------------------------------------------
 
 from scripts.harvest_T_M7s import (
+    compute_harvest_decision,
     parse_sacct_tsv,
     summarise_census,
     verify_ac2_ci_coverage,
@@ -525,3 +526,133 @@ def test_ac5_fails_when_ci_nan(tmp_path: Path) -> None:
     result = verify_ac5_axis_coverage(blocks, stats_dir)
     assert result["all_cells_have_ci"] is False
     assert result["pass"] is False
+
+
+# ---------------------------------------------------------------------------
+# AC-H7 — summarise_census: has_non_terminal flag (Defect 1 regression)
+# ---------------------------------------------------------------------------
+
+
+def test_summarise_census_flags_non_terminal() -> None:
+    """A RUNNING task sets has_non_terminal=True — TOOTH (Defect 1 regression).
+
+    Before the fix, sacct was captured while task 70 was still RUNNING.
+    ``summarise_census`` returned ``has_non_terminal=False`` because RUNNING is
+    not in the terminal-state enumeration, causing the artifact to claim
+    finality when the array had not settled.  This test fails if the non-terminal
+    flag is missing or permanently False.
+    """
+    census_with_running = [
+        {
+            "task_idx": 0,
+            "task_id": "j_0",
+            "cell_key": "stratum_a",
+            "dist_name": "isalhg_levenshtein",
+            "state": "COMPLETED",
+        },
+        {
+            "task_idx": 70,
+            "task_id": "j_70",
+            "cell_key": "er_uniform_k5_n8_rho2",
+            "dist_name": "isalhg_levenshtein",
+            "state": "RUNNING",
+        },
+    ]
+    result = summarise_census(census_with_running)
+    assert result["has_non_terminal"] is True, (
+        "RUNNING task must set has_non_terminal=True; without this check the "
+        "artifact falsely claims the census is terminal"
+    )
+    # The RUNNING task must appear in non_completed_tasks for traceability.
+    assert any(e["state"] == "RUNNING" for e in result["non_completed_tasks"])
+
+
+# ---------------------------------------------------------------------------
+# AC-H8 — compute_harvest_decision (Defect 2 regression)
+# ---------------------------------------------------------------------------
+
+
+def _clean_ac(*, pass_: bool = True) -> dict:
+    """Minimal passing AC dict (used for ac2/ac3/ac4 stubs)."""
+    return {"pass": pass_}
+
+
+def _ac5_with_arity(*, arity_axis_ok: bool) -> dict:
+    """Minimal AC5 dict with controllable arity_axis_ok."""
+    return {
+        "pass": True,
+        "n_axis_ok": True,
+        "density_axis_ok": True,
+        "arity_axis_ok": arity_axis_ok,
+        "all_cells_have_ci": True,
+        "n_values": [8, 16, 24],
+        "density_values": [1.0, 2.0, 4.0],
+        "arity_values": [3, 5],
+        "arity_axis_note": "Stratum B arity axis has only 2 points (k∈{3,5}).",
+    }
+
+
+def _terminal_census() -> dict:
+    """Minimal census_summary with no non-terminal tasks."""
+    return {
+        "total": 77,
+        "completed": 74,
+        "timeout": 3,
+        "failed": 0,
+        "oom": 0,
+        "other": 0,
+        "non_completed_tasks": [],
+        "has_non_terminal": False,
+    }
+
+
+def test_compute_decision_arity_axis_shortfall() -> None:
+    """arity_axis_ok=False → shortfalls=['ac5_arity_axis'], all_pass=False — TOOTH (Defect 2).
+
+    Before the fix, ``all_acceptance_pass: true`` was written even when
+    ``ac5_axis_coverage.arity_axis_ok`` was ``false``.  This test fails against
+    the old ``all_pass = ac2[...] and ac3[...] and ac4[...] and ac5["pass"]``
+    logic (ac5["pass"] is True even when arity_axis_ok is False).
+    """
+    ac5 = _ac5_with_arity(arity_axis_ok=False)
+    # ac5["pass"] is True here — that is the old logic's blind spot.
+    assert ac5["pass"] is True, "Precondition: ac5.pass must be True for the tooth to bite"
+
+    all_pass, shortfalls = compute_harvest_decision(
+        _clean_ac(),
+        _clean_ac(),
+        _clean_ac(),
+        ac5,
+        _terminal_census(),
+    )
+    assert all_pass is False, "arity_axis_ok=False must make all_acceptance_pass=False"
+    assert "ac5_arity_axis" in shortfalls
+
+
+def test_compute_decision_non_terminal_census() -> None:
+    """has_non_terminal=True → shortfalls contain census_non_terminal — TOOTH (Defect 1)."""
+    non_terminal_census = dict(_terminal_census())
+    non_terminal_census["has_non_terminal"] = True
+
+    all_pass, shortfalls = compute_harvest_decision(
+        _clean_ac(),
+        _clean_ac(),
+        _clean_ac(),
+        _ac5_with_arity(arity_axis_ok=True),
+        non_terminal_census,
+    )
+    assert all_pass is False
+    assert "census_non_terminal" in shortfalls
+
+
+def test_compute_decision_clean_all_pass() -> None:
+    """All sub-checks pass and no shortfalls → all_pass=True, shortfalls=[]."""
+    all_pass, shortfalls = compute_harvest_decision(
+        _clean_ac(),
+        _clean_ac(),
+        _clean_ac(),
+        _ac5_with_arity(arity_axis_ok=True),
+        _terminal_census(),
+    )
+    assert all_pass is True
+    assert shortfalls == []

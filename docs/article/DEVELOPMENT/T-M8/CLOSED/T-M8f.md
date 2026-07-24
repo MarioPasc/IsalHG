@@ -92,3 +92,31 @@ All four acceptance criteria satisfied:
 6. **`docs/article/DEVELOPMENT/README.md` critical-path paragraph** updated with S7 measured headlines (ν=0.097, D̂=17, stress=0.046; degree_seq/NetLSD lead A2/A3; WL hubness 2.37 → AUC 0.495 chance; G2 IQR 3–9; scalability frontier).
 
 **Checks:** pytest 1499 passed / 9 skipped / 0 failed · ruff 3 (pre-existing) · mypy 21 (pre-existing). No new failures from docs changes.
+
+---
+
+**Second-pass closing note (2026-07-24) — pipeline artifact correction.**
+
+The first pass used self-derived Wilcoxon tests and percentile bootstrap CIs; both have been replaced in a second pass with pipeline values from `results/T-M7d/stats/stratum_a_stats.json` (T-M7t; `bootstrap_method: "BCa"`).
+
+**What changed:**
+
+1. **All geometry-table CIs** replaced with BCa from `stratum_a_stats.json::cis` (keys `<repr>::g1_a1::{nu,d_hat,stress,hubness_skewness}`). IsalHG row: ν=[0.096,0.099], D̂=[16,17], stress=[0.045,0.048], hubness=[0.825,0.990].
+
+2. **A2-ARI CIs** replaced with BCa: `<repr>::a2::ari::*`. All seven representations updated. Wilcoxon replaced: degree_seq>IsalHG fwd p_holm=4.47e-7 rb=1.00 (from `degree_seq_l1::a2::ari` reverse entry); NetLSD>IsalHG fwd p_holm=4.47e-7 rb=1.00 (from `netlsd_l2::a2::ari` reverse entry); IsalHG>nauty fwd p_holm=6.11e-7 rb=0.99 (from `nauty_levi_edit::a2::ari` forward entry); IsalHG>WL fwd p_holm=4.47e-7 rb=1.00 (from `hypergraph_wl_l1::a2::ari` forward entry); HPD ns — both fwd p_holm=1.0 and rev p_holm=1.0 (from `hpd_jsd::a2::ari`).
+
+3. **A3-AUC@k5 CIs** replaced with BCa: `<repr>::a3::auc_k5`. All seven updated. Wilcoxon: degree_seq>IsalHG rev p_holm=1.93e-5 rb=0.94 (from `degree_seq_l1::a3::auc_k5` reverse); NetLSD>IsalHG rev p_holm=1.24e-2 rb=0.71 (from `netlsd_l2::a3::auc_k5` reverse); **IsalHG>HPD fwd p_holm=4.17e-6 rb=0.97** (from `hpd_jsd::a3::auc_k5` forward — `alternative: isalhg_greater`); IsalHG>nauty fwd p_holm=4.47e-7 rb=1.00; IsalHG>WL fwd p_holm=4.47e-7 rb=1.00. **The HPD A3 result corrects the first pass (which had "HPD vs. IsalHG ns, p_Holm=1.0" — the error was using the wrong Wilcoxon direction).**
+
+4. **§Usefulness competitive framing corrected:** "competitive second to HPD-JSD on A2 and A3" removed; the honest competitive picture is stated (IsalHG beats WL, nauty, and HPD on A3; ties HPD on A2; loses to degree-seq and NetLSD on both A2 and A3).
+
+5. **G2 IQR** (3–9 tokens, median=5, 1700 edits): read from `results/T-M7q/g2_catalog_sensitivity/g2_catalog_sensitivity/catalog_all_s*/seed*/g2_catalog_sensitivity.json`, field `edits[].s_e_isalhg`.
+
+6. **Regime confrontation** (16/17 confirmed, 1 falsified): read from `results/T-M7q/g2_catalog_sensitivity/regime_confrontation.json`, field `confirmed`, `falsified`.
+
+7. **Ladder increments** (Q1=6, median=12, Q3=18; monotone_frac=0.71): read from `results/T-M7q/g2_design_ladder/design_ladder/*/seed*/design_ladder.json`, field `all_increments`.
+
+8. **A4 results** (IsalHG recovery=0.125; decodability 8/8; mean 2.4 intermediates): read from `results/T-M7q/a4_design/design_a4/*/seed*/a4_result.json`.
+
+9. **geometry.md §3 table** updated in parallel: same BCa CIs for the `d_I^⊥` row (ν=[0.096,0.099], D̂=[16,17]); "percentile bootstrap" → "BCa" in both documents.
+
+**Checks (second pass):** pytest 1507 passed / 9 skipped / 0 failed (test count grew from 1499 by T-M7o/T-M7t new tests merged in) · ruff 3 (pre-existing) · mypy 21 (pre-existing). No new failures from docs changes.

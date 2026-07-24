@@ -38,10 +38,10 @@ Competitors run the same pipeline off their own `D_rep`.
 
 The section's organizing claim is not that `d_I` yields the best task-metric
 scores — on A2 (clustering) the naive degree-sequence baseline and NetLSD both
-lead IsalHG significantly (p_Holm < 10⁻⁷, r = 1.09 in each case), and on A3
-(kNN) they lead again (degree-seq p_Holm = 2.0 × 10⁻⁶, NetLSD p_Holm = 1.3 ×
-10⁻³); HPD-JSD does not differ significantly from IsalHG on either task (A2
-p_Holm = 0.36, A3 p_Holm = 1.0). The design families in the primary corpus
+lead IsalHG significantly (p_Holm = 4.47 × 10⁻⁷, rb = 1.00 in each case), and on A3
+(kNN) they lead again (degree-seq p_Holm = 1.93 × 10⁻⁵, rb = 0.94; NetLSD p_Holm = 1.24 ×
+10⁻², rb = 0.71); HPD-JSD does not differ significantly from IsalHG on A2
+(both p_Holm = 1.0), but IsalHG beats HPD on A3 (p_Holm = 4.17 × 10⁻⁶, rb = 0.97). The design families in the primary corpus
 separate cleanly on degree structure alone, so the degree-sequence baseline
 captures the dominant discriminative signal on these tasks, and no degree-free
 representation is expected to dominate it. Usefulness rests on three axes
@@ -60,8 +60,9 @@ jointly:
    degree-sequence baseline (`Deg-seq L1`, `../COMPETITORS.md` §4) leads the
    A2/A3 ranking: where degree structure alone discriminates the design families,
    no higher-order representation is expected to dominate it, and none does. HPD
-   does not differ significantly from IsalHG on either task. Relative standings
-   are reported with 95% bootstrap confidence intervals and one-sided Wilcoxon
+   is tied with IsalHG on A2 (both p_Holm = 1.0); IsalHG outperforms HPD on A3
+   (p_Holm = 4.17 × 10⁻⁶, rb = 0.97). Relative standings are reported with 95%
+   BCa bootstrap confidence intervals and one-sided Wilcoxon
    signed-rank tests, Holm-corrected across the (representations × metrics)
    family; no representation is declared dominant where the corrected p exceeds
    0.05.
@@ -105,7 +106,7 @@ On every corpus, before any application: the pairwise-distance histogram of
 
 **Measured (17 design families, 85 items, 27 seeds; metric `d_I^⊥`).** The
 hubness signatures separate the representations sharply. `d_I^⊥` is moderately
-hub-prone (`N_10` skewness 0.91 [0.52, 1.28]) with moderate concentration
+hub-prone (`N_10` skewness 0.907 [0.825, 0.990]) with moderate concentration
 (diameter-to-median 2.72); the WL histogram distance is the most hub-prone
 (skewness 2.37 [2.37, 2.37] — a narrow CI because WL skewness is nearly
 deterministic on these families), while NetLSD and HPD are hubness-neutral
@@ -187,14 +188,14 @@ first-class descriptors.
   argues the representation captures structure more compactly).
 
 **Measured (17 design families, 85 items, 27 seeds; metric `d_I^⊥`).** The
-geometry table is the paper's central characterization, with 95% confidence
-intervals computed by percentile bootstrap over seeds. All IsalHG entries use
+geometry table is the paper's central characterization, with 95% BCa bootstrap
+confidence intervals over seeds. All IsalHG entries use
 `d_I^⊥` — the structural member of the metric family (trivial vocabulary;
 `stability.md` §1 Remark). `d_I^⊥` is **genuinely non-Euclidean**: the
 double-centred Gram matrix is indefinite (not PSD) with non-Euclidean mass
-`ν = 0.097` [0.092, 0.105] and cross-validated intrinsic dimension
-`D̂ = 17` [15, 20] at low residual distortion (Kruskal stress-1 = 0.046
-[0.042, 0.055]). Real HIC genre hypergraphs yield `D̂ ≈ 10` under `d_I^Σ`
+`ν = 0.097` [0.096, 0.099] and cross-validated intrinsic dimension
+`D̂ = 17` [16, 17] at low residual distortion (Kruskal stress-1 = 0.046
+[0.045, 0.048]). Real HIC genre hypergraphs yield `D̂ ≈ 10` under `d_I^Σ`
 (label-aware member; non-trivial IMDB vocabulary; `../theoretical/geometry.md`
 §3); those rows measure a different family member and are read as a separate
 object. The nauty-Levi canonical-string distance is non-Euclidean but less
@@ -207,15 +208,15 @@ cap, so their `D̂` is reported as censored. HyperCOT is one-dimensional
 non-Euclidean verdict licenses the medoid-based clustering of A2; the
 per-representation `D̂` is itself a comparison axis.
 
-| Representation | PSD | `ν` [95% CI] | `D̂` [95% CI] | stress@`D̂` [95% CI] | diam/med | `N_10` skew [95% CI] |
+| Representation | PSD | `ν` [95% BCa CI] | `D̂` [95% BCa CI] | stress@`D̂` [95% BCa CI] | diam/med | `N_10` skew [95% BCa CI] |
 |---|---|---|---|---|---|---|
-| IsalHG (`d_I^⊥`) | no | 0.097 [0.092, 0.105] | 17 [15, 20] | 0.046 [0.042, 0.055] | 2.72 | 0.91 [0.52, 1.28] |
-| WL histogram | yes | 0.030 [0.029, 0.031] | ≥40 (censored) | 0.310 [0.302, 0.318] | 1.88 | 2.37 [2.37, 2.37] |
-| NetLSD | yes | 0.000 | 4 | 0.000 | 2.73 | 0.17 [−0.16, 0.41] |
-| HPD-JSD | yes† | 0.000 | ≥40 (censored) | 0.018 [0.016, 0.021] | 1.10 | 0.10 [−0.22, 0.40] |
-| nauty-Levi edit | no | 0.024 [0.022, 0.026] | ≥39 (p.c.) | 0.023 [0.021, 0.025] | 3.86 | 0.01 [−0.49, 0.40] |
-| degree-seq L1 | no | 0.103 [0.093, 0.113] | 3 | 0.053 [0.050, 0.056] | 2.93 | 0.28 [−0.04, 0.50] |
-| HyperCOT | no | 0.250 [0.239, 0.261] | 1 [1, 2] | 0.275 [0.256, 0.295] | 8.05 | 0.07 [−0.23, 0.33] |
+| IsalHG (`d_I^⊥`) | no | 0.097 [0.096, 0.099] | 17 [16, 17] | 0.046 [0.045, 0.048] | 2.72 | 0.907 [0.825, 0.990] |
+| WL histogram | yes | 0.030 [0.030, 0.030] | ≥40 (censored) | 0.310 [0.308, 0.312] | 1.88 | 2.37 [2.37, 2.37] |
+| NetLSD | yes | 0.000 | 4 | 0.000 | 2.73 | 0.17 [0.10, 0.22] |
+| HPD-JSD | yes† | 0.000 | ≥40 (censored) | 0.018 [0.018, 0.019] | 1.10 | 0.10 [0.03, 0.16] |
+| nauty-Levi edit | no | 0.024 [0.023, 0.024] | ≥39 (p.c.) | 0.023 [0.022, 0.023] | 3.86 | 0.01 [−0.09, 0.10] |
+| degree-seq L1 | no | 0.103 [0.101, 0.105] | 3 | 0.053 [0.053, 0.054] | 2.93 | 0.28 [0.22, 0.34] |
+| HyperCOT | no | 0.250 [0.247, 0.252] | 1.1 [1.0, 1.3] | 0.275 [0.271, 0.279] | 8.05 | 0.07 [0.01, 0.13] |
 
 †HPD-JSD: ν = 0 because JSD^{1/2} has a PSD Gram matrix on this corpus; the triangle-inequality caveat (§Usefulness) applies to the clustering and kNN steps.
 p.c. = partially censored (52% of seeds hit the search cap at D = 40).
@@ -247,14 +248,16 @@ perturbations ⇒ known membership; `../DATA.md` §1).
 **Measured (17 design families, 85 items, 27 seeds; metric `d_I^⊥`).** Recovering
 17 families from structure alone is a demanding task — degree structure is the
 dominant discriminative signal in these families, so degree-free representations
-are not expected to lead, and none does. Adjusted Rand Index (ARI, 95% CI):
-degree-seq leads at 0.451 [0.366, 0.559]; NetLSD follows at 0.479 [0.402,
-0.573]; IsalHG is 0.285 [0.195, 0.368]; HPD 0.303 [0.240, 0.381]; HyperCOT
-0.287 [0.225, 0.365]; nauty-Levi 0.178 [0.123, 0.236]; WL 0.016 [0.012,
-0.017]. One-sided Wilcoxon signed-rank, Holm-corrected: degree-seq > IsalHG
-(p_Holm = 8.2 × 10⁻⁸, r = 1.09); NetLSD > IsalHG (p_Holm = 7.5 × 10⁻⁸,
-r = 1.09); HPD vs. IsalHG ns (p_Holm = 0.36); IsalHG > nauty-Levi
-(p_Holm = 8.9 × 10⁻⁸); IsalHG > WL (p_Holm = 6.7 × 10⁻⁸). PAM is the
+are not expected to lead, and none does. Adjusted Rand Index (ARI, 95% BCa CI):
+degree-seq 0.451 [0.433, 0.472]; NetLSD 0.479 [0.460, 0.500];
+HPD 0.303 [0.289, 0.319]; HyperCOT 0.287 [0.272, 0.304];
+IsalHG 0.285 [0.268, 0.303]; nauty-Levi 0.178 [0.166, 0.191];
+WL 0.016 [0.015, 0.016]. One-sided Wilcoxon signed-rank, Holm-corrected:
+degree-seq > IsalHG (p_Holm = 4.47 × 10⁻⁷, rb = 1.00);
+NetLSD > IsalHG (p_Holm = 4.47 × 10⁻⁷, rb = 1.00);
+HPD vs. IsalHG ns (both p_Holm = 1.0);
+IsalHG > nauty-Levi (p_Holm = 6.11 × 10⁻⁷, rb = 0.99);
+IsalHG > WL (p_Holm = 4.47 × 10⁻⁷, rb = 1.00). PAM is the
 correct estimator precisely because the space is non-Euclidean (A1); no
 centroid method applies. The conclusion is that IsalHG clustering is
 statistically weaker than degree-seq and NetLSD on these families, statistically
@@ -286,20 +289,20 @@ Needs a **labelled** hypergraph corpus with ≥2 classes: planted family ids
 
 **Measured (17 design families, 85 items, 27 seeds; metric `d_I^⊥`).** The G1
 hubness profile predicts the kNN ordering. WL's hubness skewness is 2.37 on
-this corpus and its AUC-OvR at k = 5 **collapses to chance (0.495 [0.487,
-0.500])** — the primary confirmation of the licence. AUC-OvR at k = 5 (95%
-CI): degree-seq 0.948 [0.927, 0.965]; NetLSD 0.934 [0.909, 0.959]; IsalHG
-0.920 [0.885, 0.946]; HyperCOT 0.926 [0.894, 0.958]; HPD 0.895 [0.871,
-0.921]; nauty-Levi 0.839 [0.804, 0.881]; WL 0.495 [0.487, 0.500].
+this corpus and its AUC-OvR at k = 5 **collapses to chance (0.495 [0.494,
+0.497])** — the primary confirmation of the licence. AUC-OvR at k = 5 (95%
+BCa CI): degree-seq 0.948 [0.943, 0.951]; NetLSD 0.934 [0.929, 0.939];
+HyperCOT 0.926 [0.920, 0.933]; IsalHG 0.920 [0.913, 0.925]; HPD 0.895
+[0.891, 0.900]; nauty-Levi 0.839 [0.831, 0.848]; WL 0.495 [0.494, 0.497].
 One-sided Wilcoxon signed-rank, Holm-corrected: degree-seq > IsalHG
-(p_Holm = 2.0 × 10⁻⁶, r = 0.949); NetLSD > IsalHG (p_Holm = 1.3 × 10⁻³,
-r = 0.655); HPD vs. IsalHG ns (p_Holm = 1.0; HPD is numerically below
-IsalHG); IsalHG > nauty-Levi (p_Holm = 5.2 × 10⁻⁸, r = 1.09); IsalHG > WL
-(p_Holm = 6.0 × 10⁻⁸, r = 1.09). The strong-hubness→failure prediction for WL
-is decisive; among the remaining representations degree-seq and NetLSD lead
-significantly, which mirrors the A2 ranking and reflects the dominant role of
-degree structure in discriminating the design families. HPD does not improve on
-IsalHG on A3 despite its A2 numerical lead. This is the payoff of the
+(p_Holm = 1.93 × 10⁻⁵, rb = 0.94); NetLSD > IsalHG (p_Holm = 1.24 × 10⁻²,
+rb = 0.71); IsalHG > HPD (p_Holm = 4.17 × 10⁻⁶, rb = 0.97);
+IsalHG > nauty-Levi (p_Holm = 4.47 × 10⁻⁷, rb = 1.00); IsalHG > WL
+(p_Holm = 4.47 × 10⁻⁷, rb = 1.00). The strong-hubness→failure prediction for WL
+is decisive; degree-seq and NetLSD lead IsalHG significantly, mirroring the
+A2 ranking and reflecting the dominant role of degree structure in discriminating
+the design families. IsalHG outperforms HPD significantly on A3 despite their
+statistical parity on A2. This is the payoff of the
 no-orphan-geometry rule: the G1 hubness measurement forecasts the supervised
 outcome before the classifier is run.
 

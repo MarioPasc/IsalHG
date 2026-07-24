@@ -117,13 +117,13 @@ members per family; metric `d_I^⊥`, trivial vocabulary); results averaged over
 
 | corpus | metric | `N` | `ν` [95% CI] | `D̂` (CV) [95% CI] | `D̂` (Horn) | Mardia `P^(2)` |
 |---|---|---|---|---|---|---|
-| 17 design families | `d_I^⊥` | 85 | 0.097 [0.092, 0.105] | 17 [15, 20] | — | — |
+| 17 design families | `d_I^⊥` | 85 | 0.097 [0.096, 0.099] | 17 [16, 17] | — | — |
 | HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 | 0.993 |
 | HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 | 0.992 |
 
 On the 17-family design corpus `d_I^⊥` is **genuinely non-Euclidean**:
-`ν = 0.097` [0.092, 0.105] (mean over 27 seeds, 95% CI by percentile bootstrap),
-and the cross-validated intrinsic dimension is `D̂ = 17` [15, 20]. An earlier
+`ν = 0.097` [0.096, 0.099] (mean over 27 seeds, 95% BCa CI),
+and the cross-validated intrinsic dimension is `D̂ = 17` [16, 17]. An earlier
 N-scaling study on a different planted corpus (20 random families, effective
 arity 3) showed the CV estimate climbing from 21 at `N = 60` and plateauing at
 26 for `N ≥ 240`, with Horn parallel-analysis bracketing it conservatively at
@@ -140,7 +140,7 @@ IMDB metadata). These are members of different families (the Remark in
 `stability.md` §1), measuring isomorphism in different domains; they are read as
 two objects rather than one continuous series, which is a candidate explanation
 for the lower real-data `D̂` beyond structural differences alone. The estimate is
-reported as a bracketed range [15, 20] (bootstrap 95% CI on the CV optimum),
+reported as a bracketed range [16, 17] (BCa 95% CI on the CV optimum),
 not a bare number.
 
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis

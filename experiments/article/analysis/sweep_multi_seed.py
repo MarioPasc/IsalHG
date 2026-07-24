@@ -134,6 +134,7 @@ REPR_LABELS: dict[str, str] = {
 
 _BOOTSTRAP_N_RESAMPLES: int = 9999
 _BOOTSTRAP_SEED: int = 0
+BOOTSTRAP_METHOD: str = "BCa"
 _KNN_K_VALUES: list[int] = [1, 3, 5]
 _N_CV_FOLDS: int = 5
 _N_KMEDOIDS_INIT: int = 10
@@ -1810,7 +1811,7 @@ def run_sweep(
                 all_seed_metrics=a_seed_metrics_by_dist,
                 n_seeds=n_seeds,
             )
-            _write_cell_stats(a_stats, output_root / "stats" / "stratum_a_stats.json")
+            write_cell_stats(a_stats, output_root / "stats" / "stratum_a_stats.json")
             logger.info("Stratum A: stats written.")
 
     # ---- Stratum B ----
@@ -1878,7 +1879,7 @@ def run_sweep(
                 },
             )
             all_b_stats.append((block, b_stats))
-            _write_cell_stats(
+            write_cell_stats(
                 b_stats,
                 output_root / "stats" / f"{block.block_key}_stats.json",
             )
@@ -1915,12 +1916,22 @@ def run_sweep(
 # ---------------------------------------------------------------------------
 
 
-def _write_cell_stats(cs: CellStats, path: Path) -> None:
+def write_cell_stats(cs: CellStats, path: Path) -> None:
+    """Write a CellStats object to a JSON file.
+
+    Parameters
+    ----------
+    cs : CellStats
+        Aggregated stats (BCa CIs + Wilcoxon + Holm).
+    path : Path
+        Destination path.  Parent directories are created if needed.
+    """
     payload = {
         "cell_key": cs.cell_key,
         "stratum": cs.stratum,
         "n_seeds": cs.n_seeds,
         "block_meta": cs.block_meta,
+        "bootstrap_method": BOOTSTRAP_METHOD,
         "cis": cs.cis,
         "wilcoxon": cs.wilcoxon,
     }

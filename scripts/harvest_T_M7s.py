@@ -447,6 +447,70 @@ def verify_ac3_wilcoxon_coverage(
     }
 
 
+def verify_multi_rep_wilcoxon_populated(cell_stats: CellStats) -> dict[str, Any]:
+    """Check that a CellStats with ≥2 representations has a non-empty wilcoxon dict.
+
+    A stats file with ≥2 representations but an empty ``wilcoxon`` indicates the
+    per-task pipeline bug: each SLURM task only saw one representation at a time
+    so the Wilcoxon/Holm step never fired.
+
+    Parameters
+    ----------
+    cell_stats : CellStats
+        Aggregated stats object to inspect.
+
+    Returns
+    -------
+    dict
+        Keys: ``n_reps`` (distinct repr names found in cis), ``wilcoxon_empty``
+        (bool), ``pass`` (False when n_reps ≥ 2 and wilcoxon is empty).
+    """
+    reps_seen: set[str] = set()
+    for row in cell_stats.cis.values():
+        reps_seen.add(row["repr"])
+    n_reps = len(reps_seen)
+    wilcoxon_empty = len(cell_stats.wilcoxon) == 0
+    return {
+        "n_reps": n_reps,
+        "wilcoxon_empty": wilcoxon_empty,
+        "pass": not (n_reps >= 2 and wilcoxon_empty),
+    }
+
+
+def verify_excluded_cells_no_isalhg_comparison(
+    cell_stats_map: dict[str, CellStats],
+    excluded_cell_keys: set[str],
+) -> dict[str, Any]:
+    """Check that excluded cells carry no IsalHG comparison in their wilcoxon dict.
+
+    Cells where ``isalhg_levenshtein`` timed out are excluded whole-cell from
+    IsalHG comparative analysis.  Their ``wilcoxon`` dict must be empty —
+    any non-empty entry means partial seed data was used despite the exclusion
+    policy.
+
+    Parameters
+    ----------
+    cell_stats_map : dict[str, CellStats]
+        Mapping of cell_key → CellStats for cells to audit.
+    excluded_cell_keys : set[str]
+        Cell keys that should have no IsalHG comparison.
+
+    Returns
+    -------
+    dict
+        Keys: ``violations`` (list of cell_key strings that have a non-empty
+        wilcoxon despite being excluded), ``pass``.
+    """
+    violations: list[str] = []
+    for cell_key, cs in cell_stats_map.items():
+        if cell_key in excluded_cell_keys and cs.wilcoxon:
+            violations.append(cell_key)
+    return {
+        "violations": sorted(violations),
+        "pass": len(violations) == 0,
+    }
+
+
 def verify_ac4_per_arity(
     results_root: Path,
     n_seeds: int,
@@ -711,6 +775,7 @@ def harvest(
     n_seeds: int = 27,
     array_id: int = 1640910,
     pairs_file: Path | None = None,
+    isalhg_timeout_cells_override: set[str] | None = None,
 ) -> dict[str, Any]:
     """Run the full T-M7s harvest and acceptance check.
 
@@ -732,6 +797,12 @@ def harvest(
     pairs_file : Path or None
         The launcher pairs file (``T-M7d_pairs.txt``).  Used only when
         ``sacct_tsv`` is provided.
+    isalhg_timeout_cells_override : set[str] or None
+        If provided, overrides the census-derived timeout detection.  Use
+        when the sacct TSV is unavailable but the known timeout cells must
+        be carried (e.g. local re-aggregation after the array has settled).
+        The three S=27 cells are: ``er_uniform_k3_n16_rho4``,
+        ``er_uniform_k3_n24_rho2``, ``er_uniform_k5_n8_rho2``.
 
     Returns
     -------
@@ -767,11 +838,21 @@ def harvest(
     # Identify B cells where the primary repr (isalhg_levenshtein) timed out.
     # These cells are excluded from IsalHG comparative analysis (whole-cell
     # exclusion per T-M7s policy; partial seed data is present but not used).
-    isalhg_timeout_b_cells: set[str] = {
-        entry["cell_key"]
-        for entry in census_summary.get("non_completed_tasks", [])
-        if entry.get("dist_name") == _PRIMARY_REPR and entry.get("cell_key") != _STRATUM_A_KEY
-    }
+    if isalhg_timeout_cells_override is not None:
+        # Caller supplied the known timeout cells directly (e.g. when the
+        # sacct TSV is unavailable but the exclusion policy must be carried).
+        isalhg_timeout_b_cells: set[str] = isalhg_timeout_cells_override
+        logger.info(
+            "IsalHG TIMEOUT cells provided via override (%d): %s.",
+            len(isalhg_timeout_b_cells),
+            sorted(isalhg_timeout_b_cells),
+        )
+    else:
+        isalhg_timeout_b_cells = {
+            entry["cell_key"]
+            for entry in census_summary.get("non_completed_tasks", [])
+            if entry.get("dist_name") == _PRIMARY_REPR and entry.get("cell_key") != _STRATUM_A_KEY
+        }
     if isalhg_timeout_b_cells:
         logger.warning(
             "IsalHG TIMEOUT on %d B cell(s): %s.  These cells are excluded from "
@@ -805,6 +886,14 @@ def harvest(
         n_seeds=n_seeds,
         dist_names=_ALL_DISTANCES,
     )
+    # Persist fully-aggregated stats (BCa CIs + Wilcoxon + Holm) back to disk.
+    # The SLURM per-task files only captured one dist at a time, so wilcoxon
+    # was never computed there; this write makes the on-disk files authoritative.
+    from experiments.article.analysis.sweep_multi_seed import write_cell_stats
+
+    _a_stats_path = results_root / "stats" / "stratum_a_stats.json"
+    write_cell_stats(a_stats, _a_stats_path)
+    logger.info("Stratum A: stats written to %s.", _a_stats_path)
 
     # ------------------------------------------------------------------ #
     # Re-aggregation: Stratum B                                            #
@@ -841,6 +930,9 @@ def harvest(
             block_meta={"n": b.n, "k": b.k, "density_ratio": b.density_ratio},
         )
         b_agg_stats.append(b_stats)
+        _b_stats_path = results_root / "stats" / f"{b.block_key}_stats.json"
+        write_cell_stats(b_stats, _b_stats_path)
+        logger.info("Block %s: stats written to %s.", b.block_key, _b_stats_path)
 
     # ------------------------------------------------------------------ #
     # AC2 — BCa CI coverage (Stratum A)                                   #
@@ -1037,7 +1129,22 @@ def main() -> None:
         default=1640910,
         help="SLURM array job ID.",
     )
+    parser.add_argument(
+        "--timeout-cells",
+        nargs="*",
+        default=None,
+        metavar="CELL_KEY",
+        help=(
+            "Explicitly specify Stratum B cell keys where isalhg_levenshtein "
+            "timed out (whole-cell exclusion).  Use when the sacct TSV is "
+            "unavailable but the exclusion policy must be carried."
+        ),
+    )
     args = parser.parse_args()
+
+    timeout_override: set[str] | None = (
+        set(args.timeout_cells) if args.timeout_cells is not None else None
+    )
 
     summary = harvest(
         results_root=args.results_root,
@@ -1047,6 +1154,7 @@ def main() -> None:
         n_seeds=args.n_seeds,
         array_id=args.array_id,
         pairs_file=args.pairs_file,
+        isalhg_timeout_cells_override=timeout_override,
     )
 
     print("\n" + "=" * 60)

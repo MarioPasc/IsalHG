@@ -67,36 +67,8 @@
     }
   ],
   "census": {
-    "total": 77,
-    "completed": 74,
-    "timeout": 3,
-    "failed": 0,
-    "oom": 0,
-    "other": 0,
-    "non_completed_tasks": [
-      {
-        "task_idx": 42,
-        "task_id": "1640910_42",
-        "cell_key": "er_uniform_k3_n16_rho4",
-        "dist_name": "isalhg_levenshtein",
-        "state": "TIMEOUT"
-      },
-      {
-        "task_idx": 56,
-        "task_id": "1640910_56",
-        "cell_key": "er_uniform_k3_n24_rho2",
-        "dist_name": "isalhg_levenshtein",
-        "state": "TIMEOUT"
-      },
-      {
-        "task_idx": 70,
-        "task_id": "1640910_70",
-        "cell_key": "er_uniform_k5_n8_rho2",
-        "dist_name": "isalhg_levenshtein",
-        "state": "TIMEOUT"
-      }
-    ],
-    "has_non_terminal": false
+    "total": 0,
+    "note": "sacct_tsv or pairs_file not provided"
   },
   "isalhg_timeout_b_cells": [
     "er_uniform_k3_n16_rho4",

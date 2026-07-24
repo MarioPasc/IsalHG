@@ -111,7 +111,8 @@ After excluding the 3 TIMEOUT cells, 7 B cells retain full IsalHG coverage:
 Written to `artifacts/T-M7d-harvest/harvest_summary.json` for T-M8f to cite.
 
 Key fields:
-- `all_acceptance_pass`: true
+- `all_acceptance_pass`: false
+- `acceptance_shortfalls`: ["ac5_arity_axis"]
 - `isalhg_timeout_b_cells`: ["er_uniform_k3_n16_rho4", "er_uniform_k3_n24_rho2",
   "er_uniform_k5_n8_rho2"]
 - `stratum_b_n_cells_isalhg_complete`: 7 (of 10 admitted)
@@ -119,12 +120,33 @@ Key fields:
 ### Suite checks (worktree env isalhg-T-M7s)
 
 ```
-pytest 1487 passed, 9 skipped (full suite incl. property tests)
+pytest 1466 passed, 9 skipped (full suite incl. property tests)
 ruff src/ tests/: 3 errors (pre-existing baseline — matched)
 mypy src/isalhg/: 21 errors (pre-existing baseline — matched)
 ```
 
+### Round-2 defect corrections (2026-07-24)
+
+Two defects found by the coordinator after Round 1:
+
+**Defect 1 — non-terminal census.** The first harvest captured sacct while task
+70 was still RUNNING.  The reported census was 74C/2T/1other; the true terminal
+state is 74 COMPLETED / 3 TIMEOUT (tasks 42, 56, 70).  Fix: added
+`_TERMINAL_STATES` frozenset and `has_non_terminal` flag to `summarise_census()`;
+added `compute_harvest_decision()` that sets `all_acceptance_pass=False` whenever
+`has_non_terminal=True`.  Tooth test: `test_summarise_census_flags_non_terminal`.
+
+**Defect 2 — overstatement.** `all_acceptance_pass: true` was written even though
+`ac5_axis_coverage.arity_axis_ok=False`.  Root cause: `ac5["pass"]` is correctly
+True (n and density axes pass), but the arity shortfall was not propagated to the
+top-level boolean.  Fix: `compute_harvest_decision()` appends `"ac5_arity_axis"`
+to `acceptance_shortfalls` and sets `all_acceptance_pass=False` when
+`arity_axis_ok` is False.  Tooth test: `test_compute_decision_arity_axis_shortfall`
+(precondition asserts `ac5["pass"] is True` — exactly the old logic's blind spot).
+
+Commit: c6cc26f
+
 ### New files
 
 - `scripts/harvest_T_M7s.py` — harvest + AC verification script (DO NOT MODIFY)
-- `tests/unit/experiments_article/test_harvest_t_m7s.py` — 20 unit tests (tooth-tested)
+- `tests/unit/experiments_article/test_harvest_t_m7s.py` — 24 unit tests (tooth-tested)

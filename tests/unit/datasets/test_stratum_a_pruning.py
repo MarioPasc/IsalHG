@@ -523,10 +523,13 @@ class TestGracefulBuildAndRealizedCounts:
             admitted_ids=ADMITTED_A_IDS,
             members_per_family=3,
         )
+        from isalhg.datasets.synthetic.known_design_catalog import DATA_MANIFEST
+
         realized = dict(Counter(label_strings))
-        # 14 admitted families → 14 keys (one per family label).
-        assert len(realized) == 14, (
-            f"Expected 14 family labels in realized counts, got {len(realized)}"
+        # Expected count comes from the manifest — never hardcode (predates T-M7o).
+        expected_n = len(DATA_MANIFEST.stratum_a_ids)
+        assert len(realized) == expected_n, (
+            f"Expected {expected_n} family labels in realized counts, got {len(realized)}"
         )
         # All values must be >= 1 (the seed is always accepted).
         assert all(v >= 1 for v in realized.values()), (

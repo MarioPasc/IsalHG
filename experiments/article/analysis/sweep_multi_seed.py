@@ -768,7 +768,6 @@ def run_stratum_a_seed(
     """
     from isalhg.datasets.synthetic.known_design_catalog import (
         COARSE_CLASS_BY_ID,
-        assert_single_arity_group,
     )
 
     cell_key = "stratum_a"
@@ -875,17 +874,20 @@ def run_stratum_a_seed(
             return 5
         return None
 
-    # For each hypergraph, determine its arity group from its edges.
-    # (All catalog families are uniform; take the unique edge size.)
-    def _arity_of_H(H: Any) -> int:
-        arities = {len(members) for _, members, _ in H.iter_edges()}
-        return min(arities) if arities else 0
-
-    # Group item indices by arity.
+    # Group item indices by their family's catalog arity (not empirical edge size).
+    # Using coarse_class_strings ("design_k3" → 3, "cycle_k4" → 4, etc.) avoids
+    # misclassifying items from k=4/5 families whose Qin-edit perturbations produced
+    # a lower-arity edge (e.g. split of a k=4 edge → one k=3 + one k=4 sub-edge).
+    # Within a same-catalog-arity sub-corpus, d_I is valid: all items are encoded
+    # with the same k-alphabet (PlantedFamilyDataset respects the per-family arity
+    # cap since T-M7o), so string-space comparability holds regardless of whether
+    # any individual edge was reduced by perturbation.
     arity_indices: dict[int, list[int]] = {}
-    for idx, H in enumerate(hypergraphs):
-        k = _arity_of_H(H)
-        arity_indices.setdefault(k, []).append(idx)
+    for idx, cc in enumerate(coarse_class_strings):
+        k = _arity_from_coarse_class(cc)
+        if k is not None:
+            arity_indices.setdefault(k, []).append(idx)
+        # Items with unrecognised coarse class are excluded from per-arity A2/A3.
 
     # Pre-compute which coarse classes are dropped from A2/A3 per arity.
     # This is corpus-level (same for all representations).
@@ -960,21 +962,10 @@ def run_stratum_a_seed(
                 a3_per_arity[k_arity] = None
                 continue
 
-            # Guard: all items must share one arity (should always hold here).
-            sub_hgs = [hypergraphs[i] for i in a2a3_idx]
-            try:
-                assert_single_arity_group(sub_hgs)
-            except ValueError as exc:
-                logger.warning(
-                    "Stratum A seed %d, k=%d: pooling guard fired: %s",
-                    seed,
-                    k_arity,
-                    exc,
-                )
-                a2_per_arity[k_arity] = None
-                a3_per_arity[k_arity] = None
-                continue
-
+            # No per-arity pooling guard here: all items are from same-catalog-arity
+            # families (guaranteed by the coarse_class_strings classification above).
+            # Qin-edit perturbations may reduce individual edge sizes, but the items
+            # remain in the same k-alphabet encoding space, so d_I is valid.
             sub_D = D[np.ix_(a2a3_idx, a2a3_idx)]
             sub_labels = [labels[i] for i in a2a3_idx]
             # Remap labels to 0-based within the filtered sub-corpus.

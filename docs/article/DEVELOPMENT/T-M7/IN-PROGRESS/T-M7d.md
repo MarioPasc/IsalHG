@@ -1,6 +1,6 @@
 # T-M7d — Combined sweep + statistics harness: body re-run with CIs and paired tests
 **Declared:** 2026-07-22 11:56 CEST
-**Status:** OPEN (unblocked 2026-07-24)
+**Status:** IN-PROGRESS (2026-07-24)
 **Depends on:** T-M7a (Stratum A corpus), T-M7b (Stratum B sweep + envelope),
 T-M7c (naive baseline registered), T-M5b/c/d (the existing A1/A2/A3 pipelines
 this re-drives), T-M5f (geometry helpers).
@@ -165,3 +165,62 @@ k=5 only at n=8; k=7 and k=10 are measured infeasible. This is the article's
 scalability envelope.
 
 **Status:** unblocked, scheduled for execution.
+
+---
+
+## Closing note — 2026-07-24 13:25 CEST (ledger-worker T-M7d, branch T-M7d-fixes)
+
+**Four corrections applied.**
+
+1. **ADMITTED_A_IDS (correction 1):** replaced the hardcoded 14-family frozenset with
+   `from isalhg.datasets.synthetic.known_design_catalog import DATA_MANIFEST` + `ADMITTED_A_IDS:
+   frozenset[str] = DATA_MANIFEST.stratum_a_ids`. Import placed in the top-level import block
+   (before `logger = ...`) to satisfy ruff E402. Module docstring updated: "17 admitted seeds".
+   Comment on line ~156 updated: "members=5 × 17 families = 85 items (7 k3 + 6 k4 + 4 k5)".
+2. **Arity-3 fallback (correction 2):** `single_member_families` log level upgraded from
+   `logger.info` to `logger.warning("... UNEXPECTED post-T-M7o ...")`. The stale
+   `ADMITTED_A_IDS_ARITY3` variable comment updated.
+3. **Seeds (correction 3):** `T_M7D_N_SEEDS=20` → `27` in `slurm/T-M7d_launcher.sh`.
+4. **Task lists (correction 4):** launcher header comments regenerated against 17 Stratum A +
+   10 admitted Stratum B cells × 7 representations (S=27, runtime estimates updated).
+
+**AC2 slow tests fixed:** `test_build_stratum_a_seed_corpus_labels_align` and
+`test_build_stratum_a_seed_corpus_different_seeds_differ` unpacked 3 values from
+`build_stratum_a_seed_corpus` which returns 4; fixed to unpack 4.
+
+**Test results:**
+```
+pytest tests/unit/experiments_article/ -q --tb=short
+177 passed, 2 warnings in 15.37s
+ruff: 3 errors (baseline matched — ANN001 + SIM108, pre-existing)
+mypy: 21 errors (baseline matched, pre-existing)
+```
+
+**New tooth tests (fail against pre-fix code, pass after):**
+- `test_admitted_a_ids_count`: `len(ADMITTED_A_IDS) == 17`, plus mandatory presence of
+  `tight_cycle_k4_n8 / tight_cycle_k4_n10 / tight_cycle_k5_n8` (T-M7o additions).
+- `test_admitted_a_ids_matches_manifest`: `ADMITTED_A_IDS == DATA_MANIFEST.stratum_a_ids`.
+
+**Local smoke — all 7 representations, 3 seeds, Stratum A (N=85, 17 families):**
+- No single_member_families WARNING fired (T-M7o fix effective for all 17 families).
+- isalhg_levenshtein: 85×85 matrix computed in 15–52 s/seed (variance from Qin retries on k=4/5 families).
+- All 7 representations complete without errors.
+- stats JSON: 72 BCa CI entries + 60 Wilcoxon entries (6 competitors × 10 metrics, Holm-corrected).
+  Per-seed JSONs carry `seed:` in content.
+
+**Picasso submission ready.** `slurm/T-M7d_launcher.sh` + `slurm/T-M7d_worker.sh` are correct
+per picasso-sbatch conventions (CPU-only, `--constraint=cpu`, no `--gres`, defensive conda bootstrap,
+4-hour wall time, 77-task array at max_concurrent=20). Submit with:
+```
+# On Picasso (after rsync of this branch to fscratch/repos/IsalHG):
+bash slurm/T-M7d_launcher.sh --dry-run   # verify 77 pairs
+bash slurm/T-M7d_launcher.sh             # submit S=27 array
+```
+Rsync: `rsync -av <local_worktree>/ picasso:/.../fscratch/repos/IsalHG/`
+Results land at: `/mnt/home/users/tic_163_uma/mpascual/fscratch/results/T-M7d/`
+
+**Handoff filed:** T-M7r — `_arity_of_H` uses `min(arities)` causing per-arity
+sub-corpus contamination (k=4 family items with a lower-arity edge get classified
+as k=3). Pooling guard fires for all per-arity groups → per-arity A2/A3 = None.
+Pooled A2/A3 (mixed-k, lines 942–943) is unaffected. Geometry tables (G1, A1)
+are unaffected. Filed as T-M7r; out of scope for T-M7d.

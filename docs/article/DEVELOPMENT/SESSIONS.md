@@ -33,7 +33,7 @@ optional small task to fill a freed slot; never blocks the session.
 | ☑ | **S3** — Geometry instrumentation & HPC submit | Geometry helpers + G2 profiles + doc hygiene; E1' batch queued on Picasso | { T-M5f ∥ T-M5g ∥ T-TBg } → `[O]` T-M5a part 1 (DQ1' probe + HPC submission) | S1 (T-M2c, T-M4); S2 (T-M3a) |
 | ☑ | **S4** — Applications (the body) | A1–A4 results + the per-corpus geometry table | T-M5b → { T-M5c ∥ T-M5d ∥ T-M5e } | S3 (T-M5f, T-M5g); T-DQ3' verdict decides corpora |
 | ☑ | **S5** — Discussion evidence & closure | E1' figure + bits table; T-M0c executed; ledger truthful | `[O]` T-M5a part 2 (harvest + figure + bits) → `[O]` closure sweep (T-M0c execute; ledger truth) | HPC batch finished; T-M0c answer on file |
-| ☐ | **S7** — Pre-writing revision (data + stats + framing) | Strict master corpus (known designs + parametric sweep); CIs + paired tests on the whole body; naive baseline; G3; real anchor; framing docs | { T-M7a ∥ T-M7b ∥ T-M7c } → { T-M7d ∥ T-M7e ∥ T-M8a } → { T-M7f ∥ T-M7g ∥ T-M8c } → T-M8b → `[O]` T-M8d | S1–S5 merged; `REVIEW/` specs on file (Mario-directed 2026-07-22); PI notified that S7 supersedes the N=240 headline numbers |
+| ☑ | **S7** — Pre-writing revision (data + stats + framing) | Strict master corpus (known designs + parametric sweep); CIs + paired tests on the whole body; naive baseline; G3; real anchor; framing docs | { T-M7a ∥ T-M7b ∥ T-M7c } → { T-M7d ∥ T-M7e ∥ T-M8a } → { T-M7f ∥ T-M7g ∥ T-M8c } → T-M8b → `[O]` T-M8d | S1–S5 merged; `REVIEW/` specs on file (Mario-directed 2026-07-22); PI notified that S7 supersedes the N=240 headline numbers |
 | ☐ | **S6** — Optional & stretch | Optional, post-article: fold the published Gray code into the bits axis; stretch theory + reparent | { T-M4a (incl. Gray-code bits column) ∥ T-TBe } (either/none) → T-M6 | S1–S5 done; explicit human opt-in; runs after S7 if both are wanted |
 
 ---
@@ -652,7 +652,39 @@ re-recorded; `main` pushed.
 
 **Orchestrator notes (append-only).**
 
-- _(empty)_
+- **2026-07-24/25 — S7 re-run executed and closed (orchestrator).** The re-run
+  of the HGED-free body on the corrected corpus (17-family Stratum A + 10
+  admitted Stratum B, S=27, 7 representations) is complete. Sequence as run,
+  not as planned: the Wave-1/2 corpus and harness work (T-M7a/b/c/m/o/p/h/n)
+  had already merged in the data-correction phase; this session unblocked and
+  ran **T-M7d** (sweep+stats, S=8 validation on Picasso then S=27 array
+  1640910), re-ran **T-M7q** (G2/A4 on the corrected corpus — G3/T-M7f was
+  verified corpus-valid and *not* re-run, so T-M7r was withdrawn on evidence),
+  **T-M7g** (real anchor = designs catalog; real-world gate all-NO_GO),
+  harvested via **T-M7s**, and produced the docs (**T-M8b** capability matrix,
+  **T-M8f** prose fold, **T-M8d** repro artifact).
+- **Two defects caught in verification, both filed and fixed rather than
+  merged:** (1) the S=27 array never persisted paired tests — every stats file
+  had an empty `wilcoxon` dict and the harvest counted in-memory objects
+  (**T-M7t**: aggregation now written to disk, bidirectional Wilcoxon + Holm +
+  BCa, cross-checked against an independent computation); (2) the T-M8f fold
+  initially carried self-derived percentile-bootstrap p-values, corrected to
+  the pipeline BCa artifacts.
+- **Findings folded into the article, not hidden:** A2/A3 reported honestly
+  (IsalHG beats WL/nauty on A2-ARI + all A3 points and HPD on A3, ties HPD on
+  A2, loses A2 clustering to the degree baseline and NetLSD); the scalability
+  frontier (k=3→n≈24, k=5→n=8, k=7/10 infeasible) and the three IsalHG-only
+  4-hour timeouts stated as findings; the arity-axis shortfall recorded
+  (`all_acceptance_pass: false`).
+- **Exit criteria:** every A1/A2/A3/G1/bits cell carries a 95% BCa CI; every
+  competitor comparison carries a Holm-corrected p (both directions) + effect
+  size; naive baseline on every surface; G2/A4 on design-seeded ladders + §4.2
+  re-scored (16/17); real-anchor gate records exist (NO_GO); Remark + capability
+  matrix + prose fold + repro artifact in place; dry-run reproduces geometry +
+  bits + a paired test from shipped caches. **Not fully met on one axis:** the
+  Stratum B arity sweep has 2 points (k∈{3,5}) not 3 — a measured consequence
+  of the feasibility envelope, reported as a limitation. `main` clean, baselines
+  1478/9/29 · ruff 3 · mypy 21. Deposit DOI pending PI.
 
 ---
 

@@ -1,5 +1,20 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
+- **D-ART3** — **[PENDING PI]** Theory-forward rescope (v4): reframe the
+  article from "characterize → exploit" to "characterize → explain →
+  instrument" in light of the T-M4b measured outcome (A2/A3 fall against
+  IsalHG on the controlled corpus; the mechanism — encoding-format
+  instability, not completeness — is measured). Proposal, spine v4, the two
+  proof obligations (P1 ambient-decodability proposition, low risk; P2
+  drift/avalanche Levenshtein lower bound, moderate risk with a pre-agreed
+  fallback), risks, and the execution plan are in
+  [`RESCOPE_D-ART3_DRAFT.md`](RESCOPE_D-ART3_DRAFT.md). Recommendation:
+  adopt (reframe inside the current skeleton + the two propositions; venue
+  decision deferred until P2 resolves). Raised by the PI 2026-08-09
+  ("maybe we need to re-think the paper as a more theoretical paper");
+  drafted same day. Until ratified, the v3 scope (D-ART2) stays active and
+  no scope doc changes.
+
 - **D-M4b** — **[RESOLVED 2026-08-09, PI (Mario), in-session]** The
   size-controlled replacement corpus (T-M4b): **build Stratum C and report the
   honest outcome** per the pre-registered `COMPETITORS.md` §4 contract — PI:

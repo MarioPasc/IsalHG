@@ -103,7 +103,7 @@ COARSE_CLASSES_BY_ARITY: dict[int, list[str]] = {
 # Seven representations
 # ---------------------------------------------------------------------------
 
-# All 7 reps for the full sweep.
+# All reps for the full sweep.
 ALL_DISTANCES: list[str] = [
     "isalhg_levenshtein",  # reference / d_I
     "hypergraph_wl_l1",
@@ -111,6 +111,7 @@ ALL_DISTANCES: list[str] = [
     "hpd_jsd",
     "nauty_levi_edit",
     "degree_seq_l1",  # naive baseline, T-M7c
+    "size_l1",  # naive size baseline (|Δn| + |Δm|), T-M4b
     "hypercot",  # O(n³)/pair; gated at runtime by HYPERCOT_MAX_N / HYPERCOT_MAX_CORPUS
 ]
 
@@ -129,6 +130,7 @@ REPR_LABELS: dict[str, str] = {
     "hpd_jsd": "HPD-JSD",
     "nauty_levi_edit": "NautyEdit",
     "degree_seq_l1": "DegreeSeq",
+    "size_l1": "SizeL1",
     "hypercot": "HyperCOT",
 }
 
@@ -148,6 +150,17 @@ _STRATUM_A_MAX_RETRIES: int = 300
 
 # Stratum B Erdős–Rényi: connected-domain generator.
 _STRATUM_B_CONNECTED_MAX_ATTEMPTS: int = 1000
+
+# Stratum C size-controlled cells (T-M4b): swap-planted families at one fixed
+# (n, m, k, degree-sequence) per cell, so size_l1 and degree_seq_l1 are
+# identically zero on every pair by construction.  Cells are analyzed
+# independently (no cross-cell pairs), so no size axis re-enters.
+STRATUM_C_CELLS: list[tuple[int, int]] = [(9, 12), (12, 20), (15, 35)]
+_STRATUM_C_K: int = 3
+_STRATUM_C_N_FAMILIES: int = 12
+_STRATUM_C_MEMBERS_PER_FAMILY: int = 6
+_STRATUM_C_T_SWAPS: int = 2
+_STRATUM_C_MAX_RETRIES: int = 300
 
 # ---------------------------------------------------------------------------
 # Atomic I/O helpers
@@ -704,7 +717,7 @@ class SeedMetrics:
     """All metrics for one (cell, seed, representation)."""
 
     cell_key: str
-    stratum: str  # "a" or "b"
+    stratum: str  # "a", "b", or "c"
     dist_name: str
     seed: int
     n_corpus: int
@@ -1002,6 +1015,220 @@ def run_stratum_a_seed(
             realized_counts_per_family=realized_counts_per_family,
             realized_counts_per_coarse_class=realized_counts_per_coarse_class,
             a2a3_dropped_coarse_classes=a2a3_dropped_coarse_classes,
+        )
+        results.append(sm)
+        _cache_seed_metrics(sm, output_root)
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Single-seed runner: Stratum C (size-controlled, T-M4b)
+# ---------------------------------------------------------------------------
+
+
+def stratum_c_cell_key(n_nodes: int, n_edges: int) -> str:
+    """Return the canonical cell key for a Stratum C cell."""
+    return f"stratum_c_n{n_nodes}m{n_edges}"
+
+
+def build_stratum_c_seed_corpus(
+    n_nodes: int,
+    n_edges: int,
+    seed: int,
+    k: int = _STRATUM_C_K,
+    n_families: int = _STRATUM_C_N_FAMILIES,
+    members_per_family: int = _STRATUM_C_MEMBERS_PER_FAMILY,
+    t_swaps: int = _STRATUM_C_T_SWAPS,
+    max_retries: int = _STRATUM_C_MAX_RETRIES,
+) -> tuple[list[Any], list[int]]:
+    """Build one Stratum C corpus sample under a given generator seed.
+
+    Every item shares the cell's ``(n_nodes, n_edges)``, the uniform arity
+    ``k``, and one exact degree sequence, so ``size_l1`` and
+    ``degree_seq_l1`` are identically zero on every pair by construction.
+
+    Parameters
+    ----------
+    n_nodes, n_edges : int
+        The cell.
+    seed : int
+        Generator seed (0-indexed; the outer resampling unit).
+    k : int
+        Uniform hyperedge arity.
+    n_families : int
+        Planted families per cell.
+    members_per_family : int
+        Members per family, seed included.
+    t_swaps : int
+        Incidence swaps per non-seed member.
+    max_retries : int
+        Rejection-sampling attempts per member.
+
+    Returns
+    -------
+    hypergraphs : list[SparseHypergraph]
+    labels : list[int]
+        Family index (0-indexed) per hypergraph, same order.
+    """
+    from isalhg.datasets.synthetic.size_controlled_corpus import (
+        SizeControlledCellDataset,
+    )
+
+    dataset = SizeControlledCellDataset(
+        n_nodes=n_nodes,
+        n_edges=n_edges,
+        k=k,
+        n_families=n_families,
+        members_per_family=members_per_family,
+        t_swaps=t_swaps,
+        max_retries=max_retries,
+        seed_value=seed,
+        dedup_backend="pynauty_levi",
+        allow_partial=True,
+    )
+    items = list(dataset)
+    hypergraphs = [item.hypergraph for item in items]
+    labels = [int(item.extra["family_index"]) for item in items]
+    return hypergraphs, labels
+
+
+def run_stratum_c_seed(
+    n_nodes: int,
+    n_edges: int,
+    seed: int,
+    dist_names: list[str],
+    output_root: Path,
+    max_cv_dims: int | None = None,
+) -> list[SeedMetrics]:
+    """Run all representations for one Stratum C cell × seed.
+
+    Mirrors :func:`run_stratum_a_seed` without the per-arity split (the cell
+    is k-uniform by construction).  Families that realize fewer than 2
+    members are kept in G1/A1 geometry but excluded from A2/A3, as in
+    Stratum A.
+
+    Parameters
+    ----------
+    n_nodes, n_edges : int
+        The cell.
+    seed : int
+        Corpus seed (0-indexed resampling unit).
+    dist_names : list[str]
+        Distance representations to run.
+    output_root : Path
+        Root output directory.
+    max_cv_dims : int or None
+        Max CV dimension for D̂ selection.
+
+    Returns
+    -------
+    list[SeedMetrics]
+        One per representation.
+    """
+    from collections import Counter
+
+    cell_key = stratum_c_cell_key(n_nodes, n_edges)
+    cache_root = output_root / "d_matrix" / cell_key / f"seed{seed}"
+
+    logger.info("Stratum C %s seed %d: building corpus...", cell_key, seed)
+    t0 = time.perf_counter()
+    try:
+        hypergraphs, labels = build_stratum_c_seed_corpus(
+            n_nodes=n_nodes, n_edges=n_edges, seed=seed
+        )
+    except Exception as exc:
+        logger.error("Stratum C %s seed %d: corpus build failed: %s", cell_key, seed, exc)
+        return []
+
+    n = len(hypergraphs)
+    logger.info(
+        "Stratum C %s seed %d: N=%d items, %d families, %.2fs",
+        cell_key,
+        seed,
+        n,
+        len(set(labels)),
+        time.perf_counter() - t0,
+    )
+
+    member_counts = Counter(labels)
+    realized_counts_per_family: dict[str, int] = {
+        f"fam{fam:02d}": cnt for fam, cnt in sorted(member_counts.items())
+    }
+    # Single-member families: no pairwise signal for clustering/kNN.
+    a2a3_idx = [i for i, lbl in enumerate(labels) if member_counts[lbl] >= 2]
+    sub_labels = [labels[i] for i in a2a3_idx]
+    unique_sub = sorted(set(sub_labels))
+    remap = {orig: new for new, orig in enumerate(unique_sub)}
+    sub_labels_remapped = [remap[lbl] for lbl in sub_labels]
+    sub_n_families = len(unique_sub)
+
+    corpus_meta = {
+        "stratum": "c",
+        "cell_key": cell_key,
+        "seed": seed,
+        "n_items": n,
+        "n_nodes": n_nodes,
+        "n_edges": n_edges,
+        "k": _STRATUM_C_K,
+        "n_families": _STRATUM_C_N_FAMILIES,
+        "members_per_family": _STRATUM_C_MEMBERS_PER_FAMILY,
+        "t_swaps": _STRATUM_C_T_SWAPS,
+    }
+
+    results: list[SeedMetrics] = []
+    for dist_name in dist_names:
+        if dist_name == "hypercot" and (n_nodes > HYPERCOT_MAX_N or n > HYPERCOT_MAX_CORPUS):
+            logger.info(
+                "  Stratum C %s: hypercot gated out (n=%d > %d or N=%d > %d).",
+                cell_key,
+                n_nodes,
+                HYPERCOT_MAX_N,
+                n,
+                HYPERCOT_MAX_CORPUS,
+            )
+            continue
+        logger.info("  Stratum C %s seed %d: %s", cell_key, seed, dist_name)
+
+        D = compute_and_cache_d_matrix(hypergraphs, dist_name, cache_root, corpus_meta)
+        if D is None:
+            results.append(
+                SeedMetrics(
+                    cell_key=cell_key,
+                    stratum="c",
+                    dist_name=dist_name,
+                    seed=seed,
+                    n_corpus=n,
+                    g1_a1=None,
+                    a2=None,
+                    a3=None,
+                    bits=None,
+                    realized_counts_per_family=realized_counts_per_family,
+                )
+            )
+            continue
+
+        g1_a1 = compute_g1_a1(D, cell_key, dist_name, max_cv_dims=max_cv_dims)
+
+        sub_D = D[np.ix_(a2a3_idx, a2a3_idx)]
+        a2 = compute_a2(sub_D, sub_labels_remapped, sub_n_families, rng_seed=seed)
+        a3 = compute_a3_fold_aucs(sub_D, sub_labels_remapped, sub_n_families, rng_seed=seed)
+
+        bits: dict[str, Any] | None = None
+        if dist_name == PRIMARY_REPR:
+            bits = compute_bits_for_hypergraphs(hypergraphs)
+
+        sm = SeedMetrics(
+            cell_key=cell_key,
+            stratum="c",
+            dist_name=dist_name,
+            seed=seed,
+            n_corpus=n,
+            g1_a1=g1_a1,
+            a2=a2,
+            a3=a3,
+            bits=bits,
+            realized_counts_per_family=realized_counts_per_family,
         )
         results.append(sm)
         _cache_seed_metrics(sm, output_root)
@@ -1340,9 +1567,11 @@ def aggregate_cell_stats(
         block_meta=block_meta,
     )
 
-    # Define which metrics to aggregate per stratum.
+    # Define which metrics to aggregate per stratum.  Stratum C carries the
+    # same pooled A2/A3 fields as Stratum A (single-arity cells, no per-k
+    # split), so it aggregates through the same path.
     geom_metrics = ["nu", "stress", "hubness_skewness", "d_hat"]
-    a2_metrics = ["ari", "nmi", "silhouette"] if stratum == "a" else []
+    a2_metrics = ["ari", "nmi", "silhouette"] if stratum in ("a", "c") else []
     bits_metrics = ["median_ratio", "gt1_fraction"] if PRIMARY_REPR in all_seed_metrics else []
 
     def _metric_id(family: str, key: str, k: int | None = None) -> str:
@@ -1405,7 +1634,7 @@ def aggregate_cell_stats(
             cs.cis[f"{dist_name}::{mid}"] = row
 
         # A3: per k value.
-        if stratum == "a":
+        if stratum in ("a", "c"):
             for k in _KNN_K_VALUES:
                 raw_a3 = _extract_a3_scores(seed_list, k)
                 valid_a3 = [v for v in raw_a3 if v is not None]
@@ -1474,7 +1703,7 @@ def aggregate_cell_stats(
 
     # Build the list of metric ids to test.
     all_metrics: list[str] = [_metric_id("g1_a1", m) for m in geom_metrics]
-    if stratum == "a":
+    if stratum in ("a", "c"):
         all_metrics += [_metric_id("a2", m) for m in a2_metrics]
         all_metrics += [_metric_id("a3", "auc", k) for k in _KNN_K_VALUES]
 
@@ -1748,6 +1977,7 @@ def run_sweep(
     dist_names: list[str] | None = None,
     run_stratum_a: bool = True,
     run_stratum_b: bool = True,
+    run_stratum_c: bool = False,
     n_max: int | None = None,
     cell_key_filter: str | None = None,
     dist_name_filter: str | None = None,
@@ -1772,6 +2002,9 @@ def run_sweep(
         Whether to process Stratum A.  Default True.
     run_stratum_b : bool, optional
         Whether to process Stratum B.  Default True.
+    run_stratum_c : bool, optional
+        Whether to process the Stratum C size-controlled cells (T-M4b).
+        Default False.
     n_max : int | None, optional
         If set, restrict Stratum B to blocks with n ≤ n_max (local smoke).
     cell_key_filter : str | None, optional
@@ -1844,6 +2077,60 @@ def run_sweep(
             )
             write_cell_stats(a_stats, output_root / "stats" / "stratum_a_stats.json")
             logger.info("Stratum A: stats written.")
+
+    # ---- Stratum C (size-controlled, T-M4b) ----
+    stratum_c_cells_processed: list[str] = []
+    if run_stratum_c:
+        # HyperCOT is gated out of every Stratum C cell up front (N = families
+        # × members exceeds HYPERCOT_MAX_CORPUS by construction); filtering
+        # here keeps the cache-first resume loop honest.
+        c_dist_names = [d for d in dist_names if d != "hypercot"]
+        for cn, cm in STRATUM_C_CELLS:
+            c_key = stratum_c_cell_key(cn, cm)
+            if cell_key_filter is not None and cell_key_filter != c_key:
+                continue
+            logger.info(
+                "=== Stratum C cell %s (S=%d, %d reps) ===", c_key, n_seeds, len(c_dist_names)
+            )
+            c_seed_metrics_by_dist: dict[str, list[SeedMetrics]] = {d: [] for d in c_dist_names}
+
+            for seed in range(n_seeds):
+                all_cached = True
+                for dist_name in c_dist_names:
+                    cached = _load_seed_metrics_cache(c_key, "c", dist_name, seed, output_root)
+                    if cached is None:
+                        all_cached = False
+                        break
+
+                if all_cached:
+                    for dist_name in c_dist_names:
+                        cached = _load_seed_metrics_cache(c_key, "c", dist_name, seed, output_root)
+                        if cached:
+                            c_seed_metrics_by_dist[dist_name].append(cached)
+                    logger.info("  Cell %s seed %d: cache hit.", c_key, seed)
+                    continue
+
+                seed_results = run_stratum_c_seed(
+                    n_nodes=cn,
+                    n_edges=cm,
+                    seed=seed,
+                    dist_names=c_dist_names,
+                    output_root=output_root,
+                    max_cv_dims=max_cv_dims,
+                )
+                for sm in seed_results:
+                    c_seed_metrics_by_dist[sm.dist_name].append(sm)
+
+            c_stats = aggregate_cell_stats(
+                cell_key=c_key,
+                stratum="c",
+                all_seed_metrics=c_seed_metrics_by_dist,
+                n_seeds=n_seeds,
+                block_meta={"n": cn, "m": cm, "k": _STRATUM_C_K},
+            )
+            write_cell_stats(c_stats, output_root / "stats" / f"{c_key}_stats.json")
+            stratum_c_cells_processed.append(c_key)
+            logger.info("Cell %s: stats written.", c_key)
 
     # ---- Stratum B ----
     if run_stratum_b:
@@ -1927,6 +2214,7 @@ def run_sweep(
         "dist_names": dist_names,
         "n_stratum_a_seeds": n_seeds if run_stratum_a else 0,
         "n_stratum_b_cells": len(all_b_stats),
+        "stratum_c_cells": stratum_c_cells_processed,
         "stratum_b_blocks": [
             {
                 "block_key": b.block_key,
@@ -2019,9 +2307,9 @@ def main() -> None:
     parser.add_argument(
         "--stratum",
         nargs="+",
-        choices=["a", "b"],
+        choices=["a", "b", "c"],
         default=["a", "b"],
-        help="Which strata to run (default: a b).",
+        help="Which strata to run (default: a b; c = size-controlled cells, T-M4b).",
     )
     parser.add_argument(
         "--n-max",
@@ -2059,6 +2347,7 @@ def main() -> None:
         dist_names=args.distances,
         run_stratum_a="a" in args.stratum,
         run_stratum_b="b" in args.stratum,
+        run_stratum_c="c" in args.stratum,
         n_max=args.n_max,
         cell_key_filter=args.cell_key,
         dist_name_filter=args.dist_name,

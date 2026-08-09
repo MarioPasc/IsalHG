@@ -108,47 +108,76 @@ budget* rather than a spectral one — is available if isometry is not required
 paper reports the spectral `D̂` and cites the distortion bracket rather than
 selecting `D` from it.
 
-**Measured — `D̂` is corpus-dependent.** The current measurement uses 85 items
-drawn from 17 non-isomorphic design families spanning arities 3, 4, and 5 (five
-members per family; metric `d_I^⊥`, trivial vocabulary); results averaged over
-27 independent seeds. The real-data cross-check uses two HIC genre corpora
-(metric `d_I^Σ`; non-trivial IMDB vocabulary — see the Remark in `stability.md`
-§1), reported as a censored secondary exhibit (`../DATA.md` §2):
+**Measured — `D̂` is corpus-dependent.** The current measurement uses the
+size-controlled primary corpus (Stratum C, `../DATA.md` §1): three
+`(n, m)` cells, 12 swap-planted families × 6 members = 72 items per cell, one
+exact degree sequence per cell; metric `d_I^⊥`, trivial vocabulary; 27
+independent corpus seeds, 95% BCa CIs. The real-data cross-check uses two HIC
+genre corpora (metric `d_I^Σ`; non-trivial IMDB vocabulary — see the Remark
+in `stability.md` §1), reported as a censored secondary exhibit
+(`../DATA.md` §2):
 
-| corpus | metric | `N` | `ν` [95% CI] | `D̂` (CV) [95% CI] | `D̂` (Horn) | Mardia `P^(2)` |
-|---|---|---|---|---|---|---|
-| 17 design families | `d_I^⊥` | 85 | 0.097 [0.096, 0.099] | 17 [16, 17] | — | — |
-| HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 | 0.993 |
-| HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 | 0.992 |
+| corpus | metric | `N` | `ν` [95% CI] | `D̂` (CV) [95% CI] | `D̂` (Horn) |
+|---|---|---|---|---|---|
+| Stratum C (9,12) | `d_I^⊥` | 72 | 0.137 [0.136, 0.140] | 27.4 [26.9, 28.0] | — |
+| Stratum C (12,20) | `d_I^⊥` | 72 | 0.061 [0.060, 0.062] | ≥40 (censored) | — |
+| Stratum C (15,35) | `d_I^⊥` | 72 | 0.011 [0.010, 0.011] | ≥40 (censored) | — |
+| HIC IMDB-Wri-Genre-M | `d_I^Σ` | 266 | 0.160 | 10 | 1 |
+| HIC IMDB-Wri-Genre | `d_I^Σ` | 833 | 0.200 | 11 | 1 |
 
-On the 17-family design corpus `d_I^⊥` is **genuinely non-Euclidean**:
-`ν = 0.097` [0.096, 0.099] (mean over 27 seeds, 95% BCa CI),
-and the cross-validated intrinsic dimension is `D̂ = 17` [16, 17]. An earlier
-N-scaling study on a different planted corpus (20 random families, effective
-arity 3) showed the CV estimate climbing from 21 at `N = 60` and plateauing at
-26 for `N ≥ 240`, with Horn parallel-analysis bracketing it conservatively at
-[12, 26]; those measurements are from a superseded corpus and are
-not cited as current. The present design corpus yields a lower `D̂` — expected
-for a structurally homogeneous family set relative to a large random planted
-ensemble — and the non-Euclidean mass `ν = 0.097` is consistent with moderate
-negative-eigenvalue content in the Gram matrix. **Real genre hypergraphs are
-markedly lower-dimensional** (`D̂ ≈ 10–11`, Horn ≈ 1) than the synthetic
-families — a substantive finding, reported as a censored-subset measurement.
-The design rows use the structural member `d_I^⊥` (trivial vocabulary); the HIC
-rows use the label-aware member `d_I^Σ` (non-trivial `LabelVocabulary` from
-IMDB metadata). These are members of different families (the Remark in
-`stability.md` §1), measuring isomorphism in different domains; they are read as
-two objects rather than one continuous series, which is a candidate explanation
-for the lower real-data `D̂` beyond structural differences alone. The estimate is
-reported as a bracketed range [16, 17] (BCa 95% CI on the CV optimum),
-not a bare number.
+`d_I^⊥` is **genuinely non-Euclidean at every cell**, and both invariants move
+systematically with cell size: the non-Euclidean mass falls
+(0.137 → 0.061 → 0.011) while the CV dimension leaves the measurable range —
+well-determined at 27.4 [26.9, 28.0] on the smallest cell, censored at the
+search cap (40) on the two larger ones, where the CV error falls
+monotonically without turning. The censoring is informative: at fixed size
+and degrees the pairwise `d_I^⊥` distribution concentrates (the avalanche
+moves every edited object a near-constant fraction of the string length, §6),
+and a concentrated metric has no low-dimensional structure for the estimator
+to find. **Real genre hypergraphs are markedly lower-dimensional**
+(`D̂ ≈ 10–11`, Horn ≈ 1) — a substantive finding, reported as a
+censored-subset measurement. The Stratum C rows use the structural member
+`d_I^⊥`; the HIC rows use the label-aware member `d_I^Σ`. These are members
+of different families (the Remark in `stability.md` §1) and are read as two
+objects rather than one continuous series. Estimates are reported as
+bracketed ranges (BCa 95% CI on the CV optimum), never a bare number, and a
+censored estimate is reported as censored.
 
 - **Consumers:** (a) the MDS target dimension in A1; (b) a competitor axis
-  independent of any oracle — a *lower faithful* `D̂` than a competitor
-  representation's argues `d_I` captures hypergraph structure more compactly;
-  `D̂` per representation is a head-to-head result (the Euclidean vector
-  competitors WL and HPD do not concentrate at all — their CV error rides to the
-  search cap, so their `D̂` is reported as censored, itself a contrast).
+  independent of any oracle — `D̂` per representation is a head-to-head result
+  (the Euclidean vector competitors WL and HPD do not concentrate at all —
+  their CV error rides to the search cap, so their `D̂` is reported as censored,
+  itself a contrast).
+
+**`D̂` is a descriptor, not a quality score — and a complete invariant cannot be
+low-dimensional.** The intuitive reading, that a smaller `D̂` shows a
+representation captures structure more compactly, points the wrong way here and
+is not adopted. Intrinsic dimension counts the structural degrees of freedom a
+representation retains, and retaining few is what incompleteness *is*: on the
+size-controlled cells NetLSD sits at `D̂ ≈ 3.0–3.5` and is incomplete, the
+naive baselines' identically-zero matrices degenerate to `D̂ = 1`, and the WL
+histogram is censored *and* tie-degenerate (hubness 2.079, chance-level kNN).
+Read in that order, `D̂` ranks the representations by information retained,
+and the string metrics' high dimensions (IsalHG 27.4 at the smallest cell;
+nauty-Levi 38.6 [37.5, 39.3] there) are the signature of separating every
+isomorphism class. The genuine costs of a high `D̂` are two, both measured: a
+two-dimensional map is lossy (§4), and high intrinsic dimension is the
+standard precondition for hubness and concentration. On the size-controlled
+corpus the second cost *does* materialise for `d_I^⊥` at the larger cells —
+the censored `D̂` and the near-constant single-edit response (§6) are two
+faces of the same concentration, and A2/A3 pay for it — which is exactly what
+a descriptor is for: it forecast the task outcome before the classifier ran.
+
+**The estimator is calibrated.** On noiseless Euclidean clouds at the corpus
+sizes used here the cross-validated estimator recovers true ranks 2–25
+exactly, and adding 10% distance noise inflates rather than deflates the
+estimate, so CV readings are if anything upper readings; the leave-out-points
+protocol with Gower out-of-sample placement is required (entry-masking is
+in-sample and rides to the cap). The N-convergence and subsampling analyses
+of the superseded design corpus (plateau at its `D̂` well before full size)
+are retained in `results/superseded/` as estimator validation; they are
+statements about the estimator, and the calibration transfers, but their
+corpus-specific values are no longer cited.
 
 **Structural-faithfulness check (HGED-free; metric `d_I^⊥`).** Because the
 intrinsic dimension and the embedding are only as meaningful as the distances
@@ -180,6 +209,33 @@ sides:
 - **Consumer:** A1 — every similarity map ships with its distortion figures;
   competitors' maps are compared at matched `D`.
 
+**Measured — residual distortion on the size-controlled corpus (3 cells × 72
+items, 27 seeds).** At its (possibly censored) `D̂`, `d_I^⊥`'s residual
+distortion stays low across the cells: Kruskal stress-1 = 0.055
+[0.054, 0.057] at (9,12), 0.021 [0.020, 0.021] at (12,20), 0.059
+[0.057, 0.060] at (15,35); nauty-Levi edit is comparable (0.019–0.043).
+Distortion at a display dimension `D = 2` is not the distortion at `D̂`, and
+the gap is representation-dependent, so a shared-`D = 2` panel compares
+compressibility rather than fidelity; similarity maps are therefore reported
+with their own stress-at-display-dimension, and the representation comparison
+is carried by the CV-error-versus-`D` curves of §3 rather than by a common
+two-dimensional projection. (The shared-`D = 2` panel measured on the
+superseded design corpus, which quantified that artifact — a 10.7× stress
+ratio between `d_I^⊥` and NetLSD at `D = 2` against comparable fidelity at
+matched `D̂` — is archived with that corpus in `results/superseded/`.)
+
+**What the first axis measured — and how the corpus silenced it.** On the
+superseded design corpus the leading MDS coordinate of `d_I^⊥` was almost
+exactly canonical-string length: `|r(PC1, |w*_c|)| = 0.960` (Spearman 0.948),
+equally `|r(PC1, m)| = 0.956`, with length confined to the first axis. That
+corpus's families differed widely in incidence mass (mean `|w*_c| = 16.1`
+tokens, CV 0.64), so its maps displayed a size gradient before they displayed
+structure — one of the three measurements that motivated the size-controlled
+redesign (§5). On Stratum C the axis is silenced by construction: incidence
+mass is constant within a cell and `|w*_c|` varies by only a few percent
+(e.g. 562–642 characters at (15,35)), so no size axis exists for PC1 to
+find.
+
 ## 5. Concentration, spread, and hubness
 
 The distribution of pairwise `d_I` (median, IQR, diameter, its scaling with
@@ -196,6 +252,53 @@ weakens kNN (all points look equidistant, the curse of dimensionality).
 - **Consumer:** A3 — the kNN application's precondition report. High hubness or
   strong concentration predict degraded kNN; measuring them first makes the
   kNN result (good or bad) interpretable instead of anecdotal.
+
+**Measured — the length-difference floor (superseded design corpus).**
+Levenshtein distance satisfies `d_Lev(a,b) ≥ ||a|−|b||`, so some coupling
+between `d_I^⊥` and the length gap is mandatory for any string metric. On the
+superseded design corpus its magnitude was large: Spearman
+`ρ(d_I^⊥, ||w*_c(H)|−|w*_c(H')||) = 0.867` over all 3,570 pairs per seed —
+most of the ordering `d_I^⊥` imposed there was ordering by size difference,
+the pairwise counterpart of the PC1 result in §4.
+
+**The size contribution was not merely substantial — on that corpus it was
+sufficient, and this is what forced the corpus redesign.** A distance built
+from two integers per hypergraph, `d_size(H,H') = |n−n'| + |m−m'|`, carrying
+no structural information whatsoever, scored ARI 0.442 [±0.040] on the A2
+clustering task and AUC-OvR 0.932 [±0.008] on A3 — outranking five of the
+seven measured representations on the first and four of seven on the second,
+because the seventeen design families occupy only fourteen distinct `(n,m)`
+cells. Neither size axis alone achieves this (incidence mass alone: ARI
+0.101; edge count alone: 0.111); the pair resolves the families. Three
+measurements agree on the mechanism: the 0.867 length coupling, the 0.960
+PC1–`|w*_c|` correlation of §4, and the mutual redundancy of the then-leading
+representations (`d_I^⊥` against degree-sequence L1, Spearman 0.799; NetLSD
+against degree-sequence L1, 0.707) are three views of a corpus whose class
+structure is recoverable from size. Those task standings are withdrawn and
+archived (`results/superseded/`).
+
+**The resolution is the size-controlled corpus, with the substrate choice
+itself measured.** The natural-looking substrate — Steiner triple systems of
+one order, e.g. the eighty STS(15) at `n = 15`, `m = 35`, 3-uniform,
+7-regular — fails on both axes it was meant to win: pristine `w*_c` cost is
+driven by the Steiner pair-coverage tie structure, not by `|Aut|` (617 s on
+PG(3,2), the most symmetric of the eighty; > 900 s on every rigid or
+median-symmetry instance probed, and > 900 s on a rigid STS(19)), and near
+the Steiner manifold the canonical form is maximally unstable — a two-swap
+perturbation moves `d_I` as far as switching to a different Steiner system,
+so STS-seeded families carry no recoverable class structure. The adopted
+corpus (Stratum C, `../DATA.md` §1) instead fixes `(n, m, k)` and an
+irregular degree sequence per cell and plants families by degree-preserving
+incidence swaps. On it both naive baselines are identically zero on every
+pair — measured through the full harness at ARI −0.000 [−0.001, 0.000] and
+AUC 0.492 at all three cells — and within a cell `|w*_c|` varies by only a
+few percent, so the length floor of this section has no room to order
+anything. A2 and A3 now carry comparative weight, and what they show is
+reported in `../empirical/applications.md`: the planted structure is
+recoverable (nauty-Levi edit reaches ARI 0.614 [0.571, 0.657] at the largest
+cell), and `d_I^⊥` recovers only a small, statistically real part of it —
+the concentration measured in §3 and the single-edit response of §6 are the
+mechanism, and the closing discussion owns it.
 
 ## 6. Local sensitivity and ladder response
 
@@ -242,6 +345,26 @@ monotone fraction per ladder = 0.71 (local one-step regressions occur within
 ladder variance); mean `d_I^⊥` increment per Qin budget step: Q1 = 6,
 median = 12, Q3 = 18 tokens. All 56 ladders are globally increasing
 (cumulative `d_I^⊥` increases from start to end).
+
+**Scope of the profile — absolute versus relative response (measured at the
+corpus redesign).** The compact absolute profile above is a property of the
+anchored design fixtures, whose short strings and heterogeneous local
+structure localize an edit. On random fixed-degree substrates — the
+size-controlled corpus's regime — a single edit (incidence swap or Qin op;
+the two are indistinguishable in response) moves `d_I^⊥` by ≈30–50 % of the
+string at every cell probed from (9,12) to (15,35), and in relative terms
+even the design-fixture medians sit near 30 % of their short strings. There
+is no measured regime in which the single-edit response is a small *fraction*
+of the string: this is the avalanche/drift of the closing discussion measured
+directly, it is why edit-proximity class structure is largely invisible to
+`d_I^⊥` on the size-controlled tasks, and it bounds what "navigable" may
+claim — decodable interpolation (A4's ambient decodability) survives it;
+small-perturbation task geometry does not. The nauty contrast, conversely, is
+a statement about these fixtures' absolute token counts, not a task
+prediction: on the size-controlled corpus the nauty-Levi edit distance is the
+strongest structure recoverer (`../empirical/applications.md`), its
+adjacency-serialized canonical form localizing the same edits that the
+instruction string's positional coupling amplifies.
 
 ## 7. Mapping to experiments
 

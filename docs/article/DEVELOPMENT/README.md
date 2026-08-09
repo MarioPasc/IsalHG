@@ -57,8 +57,8 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-M1`](T-M1/) | `metric_space/` foundation + first distances | 0 | 3 |
 | [`T-M2`](T-M2/) | HGED — oracle for E1' + Qin ladder budgets | 0 | 4 |
 | [`T-M3`](T-M3/) | Competing representations (5, NetLSD full member) | 0 | 5 |
-| [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 2 |
-| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 0 (+1 blocked) | 12 |
+| [`T-M4`](T-M4/) | Corpora + scoring primitives | 1 | 3 |
+| [`T-M5`](T-M5/) | The experiments (body + discussion evidence) | 1 (+1 blocked) | 12 |
 | [`T-M6`](T-M6/) | Optional package reparent | 1 | 0 |
 | [`T-M7`](T-M7/) | Pre-writing revision, code: strict corpora + sweep/stats harness + baselines + G3 + real anchor | 0 | 16 |
 | [`T-M8`](T-M8/) | Pre-writing revision, docs: label-family Remark, capability matrix, motivation, repro artifact | 0 | 6 |
@@ -173,7 +173,45 @@ theory record (article-facing work done; remainder is housekeeping/stretch):
 last:  T-M6 isomorphisms/ reparent (optional)
 ```
 
-**Critical path (v3, updated at S7 close).** The canonical-form track is
+## The corpus block resolved — Stratum C is the body's corpus (T-M4b CLOSED 2026-08-09)
+
+The 2026-08-09 figure-planning findings are resolved on one side and open on
+the other. **[`T-M4b`](T-M4/CLOSED/T-M4b.md) is CLOSED**: the size-confounded
+Stratum A corpus (17 families / 14 distinct `(n,m)` cells; `size_l1` alone at
+ARI 0.442 / AUC 0.932) is superseded by **Stratum C** — 3 size-controlled
+cells `(9,12)/(12,20)/(15,35)`, k=3, 12 swap-planted families × 6 members,
+one exact degree sequence per cell — re-measured at S=27 with BCa/Holm
+(`results/T-M4b/`, FINAL). Measured outcome, reported per the COMPETITORS §4
+contract: both naive baselines at exactly the structural floor
+(ARI −0.000, AUC 0.492, every cell); WL tie-degenerate at the floor; IsalHG
+Holm-significantly above the floor but small (ARI 0.016–0.028); nauty-Levi
+edit leads (ARI up to 0.614), HPD second, NetLSD third. Mechanism measured:
+single-edit `d_I` response is ≈30–50 % of the string on unanchored substrates
+(swap ≡ Qin) — the avalanche/drift of the discussion, now with task-level
+evidence. STS(15/19) substrates measured dead (pristine `w*_c` > 900 s on
+rigid instances; 2-swap families avalanche to ARI ≈ 0.03). Corpus policy:
+`../DATA.md` §7. Decision record: D-M4b (`DECISIONS.md`). Superseded results:
+`results/superseded/T-M7d_stratum_a/`. New assets: incidence-swap edit
+(`core/sparse_hypergraph.py`), `edit_kind="swap"` planted families,
+`"size_controlled_corpus"` dataset, `size_l1` distance, `--stratum c` sweep
+path, and the confound guard
+(`tests/integration/test_corpus_confound_guard.py`).
+
+- **T-M5m — A4's decodability score is vacuous — remains OPEN.** The shipped
+  experiment decodes pool members that were already hypergraphs. The genuine
+  claim — every string on a Levenshtein alignment path decodes to a
+  *connected* hypergraph, measured 62/62 with only the endpoints canonical —
+  is a different measurement. Reproduction:
+  `scripts/diagnostics/ambient_decodability_probe.py`.
+
+Unaffected: the geometry characterization (`ν`, `D̂`, distortion, hubness), whose
+CV estimator was calibrated exact on known ranks at `N = 85` and shown converged
+in `N` (`scripts/diagnostics/dhat_calibration_probe.py`); G2 sensitivity and the
+nauty contrast; the frozen E1′ and bits results. The figure set built on these
+findings is `docs/article/figures/`.
+
+**Critical path (v3, updated at S7 close; A2/A3 rows superseded — see above).**
+The canonical-form track is
 closed and the theory record needs no article-side work. The S1–S5 HGED-free
 body was measured on N = 240 twenty-family planted corpus (S5); those numbers
 are superseded by S7 (the drive retains them per the N=60→240 precedent).

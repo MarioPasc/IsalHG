@@ -145,6 +145,49 @@ and interpreted by the paragraph above, not cherry-picked after results are seen
 **Registry name.** `"degree_seq_l1"` — implemented in
 `src/isalhg/metric_space/representations/degree_seq_l1.py` (T-M7c, 2026-07-22).
 
+**Outcome (2026-08-09) — the contract discharged, and a second floor added.**
+Outcome 2 obtained, and more sharply than anticipated: degree-sequence L1 not
+only beat IsalHG on A2 and A3, it was itself matched by a cruder distance
+still. `d_size(H,H') = |n−n'| + |m−m'|` — two integers per hypergraph, no
+structural content — reaches ARI 0.442 and AUC-OvR 0.932 on the design corpus,
+outranking five of seven representations on the first and four of seven on the
+second. Per the contract, this is reported plainly: the discriminative signal
+in that corpus is not merely first-order, it is size, and the corpus therefore
+does not test the representations at all
+(`../theoretical/geometry.md` §5). The conclusion falls on the corpus, not on
+the competitor set.
+
+Two consequences follow, both binding.
+
+- **`d_size` joins the comparison as a second naive baseline**, registry name
+  `"size_l1"`, present in the same surfaces as `degree_seq_l1` and carried
+  through the same harness so it gains the same BCa intervals and Holm-corrected
+  tests. A comparison whose floor is invisible cannot be read, and this floor is
+  one line of code for a reviewer to reconstruct.
+- **No competitor is removed on the basis of having won.** The contract above
+  was written before results were seen precisely to bind this case, and it
+  binds. NetLSD stays: it is the reference spectral descriptor (CQ4), and
+  excluding the spectral family because it scores well would leave the paper
+  without the one baseline every reader of this literature expects.
+  Degree-sequence L1 stays: it is the floor, and a floor that is removed when it
+  rises is not a floor. The right response to a naive baseline winning is to
+  fix the corpus, which is what is being done.
+
+**Resolution (2026-08-09) — the corpus fixed, the floors verified, the
+outcome reported.** On the size-controlled replacement corpus (Stratum C,
+`../DATA.md` §1; 3 cells, 27 seeds) both naive baselines sit at exactly the
+structural floor by construction and by measurement: ARI −0.000
+[−0.001, 0.000], AUC-OvR 0.492 at every cell, through the same BCa/Holm
+harness as every other row. With the floor enforced, the contract's outcome
+on the *structural* signal falls against IsalHG and is reported in that
+direction: the nauty-Levi contrast baseline leads (ARI up to 0.614
+[0.571, 0.657]), HPD second, NetLSD third, all three Holm-significantly above
+IsalHG (which is itself Holm-significantly above the floors at every cell),
+and the WL histogram is tie-degenerate at the floor. No competitor is
+removed for winning — the contrast baseline winning the tasks is itself a
+finding, and `../empirical/applications.md` §Usefulness carries its
+mechanism (avalanche/drift) and its consequences.
+
 ## 5. Resolved / remaining
 
 - CQ1. **[resolved]** Fair = WL, NetLSD, HyperCOT, HPD; contrast = nauty. §3.

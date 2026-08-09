@@ -11,9 +11,9 @@ The v3 paper needs data for **four purposes** (v2's ordering inverted: the
 body corpora lead; the exact-HGED corpus is a mini-corpus for one discussion
 figure):
 
-## 1. The planted-family corpus (primary; serves G1/G2, A1–A3)
+## 1. The size-controlled corpus (Stratum C — primary; serves A2–A3 and the G1/A1 geometry)
 
-### ⚠ Critical design constraint — classes must be non-isomorphic
+### ⚠ Critical design constraint 1 — classes must be non-isomorphic
 
 The obvious shortcut (take iso-class representatives, generate `permute()`
 copies as class members) is **invalid for classification/clustering**. Permuted
@@ -25,32 +25,84 @@ but structurally coherent.** Permuted copies are retained only as an
 invariance sanity check (and as the `HGED = 0` anchor inside the mini-corpus,
 §4).
 
-### The generator
+### ⚠ Critical design constraint 2 — classes must be invisible to size and degrees
 
-`F` seed motifs; each family = a seed + `r` independent perturbations (a few
-random Qin-op edits per member, enforced non-isomorphic within family). Yields:
+The first-generation primary corpus (Stratum A: 17 known-design families × 5
+Qin-edit members = 85 items) violated a constraint we had not made explicit:
+its 17 families occupy only **14 distinct `(n, m)` cells**, so family identity
+is nearly a lookup on two integers. The falsifying measurement (2026-08-09,
+reproduced byte-identical before any redesign): the structure-free distance
+`|Δn| + |Δm|` scores A2 ARI 0.442 ± 0.040 and A3 AUC 0.932 ± 0.008 on that
+corpus, outranking five of the seven representations on the first metric and
+four of seven on the second. Neither axis alone suffices (incidence mass
+alone: ARI 0.101; edge count alone: 0.111) — the pair resolves the families.
+On such a corpus A2/A3 measure how directly each representation encodes size,
+not representation quality; the Stratum A task numbers are withdrawn as a
+comparison (`results/superseded/`). The repaired constraint: **the corpus
+must hold `(n, m, k)` and the exact per-vertex degree sequence constant
+across classes**, so both naive baselines (`size_l1`, `degree_seq_l1`) are
+identically zero on every pair *by construction* and whatever a
+representation scores is higher-order structural signal.
 
-- non-isomorphic within-family members at small, controllable edit budget
-  (Qin-cost accounting: intra-family structural distance is bounded by
-  construction);
-- known family membership ⇒ **class labels for A2 (ARI/NMI) and A3 (kNN)**;
-- **controlled sweeps for the geometry pillar**: vary density (m/n, arity mix)
-  and size across corpora so `ν`, `D̂`, concentration/hubness are reported as
-  functions of the controlled parameters, not single numbers.
+### The Stratum C generator (size-controlled swap-planted families)
 
-This is **new code** (`datasets/synthetic/planted_families.py`) — no library
-provides the non-isomorphic-within-family constraint. Seeds: the design
-fixtures already shipped (Fano n=7, STS(9) n=9, the cyclic C13 orbits n=13,
-GQ(2,2) n=15) plus the vendored **Steiner-triple-system catalog** (T-M0c,
-2026-07-18: all iso-classes for orders 3–15 — 1/1/1/2/80 systems,
-`datasets/synthetic/sts_catalog.py`, dataset `"sts_catalog"`) and SageMath
-PG(2,q) small designs. All generated hypergraphs **connected** (the article's
-domain; generator-level guarantee).
+Three independent cells, `(n, m) ∈ {(9, 12), (12, 20), (15, 35)}`, all
+3-uniform, each analyzed separately (no cross-cell pairs, so no size axis
+re-enters). Per cell and per corpus seed:
 
-A 2026-07-08 cohort survey found no existing corpus with all three of:
-whole-hypergraph class label, ≥2 instances/class, sizes within our wall-clock
-gate — hence the bespoke generator. It is bespoke-but-standard-practice
-(planted partitions); the paper states the generator fully.
+1. **Base.** One random connected 3-uniform hypergraph realizing the cell
+   exactly.
+2. **Family seeds.** 12 independent chains of `10·m` connectivity-preserving
+   **incidence swaps** from the base (`swap_incidence`: `v1` and `v2` trade
+   places between `e1` and `e2` — preserves every vertex degree, every arity,
+   `n`, and `m` exactly; the bipartite double-edge swap on the incidence
+   structure). Chains are pairwise far apart in edit space and verified
+   pairwise non-isomorphic.
+3. **Members.** 6 per family: the family seed + 5 rejection-sampled 2-swap
+   perturbations, connected, pairwise non-isomorphic (pynauty-Levi oracle).
+
+72 items per cell per corpus seed; deterministic under `(params, seed)`
+(`datasets/synthetic/size_controlled_corpus.py`, dataset
+`"size_controlled_corpus"`). The size/degree control is enforced as a build
+invariant and pinned by an integration guard
+(`tests/integration/test_corpus_confound_guard.py`): one `(n, m)` cell, one
+degree sequence, both naive distance matrices exactly zero.
+
+**Why not Steiner systems as the substrate (measured, 2026-08-09).** The 80
+non-isomorphic STS(15) look ideal (all share `(15, 35)`, 3-uniform,
+7-regular), but both feasibility and signal fail: pristine STS(15) `w*_c`
+costs 617 s on the *most symmetric* instance (PG(3,2), |Aut| = 20160) and
+> 900 s on every rigid or median-symmetry instance tested — the cost driver is
+the Steiner pair-coverage tie structure, and |Aut| does not predict cost in
+either direction; STS(19) (11.08 × 10⁹ systems, all sampled ones rigid) also
+exceeds 900 s. Worse, near the Steiner manifold the canonical form is
+maximally unstable: a 2-swap perturbation moves `d_I` as far as switching to a
+different Steiner system entirely (within-family and between-family distance
+distributions coincide; ARI ≈ 0.02–0.05), so STS-seeded families carry no
+recoverable class structure for `d_I`. Random substrates (regular and
+irregular) were piloted at four cells with the same outcome for `d_I` — the
+single-edit response of `w*_c` is ≈ 30–50 % of the string everywhere (swap or
+Qin edit alike), the avalanche mechanism of the discussion — while NetLSD
+recovers the planted structure on the same items (positive control). The
+corpus is therefore honest by construction and *solvable* (the planted signal
+is real: within-family members share ~27/35 edges vs ~3/35 between), and the
+task outcome is reported in whichever direction it falls, per the
+pre-registered contract (`COMPETITORS.md` §4).
+
+### The Qin-edit planted-family generator (Stratum A — superseded as primary)
+
+`F` seed motifs; each family = a seed + `r` independent Qin-op edits per
+member, enforced non-isomorphic within family
+(`datasets/synthetic/planted_families.py`). Seeds: the design fixtures (Fano
+n=7, STS(9) n=9, the cyclic C13 orbits n=13, GQ(2,2) n=15) plus the vendored
+Steiner catalog (orders 3–15, `datasets/synthetic/sts_catalog.py`). It
+remains the generator behind the ladder corpora's seed pool and the
+G2-sensitivity fixtures, and its A2/A3/G1 role passed to Stratum C under
+design constraint 2. A 2026-07-08 cohort survey found no existing corpus with
+whole-hypergraph class labels, ≥2 instances/class, and sizes within our
+wall-clock gate — hence the bespoke generators. Both are
+bespoke-but-standard-practice (planted partitions); the paper states them
+fully.
 
 ## 2. Real-world anchor (credibility; serves A1–A3 at scale)
 
@@ -162,4 +214,31 @@ wiring are new `datasets/synthetic/` modules → tracked in `DEVELOPMENT/`.
 Resolved and retired: DQ2 (oracle tiering — collapsed: exact for E1' only,
 ladder budgets for the body, BP-HGED retired), DQ3 (planted families vs cohort
 — resolved: bespoke generator), DQ4 (two corpora with different purposes —
-superseded by the four-purpose split above).
+superseded by the four-purpose split above), DQ5 (geometry-vs-density grid —
+absorbed: Stratum B carries the density axis; Stratum C carries the
+size-controlled axis).
+
+## 7. Corpus policy — which corpus serves which measurement
+
+One corpus per measurement, chosen by what the measurement must control;
+geometry and applications read the *same* objects. Any table where a naive
+baseline (`size_l1`, `degree_seq_l1`) scores above its floor is measuring the
+corpus, not the representations — that is the standing falsifier every corpus
+below is checked against.
+
+| Measurement | Corpus | Why this corpus |
+|---|---|---|
+| A2 clustering, A3 kNN (task metrics, all representations) | **Stratum C** (§1): 3 size-controlled cells, 12 swap-families × 6, 27 seeds | class signal must be purely higher-order: `(n, m, k)` + degree sequence fixed ⇒ both naive baselines identically 0 by construction |
+| G1 concentration/hubness + A1 MDS geometry table (per representation) | **Stratum C**, same cells and seeds | the geometry must describe the same objects the applications run on (no-orphan-geometry rule) |
+| Geometry vs density/size trends | **Stratum B**: admitted connected-ER cells (k3 to n=24 at ρ≤2; k5 at n=8) | controlled `(n, k, ρ)` axes inside the measured `w*_c` envelope; no class labels needed |
+| G2 local sensitivity + regime confrontations | design fixtures (17 regimes) + single edits | anchored, interpretable per-regime predictions; sensitivity is a per-object profile, not a task |
+| G2 ladder response, A4 path scoring | ladder corpora (§3), known Qin budgets | HGED-free budget axis is known by construction |
+| E1' correlation figure | exact-HGED mini-corpus (§4), FROZEN | the only place the oracle is feasible for all pairs |
+| Compactness (bits) | Stratum A 85-item corpus + planted_n240 (FROZEN, 320/320) | measured pre-rescope; a size-heterogeneous corpus is *appropriate* here — compactness is a per-object claim, not a class-discrimination task |
+| Real-data exhibit (secondary, censored) | HIC IMDB clean subsets (§2 gate) | the only labelled real corpus; enters only where `w*_c` is computable |
+| Iso-invariance sanity | `permute()` pairs | tests the foundation, not the geometry |
+
+Superseded: the Stratum A task/geometry numbers (A2/A3/G1/A1 on the 85-item
+design corpus) are withdrawn under design constraint 2 (§1) and archived under
+`results/superseded/`; Stratum A survives as the bits corpus (frozen result),
+as the G2-fixture seed pool, and as the seed catalog for the ladder corpora.

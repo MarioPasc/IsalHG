@@ -1,5 +1,28 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
+- **D-M4b** — **[RESOLVED 2026-08-09, PI (Mario), in-session]** The
+  size-controlled replacement corpus (T-M4b): **build Stratum C and report the
+  honest outcome** per the pre-registered `COMPETITORS.md` §4 contract — PI:
+  "we want to have good data first"; any post-hoc scope call on weak results
+  stays with the PI. Full replacement of the primary corpus authorized; the
+  binding requirement is a clean data-decision story (now `DATA.md` §1 + §7).
+  **Adopted design:** 3 cells (9,12)/(12,20)/(15,35), k=3, irregular fixed
+  degree sequence per (cell, seed), 12 swap-planted families × 6 members,
+  t=2 incidence swaps, 10·m-swap seed separation, pynauty-Levi dedup, per-cell
+  analysis, S=27 seeds. **Alternatives measured and rejected:** STS(15)-seeded
+  families (pristine `w*_c` >900 s on rigid instances *and* total avalanche —
+  within ≈ between d_I, ARI ≈ 0.03); STS(19) (same cost wall); old corpus +
+  disclosure row (F7 option D — concedes A2/A3 measure size); rescoping A2/A3
+  out (not taken; PI reserves it post-data). **Measured context the decision
+  rests on:** single-edit d_I response is ≈30–50% of the string on every
+  unanchored substrate (swap and Qin alike), so planted classes are
+  d_I-unrecoverable while NetLSD (pilot) and nauty-Levi-edit (harness pilot,
+  1 seed) do recover them — the honest outcome will likely show a competitor
+  leading A2/A3 on the controlled corpus. Consequences for prose: A2/A3
+  reframed around the measured avalanche/drift mechanisms; the discussion's
+  impossibility argument gains task-level evidence. Execution: T-M4b (this
+  session); `size_l1` registered as the second permanent naive baseline.
+
 - **OD7** — **[PENDING PI]** Label-stripped HIC re-run: should the HIC genre
   corpora additionally be run with `LabelVocabulary.trivial()` (labels stripped)
   to produce a structural-only real-data row `d_I^⊥` per dataset? One extra

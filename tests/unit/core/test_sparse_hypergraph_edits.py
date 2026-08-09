@@ -20,7 +20,9 @@ from isalhg.core.sparse_hypergraph import (
     insert_hyperedge,
     insert_vertex,
     random_edit,
+    random_swap_edit,
     remove_incidence,
+    swap_incidence,
 )
 from isalhg.errors import HypergraphEditError, InvalidLabelError
 
@@ -184,6 +186,107 @@ class TestRemoveIncidence:
         H = SparseHypergraph(n_nodes=3, hyperedges=[frozenset({0, 1, 2}), frozenset({0, 1})])
         with pytest.raises(HypergraphEditError):
             remove_incidence(H, 2, 0)  # {0,1,2}-2 == e1
+
+
+def _degree_multiset(H: SparseHypergraph) -> tuple[int, ...]:
+    return tuple(sorted(H.degree(v) for v in range(H.n_nodes)))
+
+
+def _arity_multiset(H: SparseHypergraph) -> tuple[int, ...]:
+    return tuple(sorted(len(H.members(e)) for e in range(H.n_edges)))
+
+
+class TestSwapIncidence:
+    def test_swaps_members(self) -> None:
+        H = _base()
+        out = swap_incidence(H, 0, 0, 3, 1)  # v0: e0->e1, v3: e1->e0
+        assert out.members(0) == frozenset({1, 2, 3})
+        assert out.members(1) == frozenset({0, 2})
+        # purity
+        assert H.members(0) == frozenset({0, 1, 2})
+        assert H.members(1) == frozenset({2, 3})
+
+    def test_preserves_degrees_arities_and_size(self) -> None:
+        H = _base()
+        out = swap_incidence(H, 0, 0, 3, 1)
+        assert out.n_nodes == H.n_nodes
+        assert out.n_edges == H.n_edges
+        assert _degree_multiset(out) == _degree_multiset(H)
+        assert _arity_multiset(out) == _arity_multiset(H)
+        # per-vertex degrees are preserved, not just the multiset
+        assert all(out.degree(v) == H.degree(v) for v in range(H.n_nodes))
+
+    def test_same_edge_raises(self) -> None:
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(_base(), 0, 0, 1, 0)
+
+    def test_v1_not_member_of_e1_raises(self) -> None:
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(_base(), 3, 0, 2, 1)  # v3 not in e0
+
+    def test_v1_also_in_e2_raises(self) -> None:
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(_base(), 2, 0, 3, 1)  # v2 in both edges
+
+    def test_v2_not_member_of_e2_raises(self) -> None:
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(_base(), 0, 0, 1, 1)  # v1 not in e1={2,3}
+
+    def test_out_of_range_raises(self) -> None:
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(_base(), 0, 0, 3, 9)
+
+    def test_would_duplicate_third_edge_raises(self) -> None:
+        H = SparseHypergraph(
+            n_nodes=4,
+            hyperedges=[frozenset({0, 1}), frozenset({2, 3}), frozenset({1, 2})],
+        )
+        # e0 - {0} + {2} == {1, 2} == e2 -> duplicate
+        with pytest.raises(HypergraphEditError):
+            swap_incidence(H, 0, 0, 2, 1)
+
+    def test_exchange_between_partners_is_allowed(self) -> None:
+        # new e0 equals OLD e1 (and vice versa): the pair exchanges member
+        # sets, which duplicates nothing in the resulting hypergraph.
+        H = SparseHypergraph(n_nodes=3, hyperedges=[frozenset({0, 1}), frozenset({1, 2})])
+        out = swap_incidence(H, 0, 0, 2, 1)
+        assert out.members(0) == frozenset({1, 2})
+        assert out.members(1) == frozenset({0, 1})
+
+
+class TestRandomSwapEdit:
+    def test_deterministic(self) -> None:
+        a = random_swap_edit(_base(), random.Random(5))
+        b = random_swap_edit(_base(), random.Random(5))
+        assert a is not None and b is not None
+        assert a == b
+
+    def test_single_edge_returns_none(self) -> None:
+        H = SparseHypergraph(n_nodes=3, hyperedges=[frozenset({0, 1, 2})])
+        assert random_swap_edit(H, random.Random(0)) is None
+
+    def test_chain_preserves_degrees(self) -> None:
+        rng = random.Random(2024)
+        H = SparseHypergraph(
+            n_nodes=6,
+            hyperedges=[
+                frozenset({0, 1, 2}),
+                frozenset({2, 3, 4}),
+                frozenset({4, 5, 0}),
+                frozenset({1, 3, 5}),
+            ],
+        )
+        ref_deg = _degree_multiset(H)
+        current = H
+        for _ in range(20):
+            nxt = random_swap_edit(current, rng)
+            if nxt is None:
+                continue
+            current = nxt
+            assert _degree_multiset(current) == ref_deg
+            assert _arity_multiset(current) == _arity_multiset(H)
+            assert current.n_nodes == H.n_nodes
+            assert current.n_edges == H.n_edges
 
 
 class TestRandomEditAndPath:

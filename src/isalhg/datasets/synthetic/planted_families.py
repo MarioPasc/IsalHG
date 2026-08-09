@@ -32,7 +32,11 @@ import random
 from collections.abc import Iterator
 from typing import Any
 
-from isalhg.core.sparse_hypergraph import SparseHypergraph, random_edit
+from isalhg.core.sparse_hypergraph import (
+    SparseHypergraph,
+    random_edit,
+    random_swap_edit,
+)
 from isalhg.datasets.base import HypergraphDataset
 from isalhg.datasets.registry import register_dataset
 from isalhg.datasets.schemas import (
@@ -115,6 +119,13 @@ class PlantedFamilyDataset(HypergraphDataset):
         When provided, ``len(coarse_class_labels)`` must equal the number
         of families.  Stored in each item's ``extra["coarse_class"]``.
         When ``None``, items carry no ``"coarse_class"`` key.  Default ``None``.
+    edit_kind : str, optional
+        Perturbation move for non-seed members.  ``"qin"`` (default) applies
+        ``n_edits`` random Qin unit edits, which change size and degrees.
+        ``"swap"`` applies ``n_edits`` degree-preserving incidence swaps
+        (``random_swap_edit``), so every member shares the seed's
+        ``(n_nodes, n_edges)``, arity sequence, and exact per-vertex degree
+        sequence — the size-controlled corpus contract (T-M4b).
     """
 
     def __init__(
@@ -134,6 +145,7 @@ class PlantedFamilyDataset(HypergraphDataset):
         family_labels: list[str] | None = None,
         allow_partial: bool = False,
         coarse_class_labels: list[str] | None = None,
+        edit_kind: str = "qin",
     ) -> None:
         if members_per_family < 1:
             raise ValueError(f"members_per_family must be >= 1, got {members_per_family}")
@@ -141,7 +153,10 @@ class PlantedFamilyDataset(HypergraphDataset):
             raise ValueError(f"n_edits must be >= 1, got {n_edits}")
         if max_retries < 1:
             raise ValueError(f"max_retries must be >= 1, got {max_retries}")
+        if edit_kind not in ("qin", "swap"):
+            raise ValueError(f"edit_kind must be 'qin' or 'swap', got {edit_kind!r}")
 
+        self._edit_kind = edit_kind
         self._members_per_family = members_per_family
         self._n_edits = n_edits
         self._max_retries = max_retries
@@ -244,9 +259,23 @@ class PlantedFamilyDataset(HypergraphDataset):
                 found = False
                 for attempt in range(self._max_retries):
                     # Apply n_edits independent random edits to the seed.
-                    current: SparseHypergraph = seed_motif
+                    candidate: SparseHypergraph | None = seed_motif
                     for _ in range(self._n_edits):
-                        current, _ = random_edit(current, rng)
+                        if candidate is None:
+                            break
+                        if self._edit_kind == "swap":
+                            candidate = random_swap_edit(candidate, rng)
+                        else:
+                            candidate, _ = random_edit(candidate, rng)
+                    if candidate is None:
+                        logger.debug(
+                            "family %d member %d attempt %d found no valid swap; retrying",
+                            fam_idx,
+                            needed,
+                            attempt,
+                        )
+                        continue
+                    current: SparseHypergraph = candidate
                     # Empty hypergraph (n=0) is vacuously connected but outside the
                     # d_I domain (DegenerateHypergraphError from fingerprint); skip.
                     if current.n_nodes == 0:
@@ -354,6 +383,7 @@ class PlantedFamilyDataset(HypergraphDataset):
                 f"PlantedFamilyDataset(n_families={n_families},"
                 f" members_per_family={self._members_per_family},"
                 f" n_edits={self._n_edits},"
+                f" edit_kind={self._edit_kind!r},"
                 f" seed_value={self._seed_value})"
             ),
             label_vocabulary=LabelVocabulary.trivial(),
@@ -388,6 +418,9 @@ class PlantedFamilyDataset(HypergraphDataset):
             seed_value=int(seed),
             dedup_backend=self._dedup_backend,
             family_labels=self._family_labels,
+            allow_partial=self._allow_partial,
+            coarse_class_labels=self._coarse_class_labels,
+            edit_kind=self._edit_kind,
         )
 
 

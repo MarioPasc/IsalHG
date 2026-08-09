@@ -736,6 +736,85 @@ def remove_incidence(H: SparseHypergraph, v: NodeId, e: EdgeId) -> SparseHypergr
     return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
 
 
+def swap_incidence(
+    H: SparseHypergraph,
+    v1: NodeId,
+    e1: EdgeId,
+    v2: NodeId,
+    e2: EdgeId,
+) -> SparseHypergraph:
+    """Return a copy of ``H`` with ``v1`` moved from ``e1`` to ``e2`` and ``v2``
+    moved from ``e2`` to ``e1``.
+
+    The bipartite double-edge swap on the incidence structure: it preserves
+    every vertex degree, every hyperedge arity, ``n_nodes`` and ``n_edges``
+    exactly, which makes it the generating move for corpora whose classes must
+    be invisible to size and degree-sequence baselines. Not one of the six Qin
+    unit ops -- it equals a ``remove_incidence`` + ``add_incidence`` pair on
+    each of the two edges, so a chain of ``t`` swaps upper-bounds the HGED of
+    the result by ``4t``.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    v1 : NodeId
+        Vertex leaving ``e1``; must be incident to ``e1`` and not to ``e2``.
+    e1 : EdgeId
+        First hyperedge; must differ from ``e2``.
+    v2 : NodeId
+        Vertex leaving ``e2``; must be incident to ``e2`` and not to ``e1``.
+    e2 : EdgeId
+        Second hyperedge.
+
+    Returns
+    -------
+    SparseHypergraph
+        Copy in which ``members(e1)`` trades ``v1`` for ``v2`` and
+        ``members(e2)`` trades ``v2`` for ``v1``.
+
+    Raises
+    ------
+    HypergraphEditError
+        If ``e1 == e2``, an operand is out of range, a vertex is not incident
+        where required (or incident where forbidden), or a swapped edge would
+        duplicate a hyperedge *other than the two being modified* (the pair
+        exchanging member sets outright is legal: it duplicates nothing in the
+        result).
+    """
+    if e1 == e2:
+        raise HypergraphEditError("swap requires two distinct hyperedges")
+    for e in (e1, e2):
+        if not 0 <= e < H.n_edges:
+            raise HypergraphEditError(f"edge {e} out of range [0, {H.n_edges})")
+    m1, m2 = H.members(e1), H.members(e2)
+    if v1 not in m1:
+        raise HypergraphEditError(f"vertex {v1} is not incident to edge {e1}")
+    if v2 not in m2:
+        raise HypergraphEditError(f"vertex {v2} is not incident to edge {e2}")
+    if v1 in m2:
+        raise HypergraphEditError(f"vertex {v1} is already incident to edge {e2}")
+    if v2 in m1:
+        raise HypergraphEditError(f"vertex {v2} is already incident to edge {e1}")
+    new1: HyperedgeSet = (m1 - {v1}) | {v2}
+    new2: HyperedgeSet = (m2 - {v2}) | {v1}
+    l1, l2 = H.edge_label(e1), H.edge_label(e2)
+    # new1 always contains v2 and new2 never does, so new1 != new2; only
+    # collisions with unmodified third-party edges can produce a duplicate.
+    for e_id, members, ell in H.iter_edges():
+        if e_id in (e1, e2):
+            continue
+        if (ell == l1 and members == new1) or (ell == l2 and members == new2):
+            raise HypergraphEditError(
+                f"swapping vertices {v1} and {v2} between edges {e1} and {e2} "
+                "would duplicate an existing hyperedge"
+            )
+    edges, edge_labels, vertex_labels = _snapshot(H)
+    edges[e1] = new1
+    edges[e2] = new2
+    return _assemble(H, H.n_nodes, edges, edge_labels, vertex_labels)
+
+
 # ---------------------------------------------------------------------------
 # Random edits and perturbation paths
 # ---------------------------------------------------------------------------
@@ -789,6 +868,54 @@ def _sample_remove_incidence(
         v = rng.choice(tuple(old))
         if not H.has_edge(old - {v}, H.edge_label(e)):
             return v, e
+    return None
+
+
+def random_swap_edit(
+    H: SparseHypergraph,
+    rng: random.Random,
+    tries: int = 32,
+) -> SparseHypergraph | None:
+    """Apply one uniformly-sampled valid incidence swap, or ``None``.
+
+    Rejection-samples ``(v1, e1, v2, e2)`` operands for :func:`swap_incidence`
+    and applies the first valid one. Degree sequence, arity sequence,
+    ``n_nodes`` and ``n_edges`` of the result equal ``H``'s exactly.
+    Connectivity is *not* guaranteed; callers that need it filter downstream.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        Source hypergraph (unchanged).
+    rng : random.Random
+        Seeded generator; equal seeds give equal results.
+    tries : int, optional
+        Sampling attempts before giving up.
+
+    Returns
+    -------
+    SparseHypergraph | None
+        The swapped copy, or ``None`` if no valid swap was found in ``tries``
+        attempts (e.g. fewer than two hyperedges).
+    """
+    m = H.n_edges
+    if m < 2:
+        return None
+    for _ in range(tries):
+        e1, e2 = rng.randrange(m), rng.randrange(m)
+        if e1 == e2:
+            continue
+        m1, m2 = H.members(e1), H.members(e2)
+        only1 = sorted(m1 - m2)
+        only2 = sorted(m2 - m1)
+        if not only1 or not only2:
+            continue
+        v1 = rng.choice(only1)
+        v2 = rng.choice(only2)
+        try:
+            return swap_incidence(H, v1, e1, v2, e2)
+        except HypergraphEditError:
+            continue
     return None
 
 

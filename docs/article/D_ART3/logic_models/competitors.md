@@ -79,20 +79,39 @@ regression-pinned measurement in `../../empirical/correlation.md` is a **median
 of 22 tokens at n = 10** (and 8 at n = 6); the 562–642 figure quoted in
 `../../theoretical/geometry.md` is characters at the (15,35) cell.
 
-Corrected orders of magnitude at `n = 10`: `L² ≈ 484` against `n³ = 1,000`,
-before accounting for rapidfuzz's bit-parallel Myers kernel and for the fact
-that the Hungarian route must also *build* an `n × n` substitution-cost matrix
-whose entries compare incident fact sets. **We are comparable per pair, not
-~380× slower** — and the asymmetry that matters is structural: our cost is
-`N` canonicalizations plus `N²` string comparisons, theirs is `N²` assignment
-solves, so our expensive part amortizes as `N` grows and theirs does not.
+**Measured (gate G-L4, run 2026-08-12;
+`scripts/diagnostics/token_length_probe.py`).** Connected random 3-uniform
+instances, `w*_c` under the `"canonical"` variant, tokens via the bracket-aware
+parser:
 
-Honest residue: `L` scales with incidence mass (`Θ(m·a)`), so dense structures
-push `L²` above `n³`; and `w*_c` canonicalization is genuinely expensive and is
-the real bottleneck. **The throughput claim in either direction is pending a
-direct token-count sweep** (a 30-second script: canonical string, `parse`, count,
-across the size grid). Until it runs, the paper claims neither a throughput win
-nor a throughput loss — it claims the guarantee (§3) and the decodability.
+| `n` | `m` | chars | **tokens `L`** | `L²` | `n³` |
+|---|---|---|---|---|---|
+| 6 | 8 | 94 | 13 | 169 | 216 |
+| 8 | 10 | 164 | 25 | 625 | 512 |
+| 10 | 20 | 281 | 44 | 1,936 | 1,000 |
+| 12 | 20 | 348 | 55 | 3,025 | 1,728 |
+| 15 | 20 | 380 | 59 | 3,481 | 3,375 |
+
+**The honest reading: `L²` and `n³` are the same order of magnitude across the
+whole envelope** — we are cheaper at `n = 6`, comparable at `n = 8` and
+`n = 15`, and about 2× more expensive at `n = 10`–`12`. Neither the "384×
+slower" figure nor a throughput win is supported. Both sides carry constant
+factors that this arithmetic ignores and that cut in our favour: rapidfuzz's
+bit-parallel Myers kernel processes 64 symbols per word (and every `L` here is
+under 64), while the Hungarian route must *build* an `n × n` substitution-cost
+matrix whose entries compare incident fact sets before it can solve the
+assignment.
+
+**The asymmetry that actually matters is structural, not per-pair.** Our cost is
+`N` canonicalizations plus `N²` string comparisons; theirs is `N²` assignment
+solves. `w*_c` is genuinely expensive — it is our real bottleneck — but it is
+paid `N` times, so it amortizes as `N` grows while their per-pair cost does not.
+`L` scales with incidence mass (`Θ(m·a)`), so dense structures move the per-pair
+comparison against us; the crossover in `N` is the quantity to report.
+
+**What the paper claims:** the guarantee (§3) and the decodability. On
+throughput it reports the measured crossover and claims neither a win nor a
+loss.
 
 **Contract.** Report (i) distance-matrix wall-clock, (ii) the objective value
 `Σ_i d(M, K_i)` achieved by each method **measured in a common distance** —

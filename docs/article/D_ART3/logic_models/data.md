@@ -122,9 +122,13 @@ L-LIT**; named here so the idea files check before building bespoke corpora.
   alphabet and neither idea is gated on D3′; median `Θ(n)` ⇒ D3′ is required.
   **Replaces the incorrect blanket infeasibility claim** that both idea agents
   inherited (`risks.md` §2). Cheap — no search, no oracle.
-- **G-L4 (new) — the token-count sweep.** `|w*_c|` in **tokens** (not
-  characters) across the size grid, to settle the per-pair cost comparison
-  against Hungarian GED in either direction (`competitors.md` §3.1). Minutes.
+- **G-L4 — the token-count sweep. [CLOSED 2026-08-12.]** `|w*_c|` in **tokens**
+  (not characters) across the size grid
+  (`scripts/diagnostics/token_length_probe.py`): 13 tokens at `n = 6` rising to
+  59 at `n = 15`. `L²` and `n³` are the same order of magnitude across the whole
+  envelope, so the per-pair comparison against Hungarian GED is a wash and the
+  real asymmetry is `N` canonicalizations versus `N²` assignment solves. Table
+  and reading: `competitors.md` §3.1.
 
 ## 7. Open data questions
 

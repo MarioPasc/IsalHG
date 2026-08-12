@@ -1,19 +1,60 @@
 # Decisions pending PI (mirror `CODE_DESIGN.md` §11)
 
-- **D-ART3** — **[PENDING PI]** Theory-forward rescope (v4): reframe the
-  article from "characterize → exploit" to "characterize → explain →
-  instrument" in light of the T-M4b measured outcome (A2/A3 fall against
-  IsalHG on the controlled corpus; the mechanism — encoding-format
-  instability, not completeness — is measured). Proposal, spine v4, the two
-  proof obligations (P1 ambient-decodability proposition, low risk; P2
-  drift/avalanche Levenshtein lower bound, moderate risk with a pre-agreed
-  fallback), risks, and the execution plan are in
-  [`RESCOPE_D-ART3_DRAFT.md`](RESCOPE_D-ART3_DRAFT.md). Recommendation:
-  adopt (reframe inside the current skeleton + the two propositions; venue
-  decision deferred until P2 resolves). Raised by the PI 2026-08-09
-  ("maybe we need to re-think the paper as a more theoretical paper");
-  drafted same day. Until ratified, the v3 scope (D-ART2) stays active and
-  no scope doc changes.
+- **D-ART3** — **[PENDING PI — revised to v5, 2026-08-12]** Rescope the article
+  from "characterize → exploit" to **"enumerate, deduplicate, decode,
+  navigate"**. *History:* raised by the PI 2026-08-09 after the T-M4b close
+  ("maybe we need to re-think the paper as a more theoretical paper") and
+  drafted the same day as v4 (theory-forward: characterize → explain →
+  instrument). **Revised 2026-08-12 on four PI inputs:** (i) venue changes to
+  **IEEE TKDE** (ISSN 1041-4347), not *Information Sciences*; (ii) a new
+  flagship problem — exhaustive search for the **smallest countermodel** of a
+  first-order formula, using the fact that every finite model *is* a labelled
+  hypergraph and that our advantage shows under exhaustive rather than random
+  search (the IsalSR precedent); (iii) applications must be ones where IsalHG is
+  *indispensable* rather than competitive — explicitly "enumerar los vecinos" and
+  "el camino más corto", with the shortest-path work **kept and promoted**, not
+  abandoned; (iv) real corpora from the ARB/Benson collection replace the failed
+  HIC anchor, derived by Qin et al.'s own ICDE-2023 ego-network definition
+  (already implemented in-repo). *Scope:* nine files in
+  [`../D_ART3/`](../D_ART3/) (hub: `README.md`), mirroring the article's own
+  documents. *Decision record and v4 history:*
+  [`RESCOPE_D-ART3_DRAFT.md`](RESCOPE_D-ART3_DRAFT.md). *Carried from v4
+  unchanged:* the encoding-format constraint (the measured culprit is the
+  instruction format, not completeness — nauty is complete too and localizes the
+  same edits), P1 (ambient decodability, low risk) and P2 (drift/avalanche
+  lower bound, moderate risk, time-boxed with a pre-agreed fallback).
+  **Revised the same day to v5.1 on two author corrections.** (α) *The alphabet
+  is not fixed.* D-TA2 froze which tie-complete lex-min is canonical **for
+  `Σ_HG`**, not that `Σ_HG` is the only alphabet; a purpose-built `Σ_FO` is a
+  first-class option and the geometry harness (representation-agnostic) can be
+  re-run on it. Recommended: a native `FACT` token as a **conservative
+  extension** degenerating to `Σ_HG` on the unlabelled fragment, which keeps
+  every frozen result true of the fragment, extends Theorem A rather than
+  restarting it (the proof is alphabet-parametric), and turns the change into a
+  measurement of whether a semantics-aligned token reduces the ≈30–50 %
+  single-edit response. (β) *Deduplication is not a claim* — Levi-`{nauty,
+  bliss, Traces}` deduplicate faster with identical exactness, so isomorph-free
+  enumeration is demoted to a correctness precondition with nauty named as a
+  faster pluggable key. The operative framing becomes **"a certificate is not a
+  space"**: applications are C1 (search-space framework), C2 (minimal
+  countermodels + the geometry of model space), C3 (navigation, promoted),
+  C4 (black-box structural optimization) and C5 (real data; the
+  completeness-price measurement is reported as a *tie* with nauty). *Obligations
+  at v5.1:* **P6** (move-operator closure, ball enumerability, reachability —
+  now the load-bearing one) with P1 and P3 beneath it; P4 demoted off the
+  critical path; P5 (HGED envelope as a candidate certified filter — expected
+  too weak, measured before any claim). *New geometry invariant:* ball growth
+  and its collapse onto isomorphism classes — the search's branching factor.
+  **Six PI decisions are open** (`../D_ART3/README.md` §5): flagship vs second
+  pillar; one paper or two; **D3′ the alphabet** (reduction into `Σ_HG` vs a
+  purpose-built `Σ_FO` — now the largest technical decision); the P2 time-box;
+  retiring the HIC exhibit; the A2/A3 disposition. **Gates blocking scope
+  commitment:** G-L1 (`w*_c` cost on encoded structures), G-D1 (ARB arity/size
+  feasibility), G-B1 (ball growth / branching factor), G-B2 (frontier ceiling).
+  *Data:* the full ARB/Benson collection is being downloaded to
+  `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data/arb_benson/`
+  (author-directed 2026-08-12). Recommendation: adopt v5.1. Until ratified, the
+  v3 scope (D-ART2) stays active and no scope doc changes.
 
 - **D-M4b** — **[RESOLVED 2026-08-09, PI (Mario), in-session]** The
   size-controlled replacement corpus (T-M4b): **build Stratum C and report the

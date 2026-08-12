@@ -1,0 +1,54 @@
+Let us consider first-order logic without functions. I have N sets of ground facts (knowledge bases). I need to find the medianoid of such N knowledge bases, according to some well-defined distance criterion. In other words, I intend to find the consensus knowledge that best represents the set of N knowledge bases. The search must be isomorphism invariant, i.e., isomorphic knowledge bases where only the names of the constants change are regarded as the same. Please tell me about efficient algorithms to solve this problem.
+
+https://claude.ai/share/b6e4a7eb-ad76-4d35-9311-cfc16686b0ea
+
+This is a genuinely hard problem, and the most useful thing I can do first is locate it precisely, because that tells you exactly where the difficulty lives and which known algorithm families apply. The short version: your problem is the **generalized median (1‑median) of a set of finite relational structures under edit/matching distance**, which is equivalent to *distance‑based belief merging* except that the isomorphism‑invariance requirement replaces a polynomial majority‑vote with an NP‑hard graph‑matching problem. Almost everything below follows from that observation.
+
+## Formalization
+
+Function‑free FO ground facts are exactly finite **relational structures**: a domain of constants plus a set of ground atoms `R(c₁,…,cₖ)`. If every relation is binary you have a labeled directed graph; in general you have a colored hypergraph. "Up to renaming of constants" means you work modulo isomorphism of these structures.
+
+**Distance.** The natural isomorphism‑invariant, well‑defined distance is
+- (equal domain sizes) `d(A,B) = min over bijections σ of |σ(A) △ B|` — the minimum symmetric difference of fact sets over all constant renamings; or
+- (general) the **relational‑structure edit distance**: minimum number of atom insertions/deletions plus constant insertions/deletions to turn `A` into something isomorphic to `B`.
+
+This is the generalization of **graph edit distance (GED)** to colored hypergraphs. Under uniform edit costs it is a metric (triangle inequality holds), which matters below. Crucially, `d(A,B)=0` iff `A≅B`, so even *computing one distance* is graph‑isomorphism‑hard, and the minimization is NP‑hard in general.
+
+**Medianoid.** With sum aggregation, `M* = argmin_M Σᵢ d(M, Kᵢ)` over finite structures `M`. Sum‑of‑distances is what makes it a *median* (sum of squares would give a centroid). This is precisely the **generalized median graph** problem (Jiang, Münger & Bunke, IEEE TPAMI 2001), which is NP‑hard, and in the belief‑merging literature it is the model‑based Δ^Σ operator of Konieczny & Pérez — with the important caveat that standard merging assumes a *rigid, named* vocabulary, which is exactly the assumption your isomorphism‑invariance drops.
+
+## The one structural fact that organizes everything
+
+Suppose you fix, for each input `Kᵢ`, a bijection `σᵢ` mapping its constants into a common reference domain. Then
+
+`Σᵢ d(M,Kᵢ) = Σᵢ |M △ σᵢ(Kᵢ)| = Σ_atoms a  Σᵢ [a∈M XOR a∈σᵢ(Kᵢ)]`
+
+decomposes **per ground atom**, and the optimum is obtained by setting `a∈M` iff `a` occurs in a strict majority of the aligned inputs. So **once the alignments are fixed, the exact median is just per‑atom majority vote.** All of the hardness lives in choosing the joint alignment — i.e., this is a **multi‑graph matching / permutation‑synchronization** problem, not a logic problem. This is the same phenomenon as multiple sequence alignment: the "consensus" step is trivial, the alignment step is everything.
+
+## Algorithm families
+
+**1. Set‑medianoid (medoid) — your cheapest reliable baseline.** Restrict `M ∈ {K₁,…,K_N}` and pick the one minimizing `Σⱼ d(Kᵢ,Kⱼ)`. This needs only the N×N pairwise‑distance matrix, and because your distance is a metric the medoid is a **2‑approximation** of the true generalized median. This is often the pragmatic answer.
+
+**2. Approximate the pairwise distances in polynomial time.** Exact GED is NP‑hard, so use the **bipartite/Hungarian approximation** (Riesen & Bunke, 2009): build a constant‑to‑constant assignment cost matrix where each substitution cost reflects the local mismatch of incident facts, solve the assignment in `O(n³)`, and read off an upper bound on the edit distance. This makes step 1 fully polynomial per pair. Alternatives: **Weisfeiler–Leman / graph‑kernel embeddings** of each KB into a vector space for cheap approximate distances.
+
+**3. Alternating majority‑vote (block‑coordinate / a Weiszfeld analog).** Given a current median estimate `M`: (i) align each `Kᵢ` to `M` by solving N assignment problems; (ii) update `M` by per‑atom majority over the aligned inputs; (iii) repeat until convergence. Each iteration is polynomial and the objective is monotonically non‑increasing, so it converges to a local optimum. Initialize from the medoid (step 1). This is the workhorse.
+
+**4. Joint alignment via permutation synchronization** — better global optima than the single‑reference alternation. Compute all pairwise matchings, then enforce **cycle consistency** (`σᵢⱼ σⱼₖ = σᵢₖ`) by spectral synchronization (Pachauri, Kondor & Singh, NIPS 2013) or convex/factorized methods (MatchLift, MatchALS; Yan et al.'s multi‑graph matching). This yields globally coherent bijections into one reference frame, after which you again apply majority vote. This is the most principled way to handle the "N‑way" nature of your problem rather than reducing it to a reference.
+
+**5. Exact methods for small instances.** Encode as an ILP/QAP: binary variables for which atoms `M` contains over a bounded reference domain, plus a permutation‑matrix variable per input aligning it to `M`; objective is the total mismatch (bilinear in the permutation and the atom‑presence variables, linearizable by standard QAP/McCormick techniques). CP‑SAT or Gurobi solves this for small N and small domains. Alternatively, A\*-style generalized‑median‑graph search with edit‑distance bounds. You can cap the median's domain size at `maxᵢ|Cᵢ|` as a heuristic (a Steiner/median point rarely needs more constants than the largest input under Σ aggregation).
+
+**6. Embedding, median‑in‑vector‑space, reconstruction** (Ferrer et al.). Embed all KBs, compute an ordinary median of vectors, then reconstruct the nearest structure. Fast and often good, but the reconstruction step is approximate.
+
+A reasonable **pipeline**: canonicalize and deduplicate isomorphic inputs (nauty/bliss or a WL hash) → approximate pairwise distances (Hungarian) → medoid as initialization → permutation‑synchronization for joint alignment → majority vote → optional ILP/A\* polish on the residual.
+
+## Tractable special cases worth checking against your data
+
+- **Rigid, consistently‑named constants** (isomorphism‑invariance is moot because names are shared across KBs): the whole thing collapses to propositional model‑based merging, and the median is *exactly* per‑atom majority vote in polynomial time (Δ^Σ with Dalal distance). If you can align constants once, up front, by a natural key, you buy your way out of the NP‑hardness entirely.
+- **Unary relations only** (attributes/colors, no relational links): isomorphism reduces to multiset equality of colored constants; matching and median are easy.
+- **Small overall domain** `k`: brute‑force the `k!` bijections per pair; exact and fine for small `k`.
+- **Trees / bounded treewidth + bounded degree**: isomorphism and edit distance become polynomial, so pairwise distances are exact and cheap (the median stays hard but far more approachable).
+
+## Caveats
+
+Because of symmetry, there are typically **many co‑optimal medians** (any renaming of a median is also a median, and with even N the majority threshold is ambiguous for atoms present in exactly half the aligned inputs). Decide your tie rule and whether you want one representative or the isomorphism class. And be honest with expectations: there is no known polynomial exact algorithm; "efficient" here means the polynomial approximation pipeline above, with exact solves reserved for small instances.
+
+If you can tell me the arities involved (all binary? mixed?), the typical domain sizes, and N, I can point you to the tightest special case and the most suitable matching solver — that's where the real efficiency gains are.

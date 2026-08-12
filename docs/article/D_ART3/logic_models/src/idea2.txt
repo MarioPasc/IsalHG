@@ -1,0 +1,64 @@
+Let us consider first-order logic without functions. I have a theorem that I want to prove and a set of ground facts (a knowledge base) that is not a countermodel of the negation of the theorem. That is, the knowledge base does not entail the theorem. I need to find the closest knowledge base, according to some well-defined distance criterion, that contradicts the negation of the theorem. In other words, I intend to modify the knowledge base so that the theorem is entailed by the knowledge base. The search must be isomorphism invariant, i.e., isomorphic knowledge bases where only the names of the constants change are regarded as the same. The domain (set of constants) may grow or shrink. Please tell me about efficient algorithms to solve this problem.
+
+https://claude.ai/share/e8116a51-84d8-49f7-8d30-e16c5a5c6440
+
+A few things are worth pinning down before the algorithms, because they change the answer substantially.
+
+## What the problem actually is
+
+You're editing a finite relational structure (no functions, so a knowledge base of ground facts *is* a finite σ-structure) to satisfy a first-order sentence T, minimizing an isomorphism-invariant distance while allowing the domain to grow or shrink. The iso-invariance means your metric is really defined on *isomorphism classes*: 
+
+d(M, M′) = min over M″ ≅ M′ of ( |Facts(M) △ Facts(M″)| + c·(domain-size change) ),
+
+i.e. the minimum symmetric difference of fact-sets after optimally *relabeling* one structure onto the other, plus whatever you charge for adding/removing constants. For binary signatures this is exactly **graph edit distance**; for general σ it's the structure-edit-distance analogue. That identification is the key, because it hands you both the hardness and the toolbox.
+
+Also, one semantic fork matters:
+
+- **Closed-world / model reading** ("KB is not a countermodel of ¬T" = the single structure M fails to satisfy T). Then general T is meaningful and you want the nearest *model* of T. This is the reading that fits "domain may grow or shrink."
+- **Open-world / theory reading** (every model of the ground facts must satisfy T). Here ground facts can only entail sentences preserved under extensions/homomorphisms — by Łoś–Tarski / homomorphism-preservation, essentially existential-positive T. So under OWA the *only* interesting case is T being a (union of) conjunctive queries, and the problem collapses to "add the cheapest set of facts that creates a query match." Worth deciding which world you're in first.
+
+## Why "efficient" needs qualification
+
+Three hardness facts set expectations:
+
+- Deciding **distance zero** (is M already an isomorphic model?) contains graph isomorphism, so it's GI-hard/GI-complete in general (quasipolynomial via Babai, but not known polynomial).
+- Computing the iso-invariant distance is **graph-edit-distance**, which is NP-hard and even hard to approximate.
+- For *arbitrary* FO T, "does a finite model exist at all near M?" runs into **Trakhtenbrot's theorem**: finite satisfiability is only semi-decidable (r.e., not decidable). So a fully general procedure is at best a semi-decision procedure that may not terminate when T has no finite model. To get real algorithms you either bound the domain, or restrict T to a decidable finite-model fragment (FO², guarded, Bernays–Schönfinkel ∃*∀*, monadic, etc.).
+
+So "efficient" means: good solver encodings, FPT in the right parameter, or genuine polynomiality on structured T — not polynomial in general.
+
+## The general-purpose method
+
+The workhorse is **branch-and-bound over domain size wrapped around a constrained minimal-model finder**. For each candidate domain size n (ranging around |M|), you solve: among all σ-structures on n elements satisfying T, find the one minimizing distance to M. Two subproblems combine:
+
+1. *Satisfying T* on a fixed n-element domain is finite model finding: ground T over the n elements (∀ → conjunction, ∃ → disjunction) into a propositional constraint.
+2. *Minimizing distance* is a weighted objective over the ground atoms.
+
+Encode both together as **MaxSAT** (hard clauses = grounded T, soft clauses = "keep atom a as it is in M" weighted by edit cost), or as **ASP with weak constraints** (`clingo`/DLV: choice rules guess the structure and domain, constraints test T, `#minimize` optimizes the edit cost — ASP is especially natural because "generate structure / test property / optimize" is its native idiom), or as **OptSMT / ILP** (νZ in z3, or a 0/1 program).
+
+The isomorphism invariance is the delicate part and you have two honest options:
+
+- **Symmetry breaking** so the solver enumerates one representative per iso class — lex-leader constraints (Crawford et al.), BreakID/Shatter/SBASS on the SAT side, or the least-number-heuristic canonicalization built into finite model finders. This shrinks search but doesn't by itself compute the *aligned* distance.
+- **Explicit alignment variables**: introduce a bijection/matching x_{i,j} between M's elements and the target's, and define the objective as the number of facts whose truth differs *after* applying the alignment. This is precisely the assignment-based ILP formulation of graph edit distance (Justice–Hero, Lerouge et al.), solvable exactly by A* over partial matchings with a Hungarian/bipartite lower-bound heuristic (Riesen–Bunke) or by branch-and-bound.
+
+For pruning and lower bounds, exploit that the metric is iso-invariant: cheap isomorphism invariants — relation cardinalities, degree/type multisets, Weisfeiler–Leman colors, small homomorphism counts — give admissible lower bounds on the edit distance to *any* structure with a given profile, letting you prune domain sizes and partial matchings. That's what makes the branch-and-bound over n terminate: once the unavoidable cost of every unexplored n exceeds your incumbent, stop.
+
+Off-the-shelf finite model finders you can use as the model-existence oracle inside this loop: **Kodkod** (Alloy's backend, relational, built-in symmetry breaking, bounded scopes — a very good fit for iso-invariance), **Paradox**, **Mace4**, **SEM**, and **Vampire's** finite model builder. Alloy in particular lets you state T relationally and search increasing scopes; you then wrap it in the distance-minimization loop.
+
+## Cases that are genuinely efficient
+
+The structure of T is what buys you tractability, so it's worth classifying it:
+
+**Existential-positive / conjunctive-query T.** Making M′ ⊨ T means creating a homomorphic image of the query pattern in M′. The minimal edit is: over all partial matches of the pattern into existing elements, pick the one whose missing atoms (and possibly a few fresh constants) are cheapest to add. This is a minimum-cost subgraph/homomorphism-completion problem — polynomial in data complexity (fixed query), NP-hard in the query size, and closely related to database "missing answers / why-not" repair. This is also the *entire* problem under the open-world reading.
+
+**Universal / forbidden-pattern T** (T says "none of these finitely many substructures occurs" — integrity/denial constraints, or a hereditary graph property). Then M fails T because it contains witnesses, and repairing is **graph/structure modification to a hereditary class**. This is **fixed-parameter tractable in the edit budget k** by bounded-search-tree branching: find a forbidden witness, branch over the finitely many single edits that destroy it, recurse to depth k (Cai's theorem for vertex-deletion to finite-forbidden-set properties, and the H-free edge-modification results). Because the target property is closed under isomorphism, this is automatically iso-invariant — a rare case where you get a real FPT algorithm rather than a solver heuristic. If your theorem is naturally "avoid these patterns," this is the route.
+
+**Denial constraints / functional dependencies** put you squarely in the **database-repair** literature (Arenas–Bertossi–Chomicki and successors): subset-minimal vs cardinality-minimal repairs, with mature ASP and MaxSAT encodings, and PTIME islands (e.g. single-key repairs).
+
+**Additions only** (monotone editing) is **abduction**: find a minimal Δ with KB ∪ Δ ⊨ T. Propositional/Horn cases have known complexity (Eiter–Gottlob; Selman–Levesque for Horn), and abductive logic programming / ATMS tooling applies. Allowing deletions too turns it into model-based **belief revision/update** — Dalal's operator is exactly cardinality-minimal symmetric-difference (your metric, propositionally), Winslett's PMA is the subset-minimal variant; both are the propositional ancestors of what you're doing, and the Katsuno–Mendelzon framework tells you which minimality notion you're implicitly committing to.
+
+## A practical recommendation
+
+Fix the metric precisely first (per-relation atom weights? cost of a fresh constant? cardinality-minimal or subset-minimal?), since cardinality-minimal gives a single clean optimization and subset-minimal gives an incomparable frontier. Then: if T is a forbidden-pattern sentence, use FPT branching in k; if T is a conjunctive query, use minimum-cost match completion; otherwise use the branch-and-bound-over-domain-size loop with an ASP-with-weak-constraints or MaxSAT encoding, iso handled by explicit alignment variables for exactness (or symmetry breaking for speed), and invariant-based lower bounds for pruning. Keep Trakhtenbrot in mind: restrict T to a decidable fragment or cap the domain so the loop is guaranteed to terminate.
+
+If you tell me the shape of your theorems (are they closer to conjunctive queries, to universal constraints, or genuinely mixed?) and your exact distance definition, I can point you to the tightest encoding or the applicable tractability result rather than the general menu.

@@ -126,6 +126,32 @@ The honest resolutions, in the order they should be attempted, are in
 | [`ideas/idea2_entailment.md`](ideas/) | entailment forcing — nearest model of `T` |
 | [`ideas/idea3_median.md`](ideas/) | medianoid — consensus of `N` KBs |
 
+## 4b. Verdicts from the three developments (2026-08-12)
+
+Each idea was developed independently against this foundation. Their files are
+in [`ideas/`](ideas/); the headline outcomes:
+
+| Idea | Verdict | The finding that most changes the plan |
+|---|---|---|
+| **P-REPAIR** | follow-up paper; two measurements runnable now | the **duplicate-repair count** is the highest-confidence, alphabet-independent deliverable: `dup_rate` for MaxSAT with/without BreakID and for ASP, against ours which is exactly 0 by Theorem A |
+| **P-ENTAIL** | short exhibit beside P-REPAIR, not a lead | **for universal / forbidden-pattern `T` our iso-invariance argument has no force**: FPT bounded-search-tree branching is already iso-invariant, since hereditary properties are closed under isomorphism. Denial constraints and integrity axioms live in that fragment. Our case survives only for existential-positive and mixed FO |
+| **P-MEDIAN** | **flagship confirmed**; both critical claims verified | the 2-approximation **survives** (three-line proof from Corollary A alone), and the Hungarian/bipartite GED **is** provably not a metric (per-pair independent assignment breaks the triangle inequality; Riesen & Bunke present it as an upper bound), so their medoid carries no guarantee and ours does |
+
+**Two corrections applied to this foundation as a result** — one from an agent,
+one against them:
+
+- *From P-MEDIAN:* the per-atom majority-vote characterization does **not**
+  transfer from `d_SED` to `d_I`, so the `d_I`-median has **no closed form** and
+  must be searched; and the decoded median word is generally **non-canonical**,
+  so the objective must be evaluated after re-canonicalization
+  (`risks.md` §1).
+- *Against both P-REPAIR and P-ENTAIL:* the F0-infeasibility claim they
+  inherited from `risks.md` §2 **was wrong**. It conflated `d_I` (between
+  canonical forms, where the avalanche lives) with `d_amb` (the ambient reach
+  distance, `vocabulary.md` §2.1), which is what actually governs ball
+  enumeration and can be far smaller. Feasibility is **open pending gate
+  G-L3**, not refuted. Their other findings are unaffected.
+
 ## 5. Standing recommendation on scope
 
 **Idea 3 is the strongest of the three and should lead.** Reasons, in order:
@@ -145,9 +171,21 @@ The honest resolutions, in the order they should be attempted, are in
    closed and `S2H` is total.
 5. Data exists today: ARB ego-networks *are* sets of ground facts.
 
-Ideas 1 and 2 are the more ambitious pair and are gated on the alphabet
-decision (§3). They should be developed, priced, and then scheduled behind
-idea 3 unless the `Σ_FO` work lands early.
+**Confirmed by the independent development** (§4b): both critical claims behind
+this recommendation survived verification, which is the outcome that matters —
+the 2-approximation needs only Corollary A, and the competing approximation
+genuinely lacks the metric property it would need to claim the same guarantee.
+
+Ideas 1 and 2 are the more ambitious pair. They are **no longer known to be
+gated on the alphabet decision** — that claim was withdrawn (§4b) and replaced
+by gate **G-L3**, which is cheap and decides the question. Schedule them behind
+idea 3 regardless, on the strength of P-ENTAIL's FPT finding: on the most
+natural axiom shapes our differentiator does not bite.
+
+**The three gates that unblock everything here**, in cost order: **G-L3**
+(representation locality — decides ideas 1 and 2), **G-L4** (token-count sweep —
+settles the per-pair cost comparison), **G-L1** (`w*_c` on encoded structures —
+decides the whole scope). None is large; none has run.
 
 ## 6. Status
 

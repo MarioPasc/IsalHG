@@ -104,6 +104,22 @@ piece of new theory the logic program generates.** It should be settled by
 measurement (single-edit response and compression ratio under both), not by
 argument.
 
+**Sharpened 2026-08-12 by the P-ENTAIL development.** The addressing choice is
+exactly what determines the **ambient reach distance** `d_amb`
+(`vocabulary.md` §2.1), which is what governs whether ball enumeration works for
+P-REPAIR and P-ENTAIL:
+
+- **Absolute addressing** ⇒ one ground fact is one token *with no preceding
+  pointer moves*, so `d_amb = 1` per fact, exactly. Ball enumeration becomes
+  trivially feasible and the search radius is the fact budget.
+- **Relative addressing** ⇒ `d_amb = 1 + (CDLL displacement)`, so feasibility
+  depends on how far the fact's vertices sit from the pointer trajectory. This
+  is measurable *today, under F0*, by gate **G-L3** — and G-L3's answer is also
+  the quantitative case for or against absolute addressing.
+
+So the two questions are one question, and one cheap probe answers both. Run
+G-L3 before deciding D3′.
+
 ### 3.2 The honest price of a new alphabet
 
 1. **Theorem A must be re-proved** for `Σ_FO`. Its structure — iso-invariant

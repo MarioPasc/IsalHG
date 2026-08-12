@@ -67,6 +67,33 @@ of a repair path a valid inspectable structure; and the measured `d_I` vs
 | **WL / NetLSD / HPD embeddings + vector median** | the article's existing competitor set, re-used | incomplete keys: they merge non-isomorphic KBs, so the consensus is over a coarsened set |
 | **ours: `d_I` matrix → medoid → median-string search → decode** | — | — |
 
+### 3.1 Per-pair throughput — the arithmetic, corrected
+
+`ideas/idea3_median.md` concludes that we lose per-pair throughput badly,
+comparing `L² ≈ 384,400` against Hungarian `n³ = 1,000` at `n = 10, m = 20`.
+**That comparison uses the character length, and `d_I` does not run on
+characters.** `metric_space/distances/isalhg_levenshtein.py` parses `w*_c` into
+a token tuple (`tuple(parse(w_star))`, seed-label prefixed) and hands rapidfuzz
+the **token sequence**; `L` is therefore the token count. The frozen,
+regression-pinned measurement in `../../empirical/correlation.md` is a **median
+of 22 tokens at n = 10** (and 8 at n = 6); the 562–642 figure quoted in
+`../../theoretical/geometry.md` is characters at the (15,35) cell.
+
+Corrected orders of magnitude at `n = 10`: `L² ≈ 484` against `n³ = 1,000`,
+before accounting for rapidfuzz's bit-parallel Myers kernel and for the fact
+that the Hungarian route must also *build* an `n × n` substitution-cost matrix
+whose entries compare incident fact sets. **We are comparable per pair, not
+~380× slower** — and the asymmetry that matters is structural: our cost is
+`N` canonicalizations plus `N²` string comparisons, theirs is `N²` assignment
+solves, so our expensive part amortizes as `N` grows and theirs does not.
+
+Honest residue: `L` scales with incidence mass (`Θ(m·a)`), so dense structures
+push `L²` above `n³`; and `w*_c` canonicalization is genuinely expensive and is
+the real bottleneck. **The throughput claim in either direction is pending a
+direct token-count sweep** (a 30-second script: canonical string, `parse`, count,
+across the size grid). Until it runs, the paper claims neither a throughput win
+nor a throughput loss — it claims the guarantee (§3) and the decodability.
+
 **Contract.** Report (i) distance-matrix wall-clock, (ii) the objective value
 `Σ_i d(M, K_i)` achieved by each method **measured in a common distance** —
 this is essential, since each method optimizes its own — (iii) the exact optimum

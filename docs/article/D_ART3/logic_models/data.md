@@ -108,10 +108,23 @@ L-LIT**; named here so the idea files check before building bespoke corpora.
   surviving encoding. Blocks the entire logic scope.
 - **G-D1 (size half)** — ARB ego-net size distribution and `w*_c` yield. Blocks
   the real-KB experiments.
-- **G-L2 (new)** — for P-MEDIAN: the distribution of `N` and of KB size obtainable
+- **G-L2** — for P-MEDIAN: the distribution of `N` and of KB size obtainable
   from a given ARB dataset at a given ego radius, i.e. *how many KBs of what size
   does a real dataset actually give us to reach consensus over?* Cheap; runs with
   G-D1.
+- **G-L3 (new, 2026-08-12) — the representation-locality probe. Decides
+  P-REPAIR and P-ENTAIL.** For a sample of structures `K` and their one-fact
+  neighbours `K'`, compute a **constructive upper bound** on the ambient reach
+  distance `d_amb(K,{K'})` (`vocabulary.md` §2.1): emit the word that inserts
+  the required `P`/`N` pointer moves plus the construction token, and count its
+  length. Report the distribution over neighbours and over instance sizes.
+  Median `O(1)`–`O(log n)` ⇒ ball enumeration is feasible under the current
+  alphabet and neither idea is gated on D3′; median `Θ(n)` ⇒ D3′ is required.
+  **Replaces the incorrect blanket infeasibility claim** that both idea agents
+  inherited (`risks.md` §2). Cheap — no search, no oracle.
+- **G-L4 (new) — the token-count sweep.** `|w*_c|` in **tokens** (not
+  characters) across the size grid, to settle the per-pair cost comparison
+  against Hungarian GED in either direction (`competitors.md` §3.1). Minutes.
 
 ## 7. Open data questions
 

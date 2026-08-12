@@ -47,17 +47,63 @@ under each.
 without saying *closest in which distance*, and each must state which resolution
 it adopts.
 
+**A sharper form of the mismatch, specific to P-MEDIAN (verified 2026-08-12).**
+The per-atom majority-vote characterization in `src/idea3.txt` — *once the
+alignments are fixed, the optimum is per-atom majority vote* — is a statement
+about `d_SED` and **does not transfer to `d_I`**: Levenshtein alignment is
+global, token positions interact through VM state, and a position-wise "token
+majority" does not in general decode to a valid canonical string. **The
+`d_I`-median therefore has no closed form and must be searched.** Consequence
+for implementation: a beam search over words, with re-canonicalization at every
+accepted step, because the decoded median word is generally **non-canonical**
+(`s* ≠ w*_c(S2H(s*))`), so the objective must be evaluated on
+`w*_c(S2H(s*))` and not on bare `d_Lev(s*, t_i)`. This is solvable at one `w*_c`
+call per step but must be designed in from the start.
+
 ## 2. Feasibility of ball enumeration for P-REPAIR / P-ENTAIL
 
-Composing two measured facts — a one-fact edit is `1 + a` structural elements
-under E2, and one structural edit moves `w*_c` by ≈30–50 % of the string —
-gives: **a one-fact repair is a large fraction of the string away in `d_I`**, so
-ball enumeration at feasible radii will not find it.
+> **⚠ CORRECTED 2026-08-12. The original text of this section was wrong, and
+> both idea-agent analyses inherited the error — `ideas/idea1_repair.md` and
+> `ideas/idea2_entailment.md` both treat F0 infeasibility as established. It is
+> not. Their feasibility verdicts, and only those, must be re-read against this
+> section; their other findings stand.**
 
-This is a feasibility failure, not a quality one. **P-REPAIR and P-ENTAIL are
-gated on decision D3′** (a `Σ_FO` in which one ground fact is one token;
-`encoding.md` §3). Do not schedule them before the alphabet decision, and do not
-write them up as if F0 supported them.
+**The original (incorrect) argument.** A one-fact edit is `1 + a` structural
+elements under E2, and one structural edit moves `w*_c` by ≈30–50 % of the
+string, therefore a one-fact repair is a large fraction of the string away and
+ball enumeration at feasible radii cannot find it.
+
+**Why it is wrong.** It conflates `d_I` with `d_amb` (`vocabulary.md` §2.1).
+The ≈30–50 % figure is the distance between **canonical forms**. Ball
+enumeration does not travel between canonical forms: it edits `w*_c(E(K))` and
+decodes, so it may reach the target through a **non-canonical** word. Inserting a
+single `C[le;i]` token where the pointers already sit gives `d_amb = 1` for a
+one-fact extension while `d_I` between the canonical forms remains ≈0.4·|w| —
+consistent, because `w` and `w*_c(E(K'))` are different words for the same
+structure.
+
+**What actually governs feasibility: pointer displacement.** A construction
+token acts on the current pointer configuration. Facts whose vertices lie near
+the pointer trajectory of `w*_c(E(K))` are reachable in `O(1)` tokens; an
+arbitrary fact costs `P`/`N` tokens proportional to CDLL displacement. So the
+binding question is the **distribution of `d_amb` over one-fact neighbours**,
+not the avalanche.
+
+**Gate G-L3 (new, cheap, decisive).** For a sample of structures `K` and their
+one-fact neighbours `K'`, compute a **constructive upper bound** on
+`d_amb(K,{K'})` — emit the word that inserts the required pointer moves plus the
+construction token, and count. No search needed; the bound suffices to decide
+feasibility. Report the distribution.
+- Median `O(1)`–`O(log n)` ⇒ **ball enumeration is feasible under F0**, and
+  P-REPAIR/P-ENTAIL are not gated on the alphabet.
+- Median `Θ(n)` ⇒ D3′ is required, and the F4 `FACT` token with **absolute**
+  addressing (`encoding.md` §3.1) drives `d_amb` to exactly 1 per fact — which
+  is the strongest argument yet for absolute over relative addressing.
+
+**Status.** F0-feasibility for P-REPAIR/P-ENTAIL is **open, pending G-L3**, not
+refuted. What survives unchanged from the original concern: `d_I`-*ranking* of
+candidate repairs is uninformative under the avalanche, so the search must be
+ordered by `d_amb`/cost, never by `d_I` to a target.
 
 ## 3. Scale
 

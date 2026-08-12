@@ -82,6 +82,44 @@ sixth. Names are binding.
 **Naming rule.** When a file says "distance" without qualification it means
 `d_I`. Every other distance is named.
 
+### 2.1 `d_amb` — the ambient reach distance (added 2026-08-12; do not conflate with `d_I`)
+
+*This entry exists because the first draft of `risks.md` §2 conflated two
+quantities and both idea agents inherited the error.*
+
+For a set `X` of structures, the **ambient reach distance** from `K` is
+
+```
+d_amb(K, X)  =  min { d_Lev( w*_c(E(K)), w ) : w ∈ Σ*, S2H(w) ∈ X }
+```
+
+— the fewest **token edits to the canonical string of `K`** that produce *any*
+word decoding into `X`. It is the quantity that governs **search feasibility**
+for ball enumeration.
+
+**`d_amb` is not `d_I`, and it can be far smaller.** `d_I(K,K')` compares two
+*canonical* strings; `d_amb` allows the target to be reached through a
+**non-canonical** word. Since `S2H` is many-to-one, the preimage of `K'` is a
+large set of words, and the nearest member of that preimage may sit far closer
+to `w*_c(E(K))` than `w*_c(E(K'))` does. There is no contradiction: by the
+triangle inequality `d_I(K,K') ≤ d_amb(K,{K'}) + d_Lev(w, w*_c(E(K')))`, and
+the second term absorbs the difference.
+
+**Concretely.** Inserting one `C[le;i]` token into `w*_c(E(K))` at a point where
+the pointers already sit yields `d_amb = 1` for the structure "`K` plus that one
+hyperedge", *even though* `d_I` between the two canonical forms is ≈30–50 % of
+the string (the measured avalanche). The avalanche bounds ranking by `d_I`; it
+does not bound `d_amb`.
+
+**What does bound `d_amb`: pointer displacement.** A `C` token acts on the
+current pointer configuration, so the facts reachable at small `d_amb` are those
+whose vertices lie near the pointer trajectory of `w*_c(E(K))`; reaching an
+arbitrary fact costs `P`/`N` tokens proportional to CDLL displacement. So
+`d_amb` for one-fact neighbours is `1 + (displacement)`, and its distribution is
+**measurable by a constructive upper bound** — build the word that inserts the
+needed pointer moves plus the construction token and count its length. No search
+is required to obtain the bound. This is gate **G-L3** (`data.md` §6).
+
 ## 3. Cost functions on structures
 
 - **`cost(𝔐) = |D| + Σ_i |P_i^𝔐|`** — the objective of the original

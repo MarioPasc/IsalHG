@@ -1,0 +1,27 @@
+{
+ "part1": {
+  "V_cdll_order": [
+   0,
+   1,
+   2
+  ],
+  "Aplus_cdll_order": [
+   0,
+   2,
+   1
+  ],
+  "layouts_equal": false,
+  "note": "creation order is 0,1,2 in both; the CDLL block after p_1 is reversed"
+ },
+ "part2": {
+  "n_kb": 40,
+  "ok": 480,
+  "total": 480,
+  "fraction": 1.0,
+  "by_creator": {
+   "C": 463,
+   "V(j=2)": 17
+  },
+  "failures": {}
+ }
+}

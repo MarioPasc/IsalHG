@@ -1,5 +1,12 @@
 # D-ART3 (v5) — proposal folder: the enumeration-and-search rescope
 
+> **2026-09-03 — superseded as the entry point.** The article was re-centred
+> on the consensus idea and the four collection-level applications; the
+> current entry point is [`START_HERE.md`](START_HERE.md), the storyline is
+> [`prose.md`](prose.md), and the verified fact base is [`foundation/`](foundation/).
+> This file is kept as the v5.1 record; `START_HERE.md` §5 says which parts
+> of it survive.
+
 **Status:** PROPOSAL, pending PI ratification. Written 2026-08-12 after the PI's
 feedback on the v4 draft (`../DEVELOPMENT/RESCOPE_D-ART3_DRAFT.md`). **Nothing
 in `docs/article/{PROPOSAL,DATA,COMPETITORS,theoretical,empirical}.md` changes

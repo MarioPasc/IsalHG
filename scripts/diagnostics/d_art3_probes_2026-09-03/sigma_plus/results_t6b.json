@@ -1,0 +1,16 @@
+{
+ "forward": {
+  "j2_total": 1500,
+  "j2_exact": 1433,
+  "j2_cdll_label_order_ok": 0,
+  "j2_rank_label_map_ok": 1500,
+  "j2_iso": 1433
+ },
+ "reverse": {
+  "j2_total": 1500,
+  "j2_exact": 0,
+  "j2_cdll_label_order_ok": 1500,
+  "j2_rank_label_map_ok": 0,
+  "j2_iso": 1500
+ }
+}

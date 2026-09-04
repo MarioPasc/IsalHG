@@ -1,0 +1,14 @@
+{
+ "forward": {
+  "total": 2000,
+  "exact": 1912,
+  "cdll_label_order_ok": 0,
+  "rank_label_map_ok": 2000
+ },
+ "reverse": {
+  "total": 2000,
+  "exact": 0,
+  "cdll_label_order_ok": 2000,
+  "rank_label_map_ok": 0
+ }
+}

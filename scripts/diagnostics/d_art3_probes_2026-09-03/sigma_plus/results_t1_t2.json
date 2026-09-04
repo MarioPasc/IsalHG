@@ -1,0 +1,23 @@
+{
+ "task1": {
+  "n_words": 2000,
+  "structural_equal": 2000,
+  "canonicalizable": 1891,
+  "canonical_equal": 1891,
+  "secs": 62.78784536100284
+ },
+ "task2": {
+  "n_words": 20000,
+  "exceptions": 0,
+  "disconnected": 0,
+  "duplicate_edges": 0,
+  "words_with_new_tokens": 19470,
+  "words_where_clamp_certainly_fired": 19454,
+  "edgeless_decodes": 87,
+  "mean_n": 9.9539,
+  "mean_m": 15.06255,
+  "max_n": 32,
+  "max_m": 38,
+  "secs": 2.427100299999438
+ }
+}

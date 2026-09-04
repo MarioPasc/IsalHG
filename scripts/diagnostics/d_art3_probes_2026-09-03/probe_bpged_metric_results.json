@@ -1,0 +1,87 @@
+{
+  "seed": 20260903,
+  "sanity": {
+    "n_triples": 300,
+    "sym_violations": 0,
+    "tri_violations": 0,
+    "zero_self_ok": 300
+  },
+  "upper_bound": {
+    "n_pairs": 300,
+    "upper_bound_holds": 300,
+    "n_equal": 170
+  },
+  "symmetry": {
+    "n_pairs": 2000,
+    "raw_asymmetric": 0,
+    "induced_asymmetric": 767
+  },
+  "triangle": {
+    "n_triples": 5000,
+    "raw_violations": 0,
+    "induced_violations": 68
+  },
+  "exact_triangle": {
+    "n_checked": 2124,
+    "violations": 0
+  },
+  "counterexample_induced": {
+    "total_n": 10,
+    "A": {
+      "labels": [
+        "a",
+        "b",
+        "a"
+      ],
+      "edges": [
+        [
+          0,
+          2
+        ]
+      ]
+    },
+    "B": {
+      "labels": [
+        "b",
+        "b",
+        "b"
+      ],
+      "edges": [
+        [
+          0,
+          1
+        ]
+      ]
+    },
+    "C": {
+      "labels": [
+        "b",
+        "b",
+        "b",
+        "a"
+      ],
+      "edges": [
+        [
+          0,
+          1
+        ],
+        [
+          0,
+          2
+        ],
+        [
+          0,
+          3
+        ],
+        [
+          1,
+          2
+        ]
+      ]
+    },
+    "d_AB": 2,
+    "d_BC": 4,
+    "d_AC": 7
+  },
+  "counterexample_raw": null
+}

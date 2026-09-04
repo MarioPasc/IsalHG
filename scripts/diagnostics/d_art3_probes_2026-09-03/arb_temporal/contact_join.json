@@ -1,0 +1,50 @@
+{
+ "contact-high-school": {
+  "dataset": "contact-high-school",
+  "temporal_distinct_simplices": 7818,
+  "labeled_hyperedges": 7818,
+  "nodes_temporal": 327,
+  "nodes_labeled": 327,
+  "n_node_label_entries": 327,
+  "n_classes": 9,
+  "class_names": [
+   "2BIO1",
+   "2BIO2",
+   "2BIO3",
+   "MP*1",
+   "MP*2",
+   "PSI*",
+   "PC",
+   "PC*",
+   "MP"
+  ],
+  "identical_degree_vector": true,
+  "equal_as_multiset": true,
+  "n_mismatching_ids": 0
+ },
+ "contact-primary-school": {
+  "dataset": "contact-primary-school",
+  "temporal_distinct_simplices": 12704,
+  "labeled_hyperedges": 12704,
+  "nodes_temporal": 242,
+  "nodes_labeled": 242,
+  "n_node_label_entries": 242,
+  "n_classes": 11,
+  "class_names": [
+   "5B",
+   "5A",
+   "4A",
+   "Teachers",
+   "3B",
+   "4B",
+   "2A",
+   "1B",
+   "2B",
+   "1A",
+   "3A"
+  ],
+  "identical_degree_vector": true,
+  "equal_as_multiset": true,
+  "n_mismatching_ids": 0
+ }
+}

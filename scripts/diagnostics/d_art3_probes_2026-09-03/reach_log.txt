@@ -1,0 +1,26 @@
+[1/24] (8,10) t=1 c=903: M0->copies r1=4/7 r2=5/7 | cov1 M0=4 med=1 bestNO=1 ties=1 | cov2 M0=5 med=4 | 103s
+[2/24] (8,10) t=2 c=903: M0->copies r1=0/7 r2=2/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=2 med=1 | 148s
+[3/24] (8,10) t=1 c=904: M0->copies r1=3/7 r2=4/7 | cov1 M0=3 med=1 bestNO=1 ties=1 | cov2 M0=4 med=2 | 266s
+[4/24] (8,10) t=2 c=904: M0->copies r1=0/7 r2=3/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=3 med=1 | 339s
+[5/24] (8,10) t=1 c=905: M0->copies r1=3/7 r2=3/7 | cov1 M0=3 med=2 bestNO=2 ties=1 | cov2 M0=3 med=2 | 404s
+[6/24] (8,10) t=2 c=905: M0->copies r1=0/7 r2=0/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=0 med=1 | 460s
+[7/24] (8,10) t=1 c=906: M0->copies r1=3/7 r2=6/7 | cov1 M0=3 med=2 bestNO=2 ties=1 | cov2 M0=6 med=2 | 516s
+[8/24] (8,10) t=2 c=906: M0->copies r1=1/7 r2=1/7 | cov1 M0=1 med=1 bestNO=1 ties=8 | cov2 M0=1 med=2 | 569s
+[9/24] (8,10) t=1 c=907: M0->copies r1=3/7 r2=3/7 | cov1 M0=3 med=1 bestNO=1 ties=1 | cov2 M0=3 med=1 | 623s
+[10/24] (8,10) t=2 c=907: M0->copies r1=0/7 r2=0/7 | cov1 M0=0 med=1 bestNO=1 ties=8 | cov2 M0=0 med=2 | 694s
+[11/24] (8,10) t=1 c=908: M0->copies r1=1/7 r2=2/7 | cov1 M0=1 med=1 bestNO=1 ties=9 | cov2 M0=2 med=1 | 777s
+[12/24] (8,10) t=2 c=908: M0->copies r1=0/7 r2=0/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=0 med=1 | 857s
+[13/24] (10,12) t=1 c=903: M0->copies r1=2/7 r2=5/7 | cov1 M0=2 med=1 bestNO=1 ties=1 | cov2 M0=5 med=2 | 1149s
+[14/24] (10,12) t=2 c=903: M0->copies r1=0/7 r2=2/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=2 med=1 | 1269s
+[15/24] (10,12) t=1 c=904: M0->copies r1=1/7 r2=3/7 | cov1 M0=1 med=1 bestNO=2 ties=1 | cov2 M0=3 med=2 | 1694s
+[16/24] (10,12) t=2 c=904: M0->copies r1=0/7 r2=0/7 | cov1 M0=0 med=1 bestNO=2 ties=1 | cov2 M0=0 med=1 | 1873s
+[17/24] (10,12) t=1 c=905: M0->copies r1=2/7 r2=4/7 | cov1 M0=2 med=1 bestNO=1 ties=1 | cov2 M0=4 med=2 | 2052s
+[18/24] (10,12) t=2 c=905: M0->copies r1=0/7 r2=1/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=1 med=1 | 2216s
+[19/24] (10,12) t=1 c=906: M0->copies r1=2/7 r2=4/7 | cov1 M0=2 med=1 bestNO=1 ties=1 | cov2 M0=4 med=1 | 2347s
+[20/24] (10,12) t=2 c=906: M0->copies r1=0/7 r2=0/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=0 med=1 | 2463s
+[21/24] (10,12) t=1 c=907: M0->copies r1=2/7 r2=4/7 | cov1 M0=2 med=1 bestNO=2 ties=2 | cov2 M0=4 med=1 | 2582s
+[22/24] (10,12) t=2 c=907: M0->copies r1=0/7 r2=2/7 | cov1 M0=0 med=1 bestNO=1 ties=7 | cov2 M0=2 med=1 | 2727s
+[23/24] (10,12) t=1 c=908: M0->copies r1=2/7 r2=2/7 | cov1 M0=2 med=1 bestNO=1 ties=1 | cov2 M0=2 med=1 | 2870s
+[24/24] (10,12) t=2 c=908: M0->copies r1=1/7 r2=2/7 | cov1 M0=1 med=1 bestNO=1 ties=8 | cov2 M0=2 med=1 | 3023s
+
+wall clock 3023s; canon=252685 max=0.174s DNF=0

@@ -67,7 +67,7 @@ hyperedges have arity ≥ 3.
 largest classes hold 2.1 %). With labels stripped: 1,317 classes (the ten
 largest hold 37.6 %) — star shapes of a given size. Labelled fingerprints are
 therefore near-unique, which is the regime in which exact identity matters
-(RQ1, RQ3) and which the census reports as such.
+(RQ2, RQ4) and which the census reports as such.
 
 **Canonicalization** (tie-complete `w*_c`, C++ engine, labelled, 30 s budget,
 stratified by `n`): median 0.0003 s / 0.004 s / 0.004 s / 0.57 s / 2.44 s in
@@ -87,10 +87,10 @@ U.S. state 36, business 34, private not-for-profit educational institution
 imbalance (human and film are 73 %) is stated; clustering scores report
 per-class support, and a super-class coarsening is the pre-agreed fallback.
 
-**Serves.** RQ1 (prerequisite consequences on a real collection), RQ3
-(corruption injection substrate; rare-class census), RQ4 (k-medoids and
-dendrogram against types), RQ5 (generative model and decodability figure),
-RQ6 (yield row).
+**Serves.** RQ1 (the addressing comparison), RQ2 (prerequisite consequences on
+a real collection), RQ4 (corruption substrate; rare-class census), RQ5
+(k-medoids and hierarchy against types), RQ6 (generative model and the
+decodability figure), RQ7 (yield row).
 
 **Purity control — WD50K(100).** Same derivation on the subset in which
 every statement carries a qualifier: 1,847 in-envelope knowledge bases, 99.8 %
@@ -183,12 +183,28 @@ measurement: the induced (Qin-style) ego-networks of the contact datasets —
 dense, not large (median 37 constants carrying 454 facts), 26 usable members
 at the safe density, every one a singleton class.
 
-**Serves.** RQ2 (consensus without identity: the exact fact-level distance
-from the returned consensus to the held-out next member; the identity-using
-majority-vote merge as the reference), RQ1 (false merges on real members),
-RQ6 (yield rows).
+**The two regimes inside this collection, and what they cost RQ3.** Of the 555
+consecutive encodable pairs, **140 (25.2 %) preserve the constant set and 415
+(74.8 %) change it** — a class gains or loses member classes between quarters,
+median 6 constants moved. The distinction is not cosmetic: it is exactly the
+boundary of the adopted encoding (`foundation/probes_2026-09.md` §9), which
+gives a one-token distance for a one-fact difference in the first regime and
+loses to the pointer alphabet in the second. Restricted to preserving runs the
+corpus collapses to **15 drug classes with ≥ 3 consecutive preserving quarters
+and 2 with ≥ 5** (longest run 5), so the natural series alone cannot carry the
+consensus experiment. Plan of record: RQ3 is run on constant-preserving
+ladders built over *real* members of this collection (injected fact edits,
+constant set held fixed), with the 555 natural pairs reported beside them as
+the harder, unmodified case; both are stated, neither is hidden.
 
-## S3. Controlled corruptions of real members (RQ3)
+**Serves.** RQ3 (the representative record: the exact fact-level distance from
+the returned representative to the held-out next quarter; the identity-using
+majority merge as the reference), RQ1 (the addressing comparison on a real
+variant series — this is the collection where "similar knowledge bases" has a
+ground-truth meaning, and where the two regimes are separable), RQ2 (false
+merges on real members), RQ7 (yield rows).
+
+## S3. Controlled corruptions of real members (RQ4)
 
 Real members of S1 and S2 inside the envelope; one corruption per member of
 a stated type and budget `b ∈ {1, 2}`: *spurious fact* (a fact over existing
@@ -201,7 +217,7 @@ label; the evaluation is the area under the ROC curve of the outlier score,
 per corruption type and representation. Rates and budgets are reported with
 every table.
 
-## S4. Operating-envelope sweep (RQ6)
+## S4. Operating-envelope sweep (RQ7)
 
 Random connected labelled knowledge bases over a grid of fact counts
 `m ∈ {10, 20, 40, 80, 120, 160}`, maximum arity `k ∈ {2, 3, 4, 5}`, edge
@@ -215,7 +231,28 @@ in 0.06 s, one with 14 constants and 114 facts times out), and labels are the
 tie-breaker (labelled milliseconds where the unlabelled form fails at
 thirteen constants).
 
-## S5. Retired collections (kept in the record, not in the paper)
+## S5. The addressing schemes not adopted
+
+The main text carries one encoding: fact tokens addressed by global canonical
+rank, selected on measured local stability (RQ1). The **four** it displaced are
+documented here with their full measurements, because together they are what
+makes the frontier proposition credible: pointer addressing inherited from the
+earlier work; local `(refinement colour, index)` addressing; and the two
+locally-keyed schemes, `(type + incident predicate/arity multiset, index)` and
+its coarse control `(type + degree, index)`. The supporting locality
+experiments belong here too — one fact edit moves 92–98 % of depth-3
+refinement colours (36–52 % at depth 1) while the canonical rank order
+survives 68–85 % of edits, and no edit among 21,528 left a content-determined
+address map intact, against a 22–57 % zero-cost fraction for ranks:
+single-edit response per edit kind, correlation with the true fact-level
+difference on the variant series, empirical completeness and iso-invariance,
+token counts, wall-clock, and the correlation of each with the
+canonical-labelling certificate distance. Reporting them is what makes the
+adopted scheme a measured choice rather than an assertion, and it is where the
+earlier alphabet's clustering and nearest-neighbour numbers now live: they
+describe the pointer representation, which this article replaces.
+
+## S6. Retired collections (kept in the record, not in the paper)
 
 Planted swap families and the size-controlled Stratum C corpus of the
 previous iteration (synthetic; superseded by S1–S3); the contact induced

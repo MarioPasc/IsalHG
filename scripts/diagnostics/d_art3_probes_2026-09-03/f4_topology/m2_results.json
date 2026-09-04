@@ -1,0 +1,201 @@
+{
+ "config": {
+  "budget_s": 60.0,
+  "ea_pairs_cap": 1000000
+ },
+ "ndc_classes_quarter": {
+  "n_pairs": 555,
+  "A": {
+   "n": 473,
+   "spearman": 0.683,
+   "pearson": 0.6284,
+   "median_by_stratum": {
+    "0": 0,
+    "1": 4,
+    "2": 3.0,
+    "3-5": 6,
+    ">5": 13.0
+   },
+   "n_by_stratum": {
+    "0": 77,
+    "1": 93,
+    "2": 110,
+    "3-5": 169,
+    ">5": 24
+   },
+   "delta1": {
+    "n": 93,
+    "frac_le2": 0.3548,
+    "frac_le5": 0.6774,
+    "frac_ge25pct": 0.6559,
+    "median_norm": 0.4286
+   }
+  },
+  "B": {
+   "n": 555,
+   "spearman": 0.6323,
+   "pearson": 0.6197,
+   "median_by_stratum": {
+    "0": 0,
+    "1": 7.0,
+    "2": 5.0,
+    "3-5": 8,
+    ">5": 9
+   },
+   "n_by_stratum": {
+    "0": 85,
+    "1": 120,
+    "2": 134,
+    "3-5": 191,
+    ">5": 25
+   },
+   "delta1": {
+    "n": 120,
+    "frac_le2": 0.225,
+    "frac_le5": 0.3333,
+    "frac_ge25pct": 0.7417,
+    "median_norm": 0.4615
+   }
+  },
+  "C": {
+   "n": 555,
+   "spearman": 0.5825,
+   "pearson": 0.642,
+   "median_by_stratum": {
+    "0": 0,
+    "1": 14.0,
+    "2": 13.0,
+    "3-5": 17,
+    ">5": 20
+   },
+   "n_by_stratum": {
+    "0": 85,
+    "1": 120,
+    "2": 134,
+    "3-5": 191,
+    ">5": 25
+   },
+   "delta1": {
+    "n": 120,
+    "frac_le2": 0.0,
+    "frac_le5": 0.0,
+    "frac_ge25pct": 1.0,
+    "median_norm": 1.0
+   }
+  },
+  "arm_A": {
+   "n": 417,
+   "ok": 392,
+   "dnf": 25,
+   "err": 0,
+   "dnf_frac": 0.06,
+   "secs": {
+    "min": 0.0005581539990089368,
+    "p25": 0.0008737500011193333,
+    "med": 0.0011217089995625429,
+    "p75": 0.006259200999920722,
+    "p90": 0.17372605500167992,
+    "max": 58.644306054999106,
+    "mean": 0.813
+   }
+  }
+ },
+ "wd50k66_synthetic_ladder": {
+  "n_pairs": 1000,
+  "A": {
+   "n": 950,
+   "spearman": 0.5632,
+   "pearson": 0.5104,
+   "median_by_stratum": {
+    "0": 0,
+    "1": 5,
+    "2": 8,
+    "3-5": 10,
+    ">5": null
+   },
+   "n_by_stratum": {
+    "0": 33,
+    "1": 253,
+    "2": 229,
+    "3-5": 435,
+    ">5": 0
+   },
+   "delta1": {
+    "n": 253,
+    "frac_le2": 0.0751,
+    "frac_le5": 0.6008,
+    "frac_ge25pct": 0.9723,
+    "median_norm": 1.0
+   }
+  },
+  "B": {
+   "n": 1000,
+   "spearman": 0.633,
+   "pearson": 0.5655,
+   "median_by_stratum": {
+    "0": 0.0,
+    "1": 1.0,
+    "2": 4.0,
+    "3-5": 6.0,
+    ">5": null
+   },
+   "n_by_stratum": {
+    "0": 34,
+    "1": 264,
+    "2": 242,
+    "3-5": 460,
+    ">5": 0
+   },
+   "delta1": {
+    "n": 264,
+    "frac_le2": 0.5947,
+    "frac_le5": 0.9053,
+    "frac_ge25pct": 0.2955,
+    "median_norm": 0.1307
+   }
+  },
+  "C": {
+   "n": 1000,
+   "spearman": 0.2857,
+   "pearson": 0.2764,
+   "median_by_stratum": {
+    "0": 0.0,
+    "1": 12.0,
+    "2": 13.0,
+    "3-5": 15.0,
+    ">5": null
+   },
+   "n_by_stratum": {
+    "0": 34,
+    "1": 264,
+    "2": 242,
+    "3-5": 460,
+    ">5": 0
+   },
+   "delta1": {
+    "n": 264,
+    "frac_le2": 0.0,
+    "frac_le5": 0.0,
+    "frac_ge25pct": 1.0,
+    "median_norm": 1.0667
+   }
+  },
+  "arm_A": {
+   "n": 1165,
+   "ok": 1128,
+   "dnf": 37,
+   "err": 0,
+   "dnf_frac": 0.0318,
+   "secs": {
+    "min": 0.0005039389998273691,
+    "p25": 0.0008163120000972413,
+    "med": 0.0012705499993899139,
+    "p75": 0.041840502999548335,
+    "p90": 1.2074431180008105,
+    "max": 52.357604380998964,
+    "mean": 0.894
+   }
+  },
+  "note": "no natural variant series exists for WD50K; edits are synthetic constant-set-preserving fact insert/delete walks of length t=1..5, delta = |F_0 symmetric-difference F_t| computed exactly on stable ids"
+ }
+}

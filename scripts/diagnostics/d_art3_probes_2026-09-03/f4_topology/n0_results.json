@@ -1,0 +1,101 @@
+{
+ "seeds": {
+  "corpus": 20260904,
+  "perm": 20260906
+ },
+ "note": "E-A/E-B/E-C rows carried from m0_results.json; this stage scores E-D and E-D1",
+ "corpora": {
+  "synthetic": {
+   "n": 2000,
+   "iso_invariance": {
+    "D": {
+     "checked": 2000,
+     "violations": 0
+    },
+    "D1": {
+     "checked": 2000,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "D": {
+     "n_checked": 2000,
+     "iso_classes_nauty": 2000,
+     "classes_enc": 2000,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "D1": {
+     "n_checked": 2000,
+     "iso_classes_nauty": 2000,
+     "classes_enc": 2000,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  },
+  "ndc_classes_quarter": {
+   "n": 500,
+   "iso_invariance": {
+    "D": {
+     "checked": 500,
+     "violations": 0
+    },
+    "D1": {
+     "checked": 500,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "D": {
+     "n_checked": 500,
+     "iso_classes_nauty": 325,
+     "classes_enc": 325,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "D1": {
+     "n_checked": 500,
+     "iso_classes_nauty": 325,
+     "classes_enc": 325,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  },
+  "wd50k66": {
+   "n": 500,
+   "iso_invariance": {
+    "D": {
+     "checked": 500,
+     "violations": 0
+    },
+    "D1": {
+     "checked": 500,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "D": {
+     "n_checked": 500,
+     "iso_classes_nauty": 489,
+     "classes_enc": 489,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "D1": {
+     "n_checked": 500,
+     "iso_classes_nauty": 489,
+     "classes_enc": 489,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  }
+ },
+ "trace_equivalence": {
+  "checked": 2000,
+  "mismatches": 0,
+  "rng_states_equal": true
+ }
+}

@@ -102,6 +102,16 @@ heuristic. That is the geometry→application link the v3 program never had.
 
 ## 5. Decisions the PI must make
 
+> **ANSWERED 2026-09-04.** The PI ratified D1 (string-space processing of KB
+> collections as the centre, with a new obligation to justify the tasks'
+> real-world utility), D2 (the logic material becomes a *second* manuscript —
+> this one stays out of the logical aspects), D3′ (the preprint's alphabet is
+> not binding; F4 preferred; **criterion: similar KBs must encode to strings at
+> small Levenshtein distance**), and D4–D6 as recommended. His words, the
+> mapping and the consequences — including the fact that the D3′ criterion
+> requires an *encoder* change rather than the decoder-side extension that had
+> been proposed — are in [`START_HERE.md` §6.0](START_HERE.md).
+
 Listed in the order that unblocks the most work.
 
 - **D1 — Is the search-space pillar the flagship, or a second pillar?**

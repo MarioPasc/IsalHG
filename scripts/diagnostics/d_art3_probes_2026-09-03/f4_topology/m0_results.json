@@ -1,0 +1,144 @@
+{
+ "seeds": {
+  "corpus": 20260904,
+  "perm": 20260906
+ },
+ "corpora": {
+  "synthetic": {
+   "n": 2000,
+   "iso_invariance": {
+    "A": {
+     "checked": 2000,
+     "violations": 0
+    },
+    "B": {
+     "checked": 2000,
+     "violations": 0
+    },
+    "C": {
+     "checked": 2000,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "A": {
+     "n_checked": 2000,
+     "iso_classes_nauty": 2000,
+     "classes_enc": 2000,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "B": {
+     "n_checked": 2000,
+     "iso_classes_nauty": 2000,
+     "classes_enc": 2000,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "C": {
+     "n_checked": 2000,
+     "iso_classes_nauty": 2000,
+     "classes_enc": 2000,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  },
+  "ndc_classes_quarter": {
+   "n": 500,
+   "iso_invariance": {
+    "A": {
+     "checked": 465,
+     "violations": 0
+    },
+    "B": {
+     "checked": 500,
+     "violations": 0
+    },
+    "C": {
+     "checked": 500,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "A": {
+     "n_checked": 465,
+     "iso_classes_nauty": 298,
+     "classes_enc": 298,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "B": {
+     "n_checked": 500,
+     "iso_classes_nauty": 325,
+     "classes_enc": 325,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "C": {
+     "n_checked": 500,
+     "iso_classes_nauty": 325,
+     "classes_enc": 325,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  },
+  "wd50k66": {
+   "n": 500,
+   "iso_invariance": {
+    "A": {
+     "checked": 474,
+     "violations": 0
+    },
+    "B": {
+     "checked": 500,
+     "violations": 0
+    },
+    "C": {
+     "checked": 500,
+     "violations": 0
+    }
+   },
+   "completeness": {
+    "A": {
+     "n_checked": 474,
+     "iso_classes_nauty": 463,
+     "classes_enc": 463,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "B": {
+     "n_checked": 500,
+     "iso_classes_nauty": 489,
+     "classes_enc": 489,
+     "false_merges": 0,
+     "false_splits": 0
+    },
+    "C": {
+     "n_checked": 500,
+     "iso_classes_nauty": 489,
+     "classes_enc": 489,
+     "false_merges": 0,
+     "false_splits": 0
+    }
+   }
+  }
+ },
+ "arm_A": {
+  "n": 5838,
+  "ok": 5723,
+  "dnf": 115,
+  "err": 0,
+  "dnf_frac": 0.0197,
+  "secs": {
+   "min": 0.00041667100003905944,
+   "p25": 0.0009361149996038876,
+   "med": 0.0015804109998498461,
+   "p75": 0.004024290999950608,
+   "p90": 0.015847484000005352,
+   "max": 51.015739338,
+   "mean": 0.274
+  }
+ }
+}

@@ -1,0 +1,4 @@
+# Per-pair raw record dumps (1.6-3.1 MB each). Regenerable from the scripts in
+# this directory with the seeds pinned in their reports; the aggregated
+# statistics that the reports quote are committed alongside them.
+*_rows_*.json

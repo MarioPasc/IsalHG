@@ -1,0 +1,77 @@
+{
+ "synthetic": {
+  "n_base": 100,
+  "n_edits": 2000,
+  "mean_fraction_moved": {
+   "wl_h1": 0.3563,
+   "wl_h2": 0.9262,
+   "wl_h3": 0.928,
+   "wl_h64": 0.928,
+   "nauty_rank": 0.0282
+  },
+  "median_fraction_moved": {
+   "wl_h1": 0.3333,
+   "wl_h2": 1.0,
+   "wl_h3": 1.0,
+   "wl_h64": 1.0,
+   "nauty_rank": 0.0
+  },
+  "frac_edits_with_zero_shift": {
+   "wl_h1": 0.0,
+   "wl_h2": 0.0,
+   "wl_h3": 0.0,
+   "wl_h64": 0.0,
+   "nauty_rank": 0.847
+  }
+ },
+ "ndc_classes_quarter": {
+  "n_base": 100,
+  "n_edits": 1909,
+  "mean_fraction_moved": {
+   "wl_h1": 0.517,
+   "wl_h2": 0.9798,
+   "wl_h3": 0.9819,
+   "wl_h64": 0.9819,
+   "nauty_rank": 0.1021
+  },
+  "median_fraction_moved": {
+   "wl_h1": 0.5,
+   "wl_h2": 1.0,
+   "wl_h3": 1.0,
+   "wl_h64": 1.0,
+   "nauty_rank": 0.0
+  },
+  "frac_edits_with_zero_shift": {
+   "wl_h1": 0.0,
+   "wl_h2": 0.0,
+   "wl_h3": 0.0,
+   "wl_h64": 0.0,
+   "nauty_rank": 0.6805
+  }
+ },
+ "wd50k66": {
+  "n_base": 100,
+  "n_edits": 1815,
+  "mean_fraction_moved": {
+   "wl_h1": 0.3708,
+   "wl_h2": 0.8653,
+   "wl_h3": 0.9192,
+   "wl_h64": 0.9192,
+   "nauty_rank": 0.0417
+  },
+  "median_fraction_moved": {
+   "wl_h1": 0.3333,
+   "wl_h2": 1.0,
+   "wl_h3": 1.0,
+   "wl_h64": 1.0,
+   "nauty_rank": 0.0
+  },
+  "frac_edits_with_zero_shift": {
+   "wl_h1": 0.0006,
+   "wl_h2": 0.0,
+   "wl_h3": 0.0,
+   "wl_h64": 0.0,
+   "nauty_rank": 0.7433
+  }
+ }
+}

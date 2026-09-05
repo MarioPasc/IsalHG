@@ -349,11 +349,18 @@ reference, and with what guarantee?
 - *Coverage consensus.* Over candidates `C`, return
   `argmax_{c ∈ C} ( cov_r(c), −Σ_i min(reach_F(c → K_i), r+1), lexicographic word )`
   with `cov_r(c) = #{ i : reach_F(c → K_i) ≤ r }`. Candidates: the members, and
-  every knowledge base obtained from a member `K_i` by deleting `≤ r` of its
-  facts and inserting `≤ r` facts transferred from other members through the
-  alignments found by delete-and-match (alignment-transfer generation), with
-  decoded classes deduplicated by canonical key. Default radius `r = 2`
-  (budget unknown to the method); `r = t` reported as the known-budget variant.
+  every knowledge base `K_i − A′ + π(B′)` obtained from an alignment `(A, B, π)`
+  of two members `K_i`, `K_j` with `|A| + |B| ≤ 2r` — the *triangle-complete*
+  set, since a candidate within `r` of both members forces
+  `reach_F(K_i, K_j) ≤ 2r` — taking `A′ ⊆ A`, `B′ ⊆ B` with `|A′| + |B′| ≤ r`
+  (alignment-transfer generation), with decoded classes deduplicated by
+  canonical key. `π` comes from the canonical labellings of the two isomorphic
+  remainders, never from the ranks of `K_i` and `K_j` themselves (G1). The
+  narrower budgets "per side" (`|A|, |B| ≤ r`) and "sum" (`|A| + |B| ≤ r`) are
+  implemented as recorded variants only; under "sum" the source is provably
+  outside the candidate set for `t = r`, which is how the ambiguity was found
+  (2026-09-05). Default radius `r = 2` (budget unknown to the method); `r = t`
+  reported as the known-budget variant.
 - *Certified medoid.* `M = argmin_i Σ_j d(K_i, K_j)`; `LB = Σ_{i<j} d(K_i,K_j)/(N−1)`;
   `ratio = cost(M)/LB` (`≤ 2 − 2/N` by Prop 3 in any metric).
 - *Truth and the axis.* Exact fact-level distance `|F(out) △ F(truth)|`

@@ -246,21 +246,31 @@ def _build_from_pairwise(
     context = mp.get_context("fork")
     chunk_size = max(1, len(pairs) // (n_jobs * 8))
     chunks = [pairs[start : start + chunk_size] for start in range(0, len(pairs), chunk_size)]
-    with context.Pool(
-        processes=n_jobs,
-        initializer=_init_worker,
-        initargs=(list(items), arm, dict(params)),
-    ) as pool:
-        for chunk_result in pool.imap_unordered(_pair_chunk, chunks):
-            for i, j, value in chunk_result:
-                matrix[i, j] = value
-                matrix[j, i] = value
+    # Publish the corpus before forking: the children inherit it copy-on-write,
+    # so it is never pickled. Passing it through initargs sent one full copy of
+    # the collection down a pipe per worker.
+    _WORKER_STATE["items"] = items
+    try:
+        with context.Pool(
+            processes=n_jobs,
+            initializer=_init_worker,
+            initargs=(arm, dict(params)),
+        ) as pool:
+            for chunk_result in pool.imap_unordered(_pair_chunk, chunks):
+                for i, j, value in chunk_result:
+                    matrix[i, j] = value
+                    matrix[j, i] = value
+    finally:
+        _WORKER_STATE.pop("items", None)
     return matrix
 
 
-def _init_worker(items: list[SparseHypergraph], arm: str, params: dict[str, Any]) -> None:
-    """Pool initializer: instantiate the distance once per worker process."""
-    _WORKER_STATE["items"] = items
+def _init_worker(arm: str, params: dict[str, Any]) -> None:
+    """Pool initializer: instantiate the distance once per worker process.
+
+    The corpus is already present in ``_WORKER_STATE`` through the fork; only
+    the distance object, which may hold un-picklable handles, is built here.
+    """
     _WORKER_STATE["distance"] = _make_distance(arm, params)
 
 

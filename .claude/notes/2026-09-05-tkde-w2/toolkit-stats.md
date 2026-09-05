@@ -10,7 +10,7 @@
 | Branch | `worktree-agent-a57e8b6abc7474e02` |
 | Worktree | `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-a57e8b6abc7474e02` |
 | Base commit | `e7f8c0d` |
-| Head commit | `7ade266` (code) + this log's commit |
+| Head commit | `7ade266` (code) → `c0b52ac` (log) → the §12 change-request commit |
 | Started / finished | `2026-09-05T13:58:00+0200` / `2026-09-05T14:25:00+0200` |
 | Status | complete |
 
@@ -471,9 +471,12 @@ and will populate once `competitors-kb` lands it).
 |---|---|---|---|
 | `params` cannot reach a distance | medium | The frozen contract implies `get_distance(arm, **params)`; the registry has no such signature. Currently a non-empty `params` raises. If a wave-3 arm needs parameters, either the registry gains an overload or the arm gains its own registered name. | orchestrator → `competitors-kb` |
 | `labels_used` is always `null` today | low | The attribute is not yet on `HypergraphDistance`. The manifest field populates automatically once it lands; already-written caches keep `null` until recomputed. | `competitors-kb` |
-| No cached matrix built for the four heavier competitors | medium | Their aliases were unregistered at my base commit, so `nauty_cert`, `netlsd`, `hpd_jsd` and `bipartite_ged` have never been through `build_matrix`. First real exercise is wave 3; a `pairwise` that raises on a labelled KB member would surface there, not here. | wave 3 / `competitors-kb` |
+| ~~No cached matrix built for the four heavier competitors~~ | resolved | Closed by §12: all four ran under their original registered names on 200 real labelled members, none raised. | — |
+| `netlsd_l2` needs a tolerance, not `== 0` | medium | 9 exact zeros but 186 pairs below `1e-9` (§12). RQ2's false-merge census must use the `< 10⁻⁹` rule its own spec states, or it under-reports NetLSD's merges twentyfold. | wave 3 (RQ2) |
+| `bipartite_hged` exposes only the edit-path reading | medium | No false zeros measured (§12); H2b's predicted false zeros belong to the raw assignment reading, which is not registered. RQ2 cannot measure H2b until `competitors-kb` exposes it. | `competitors-kb` |
+| The pool fix is `fork`-only | low | The corpus now reaches workers by copy-on-write inheritance rather than pickling (§12). Correct under `mp.get_context("fork")`, which is what the code requests; under `spawn` `_pair_chunk` raises `KeyError` — loud, not silent. | wave 3 / future maintainer |
 | `cdist` over token tuples at N ≈ 3,988 | low | Measured 13 ms at N = 200; the cost is quadratic in N and linear in word length, so ~5 s extrapolated — fine. If it is not, `FactRankLevenshtein._encode`'s code-point trick is a value-identical drop-in. | wave 3 |
-| Pooled path only exercised at `n_jobs=2`, N=4 | low | Fork + `imap_unordered`; the initargs pickle the whole corpus once per worker. At N ≈ 3,988 that is a per-worker copy of the collection. Watch memory on Picasso. | wave 3 |
+| ~~Pooled path re-pickles the corpus per worker~~ | resolved | Fixed in §12 (copy-on-write inheritance). Measured peak-RSS deltas at N = 200, `n_jobs=4`: +0.5 MiB (`nauty_levi_edit`), +22.2 (`netlsd_l2`), +45.2 (`hpd_jsd`), +0.0 (`bipartite_hged`). | — |
 | Toolkit raises the generic `MetricSpaceError` | low | Coding rules want one descendant per failure mode; `errors.py` was read-only for W2. | orchestrator |
 | Full unit suite not re-run after the final one-line test fix | low | The fix was a stale positional argument inside a test I own; the targeted rerun is green. Cheap for the orchestrator to confirm. | orchestrator |
 | `write_rows` overwrites | low | By contract. A sharded runner must write disjoint table names or aggregate before writing, or shards will clobber each other. | wave 3 |
@@ -484,7 +487,7 @@ and will populate once `competitors-kb` lands it).
 |---|---|---|---|
 | 1 | Toolkit tests on small known cases (Prop 3 bound, `LB > cost` rate, PAM determinism, cophenetic range, kNN self-exclusion, AUROC = 1, MDS stress, `ν`, hubness) | yes | `test_toolkit_{medoid,clustering,outliers,mds,geometry}.py`, 39 + 13 tests; `LB > cost` = 14/200 = 0.070 |
 | 2 | Stats tests (Wilson vs known, Wilcoxon vs scipy, Holm by hand, BCa containment + shrinkage, Cliff's δ = ±1 / ≈ 0, clustered vs unclustered Spearman, `paired_family` Holm) | yes | `tests/experiments_tkde/test_stats.py`, 38 tests, all green |
-| 3 | `build_matrix` on 200 `wd50k66` members, four arms, symmetric / zero-diagonal / finite, cache hit logged, wall-clock per arm, roles used | yes, with one substitution | §6 row 1–3; `wl_l1` → `hypergraph_wl_l1` (§7.2) because the alias is not yet registered |
+| 3 | `build_matrix` on 200 `wd50k66` members, four arms, symmetric / zero-diagonal / finite, cache hit logged, wall-clock per arm, roles used | yes, with one substitution | §6 row 1–3; `wl_l1` → `hypergraph_wl_l1` (§7.2) because the alias is not yet registered. **Extended at the coordinator's change request to the four competitor arms — §12.** |
 | 4 | Writers produce exactly the six G6 files; manifest has a git SHA in a checkout and falls back to `.tkde_deploy` | yes | `TestFullFileSet::test_the_six_g6_files_and_nothing_else`; three provenance tests incl. both temp-dir paths |
 | 5 | `pyproject.toml` lists the new optional dependencies, nothing else changed | yes | `git diff e7f8c0d..HEAD -- pyproject.toml` is the `[dev]` block only |
 | 6 | ruff + mypy clean on my files, existing suite green, everything committed | yes | ruff 3 errors, all pre-existing; mypy 20 errors = the baseline, 0 in `toolkit/`; 141 targeted green, 1728 in the full suite (1 mine, fixed) |
@@ -501,3 +504,73 @@ non-empty `params` raise. If a wave-3 arm needs parameters, that decision has to
 be revisited before the runners are written, not after. Second is the coverage
 gap in §10 — four competitor arms have never been through `build_matrix`
 because their aliases post-date my base commit.
+
+*Superseded by §12: the four arms were run under their original registered
+names at the coordinator's request, and all four complete.*
+
+---
+
+## 12. Change request (2026-09-05, coordinator)
+
+**As received:** run `build_matrix` on the same first 200 `wd50k66` members for
+the four arms that exist at base under their original names —
+`nauty_levi_edit`, `netlsd_l2`, `hpd_jsd`, `bipartite_hged` — at `n_jobs=4`,
+recording per arm the cold wall-clock, the warm (cache-hit) wall-clock,
+symmetry, finiteness, the off-diagonal zero count and peak RSS where readable;
+message `competitors-kb` (`adb65fa32e7e16e2c`) with the member id and traceback
+on any raise, record the failure and continue; do not modify competitor code.
+Also fix the per-worker corpus re-pickling if it is a one-line change, else
+note it. Ownership, contracts and base unchanged. (This request arrived twice —
+the first attempt was cut off by an API rate limit mid-run; the numbers below
+are from a single clean re-run after the reset, on a freshly emptied cache.)
+
+**Result: all four arms completed. No arm raised on any member, so no message
+was sent to `competitors-kb`.**
+
+| arm | cold | warm (cache hit) | `max\|D − Dᵀ\|` | `max\|diag\|` | finite | off-diag zeros | `< 1e-9` | peak RSS | median | max |
+|---|---|---|---|---|---|---|---|---|---|---|
+| `nauty_levi_edit` | 0.310 s | 0.0003 s | 0 | 0 | yes | 0 / 19,900 | 0 | 57.9 MiB (+0.5) | 105 | 330 |
+| `netlsd_l2` | 9.531 s | 0.0003 s | 0 | 0 | yes | 9 / 19,900 | 186 | 80.4 MiB (+22.2) | 0.3623 | 1.366 |
+| `hpd_jsd` | 3.368 s | 0.0002 s | 0 | 0 | yes | 265 / 19,900 | 265 | 125.6 MiB (+45.2) | 0.811 | 1 |
+| `bipartite_hged` | 0.798 s | 0.0002 s | 0 | 0 | yes | 0 / 19,900 | 0 | 125.6 MiB (+0.0) | 36 | 102 |
+
+`N = 200`, 19,900 unordered pairs, `n_jobs=4`, cache emptied first, cold and
+warm in one process. Peak RSS is `max(ru_maxrss)` over the process and its
+reaped children (where the pool workers live), so it is cumulative down the
+table — the per-arm delta is the informative column. Baseline before the first
+arm: 57.4 MiB. Every warm call was asserted equal to the cold matrix.
+
+Three observations worth passing on, none of them mine to act on:
+
+- **`netlsd_l2` has 9 exact zeros but 186 values below `1e-9`.** The census of
+  RQ2 §1 specifies `< 10⁻⁹` for real-valued embeddings precisely because of
+  this; an exact-equality count would under-report its false merges twentyfold.
+  The runner must use the tolerance, not `== 0`.
+- **`hpd_jsd`'s 265 zeros are exact**, so either reading gives the same count.
+- **`bipartite_hged` shows no false zeros here.** `DESIGN.md` H2b predicts them
+  for the *raw assignment* reading; the arm registered under this name is the
+  edit-path reading. Exposing both readings is `competitors-kb`'s task
+  (`CODE_PLAN.md` §3), and RQ2 needs the other one to measure H2b.
+
+**Pool fix — applied.** It was three lines, not one, and I judged that within
+the spirit of the request. `_build_from_pairwise` now publishes the corpus into
+the module-level `_WORKER_STATE` *before* `Pool(...)` forks, so the children
+inherit it copy-on-write, and `_init_worker(arm, params)` builds only the
+distance object. Previously the whole collection went through `initargs`, i.e.
+one pickled copy down a pipe per worker. The parent's entry is removed in a
+`finally`, so nothing is retained after the pool closes. This is safe only
+because the context is explicitly `fork` (`mp.get_context("fork")`); under
+`spawn` the children would not inherit `_WORKER_STATE` and `_pair_chunk` would
+raise `KeyError` rather than compute silently wrong values. Noted here because
+a future move to `spawn` — the default on macOS, and Python's stated direction
+on Linux — breaks it loudly.
+
+Verification after the change: `pytest tests/unit/metric_space/test_toolkit_*.py
+tests/experiments_tkde -q -m unit` → **141 passed**, including
+`test_parallel_path_matches_the_serial_one`, which is the test that would catch
+a broken worker hand-off. ruff clean, `ruff format --check` clean, mypy
+unchanged at the pre-existing 20-error baseline with 0 in `toolkit/`.
+
+Scratch cache for this run:
+`$ISALHG_RESULTS_ROOT/matrices/_dev_toolkit_competitors/` (alongside
+`_dev_toolkit/` from §6; both are the orchestrator's to delete).

@@ -402,6 +402,13 @@ collections; members are `t` independent constant-preserving fact edits of the
 source (mix: each edit insert or delete with probability ½), pairwise
 non-isomorphic and non-isomorphic to the source (50 resampling attempts, else
 the collection is dropped and counted). Isolated constants are legal.
+**Deletion-only eligibility (amended 2026-09-05):** a source with `m` facts has
+at most `m` single-fact deletions, fewer up to isomorphism, so `N` pairwise
+non-isomorphic deletion variants need `m ≥ N + 1`; the deletion cells sample
+their sources from that sub-pool (the first runner found the `N = 9, t = 1`
+deletion cells 100 % dropped otherwise). Pool sizes are recorded per cell; a
+cell with fewer than 8 eligible sources runs with what exists and is marked
+`pool_limited`, an empty pool is marked `infeasible`.
 
 **Corpus B — the natural NDC series (the harder case, reported beside A).**
 Every drug class with a run of `T ≥ 4` consecutive encodable quarters (frozen

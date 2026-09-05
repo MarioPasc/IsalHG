@@ -9,7 +9,7 @@
 #
 # Sizing, measured rather than assumed (2026-09-05, i7-13700KF, single core):
 # one seed of the whole 24-cell Corpus A matrix plus all 69 Corpus B runs takes
-# 53 s, so the 27-seed campaign is about 17 minutes locally and roughly 40-60
+# 39 s, so the 27-seed campaign is about 18 minutes locally and roughly 40-60
 # minutes on an `sd` node. DESIGN.md's "a few core-hours" over-estimated it.
 # SCBI's floor asks for the *fewest, longest* tasks, so the default is a single
 # array task carrying every shard, with RQ6 (minutes) bundled into it. Raising
@@ -115,5 +115,5 @@ JOB_ID=$(_clean_job_id "${RAW}")
 
 echo "Submitted RQ3 job: ${JOB_ID}"
 echo "Monitor:  sacct -j ${JOB_ID} -X -n -P -o JobID,State,Elapsed"
-echo "Logs:     ${LOGS_DIR}/tkde-rq3_${JOB_ID}_*.out"
+echo "Logs:     ${LOGS_DIR}/tkde-rq3*_${JOB_ID}*.out"
 echo "Results:  ${RESULTS_ROOT}/RQ3_representative/"

@@ -10,9 +10,9 @@
 | Branch | `worktree-agent-adb65fa32e7e16e2c` |
 | Worktree | `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-adb65fa32e7e16e2c` |
 | Base commit | `e7f8c0d` |
-| Head commit | `<final sha>` |
-| Started / finished | `2026-09-05` / `<pending>` |
-| Status | in progress |
+| Head commit | `19185e4` + this log commit |
+| Started / finished | `2026-09-05` / `2026-09-05` |
+| Status | complete |
 
 ## 1. Prompt as received
 
@@ -206,6 +206,19 @@ runner, not here.
 481 passed, 1 skipped, 1 warning in 9.39s
 ```
 
+**Command:** `pytest tests/unit -q -m unit` (the whole suite, before the final commit)
+
+```
+1781 passed, 7 skipped, 20 warnings in 303.02s (0:05:03)
+```
+
+**Lint / types.** `ruff check` and `ruff format --check` are clean on every file
+I touched. `mypy src/isalhg/generation src/isalhg/metric_space` is clean.
+Repo-wide, `ruff check src/ tests/` reports 2 errors and `mypy src/isalhg/`
+reports 20, all **pre-existing** in files not in my diff
+(`iso_backends/isalhg_backend.py`, `viz/instruction_view.py`, `core/*`,
+`tests/unit/core/algorithms/test_registry.py`).
+
 The single skip is the HyperCOT "raises without its env" case, skipped because
 the pinned env *is* installed on this machine; the complementary
 "runs and returns finite" case covers it instead.
@@ -225,10 +238,15 @@ the pinned env *is* installed on this machine; the complementary
 
 | Circumstance | What was run | Evidence | Outcome |
 |---|---|---|---|
-| Real data — RQ6 | `TokenNGram(order=3)` on 200 `wd50k66` fact words (roles on), 1000 samples, seed 0 | 1000/1000 decode; mean length 32.9; deterministic under re-sample; novelty 0.992; JSDs n 0.397 / m 0.157 / arity 0.0001 / pred 0.0034 / type 0.0 | pass |
-| Real data — baseline | same model class on the 200 flattened words | 8/1000 accepted → rejection 0.992; causes `constant_id` 596, `type_count` 253, `dangling` 69, `arity` 44, `duplicate_fact` 14, `duplicate_header` 8, `header` 6, `terminator` 2 | pass (the dominant cause is the predicted out-of-range id) |
-| Real data — round trip | `strict_decode(flatten(H))` on 200 `wd50k66` members | 200/200 reproduce `H` exactly (ids, types, predicates) | pass |
+| Real data — RQ6, `wd50k66` | `TokenNGram(order=3)` on 200 fact words (roles on), 1000 samples, seed 0 | **1000/1000 decode**; mean length 32.9; deterministic; novelty 0.992; JSDs n 0.397 / m 0.157 / arity 0.0001 / pred 0.0034 / type 0.000 | pass |
+| Real data — RQ6, `ndc_classes` | same, roles absent | **1000/1000 decode**; mean length 15.1; deterministic; novelty 0.996; JSDs n 0.111 / m 0.105 / arity 0.0009 / pred 0.000 / type 0.0073 | pass |
+| Real data — baseline, `wd50k66` | same model class on the 200 flattened words | 8/1000 accepted → **rejection 0.992**; causes `constant_id` 596, `type_count` 253, `dangling` 69, `arity` 44, `duplicate_fact` 14, `duplicate_header` 8, `header` 6, `terminator` 2 | pass (dominant cause is the predicted out-of-range id) |
+| Real data — baseline, `ndc_classes` | same | 19/1000 accepted → **rejection 0.981**; causes `constant_id` 505, `type_count` 355, `duplicate_fact` 63, `dangling` 25, `arity` 20, `duplicate_header` 7, `header` 6 | pass |
+| Real data — round trip | `strict_decode(flatten(H))` on 200 members of each collection | 200/200 and 200/200 reproduce `H` exactly (ids, types, predicates) | pass |
+| `complete()` | prefix = first two-thirds of a real word, both collections | extends the prefix verbatim and decodes, both | pass |
 | Label sensitivity | fixed 5-constant / 3-fact doubly-labelled probe, all 24 registered arms | see §7 table | pass |
+| Competitor audit | 46 arm×collection cells, 200 members each, 500 pairs + 100 `permute` pairs, one OS process per arm | complete arms 0 false merges and 100/100 iso→0; `hpd_jsd` 2.40 %/1.42 %, `size_l1` 2.00 %, `netlsd` 1.00 %/0.81 %, `degree_seq_l1` 1.20 %/1.01 %; `bipartite_ged_path` iso→0 only 8/100 and 19/100 (max 34, 24); HyperCOT 3.46 on an iso pair; `isalhg_levenshtein` SIGKILLed on `wd50k66`; oracles censored to 11/500 and 5/500 | pass, with the failures reported as findings |
+| Uninterruptibility | escalating caps on the pointer arm | oracle `timeout=2.0` overran to >8 s; `SIGALRM` never fired; `SIGTERM` never fired; only `SIGKILL` (rc 137) ended it | finding |
 | Performance | n-gram fit + 1000 samples on 200 words | fit 0.05 s, sample 1.64 s → 0.2 s after the EOS fix; \|V\| = 1274 | pass |
 | Environment | Python 3.11.15, `isalhg-compet` (clone of `isalhg`), pytest 9.0.3, numpy/scipy/pynauty/rapidfuzz/netlsd present; `isalhg-hypercot` also present | | |
 
@@ -306,7 +324,10 @@ single-label-kind corpus finding.
 
 | Item | Severity | Detail | Suggested owner |
 |---|---|---|---|
-| HyperCOT can return a small negative value | medium | Measured −9.9e−16 on an isomorphic pair. Any downstream `sqrt`, or a non-negativity assertion, will fail on a *correct* result. The matrix builder must clamp at 0 and compare with a tolerance. Pinned by test. | `toolkit-stats` |
+| `bipartite_ged_path` does not respect isomorphism classes | **high** | Returns 0 on only 8/100 (`wd50k66`) and 19/100 (`ndc_classes`) isomorphic pairs, max 34 and 24. No false merges, but systematic false *separations*. Any use assuming `H ≅ H' ⇒ d = 0` — dedup, identity clustering, the RQ2 medoid certificate — is unsound under this arm. Its own docstring calls it an upper bound on the exact oracle, which is true and does not imply zero on isomorphic input. | wave 3 / PI |
+| `isalhg_levenshtein` hangs uninterruptibly on real `wd50k66` pairs | **high** | Had to be SIGKILLed (rc 137). Neither the Python `SIGALRM` nor `SIGTERM` fires, because the C++ canonical-string call never returns to the interpreter. Every arm must be bounded at the process level; no in-process timeout suffices. | wave 3 |
+| HyperCOT is a local optimum on both sides | medium | Measured −9.9e−16 on one isomorphic pair and **3.46** on another (`ndc_classes`) — the latter a convergence failure, not float noise. The matrix builder must clamp at 0 and compare with a tolerance, and the arm's "0 on isomorphic pairs" property should be reported as approximate. Pinned by test. | `toolkit-stats` |
+| The GED oracles' `timeout` argument does not bound a call | medium | `ExactHGED(timeout=2.0)` ran >8 s on one real pair: the check sits inside the branch-and-bound loop, after the pre-seeding LSAPs. Budget externally. | wave 3 |
 | Alias `.name` differs from the requested arm string | low | `get_distance("wl_l1").name == "hypergraph_wl_l1"`. Coordinator confirmed the cache keys off the requested string and records `distance.name` as `canonical_name`. | `toolkit-stats` |
 | Pointer arm raises on disconnected input | medium | `isalhg_levenshtein` raises `DisconnectedHypergraphError` (decision B11). All 400 audited real members are connected, so it is safe on the frozen corpora — but *generated* and *decoded* knowledge bases may be disconnected (the fact language permits them), so RQ6 must not feed samples to that arm. | wave 3 |
 | Two pre-existing ruff errors, two dozen pre-existing mypy errors | low | In `iso_backends/isalhg_backend.py`, `viz/instruction_view.py`, `core/*`. Not mine — none of those files is in my diff. My files are clean on both. | repo owner |

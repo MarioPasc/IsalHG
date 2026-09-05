@@ -242,7 +242,13 @@ maximum), `fact_rank` (B), `fact_rank_roles` (B′, WD50K only), `local_colour`
    `{insert_fact, delete_fact, add_constant, remove_constant,
    insert_fact_new_constant}`, 4 distinct edits (rejection: result connected,
    inside the envelope, not isomorphic to the base; identical instances for all
-   arms). Record `d(base, edited)` per arm, `|w(base)|`, `|w(edited)|`, the
+   arms). Edit-kind semantics (the probe's, ported verbatim): `insert_fact` /
+   `delete_fact` add or remove one fact over existing constants;
+   `add_constant` / `remove_constant` add an existing constant to one fact or
+   remove one from it (an arity change — the constant set is preserved unless
+   the removal strands a constant, which is then compacted away);
+   `insert_fact_new_constant` is the only kind that grows the constant set.
+   The regime flag is stamped from the constant identities, not from the kind. Record `d(base, edited)` per arm, `|w(base)|`, `|w(edited)|`, the
    regime (`constant_set_preserved ∈ {0,1}`), and the *zero-shift* flag for
    `fact_rank` (canonical order of the surviving constants unchanged).
 3. *M2 — correlation with the known fact-level difference.* (a) the 555 NDC

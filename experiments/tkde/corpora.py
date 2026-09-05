@@ -43,8 +43,23 @@ def results_root(root: Path | str | None = None) -> Path:
 
 
 def corpora_root(root: Path | str | None = None) -> Path:
-    """Directory holding the frozen collections."""
-    return results_root(root) / CORPORA_SUBDIR
+    """Directory holding the frozen collections.
+
+    Resolution order: an explicit ``root`` (the directory holding ``corpora/``);
+    ``ISALHG_CORPORA_ROOT``; ``ISALHG_DATA_ROOT/corpora`` when that directory
+    exists (the layout on Picasso, where the frozen corpora are staged with the
+    raw data and the results root is a different filesystem); otherwise the
+    results root, which is where the freeze script writes them locally.
+    """
+    if root is not None:
+        return Path(root) / CORPORA_SUBDIR
+    explicit = os.environ.get("ISALHG_CORPORA_ROOT")
+    if explicit:
+        return Path(explicit)
+    data_root = os.environ.get("ISALHG_DATA_ROOT")
+    if data_root and (Path(data_root) / CORPORA_SUBDIR).is_dir():
+        return Path(data_root) / CORPORA_SUBDIR
+    return results_root(None) / CORPORA_SUBDIR
 
 
 def collection_dir(name: str, root: Path | str | None = None) -> Path:

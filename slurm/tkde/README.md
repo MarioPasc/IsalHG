@@ -81,9 +81,11 @@ for (( U = LO; U < HI; U++ )); do
     # got 1 h instead of 6 h is not comparable with its paired units, and if
     # wall-clock is reported you have silently corrupted the measurement.
 
-    "${PY}" -m experiments.tkde.rqN --unit "${U}" --out "${OUT_DIR}"
-
-    tkde_sync_partial          # bound the loss if the node dies mid-bundle
+    # NEVER run the payload in the foreground: bash defers the EXIT/TERM traps
+    # while it waits on a foreground child, so a scancel or a TIMEOUT kills the
+    # step with the copy-back never having run. tkde_run_synced backgrounds it
+    # and syncs on a timer.
+    tkde_run_synced "${PY}" -m experiments.tkde.rqN --unit "${U}" --out "${OUT_DIR}"
 done
 
 tkde_job_footer
@@ -191,6 +193,38 @@ load-bearing:
 Submit the recovery sweep at launch time with `--dependency=afterany`, not by
 hand. A recovery step that depends on someone remembering does not happen.
 
+### Row files carry a run tag; smokes stage apart
+
+A row file is named `rows_<table>__<8hex>-<unit>.csv`. The `8hex` prefix is
+`experiments.tkde.rq1.run_tag(config)` — a hash of the parameters that decide
+*what* a unit measures, with the distribution keys (`n_shards`, `smoke`)
+excluded so re-sharding resumes a campaign instead of recomputing it. Without
+the tag, two runs whose unit ids coincide but whose parameters differ are
+indistinguishable on disk and the second inherits the first's rows.
+
+`load_table` (`analyze_rq1.py`, shared by the RQ2 and RQ7 analyzers) skips **an
+untagged file** and **any path with a `_smoke` component**. Both failure shapes
+happened: a smoke staged into `_smoke/`, and untagged files left in the real
+directory by the 2026-09-05 cluster smokes. The RQ3/RQ4/RQ5 analyzers exclude by
+`_smoke` path only.
+
+So: a smoke **must** stage under a `_smoke*` subtree
+(`STAGE_SUBDIR="${RQ_FOLDER}/_smoke/${EXPERIMENT}"`), because it shares the
+campaign's unit-id namespace — `exact0-ndc_classes-fact_rank` is a unit of both,
+and five toy members would otherwise stand in for the corpus and mark the unit
+done.
+
+### Depending on a job that Slurm has already forgotten
+
+Slurm purges job records after a while, and `--dependency=afterok:<old id>`
+against a purged job is **rejected** with `Job dependency problem` — the
+submission fails, it does not silently run. Confirm the record still exists
+before depending on it:
+
+```bash
+sacct -j <ID> -n -X -o JobID,State     # empty output = purged, pick another anchor
+```
+
 ### `$LOCALSCRATCH` staging
 
 `tkde_stage_localscratch <subdir>` gives you `$OUT_DIR` on the node's local disk
@@ -212,6 +246,50 @@ and installs the copy-back. Write everything there; write nothing directly to
   once direct, then `comm -23` the two `find . -type f | sort` listings. That
   diff — not a count of the artefact you happen to remember — is what catches a
   lost file.
+
+### Never run the payload in the foreground — `tkde_run_synced`
+
+The traps above only fire if the shell can run them. **Bash defers a trap while
+it waits on a foreground child**, so a `scancel` or a wall-clock kill terminates
+the step with `tkde_finalize` never having run. Measured on job `2213210`
+(2026-09-05): fourteen minutes of rows died on the node.
+
+`common.sh` therefore provides `tkde_run_synced <command> [args...]` — it
+backgrounds the payload, calls `tkde_sync_partial` every
+`TKDE_SYNC_INTERVAL_S` (default 300 s), then waits and returns the payload's
+status. Every worker's payload goes through it. Two things it buys: the TERM
+trap can run at all, and the loss on a TIMEOUT or an OOM kill is bounded to one
+interval instead of the whole task. Rows also become visible on HOME mid-run,
+which is how a long job is monitored.
+
+A job that writes straight to `$ISALHG_RESULTS_ROOT` (the matrices job) keeps
+the wrapper anyway: there the sync is a no-op and the trap is the whole point.
+
+### Shared matrices: the runner's `--out` is the node, the cache is on HOME
+
+`--out` points at the **node-local stage root**, which starts empty. Anything
+that reads the cached `N × N` distance matrices must therefore resolve them
+from `$ISALHG_RESULTS_ROOT/matrices` on HOME, or it silently rebuilds every
+matrix the shared `tkde-matrices` job already produced. Two mechanisms are in
+use and both are correct:
+
+- **Symlink** (`rq1`, `rq2`, `rq7`): `ln -sfn "${ISALHG_RESULTS_ROOT}/matrices"
+  "${STAGE_ROOT}/matrices"`. Reads resolve to HOME, and a job that also *writes*
+  a matrix (rq2's `ndc_substances` census) writes it straight into the shared
+  cache through the link. The smoke run is the exception and gets its own
+  `${STAGE_ROOT}/matrices` directory on the node — its 20-member subset would
+  otherwise overwrite a several-hour real cache with a toy.
+- **Flag** (`rq4`, `rq5`): `--matrices-root "${ISALHG_RESULTS_ROOT}"`, with
+  `--out` still on the node.
+
+**The copy-back never follows that symlink into HOME's `matrices/`, and must not
+start doing so.** The reason is the layout, not the link: `tkde_finalize` and
+`tkde_sync_partial` mirror `${MYLOCALSCRATCH}/out/` only, while `STAGE_ROOT` is
+`${MYLOCALSCRATCH}/root` — a *sibling* of `out/`. The `matrices` link lives at
+`${STAGE_ROOT}/matrices`, outside the mirrored tree; what is inside it is the
+per-experiment link `${STAGE_ROOT}/<RQ>/<experiment>` pointing back at
+`$OUT_DIR`. A change that mirrored `STAGE_ROOT` instead of `out/` would rsync
+HOME's `matrices/` onto itself through the link — the one edit to refuse here.
 
 ### Threads
 
@@ -259,6 +337,18 @@ sacct -j <ID> -n -P -o JobID,State,Elapsed,MaxRSS,ReqMem | awk -F'|' '$1 ~ /\.ba
 sacct -j <ID> -X -n -P -o JobID,State,Elapsed,NodeList   # states: this IS what -X is for
 seff <ID>_<TASK>                                          # completed jobs only
 ```
+
+Measured peaks in wave 3, for sizing anything of the same shape:
+
+| Job | MaxRSS | What drives it |
+|---|---|---|
+| `tkde-matrices` (2213202) | 34.2 GB | the corpus plus every full-collection matrix resident at once |
+| RQ3+RQ6 bundle | 20.4 GB | RQ6's per-shard cache grew across units; fixed by refitting per unit |
+
+Both were read off the `.batch` step, not off `-X`. A bundled task that
+memoizes across units is the shape to watch: the peak is the *last* unit's
+footprint plus everything the earlier ones left behind, so a cache that is not
+reset per unit turns a flat profile into a rising one.
 
 ### Results go to HOME, not FSCRATCH
 

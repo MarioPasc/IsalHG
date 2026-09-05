@@ -433,6 +433,50 @@ node is not evidence that a compute node will run the job.
 
 ---
 
+## 6.2 Wave-3 campaign jobs (2026-09-05)
+
+The provenance reference for every wave-3 result on HOME.
+
+| Job | Id |
+|---|---|
+| RQ7 envelope | `2215078` |
+| RQ2 well-posedness, main | `2215097` |
+| RQ2 well-posedness, census | `2215136` |
+| RQ1 addressing | `2215137` |
+| RQ3 + RQ6 bundle | `2215096` |
+| RQ5 patterns | `2215162` |
+| RQ4 screen | `2215168` |
+
+Four operational facts measured while placing them.
+
+**Payloads run backgrounded.** Bash defers EXIT/TERM traps while it waits on a
+foreground child, so `scancel` on job `2213210` killed the step before
+`tkde_finalize` ran and fourteen minutes of rows died on the node. Every worker
+now routes its payload through `tkde_run_synced` (`common.sh`), which
+backgrounds it and mirrors the staged tree back every `TKDE_SYNC_INTERVAL_S`
+(default 300 s) — the trap can then run, and a TIMEOUT or an OOM kill costs at
+most one interval.
+
+**Row files carry a run tag.** Campaign rows are
+`rows_<table>__<8hex>-<unit>.csv`, the prefix being a hash of the parameters
+that decide what the unit measures. The analyzers skip untagged files and any
+path under `_smoke*`; smokes stage in their own subtree because they share the
+campaign's unit-id namespace and would otherwise mark a unit done with five toy
+members.
+
+**Job records are purged.** `--dependency=afterok:<id>` on a job Slurm has
+already forgotten is rejected at submission with `Job dependency problem`.
+Check with `sacct -j <id>` before anchoring a dependency on it — an empty
+listing means the record is gone, not that the job failed.
+
+**Memory: read the `.batch` step.** `sacct -X` reports an empty `MaxRSS`
+(accounting records memory on `.batch`; `-X` shows allocation lines only).
+Measured peaks: the matrices job `2213202` at **34.2 GB**, the RQ3+RQ6 bundle at
+**20.4 GB**. The RQ6 figure was cache growth across the units of one bundled
+task, fixed by refitting per unit rather than by raising the request.
+
+---
+
 ## 7. Deviations from the wave-1 brief
 
 | # | Brief said | Reality | Resolution |

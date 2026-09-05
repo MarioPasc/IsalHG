@@ -49,13 +49,17 @@ CERT_ARM = "nauty_cert"
 
 # DESIGN.md section 2, "Gate and fallback": the pooled normalized median of
 # fact_rank must land within +-0.05 of these probe values, in the order the
-# section lists the corpora, and the pointer arm within +-0.05 of 0.500.
+# section lists the corpora, and the pointer arm within +-0.05 of 0.577 -- the
+# probe's own pointer number re-scored with an equality-keyed alphabet. The
+# probe's published 0.500 compared tokens by hash, and TokenP(i) == TokenN(i)
+# under hashing, so it under-reported the pointer response (DESIGN section 2,
+# amendment of 2026-09-06).
 GATE_FACT_RANK: dict[str, float] = {
     "synthetic_rq1": 0.188,
     "ndc_classes": 0.211,
     "wd50k66": 0.300,
 }
-GATE_POINTER = 0.500
+GATE_POINTER = 0.577
 GATE_TOLERANCE = 0.05
 WITHIN_TOKENS = 2
 
@@ -244,8 +248,11 @@ def m1_response(m1: Any) -> Any:
     frame["d_abs"] = pd.to_numeric(frame["d_abs"], errors="coerce")
     frame["len_base"] = pd.to_numeric(frame["len_base"], errors="coerce")
     frame = frame[(frame["censored"] == 0) & frame["d_abs"].notna()]
+    # d_abs is measured over the seed-prefixed symbol sequence (the fingerprint
+    # F = (seed label, w*)), which has len_base + 1 symbols; the denominator must
+    # be the length of the same sequence, not of the bare word.
     frame["normalized"] = np.where(
-        frame["len_base"] > 0, frame["d_abs"] / frame["len_base"], np.nan
+        frame["len_base"] > 0, frame["d_abs"] / (frame["len_base"] + 1), np.nan
     )
     return frame
 

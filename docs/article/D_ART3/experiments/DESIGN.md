@@ -279,8 +279,27 @@ distances for the two arms compared.
 
 **Gate and fallback.** The pipeline must reproduce the probe within tolerance
 (pooled normalized median of `fact_rank` within ±0.05 of 0.188 / 0.211 / 0.300;
-`pointer` within ±0.05 of 0.500). A discrepancy is a bug until explained. No
+`pointer` within ±0.05 of **0.577**). A discrepancy is a bug until explained. No
 scientific fallback: the selection is closed.
+
+*Amendment (2026-09-06, after the first campaign rows).* The probe's pointer
+value of 0.500 (`../foundation/probes_2026-09.md` §9) is superseded. The probe
+scored the pointer arm with `rapidfuzz.distance.Levenshtein.distance` applied
+directly to tuples of `Σ_HG` tokens, and rapidfuzz compares generic sequence
+elements by hash; `TokenP(i)` and `TokenN(i)` are hash-equal frozen dataclasses,
+so pointer advances and retreats were matched against each other and the
+response was under-reported on 67.3 % of pairs. Re-scoring the probe's own
+corpus and edits with an equality-keyed alphabet
+(`experiments/tkde/budget.py::symbol_distance`, regression-pinned) gives 0.577
+under the probe's normalizer; the pipeline measures 0.61 on `synthetic_rq1`
+and `ndc_classes`. The `fact_rank` targets are unaffected (0 of 2,400 probe
+pairs under-reported on fact words) and stand. The selection conclusion —
+`fact_rank` responds to a single edit at a third of the pointer alphabet's
+response — is unchanged and strengthened. Normalization of the single-edit
+response: the distance is measured over the seed-prefixed symbol sequence (the
+fingerprint `F = (seed label, w*)`), so the analyzer divides by that sequence's
+length, `|w| + 1`; the rows persist `d_abs` and `len_base = |w|` unchanged.
+Investigation record: `.claude/notes/2026-09-05-tkde-w3/rq1-gate.md`.
 
 **Compute.** ≈ 150 k edited instances; arms B–D1 ≈ 50 µs each; arm A ≈ 125
 core-hours at the 60 s budget → one array on `sd`, tasks bundled to ≥ 2 h.

@@ -1,0 +1,53 @@
+# Shared N x N distance matrices for the IEEE TKDE campaign.
+#
+# One unit = one (collection, arm) pair. The member order is the frozen
+# records.jsonl order and nothing else -- it is the cache key's order component,
+# so RQ2's census, RQ4's screen and RQ5's clustering all hit the same files.
+#
+# Arm names are used VERBATIM as cache keys: `netlsd` and `netlsd_l2` are the
+# same distance but cache separately, so consumers must ask for the same string
+# the builder used. The list below is the frozen one.
+#
+# Measured per-pair costs (COMPETITOR_AUDIT.md, 200-member samples, `sd`):
+#   netlsd 1.60 ms | hpd_jsd 0.22-0.38 ms | bipartite_ged_path 44-55 us
+#   nauty_cert 51 us | nauty_cert_rows 57 us | wl_l1 37-44 us
+#   bipartite_ged_assign 31-32 us | degree_seq_l1 3 us | size_l1 1 us
+# wd50k66 has 7.95 M pairs, so NetLSD alone is ~3.5 core-hours and dominates.
+
+n_jobs: null # null -> SLURM_CPUS_PER_TASK, else 1
+
+collections:
+  - name: wd50k66 # 3,988 members; n_types = 1, n_preds = 351, roles present
+    arms:
+      - fact_rank
+      - fact_rank_roles
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: ndc_classes # 1,381 members; n_types = 4, n_preds = 1, no roles
+    arms:
+      - fact_rank
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: wd50k100 # 1,837 members; RQ5 purity control (supplement)
+    arms:
+      - fact_rank
+      - nauty_cert
+      - wl_l1
+      - size_l1
+      - degree_seq_l1

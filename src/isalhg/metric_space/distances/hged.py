@@ -388,6 +388,13 @@ class ExactHGED(HypergraphDistance):
         unbounded. A complementary, deterministic ceiling knob.
     """
 
+    # Labelled unit costs, both kinds: ``_vertex_cost`` charges 1 for every
+    # matched vertex pair whose types differ, and the substitution block of
+    # ``_edge_cost`` adds 1 to a matched edge pair whose predicates differ. On
+    # a trivial vocabulary both terms vanish and the oracle reduces to the
+    # structural distance.
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(self, *, timeout: float | None = None, max_expansions: int | None = None) -> None:
         self._timeout = timeout
         self._max_expansions = max_expansions
@@ -407,18 +414,29 @@ class ExactHGED(HypergraphDistance):
 # ---------------------------------------------------------------------------
 
 
-def _bipartite_matching(
+def _bipartite_assignment(
     H1: SparseHypergraph, H2: SparseHypergraph, lsa: Any, np: Any
-) -> dict[NodeId, NodeId]:
-    """Riesen & Bunke (2009) node assignment -> a single vertex correspondence.
+) -> tuple[dict[NodeId, NodeId], float]:
+    """Riesen & Bunke (2009) node assignment -> a correspondence *and* its LSAP value.
 
     Builds the ``(n1+n2) x (n1+n2)`` LSAP with a substitution block (label + a
     local degree-difference proxy for structure), diagonal deletion/insertion
-    blocks, and a zero dummy-dummy block, then reads off the real-to-real matches.
+    blocks, and a zero dummy-dummy block, then returns the real-to-real matches
+    together with the optimal assignment value.
+
+    The two outputs are the two readings the article separates. The
+    correspondence feeds :class:`BipartiteHGED`, which re-prices it as an
+    actual edit and so returns an upper bound on the exact distance. The value
+    is the *raw assignment reading*: what the Riesen-Bunke construction scores
+    the pair at before any edit is priced. It is not an edit cost -- the local
+    degree proxy is a stand-in for structure, not a count of operations -- so
+    it neither bounds the exact distance nor vanishes only on isomorphic pairs.
+    :class:`BipartiteGEDAssign` exposes it precisely so RQ2 can measure those
+    false zeros instead of asserting them.
     """
     n1, n2 = H1.n_nodes, H2.n_nodes
     if n1 == 0 or n2 == 0:
-        return {}
+        return {}, 0.0
     dim = n1 + n2
     forbidden = float(dim + H1.n_edges + H2.n_edges + 10) * 4.0
     deg1 = [H1.degree(v) for v in range(n1)]
@@ -442,7 +460,14 @@ def _bipartite_matching(
     for i, j in zip(rows, cols, strict=True):
         if i < n1 and j < n2:
             pi[int(i)] = int(j)
-    return pi
+    return pi, float(cost[rows, cols].sum())
+
+
+def _bipartite_matching(
+    H1: SparseHypergraph, H2: SparseHypergraph, lsa: Any, np: Any
+) -> dict[NodeId, NodeId]:
+    """Return only the vertex correspondence of :func:`_bipartite_assignment`."""
+    return _bipartite_assignment(H1, H2, lsa, np)[0]
 
 
 class BipartiteHGED(HypergraphDistance):
@@ -452,7 +477,17 @@ class BipartiteHGED(HypergraphDistance):
     exact edit cost under it. That cost realises an actual edit sequence, so it
     upper-bounds the exact oracle: ``ExactHGED(H, H') <= BipartiteHGED(H, H')``.
     Optional scalable cross-check (decision DQ2), not load-bearing.
+
+    This is the **edit-path reading** of the bipartite GED, registered as
+    ``bipartite_ged_path`` as well as under its historical name
+    ``bipartite_hged``. Its companion is :class:`BipartiteGEDAssign`, the raw
+    assignment reading; RQ2 reports both because they fail differently.
     """
+
+    # Same labelled unit costs as ExactHGED -- the cost of the fixed
+    # correspondence is priced by the same ``_vertex_cost`` / ``_edge_cost``
+    # pair, so a type or predicate substitution costs 1 here too.
+    labels_used = frozenset({"vertex", "edge"})
 
     @property
     def name(self) -> DistanceName:
@@ -471,5 +506,72 @@ class BipartiteHGED(HypergraphDistance):
         )
 
 
+class BipartiteGEDAssign(HypergraphDistance):
+    """The raw Riesen-Bunke assignment value -- ``bipartite_ged_assign``.
+
+    Returns the optimal value of the vertex LSAP itself, before any edit is
+    priced: the substitution block scores a matched pair by
+    ``[labels differ] + |deg(u) - deg(v)|``, and the diagonal blocks charge
+    ``1 + deg`` for a deletion or an insertion.
+
+    Why it is a separate arm. The literature reports two different numbers
+    under the name "bipartite graph edit distance": the cost of the edit path
+    the assignment induces (:class:`BipartiteHGED`) and the assignment's own
+    optimum (this class). Only the first is an edit cost, and only the first
+    upper-bounds the exact distance. This one is a *lower-bound-flavoured*
+    heuristic whose local degree proxy is not a count of operations at all, and
+    it has **false zeros**: any two hypergraphs whose vertices pair up with
+    matching types and equal degrees score 0 whether or not they are
+    isomorphic, because no term in the matrix sees which vertices share a
+    hyperedge. RQ2 measures that rate rather than assuming it, which is why the
+    reading is exposed instead of being folded into the other class.
+
+    Not a metric, and not claimed to be: it is symmetric and non-negative, but
+    identity of indiscernibles fails by construction and the triangle
+    inequality is not asserted.
+    """
+
+    # The substitution block charges 1 when the two vertex types differ, so
+    # vertex labels are read. Edge labels are *not*: the matrix is built from
+    # vertex degrees and types only, and no predicate appears anywhere in it.
+    labels_used = frozenset({"vertex"})
+
+    @property
+    def name(self) -> DistanceName:
+        return "bipartite_ged_assign"
+
+    def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
+        """Return the optimal value of the Riesen-Bunke vertex LSAP.
+
+        Parameters
+        ----------
+        H1, H2 : SparseHypergraph
+            The two hypergraphs to compare.
+
+        Returns
+        -------
+        float
+            Non-negative assignment value; ``0`` on isomorphic pairs and also
+            on the non-isomorphic pairs the construction cannot separate.
+
+        Raises
+        ------
+        RepresentationDependencyMissingError
+            If ``scipy`` or ``numpy`` is not installed.
+        """
+        lsa, np = _import_scipy()
+        if H1.n_nodes == 0 and H2.n_nodes == 0:
+            return 0.0
+        if H1.n_nodes == 0 or H2.n_nodes == 0:
+            # One side empty: every vertex of the other is an insertion, priced
+            # by the same ``1 + deg`` the diagonal block would charge.
+            present = H1 if H2.n_nodes == 0 else H2
+            return float(sum(1 + present.degree(v) for v in range(present.n_nodes)))
+        return _bipartite_assignment(H1, H2, lsa, np)[1]
+
+
 register_distance("exact_hged", ExactHGED)
+register_distance("exact_ged", ExactHGED)
 register_distance("bipartite_hged", BipartiteHGED)
+register_distance("bipartite_ged_path", BipartiteHGED)
+register_distance("bipartite_ged_assign", BipartiteGEDAssign)

@@ -148,6 +148,16 @@ class IsalHGLevenshtein(HypergraphDistance):
         Canonical-string implementation. ``None`` uses the package default.
     """
 
+    # Both kinds, through two different mechanisms. Edge labels ride in the
+    # token grammar: a ``V`` token is ``V[edge_label; i; j; new vertex
+    # labels]``, so the predicate of every fact and the type of every
+    # constant introduced by that fact are written into the string. The one
+    # constant no ``V`` token introduces is the seed, whose type is supplied by
+    # the ``("seed", label)`` prefix Corollary A prepends (emitted only when
+    # ``n_vertex_labels > 1``). Between them every label of a connected input
+    # is recorded.
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(
         self,
         *,

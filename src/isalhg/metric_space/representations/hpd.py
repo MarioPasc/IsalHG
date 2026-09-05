@@ -92,6 +92,14 @@ class HPDDistance(HypergraphDistance):
         At call time if ``xgi``, ``networkx``, or ``scipy`` is not installed.
     """
 
+    # Label-blind, on both sides of the pipeline. ``XGIAdapter.to_external``
+    # carries members only (the XGI hypergraph it builds has empty node
+    # attributes), and the hyperedge portrait itself indexes purely on
+    # hyperedge *cardinality* and line-graph distance, so there is no slot for
+    # a type or a predicate even if the adapter carried them. Adding one would
+    # be a new method, not a wiring fix.
+    labels_used = frozenset()
+
     def __init__(self, *, sqrt_js: bool = True) -> None:
         self._sqrt_js = sqrt_js
 

@@ -106,6 +106,11 @@ class HypergraphWLDistance(HypergraphDistance):
         If ``metric`` is not one of ``"l1"`` / ``"chi2"``.
     """
 
+    # wl_hash seeds each vertex colour with H.vertex_label(v) and mixes
+    # H.edge_label(e) into every edge signature, so both label kinds enter the
+    # refinement from round 0 (verified on the "cpp" and "python" backends).
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(
         self,
         *,
@@ -161,4 +166,5 @@ class HypergraphWLDistance(HypergraphDistance):
 
 
 register_distance("hypergraph_wl_l1", lambda: HypergraphWLDistance(metric="l1"))
+register_distance("wl_l1", lambda: HypergraphWLDistance(metric="l1"))
 register_distance("hypergraph_wl_chi2", lambda: HypergraphWLDistance(metric="chi2"))

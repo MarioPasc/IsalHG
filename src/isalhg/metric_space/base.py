@@ -42,6 +42,29 @@ class HypergraphDistance(ABC):
     """
 
     # ------------------------------------------------------------------
+    # Label declaration
+    # ------------------------------------------------------------------
+
+    labels_used: frozenset[str] = frozenset()
+    """Which label kinds of the input this distance reads: ``"vertex"`` and/or ``"edge"``.
+
+    A knowledge base is a *labelled* hypergraph -- constants carry a type
+    (the vertex label) and facts carry a predicate (the edge label) -- so a
+    representation that silently drops one of the two compares less
+    information than the others and would make an unfair row in the
+    competitor tables. Every concrete distance therefore declares what it
+    actually reads, and the declaration is pinned against measured behaviour
+    by the relabel-sensitivity suite in
+    ``tests/unit/metric_space/test_representations_kb.py``: relabelling a
+    vertex must move a distance that declares ``"vertex"`` and must leave one
+    that does not declare it unchanged, and likewise for edges.
+
+    The empty default is deliberately the conservative one: a subclass that
+    forgets to declare is read as label-blind, which the suite will contradict
+    the moment the distance does react to a relabelling.
+    """
+
+    # ------------------------------------------------------------------
     # Identity
     # ------------------------------------------------------------------
 

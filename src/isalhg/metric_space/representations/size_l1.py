@@ -46,6 +46,9 @@ class SizeL1Distance(HypergraphDistance):
     docstring for its role as the size floor of every comparison surface.
     """
 
+    # Label-blind by definition: the fingerprint is the pair ``(n, m)``.
+    labels_used = frozenset()
+
     @property
     def name(self) -> DistanceName:
         return "size_l1"

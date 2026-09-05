@@ -152,6 +152,13 @@ class NautyLeviEditDistance(HypergraphDistance):
     scientific point.
     """
 
+    # ``to_levi`` colours a constant node with its type and a fact node with
+    # ``|Sigma_V| + predicate``, so both label kinds reach nauty through the
+    # colouring, and ``color_signature`` restores the absolute colour identity
+    # the ordered partition drops. Relabelling either kind therefore moves the
+    # certificate.
+    labels_used = frozenset({"vertex", "edge"})
+
     @property
     def name(self) -> DistanceName:
         return "nauty_levi_edit"
@@ -241,4 +248,136 @@ class NautyLeviEditDistance(HypergraphDistance):
         return np.asarray(result, dtype=np.float64)
 
 
+class NautyCertRowsDistance(HypergraphDistance):
+    """Levenshtein over the canonical Levi adjacency *rows* -- ``nauty_cert_rows``.
+
+    The second tokenization of the same nauty canonical form.
+    :class:`NautyLeviEditDistance` spends one symbol per certificate *byte*;
+    this arm spends one symbol per Levi *node*, the symbol being the row
+    ``(colour, *sorted canonical positions of the neighbours)`` returned by
+    :func:`isalhg.iso_backends.canonical_order.nauty_certificate_rows`.
+
+    The pair is the point. Both arms read the identical canonical form, so any
+    difference between their distances is attributable to the tokenization
+    alone -- which is what makes this the supplementary ablation of the
+    certificate member (DESIGN.md G3, L9), not an independent competitor. Both
+    are exact at zero: the colour travels inside each row, so equal row
+    sequences determine the whole *coloured* canonical graph and hence an
+    isomorphism.
+
+    Rows are tuples of ints, i.e. hashable symbols, and ``rapidfuzz`` computes
+    Levenshtein over sequences of hashables directly -- no code-point encoding
+    step is needed.
+
+    Layering. :mod:`isalhg.iso_backends.canonical_order` is imported inside
+    method bodies. ``metric_space`` generally avoids that direction (this
+    module's other class duplicates the small ``pynauty`` construction rather
+    than import it), but the two nauty tokenizations the experiments compare
+    are one definition and must have one source of truth; the precedent is
+    :func:`isalhg.metric_space.distances.fact_levenshtein.fact_word`, which
+    imports ``canonical_ranks`` the same way.
+    """
+
+    # Same colouring as the certificate arm: the row's leading symbol *is* the
+    # Levi colour, which is the vertex type on the constant side and
+    # ``|Sigma_V| + predicate`` on the fact side.
+    labels_used = frozenset({"vertex", "edge"})
+
+    @property
+    def name(self) -> DistanceName:
+        return "nauty_cert_rows"
+
+    def fingerprint(self, H: SparseHypergraph) -> tuple[tuple[int, ...], ...]:
+        """Return the canonical Levi adjacency rows of ``H``.
+
+        Parameters
+        ----------
+        H : SparseHypergraph
+            The hypergraph to encode.
+
+        Returns
+        -------
+        tuple[tuple[int, ...], ...]
+            One row per Levi node in canonical order; ``()`` when ``H`` is
+            empty.
+
+        Raises
+        ------
+        isalhg.errors.BackendUnavailableError
+            If ``pynauty`` is not installed.
+        """
+        from isalhg.iso_backends.canonical_order import nauty_certificate_rows
+
+        return nauty_certificate_rows(H)
+
+    def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
+        """Token-level Levenshtein distance between the two row sequences.
+
+        Parameters
+        ----------
+        H1, H2 : SparseHypergraph
+            The two hypergraphs to compare.
+
+        Returns
+        -------
+        float
+            Non-negative integer cast to float; ``0`` iff ``H1`` and ``H2`` are
+            isomorphic as labelled hypergraphs.
+
+        Raises
+        ------
+        RepresentationDependencyMissingError
+            If ``rapidfuzz`` is not installed.
+        isalhg.errors.BackendUnavailableError
+            If ``pynauty`` is not installed.
+        """
+        Levenshtein = _import_rapidfuzz()
+        return float(Levenshtein.distance(self.fingerprint(H1), self.fingerprint(H2)))
+
+    def matrix(self, corpus: Sequence[SparseHypergraph]) -> NDArray[np.float64]:
+        """Pairwise Levenshtein matrix over ``corpus``.
+
+        Computes the rows once per hypergraph, then fills the upper triangle.
+
+        Parameters
+        ----------
+        corpus : Sequence[SparseHypergraph]
+            Hypergraphs to compare; row/column ``i`` corresponds to
+            ``corpus[i]``.
+
+        Returns
+        -------
+        numpy.ndarray
+            Symmetric ``(N, N)`` ``float64`` matrix with a zero diagonal.
+
+        Raises
+        ------
+        RepresentationDependencyMissingError
+            If ``rapidfuzz`` or ``numpy`` is not installed.
+        """
+        Levenshtein = _import_rapidfuzz()
+        try:
+            import numpy as np
+        except ImportError as exc:  # pragma: no cover - exercised only without numpy
+            raise RepresentationDependencyMissingError(
+                "numpy is required for NautyCertRowsDistance.matrix(); "
+                "install via `pip install numpy`"
+            ) from exc
+
+        size = len(corpus)
+        if size == 0:
+            return np.zeros((0, 0), dtype=np.float64)
+
+        rows = [self.fingerprint(H) for H in corpus]
+        result = np.zeros((size, size), dtype=np.float64)
+        for i in range(size):
+            for j in range(i + 1, size):
+                value = float(Levenshtein.distance(rows[i], rows[j]))
+                result[i, j] = value
+                result[j, i] = value
+        return result
+
+
 register_distance("nauty_levi_edit", lambda: NautyLeviEditDistance())
+register_distance("nauty_cert", lambda: NautyLeviEditDistance())
+register_distance("nauty_cert_rows", NautyCertRowsDistance)

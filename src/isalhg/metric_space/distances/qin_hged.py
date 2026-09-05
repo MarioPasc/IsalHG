@@ -541,6 +541,11 @@ class QinHGED(HypergraphDistance):
         :class:`HGEDComputationError`.
     """
 
+    # Qin's op set includes node- and hyperedge-label substitution at unit
+    # cost, so both kinds are read -- the same cost model ``ExactHGED``
+    # implements, which is why the two solvers agree on labelled input.
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(
         self,
         *,

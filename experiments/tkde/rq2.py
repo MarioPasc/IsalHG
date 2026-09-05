@@ -47,7 +47,13 @@ from experiments.tkde import corpora as corpora_io
 from experiments.tkde.budget import run_with_budget_detail
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
-from experiments.tkde.rq1 import corpora_root
+from experiments.tkde.rq1 import (
+    corpora_root,
+    deploy_stamps,
+    parse_shard,
+    run_tag,
+    table_file,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -747,12 +753,12 @@ def _unit_context(
     return context
 
 
-def unit_is_done(paths: RunPaths, unit: Unit) -> bool:
+def unit_is_done(paths: RunPaths, unit: Unit, tag: str) -> bool:
     """True when every row file this unit owns exists and parses as CSV."""
     import csv
 
     for table in unit.tables:
-        target = paths.dir / f"rows_{table}__{unit.unit_id}.csv"
+        target = paths.dir / f"rows_{table_file(tag, table, unit.unit_id)}.csv"
         if not target.is_file():
             return False
         try:
@@ -768,13 +774,15 @@ def run_unit(
     config: Mapping[str, Any],
     paths: RunPaths,
     data_root: Path | None = None,
+    tag: str | None = None,
 ) -> dict[str, int]:
     """Compute one unit and write its row files."""
+    stamp = tag or run_tag(config)
     context = _unit_context(unit, config, Path(paths.root), data_root)
     tables = RUNNERS[unit.kind](unit, context)
     counts: dict[str, int] = {}
     for table, rows in tables.items():
-        write_rows(paths, f"{table}__{unit.unit_id}", rows, columns=COLUMNS[table])
+        write_rows(paths, table_file(stamp, table, unit.unit_id), rows, columns=COLUMNS[table])
         counts[table] = len(rows)
     return counts
 
@@ -824,7 +832,6 @@ def build_parser() -> argparse.ArgumentParser:
 def main(argv: Sequence[str] | None = None) -> int:
     """Entry point."""
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
-    from experiments.tkde.rq1 import parse_shard
 
     args = build_parser().parse_args(argv)
     config = load_yaml(args.config)
@@ -849,12 +856,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     shard, n_shards = parse_shard(args.shard, len(units))
     mine = units[shard::n_shards]
-    logger.info("RQ2: shard %d/%d -> %d of %d units", shard, n_shards, len(mine), len(units))
+    tag = run_tag(config)
+    logger.info(
+        "RQ2: shard %d/%d -> %d of %d units (run tag %s)",
+        shard,
+        n_shards,
+        len(mine),
+        len(units),
+        tag,
+    )
 
     written: dict[str, int] = {}
     attempted = 0
     for unit in mine:
-        if unit_is_done(paths, unit):
+        if unit_is_done(paths, unit, tag):
             logger.info("skip %s (rows present)", unit.unit_id)
             continue
         if (
@@ -866,7 +881,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             continue
         attempted += 1
         started = time.monotonic()
-        counts = run_unit(unit, config, paths, args.data_root)
+        counts = run_unit(unit, config, paths, args.data_root, tag)
         logger.info("unit %s done in %.1f s: %s", unit.unit_id, time.monotonic() - started, counts)
         for table, count in counts.items():
             written[table] = written.get(table, 0) + count
@@ -876,6 +891,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "experiment": EXPERIMENT,
         "config_path": str(args.config),
         "config": dict(config),
+        "run_tag": tag,
         "shard": f"{shard}/{n_shards}",
         "kinds": kinds,
         "smoke": bool(args.smoke),
@@ -884,15 +900,22 @@ def main(argv: Sequence[str] | None = None) -> int:
         "seeds": seeds(RQ_INDEX),
         "units": [unit.unit_id for unit in mine],
     }
-    extra = {"shard": f"{shard}/{n_shards}", "rows_written": written}
+    extra = {
+        "shard": f"{shard}/{n_shards}",
+        "run_tag": tag,
+        "rows_written": written,
+        **deploy_stamps(),
+    }
     write_config(paths, record)
     write_manifest(paths, extra=extra)
     # The kinds tag keeps the two RQ2 arrays (the immediate one and the
     # matrices-dependent census one) from overwriting each other's per-shard
     # provenance, since their shard numberings both start at 0.
-    tag = "-".join(kinds) if kinds else "all"
+    kinds_tag = "-".join(kinds) if kinds else "all"
     shard_paths = RunPaths(
-        root=results_root, rq=RQ_FOLDER, experiment=f"{EXPERIMENT}/_shards/{tag}-{shard:03d}"
+        root=results_root,
+        rq=RQ_FOLDER,
+        experiment=f"{EXPERIMENT}/_shards/{kinds_tag}-{shard:03d}",
     )
     write_config(shard_paths, record)
     write_manifest(shard_paths, extra=extra)

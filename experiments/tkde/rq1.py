@@ -167,6 +167,87 @@ class Unit:
         return (self.kind,)
 
 
+OPERATIONAL_KEYS: frozenset[str] = frozenset({"n_shards", "smoke"})
+RUN_TAG_LENGTH = 8
+
+
+def run_tag(config: Mapping[str, Any]) -> str:
+    """Short hash of the parameters that determine what a unit measures.
+
+    Every row file is named ``rows_<table>__<run_tag>-<unit_id>.csv``, and the
+    idempotence check looks for exactly that name. Without the tag, two runs
+    whose *unit ids* coincide but whose *parameters* differ are indistinguishable
+    on disk, and the second silently inherits the first's rows -- which is not
+    hypothetical: a ``--smoke`` run and the campaign share the unit-id namespace
+    (``exact0-ndc_classes-fact_rank`` is a unit of both), so five toy members
+    would have stood in for the corpus. Changing ``m1_edits_per_kind`` without
+    changing a block count has the same shape.
+
+    Keys that describe *how* the work is distributed rather than *what* is
+    measured (``n_shards``, ``smoke``) are excluded, so re-sharding a campaign
+    resumes it instead of recomputing it.
+
+    Parameters
+    ----------
+    config : Mapping
+        The parsed configuration, after any ``--smoke`` overlay.
+
+    Returns
+    -------
+    str
+        Eight hexadecimal characters.
+    """
+    import json
+
+    payload = {key: value for key, value in config.items() if key not in OPERATIONAL_KEYS}
+    encoded = json.dumps(payload, sort_keys=True, default=str).encode("utf-8")
+    return hashlib.sha1(encoded, usedforsecurity=False).hexdigest()[:RUN_TAG_LENGTH]
+
+
+def table_file(tag: str, table: str, unit_id: str) -> str:
+    """The ``write_rows`` table name of one unit's row file."""
+    return f"{table}__{tag}-{unit_id}"
+
+
+def deploy_stamps(repo_dir: Path | str | None = None) -> dict[str, str]:
+    """Both deployment stamps, because two trees are in play on the cluster.
+
+    The editable install is a PEP 660 meta-path finder, so it wins over
+    ``PYTHONPATH``: ``isalhg.*`` is imported from the checkout the environment
+    was installed from, while ``experiments.tkde.*`` comes from the deployed
+    runner tree. Recording only one of the two stamps would attribute a result
+    to a tree that did not compute half of it.
+
+    Parameters
+    ----------
+    repo_dir : Path or str or None, optional
+        The runner tree; defaults to ``$REPO_DIR`` or the current directory.
+
+    Returns
+    -------
+    dict
+        ``runner_deploy`` and ``src_deploy``, each the stamp's text or a short
+        note saying why it is unavailable.
+    """
+    import os
+
+    runner = Path(repo_dir or os.environ.get("REPO_DIR") or Path.cwd())
+    installed = Path(
+        os.environ.get(
+            "ISALHG_SRC_REPO",
+            "/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG-tkde",
+        )
+    )
+    stamps: dict[str, str] = {}
+    for name, directory in (("runner_deploy", runner), ("src_deploy", installed)):
+        stamp = directory / ".tkde_deploy"
+        try:
+            stamps[name] = stamp.read_text(encoding="utf-8").strip()
+        except OSError:
+            stamps[name] = f"absent at {stamp}"
+    return stamps
+
+
 def _blocks_for(config: Mapping[str, Any], key: str, collection: str) -> int:
     blocks = dict(config.get(key, {}) or {})
     return max(1, int(blocks.get(collection, 1)))
@@ -798,12 +879,12 @@ def _unit_context(
     }
 
 
-def unit_is_done(paths: RunPaths, unit: Unit) -> bool:
+def unit_is_done(paths: RunPaths, unit: Unit, tag: str) -> bool:
     """True when every row file this unit owns exists and parses as CSV."""
     import csv
 
     for table in unit.tables:
-        target = paths.dir / f"rows_{table}__{unit.unit_id}.csv"
+        target = paths.dir / f"rows_{table_file(tag, table, unit.unit_id)}.csv"
         if not target.is_file():
             return False
         try:
@@ -819,13 +900,15 @@ def run_unit(
     config: Mapping[str, Any],
     paths: RunPaths,
     data_root: Path | None = None,
+    tag: str | None = None,
 ) -> dict[str, int]:
     """Compute one unit and write its row files."""
+    stamp = tag or run_tag(config)
     context = _unit_context(unit, config, Path(paths.root), data_root)
     tables = RUNNERS[unit.kind](unit, context)
     counts: dict[str, int] = {}
     for table, rows in tables.items():
-        write_rows(paths, f"{table}__{unit.unit_id}", rows, columns=COLUMNS[table])
+        write_rows(paths, table_file(stamp, table, unit.unit_id), rows, columns=COLUMNS[table])
         counts[table] = len(rows)
     return counts
 
@@ -908,12 +991,20 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     shard, n_shards = parse_shard(args.shard, len(units))
     mine = units[shard::n_shards]
-    logger.info("RQ1: shard %d/%d -> %d of %d units", shard, n_shards, len(mine), len(units))
+    tag = run_tag(config)
+    logger.info(
+        "RQ1: shard %d/%d -> %d of %d units (run tag %s)",
+        shard,
+        n_shards,
+        len(mine),
+        len(units),
+        tag,
+    )
 
     written: dict[str, int] = {}
     attempted = 0
     for unit in mine:
-        if unit_is_done(paths, unit):
+        if unit_is_done(paths, unit, tag):
             logger.info("skip %s (rows present)", unit.unit_id)
             continue
         if (
@@ -925,7 +1016,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             continue
         attempted += 1
         started = time.monotonic()
-        counts = run_unit(unit, config, paths, args.data_root)
+        counts = run_unit(unit, config, paths, args.data_root, tag)
         logger.info("unit %s done in %.1f s: %s", unit.unit_id, time.monotonic() - started, counts)
         for table, count in counts.items():
             written[table] = written.get(table, 0) + count
@@ -935,6 +1026,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "experiment": EXPERIMENT,
         "config_path": str(args.config),
         "config": dict(config),
+        "run_tag": tag,
         "shard": f"{shard}/{n_shards}",
         "smoke": bool(args.smoke),
         "results_root": str(results_root),
@@ -942,7 +1034,12 @@ def main(argv: Sequence[str] | None = None) -> int:
         "seeds": seeds(RQ_INDEX),
         "units": [unit.unit_id for unit in mine],
     }
-    extra = {"shard": f"{shard}/{n_shards}", "rows_written": written}
+    extra = {
+        "shard": f"{shard}/{n_shards}",
+        "run_tag": tag,
+        "rows_written": written,
+        **deploy_stamps(),
+    }
     # Two writes on purpose. The experiment directory keeps the G6 six files
     # (last shard wins; every write is atomic, so a concurrent shard can never
     # leave a half file), and each shard also keeps its own copy under

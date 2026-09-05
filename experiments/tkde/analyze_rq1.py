@@ -42,6 +42,7 @@ logger = logging.getLogger(__name__)
 
 RQ_FOLDER = "RQ1_addressing"
 EXPERIMENT = "addressing"
+SMOKE_DIR = "_smoke"
 OURS = "fact_rank"
 POINTER_ARM = "isalhg_levenshtein"
 CERT_ARM = "nauty_cert"
@@ -92,6 +93,15 @@ def load_table(root: Path, rq_folder: str, table: str) -> Any:
     base = Path(root) / rq_folder
     frames = []
     for path in sorted(base.rglob(f"rows_{table}__*.csv")):
+        # A smoke run measures five members under the real unit ids, so its rows
+        # must never reach a table. Two guards, because both failure shapes have
+        # occurred: a smoke staged into its own _smoke subtree, and (from the
+        # 2026-09-05 cluster smokes, whose output could not be removed) untagged
+        # files sitting in the real directory. Only a file whose unit segment
+        # carries a run tag is a campaign row.
+        if SMOKE_DIR in path.parts or not _is_tagged(path, table):
+            logger.debug("skipping non-campaign rows %s", path)
+            continue
         try:
             frame = pd.read_csv(path)
         except (OSError, ValueError) as exc:
@@ -102,6 +112,19 @@ def load_table(root: Path, rq_folder: str, table: str) -> Any:
     if not frames:
         return pd.DataFrame()
     return pd.concat(frames, ignore_index=True)
+
+
+def _is_tagged(path: Path, table: str) -> bool:
+    """True when ``rows_<table>__<8 hex>-<unit>.csv`` -- i.e. a campaign row file.
+
+    The run tag is written by :func:`experiments.tkde.rq1.run_tag` and identifies
+    the parameters a row was produced under. A file without one predates the tag
+    and is not part of any campaign.
+    """
+    import re
+
+    stem = path.name[len(f"rows_{table}__") : -len(".csv")]
+    return bool(re.match(r"^[0-9a-f]{8}-", stem))
 
 
 def as_dict(interval: Interval | None) -> dict[str, Any] | None:

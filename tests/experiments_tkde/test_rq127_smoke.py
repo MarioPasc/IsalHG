@@ -189,6 +189,68 @@ def _config(name: str) -> Path:
     return Path(__file__).resolve().parents[2] / "experiments" / "tkde" / "configs" / name
 
 
+class TestRunTag:
+    """The run tag is what stops a smoke run from being mistaken for a campaign."""
+
+    def test_the_same_configuration_gives_the_same_tag(self) -> None:
+        config = rq1.load_yaml(_config("rq1.yaml"))
+        assert rq1.run_tag(config) == rq1.run_tag(dict(config))
+
+    def test_a_smoke_configuration_gives_a_different_tag(self) -> None:
+        config = rq1.load_yaml(_config("rq1.yaml"))
+        assert rq1.run_tag(config) != rq1.run_tag(rq1.smoke_config(dict(config)))
+
+    def test_changing_a_measured_parameter_changes_the_tag(self) -> None:
+        config = rq1.load_yaml(_config("rq1.yaml"))
+        other = dict(config)
+        other["m1_edits_per_kind"] = 8
+        assert rq1.run_tag(config) != rq1.run_tag(other)
+
+    def test_resharding_does_not_change_the_tag(self) -> None:
+        # Otherwise re-sharding a running campaign would recompute all of it
+        # instead of resuming it.
+        config = rq1.load_yaml(_config("rq1.yaml"))
+        other = dict(config)
+        other["n_shards"] = int(config["n_shards"]) * 2
+        assert rq1.run_tag(config) == rq1.run_tag(other)
+
+    def test_the_tag_is_eight_hex_characters(self) -> None:
+        import re
+
+        tag = rq1.run_tag(rq1.load_yaml(_config("rq7.yaml")))
+        assert re.fullmatch(r"[0-9a-f]{8}", tag)
+
+
+class TestUntaggedRowsAreIgnored:
+    """Row files without a run tag are not campaign output and must not be read."""
+
+    def test_an_untagged_file_is_skipped(self, tmp_path: Path) -> None:
+        from experiments.tkde.analyze_rq1 import load_table
+
+        directory = tmp_path / "RQ1_addressing" / "addressing"
+        directory.mkdir(parents=True)
+        header = "rq,experiment,collection,arm,d_abs\n"
+        (directory / "rows_m1__m1-synthetic_rq1-000of001.csv").write_text(
+            header + "1,addressing,synthetic_rq1,fact_rank,9\n", encoding="utf-8"
+        )
+        (directory / "rows_m1__deadbeef-m1-synthetic_rq1-000of001.csv").write_text(
+            header + "1,addressing,synthetic_rq1,fact_rank,1\n", encoding="utf-8"
+        )
+        frame = load_table(tmp_path, "RQ1_addressing", "m1")
+        assert len(frame) == 1
+        assert int(frame.iloc[0]["d_abs"]) == 1
+
+    def test_a_smoke_subtree_is_skipped(self, tmp_path: Path) -> None:
+        from experiments.tkde.analyze_rq1 import load_table
+
+        directory = tmp_path / "RQ7_envelope" / "_smoke" / "envelope"
+        directory.mkdir(parents=True)
+        (directory / "rows_sweep__deadbeef-sweep-x-000of001.csv").write_text(
+            "rq,arm,secs\n7,fact_rank,0.1\n", encoding="utf-8"
+        )
+        assert load_table(tmp_path, "RQ7_envelope", "sweep").empty
+
+
 # ---------------------------------------------------------------------------
 # Aggregate reductions
 # ---------------------------------------------------------------------------

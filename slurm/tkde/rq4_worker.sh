@@ -31,11 +31,19 @@
 # A collection-major order would give one multi-hour task and one four-minute
 # one out of the same even split.
 
+# Memory. No RQ4/RQ5 MaxRSS was ever measured -- the two cluster smokes
+# (2213203/2213204) were cancelled before they were assigned a node. The
+# nearest measurement is the matrices job (2213202): 34.2 GB of a 64 G request
+# with 32 fork-pool workers over the same corpora. The pool here is 8 workers,
+# but the corpus and the memoized matrices are resident per fork rather than
+# shared, so a linear scale-down is not safe: 48 G is >= 50 % headroom over a
+# 30 GB worst case and still schedules on every sd node.
+
 #SBATCH --job-name=tkde-rq4
 #SBATCH --time=0-08:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
-#SBATCH --mem=32G
+#SBATCH --mem=48G
 #SBATCH --constraint=sd
 #SBATCH --account=tic_163_uma
 

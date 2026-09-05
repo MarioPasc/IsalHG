@@ -31,6 +31,7 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import json
 import logging
 import os
 import sys
@@ -683,6 +684,129 @@ def ensure_smoke_matrices(
             build_matrix(items, arm, member_ids=ids, cache_dir=cache_dir, n_jobs=n_jobs)
 
 
+# ---------------------------------------------------------------------------
+# Refill of a censored arm
+# ---------------------------------------------------------------------------
+# A competitor that raised on some corrupted records leaves `censored=1` AUC
+# rows behind (see `_row_worker`). Once the library defect is fixed, that arm
+# has to be re-scored WITHOUT recomputing the seven arms that succeeded --
+# 48 core-hours of work whose numbers are already frozen on disk.
+#
+# The anomaly set is reproducible exactly: the positions come from
+# `np.random.default_rng(unit.seed).choice(n, ...)` over the frozen
+# sub-collection order, and each anomaly from
+# `corrupt(record, kind, budget, unit.seed + position)`. Both are pure
+# functions of the unit, so a refill re-derives the identical collection. It is
+# still CHECKED rather than trusted: the re-derived `anomaly_id`s are asserted
+# equal to the ones the original run persisted in `rows_anomalies`, and a unit
+# whose set does not match is refused rather than rewritten.
+
+
+class RefillMismatchError(RuntimeError):
+    """The re-derived anomaly set differs from the one the original run wrote."""
+
+
+def _censored_arm_rows(path: Path, arm: str) -> bool:
+    """Return True when this unit's AUC file holds a censored row for ``arm``."""
+    import csv
+
+    with path.open(encoding="utf-8", newline="") as handle:
+        for row in csv.DictReader(handle):
+            if row.get("arm") == arm and str(row.get("censored")) == "1":
+                return True
+    return False
+
+
+def _persisted_anomaly_ids(path: Path) -> list[str]:
+    """Return the ``anomaly_id`` column of a persisted rows_anomalies file."""
+    import csv
+
+    with path.open(encoding="utf-8", newline="") as handle:
+        return [row.get("anomaly_id", "") for row in csv.DictReader(handle)]
+
+
+def refill_unit(
+    unit: Unit,
+    arm: str,
+    rows_paths: RunPaths,
+    *,
+    matrices_root: Path,
+    corpora_root: Path | str | None,
+    n_jobs: int,
+    collection_cache: dict[str, Any],
+) -> bool:
+    """Re-score one arm of one unit in place, leaving every other arm untouched.
+
+    Parameters
+    ----------
+    unit : Unit
+    arm : str
+        The arm to re-score.
+    rows_paths : RunPaths
+        Where this unit's row files live.
+    matrices_root : Path
+    corpora_root : Path or str or None
+    n_jobs : int
+    collection_cache : dict
+
+    Returns
+    -------
+    bool
+        True when the unit was rewritten; False when it had no censored row for
+        ``arm`` and was therefore left alone.
+
+    Raises
+    ------
+    RefillMismatchError
+        When the re-derived anomaly set differs from the persisted one.
+    """
+    import csv
+
+    auc_path = rows_paths.dir / f"rows_auc__{unit.unit_id}.csv"
+    if not auc_path.exists() or not _censored_arm_rows(auc_path, arm):
+        return False
+
+    tables = run_unit(
+        unit,
+        matrices_root=matrices_root,
+        corpora_root=corpora_root,
+        arms=[arm],
+        n_jobs=n_jobs,
+        collection_cache=collection_cache,
+    )
+
+    anomalies_path = rows_paths.dir / f"rows_anomalies__{unit.unit_id}.csv"
+    if anomalies_path.exists():
+        before = _persisted_anomaly_ids(anomalies_path)
+        after = [str(row["anomaly_id"]) for row in tables["anomalies"]]
+        if before != after:
+            raise RefillMismatchError(
+                f"unit {unit.unit_id}: re-derived anomaly set differs from the "
+                f"persisted one ({len(before)} vs {len(after)} rows); refusing to rewrite"
+            )
+
+    with auc_path.open(encoding="utf-8", newline="") as handle:
+        kept = [row for row in csv.DictReader(handle) if row.get("arm") != arm]
+    merged = [*kept, *tables["auc"]]
+    write_rows(rows_paths, f"auc__{unit.unit_id}", merged, columns=ROWS_AUC_COLUMNS)
+    return True
+
+
+def _shard_manifest_stamp(out_root: Path, prefix: str, shard_tag: str) -> str | None:
+    """Return the ``src_deploy`` stamp of the shard manifest a refill overwrites.
+
+    A refilled table has two provenances: the arm just re-scored comes from the
+    current deployment, every other arm from the run that wrote the shard. The
+    manifest records the second one so a reader is not left assuming a single
+    library commit produced the whole file.
+    """
+    path = out_root / RQ_DIR / f"{prefix}shard_{shard_tag}" / "manifest.json"
+    try:
+        return json.loads(path.read_text(encoding="utf-8")).get("src_deploy")
+    except (OSError, ValueError):
+        return None
+
+
 def _unit_done(rows_paths: RunPaths, unit: Unit) -> bool:
     """Return True when this unit's AUC rows already exist."""
     return (rows_paths.dir / f"rows_auc__{unit.unit_id}.csv").exists()
@@ -708,6 +832,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--count", action="store_true")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--n-jobs", type=int, default=None)
+    parser.add_argument(
+        "--refill-censored-arm",
+        type=str,
+        default="",
+        help=(
+            "re-score ONLY this arm, and only in units whose rows_auc holds a "
+            "censored=1 row for it. Everything else on disk is left byte-identical. "
+            "Use after a library defect that censored one competitor is fixed."
+        ),
+    )
     parser.add_argument(
         "--matrices-root",
         type=Path,
@@ -795,6 +929,50 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     collection_cache: dict[str, Any] = {}
+
+    if args.refill_censored_arm:
+        arm = args.refill_censored_arm
+        if arm not in arms:
+            logger.error("--refill-censored-arm %s is not one of the configured arms", arm)
+            return 2
+        n_refilled = 0
+        for unit_index in selected:
+            if refill_unit(
+                units[unit_index],
+                arm,
+                rows_paths,
+                matrices_root=matrices_root,
+                corpora_root=data_root,
+                n_jobs=n_jobs,
+                collection_cache=collection_cache,
+            ):
+                n_refilled += 1
+                logger.info(
+                    "refilled unit %d (%s) arm %s", unit_index, units[unit_index].unit_id, arm
+                )
+        shard_tag = args.shard.replace("/", "_") if args.shard else "all"
+        refill_paths = RunPaths(
+            root=out_root, rq=RQ_DIR, experiment=f"{prefix}refill_{arm}_{shard_tag}"
+        )
+        refill_paths.ensure()
+        # The provenance the refill has to carry is the stamp of the tree that
+        # produced the rows it did NOT touch, so a reader can see the two halves
+        # of a refilled table came from different library commits.
+        original = _shard_manifest_stamp(out_root, prefix, shard_tag)
+        write_manifest(
+            refill_paths,
+            extra={
+                "refilled_arm": arm,
+                "n_units_refilled": n_refilled,
+                "n_units_examined": len(selected),
+                "refilled_from": original,
+                "matrices_root": str(matrices_root),
+                **deploy_stamps(),
+            },
+        )
+        logger.info("refill: %d unit(s) of %d rewritten for arm %s", n_refilled, len(selected), arm)
+        return 0
+
     deferred: list[int] = []
     n_written = 0
     for unit_index in selected:

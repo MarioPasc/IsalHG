@@ -14,6 +14,7 @@ which needs the frozen collections on disk and is therefore not a unit test.
 from __future__ import annotations
 
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -440,3 +441,158 @@ class TestArmFailureIsCensoredNotFatal:
         position, arm, row = rq4._row_worker((0, "hpd_jsd"))
         assert (position, arm) == (0, "hpd_jsd")
         assert row is None
+
+
+class TestRefillCensoredArm:
+    """Refilling one arm rewrites that arm only, and only where it was censored."""
+
+    @staticmethod
+    def _write_auc(paths, unit_id: str, rows) -> None:
+        from experiments.tkde.io import write_rows
+
+        write_rows(paths, f"auc__{unit_id}", rows, columns=rq4.ROWS_AUC_COLUMNS)
+
+    @staticmethod
+    def _row(arm: str, score: str, auc: float, censored: int) -> dict:
+        return {
+            "rq": "RQ4",
+            "experiment": "e",
+            "collection": "ndc_classes",
+            "seed": 40000,
+            "arm": arm,
+            "secs": 1.0,
+            "censored": censored,
+            "subcollection": "ndc_classes",
+            "corruption": "missing_fact",
+            "budget": 1,
+            "score": score,
+            "auc": auc,
+            "n_inliers": 100,
+            "n_anomalies": 5,
+            "n_skipped": 0,
+        }
+
+    def _paths(self, tmp_path):
+        from experiments.tkde.io import RunPaths
+
+        paths = RunPaths(root=tmp_path, rq=rq4.RQ_DIR, experiment="rows")
+        paths.ensure()
+        return paths
+
+    def test_no_censored_row_is_a_no_op(self, tmp_path, monkeypatch) -> None:
+        paths = self._paths(tmp_path)
+        rows = [self._row("hpd_jsd", "knn", 0.7, 0), self._row("wl_l1", "knn", 0.6, 0)]
+        self._write_auc(paths, "u0", rows)
+        before = (paths.dir / "rows_auc__u0.csv").read_bytes()
+
+        def _boom(*a, **k):
+            raise AssertionError("run_unit must not be called when nothing is censored")
+
+        monkeypatch.setattr(rq4, "run_unit", _boom)
+        # refill_unit reads only `unit.unit_id` and hands the unit to the
+        # patched run_unit, so a stub is enough and keeps the test independent
+        # of Unit's construction arguments.
+        unit = SimpleNamespace(unit_id="u0")
+        assert (
+            rq4.refill_unit(
+                unit,
+                "hpd_jsd",
+                paths,
+                matrices_root=tmp_path,
+                corpora_root=None,
+                n_jobs=1,
+                collection_cache={},
+            )
+            is False
+        )
+        assert (paths.dir / "rows_auc__u0.csv").read_bytes() == before
+
+    def test_refill_replaces_only_the_named_arm(self, tmp_path, monkeypatch) -> None:
+        import csv
+
+        paths = self._paths(tmp_path)
+        self._write_auc(
+            paths,
+            "u1",
+            [
+                self._row("hpd_jsd", "knn", float("nan"), 1),
+                self._row("hpd_jsd", "lof", float("nan"), 1),
+                self._row("wl_l1", "knn", 0.61, 0),
+                self._row("netlsd", "knn", 0.62, 0),
+            ],
+        )
+        fresh = [self._row("hpd_jsd", "knn", 0.71, 0), self._row("hpd_jsd", "lof", 0.72, 0)]
+        monkeypatch.setattr(rq4, "run_unit", lambda *a, **k: {"auc": fresh, "anomalies": []})
+        # refill_unit reads only `unit.unit_id` and hands the unit to the
+        # patched run_unit, so a stub is enough and keeps the test independent
+        # of Unit's construction arguments.
+        unit = SimpleNamespace(unit_id="u1")
+        assert (
+            rq4.refill_unit(
+                unit,
+                "hpd_jsd",
+                paths,
+                matrices_root=tmp_path,
+                corpora_root=None,
+                n_jobs=1,
+                collection_cache={},
+            )
+            is True
+        )
+
+        with (paths.dir / "rows_auc__u1.csv").open(encoding="utf-8", newline="") as handle:
+            out = list(csv.DictReader(handle))
+        by_arm = {(r["arm"], r["score"]): r for r in out}
+        # The untouched arms keep their exact values.
+        assert by_arm[("wl_l1", "knn")]["auc"] == "0.61"
+        assert by_arm[("netlsd", "knn")]["auc"] == "0.62"
+        # The refilled arm is present once per score, no longer censored.
+        assert by_arm[("hpd_jsd", "knn")]["auc"] == "0.71"
+        assert by_arm[("hpd_jsd", "lof")]["censored"] == "0"
+        assert sum(1 for r in out if r["arm"] == "hpd_jsd") == 2
+
+    def test_a_changed_anomaly_set_refuses_to_rewrite(self, tmp_path, monkeypatch) -> None:
+        from experiments.tkde.io import write_rows
+
+        paths = self._paths(tmp_path)
+        self._write_auc(paths, "u2", [self._row("hpd_jsd", "knn", float("nan"), 1)])
+        write_rows(
+            paths,
+            "anomalies__u2",
+            [
+                {
+                    "rq": "RQ4",
+                    "experiment": "e",
+                    "collection": "ndc_classes",
+                    "seed": 40000,
+                    "arm": "",
+                    "secs": 0.0,
+                    "censored": 0,
+                    "subcollection": "ndc_classes",
+                    "member_id": "m0",
+                    "anomaly_id": "m0__missing_fact_b1",
+                    "corruption": "missing_fact",
+                    "budget": 1,
+                }
+            ],
+            columns=rq4.ROWS_ANOMALIES_COLUMNS,
+        )
+        monkeypatch.setattr(
+            rq4,
+            "run_unit",
+            lambda *a, **k: {"auc": [], "anomalies": [{"anomaly_id": "SOMETHING_ELSE"}]},
+        )
+        # refill_unit reads only `unit.unit_id` and hands the unit to the
+        # patched run_unit, so a stub is enough and keeps the test independent
+        # of Unit's construction arguments.
+        unit = SimpleNamespace(unit_id="u2")
+        with pytest.raises(rq4.RefillMismatchError):
+            rq4.refill_unit(
+                unit,
+                "hpd_jsd",
+                paths,
+                matrices_root=tmp_path,
+                corpora_root=None,
+                n_jobs=1,
+                collection_cache={},
+            )

@@ -21,7 +21,7 @@ what the environment *is* and how it was verified.
 | Conda env | `isalhg-tkde` at `/mnt/home/users/tic_163_uma/mpascual/fscratch/conda_envs/isalhg-tkde` |
 | Interpreter (`$PY`) | `…/fscratch/conda_envs/isalhg-tkde/bin/python` |
 | Data root | `…/fscratch/datasets/isalhg_tkde/{raw,corpora}` |
-| Results root | `…/fscratch/results/IEEETKDE` |
+| **Results root** | **`/mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE`** — on **HOME**, not FSCRATCH (§2.1) |
 | Logs | `/mnt/home/users/tic_163_uma/mpascual/execs/tkde/logs` |
 
 **Conda envs are not under `~/.conda/envs` on Picasso.** They live in
@@ -88,14 +88,51 @@ for whoever owns the call:
    projected file count.
 3. Both.
 
+### 2.1 Decision (2026-09-05): results move to HOME
+
+**`ISALHG_RESULTS_ROOT = /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE`.**
+Inputs are unchanged and stay on FSCRATCH: repo, conda env, `raw/`, `corpora/`.
+Logs stay in `~/execs/tkde/logs`.
+
+HOME quota, read the same day:
+
+```
+home  24.23GB  0.28TB  0.75TB  none  ║  3.3k  35.0k  150.0k  none
+```
+
+Room to spare on both axes (9 % of space, 9 % of files), and HOME is
+**permanent** where FSCRATCH is pseudo-volatile.
+
+The asymmetry that decides it: **every input on FSCRATCH is reproducible** —
+re-sync the repo, re-run `picasso_env_setup.sh`, re-stage the 16 MB of raw data —
+**and a result is not**. Putting results on a filesystem that is over quota,
+purged after two months of no access, and has no working recovery tool
+(`fscratch_files` is not installed here) is the one placement the campaign
+cannot afford.
+
+Two consequences, both good: `tkde_stage_localscratch`'s copy-back is now *also*
+the durable-storage step, so no separate FSCRATCH-to-HOME rescue job is needed;
+and the campaign's output no longer consumes the exhausted FSCRATCH file quota.
+
+⚠ **This does not clear the FSCRATCH problem — it only stops the campaign
+adding to it.** FSCRATCH remains **over its file soft quota with the grace
+period running**, and the reclaim targets (`results/f4_topology`,
+`results/isalsr`, the four other `repos/` checkouts) are for the user to prune;
+this wave deliberately deleted nothing there. The only FSCRATCH deletion made
+was the now-empty `fscratch/results/IEEETKDE/` directory, after its `_smoke/`
+contents were `mv`-ed to the new HOME root.
+
 Consequences for every wave-3 launcher regardless:
 
 - Project `N_tasks × (artefacts_per_task + 2 log files)` **before** submitting,
-  and `count_files` the output directory afterwards.
+  and `count_files` the output directory afterwards. HOME's file quota is
+  35.0k — far more headroom than FSCRATCH had, but not unlimited, so a launcher
+  that would write tens of thousands of small artefacts must consolidate.
 - Prefer one consolidated artefact per unit over five small ones.
-- Harvest and then prune each RQ from FSCRATCH as it completes.
+- Harvest each RQ to the local drive as it completes; the local drive remains
+  the copy a paper cites.
 - The manual asks you to contact `soporte@scbi.uma.es` before the first array
-  over 1000 jobs; given the quota state, contact them earlier than that.
+  over 1000 jobs; given the FSCRATCH state, contact them earlier than that.
 
 ### Scheduler and entitlements
 
@@ -272,6 +309,7 @@ work is queued.
 |---|---|---|---|
 | `2210890` | sd039 | 00:02:02 | **FAILED** — 361 passed, 2 failed (see below) |
 | `2210893` | sd030 | **00:07:02** | **COMPLETED** — all checks green, 363 passed |
+| `2210916` | sd089 | **00:06:15** | **COMPLETED** — re-validation after the results root moved to HOME (§6.1) |
 
 `seff 2210893`: `State: COMPLETED (exit code 0)`, CPU Utilized 00:21:45, Memory
 Utilized **59.88 MB** — 0.73 % of the 8 GB requested. The smoke job's own
@@ -334,6 +372,60 @@ Duration:  0h 6m 39s
 
 Harvested to `…/results/IEEETKDE/_smoke/` locally: `provenance.txt`,
 `pytest_unit_core.txt`, `smoke_checks.txt`, `smoke_report.json`.
+
+### 6.1 `2210916` — re-validation of the HOME results root
+
+The move in §2.1 changes where every job writes, so it was **exercised, not
+assumed**: one further smoke job after the change.
+
+| Field | Value |
+|---|---|
+| Job | `2210916` (`--test-only` first: `2210915`, immediate start) |
+| Node | `sd089` (Xeon Gold 6230R) |
+| Elapsed | 00:06:15 |
+| State | **COMPLETED** |
+| Tests | 363 passed in 353.92 s, `PYTEST EXIT: 0` |
+
+```
+[stage] copy-back to : /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/_smoke
+[PASS] isalhg_package_path / cpp_extension_import / canonical_cpp_eq_python
+[PASS] pynauty_canon_label / rapidfuzz
+======================= 363 passed in 353.92s (0:05:53) ========================
+PYTEST EXIT: 0
+ALL SMOKE CHECKS PASSED
+Duration:  0h 6m 5s
+[stage] copy-back OK -> /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/_smoke
+```
+
+HOME results tree afterwards:
+
+```
+/mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/_smoke:
+-rw-r-----  272 Sep  5 13:50 provenance.txt
+-rw-r----- 2620 Sep  5 13:50 pytest_unit_core.txt
+-rw-r-----  571 Sep  5 13:44 smoke_checks.txt
+-rw-r-----  762 Sep  5 13:44 smoke_report.json
+```
+
+`provenance.txt` also confirms the `.tkde_deploy` fix (it read `git=n/a` before):
+
+```
+node=sd089
+cpu=Intel(R) Xeon(R) Gold 6230R CPU @ 2.10GHz
+job=2210916
+deploy=sha=e6bd84b branch=worktree-agent-a57a0919d0e693ba9 at=2026-09-05T13:43:20+02:00
+date=2026-09-05T13:50:08+02:00
+```
+
+`fscratch/results/IEEETKDE/` was emptied by `mv`-ing its `_smoke/` to the new
+root and then `rmdir`-ed. `fscratch/results/` still holds `f4_topology` and
+`isalsr`, untouched.
+
+Harvest re-run against the new root: `--dry-run` listed the four files, the real
+run pulled them into
+`/media/mpascual/Sandisk2TB/…/results/IEEETKDE/_smoke/`.
+
+---
 
 Re-run the smoke job after **any** environment change — a dependency bump, a
 rebuild, a change to `common.sh`. Environment self-checks passing on the login

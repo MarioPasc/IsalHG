@@ -105,6 +105,68 @@ Maintain `.claude/notes/2026-09-05-tkde-w1/picasso-env.md` in your worktree from
 - Three bullets: what you built; anything the orchestrator must know (quota, queue, deviations); anything unfinished.
 ```
 
+## 1b. Change request — 2026-09-05, after first merge
+
+The coordinator sent a change request once the branch was already merged
+(committed on the same branch for a second merge).
+
+**Request, verbatim in substance:** move the Picasso results root from FSCRATCH
+to HOME —
+`ISALHG_RESULTS_ROOT = /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE`.
+Reason given: FSCRATCH is over its file soft quota and is purged; HOME has
+3.3k/35k files, 24 GB/280 GB, and is permanent. Repo, env, raw data and corpora
+stay on FSCRATCH; logs stay in `~/execs/tkde/logs`. Six numbered steps: update
+the four named files; create the remote directory and re-run the smoke job once
+(≤ 10 min) so the copy-back into HOME is exercised for real; `mv` (not copy) the
+previous smoke output to the new root and `rmdir` the emptied FSCRATCH results
+directory, deleting nothing else there; re-run harvest dry-run then real; update
+this log; commit and report.
+
+**What changed**
+
+| File | Change |
+|---|---|
+| `slurm/tkde/common.sh` | `ISALHG_RESULTS_ROOT` default → `${TKDE_USER_ROOT}/results/IEEETKDE`; header comment; note in `tkde_stage_localscratch` that the copy-back is now also the durable-storage step |
+| `slurm/tkde/smoke_launcher.sh` | **its own `RESULTS_ROOT` default**, which is `--export`ed to the worker and would otherwise have silently overridden `common.sh` — not on the coordinator's list, but the change is inert without it |
+| `scripts/tkde/picasso_env_setup.sh` | **its own `RESULTS_ROOT` default**, which the setup `mkdir -p`s — a stale value would have silently re-created the retired FSCRATCH results directory on the next setup run. Also not on the list; found by grepping for residual `fscratch/results` references rather than by trusting the list |
+| `scripts/tkde/harvest_from_picasso.sh` | `TKDE_REMOTE_RESULTS` default → the HOME root; the header rationale rewritten (the remote is no longer the transient copy) |
+| `slurm/tkde/README.md` | §Harvest replaced by §"Results go to HOME, not FSCRATCH": the decision, the reproducible-inputs/irreproducible-results asymmetry, and the reminder that HOME's own 35.0k file quota still forces consolidation |
+| `docs/article/D_ART3/experiments/PICASSO.md` | §1 table row; new §2.1 (decision + the HOME quota read that day + FSCRATCH still over quota, for the user to prune); new §6.1 (re-validation job) |
+
+The smoke job's checks were not otherwise touched. The `sd` pin and the sync
+script's targets (repo and corpora stay on FSCRATCH) are unchanged.
+
+**Evidence**
+
+- Remote directory created; `_smoke/` **moved** (`mv`) from
+  `fscratch/results/IEEETKDE/` to the HOME root; the emptied directory
+  `rmdir`-ed after an `ls -A` confirmed it was empty. `fscratch/results/` still
+  contains `f4_topology` and `isalsr` — nothing else was deleted.
+- Re-validation smoke job **`2210916`** (`--test-only` `2210915` first):
+  node **`sd089`**, **00:06:15**, **COMPLETED**, 363 passed,
+  `PYTEST EXIT: 0`, and the line that mattered:
+  `[stage] copy-back OK -> /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/_smoke`.
+  Under the 10-minute cap.
+- HOME results tree after the run (files re-stamped 13:50 by the fresh
+  copy-back, over the 13:20 set moved in):
+
+  ```
+  /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/_smoke:
+  -rw-r-----  272 Sep  5 13:50 provenance.txt
+  -rw-r----- 2620 Sep  5 13:50 pytest_unit_core.txt
+  -rw-r-----  571 Sep  5 13:44 smoke_checks.txt
+  -rw-r-----  762 Sep  5 13:44 smoke_report.json
+  ```
+
+- Harvest `--dry-run` listed the four files from the HOME root; the real run
+  pulled them into `…/results/IEEETKDE/_smoke/` locally. `provenance.txt` now
+  reads `deploy=sha=e6bd84b …` where the previous run had `git=n/a`, confirming
+  the `.tkde_deploy` stamp fix in the same commit.
+
+**Note on the quota.** This stops the campaign *adding* to the FSCRATCH problem;
+it does not clear it. FSCRATCH remains over its file soft quota with the grace
+period running, and the reclaim targets are the user's to prune (§7, §10).
+
 ## 2. Understanding and plan
 
 **Restatement of the task in my own words:** Build and *prove* a clean Picasso
@@ -192,7 +254,8 @@ reveals, re-submit.
 | SHA | Message |
 |---|---|
 | `511520a` | `feat(slurm): TKDE Picasso execution environment` |
-| (this commit) | `docs(notes): picasso-env work log` |
+| `e6bd84b` | `docs(notes): picasso-env work log` |
+| (this commit) | `fix(slurm): move the TKDE results root from FSCRATCH to HOME` (change request §1b) |
 
 ## 4. Tests
 
@@ -442,7 +505,8 @@ frozen `corpora/` directory, and `--corpora` skips cleanly until it exists.
 
 | Item | Severity | Detail | Suggested owner |
 |---|---|---|---|
-| **FSCRATCH file soft quota EXCEEDED, 7-day grace running** | **high** | 230.9k/250.0k before this wave; 251.7k/250.0k after (+≈1.07k from the deployment). Hard limit 400.0k blocks writes outright. A large RQ array can reach it mid-campaign, losing the tail of every task while jobs keep burning wallclock. Needs pruning and/or a quota increase, plus a per-launcher file projection | orchestrator (account-level; reclaim targets are outside this wave's scope) |
+| **FSCRATCH file soft quota EXCEEDED, 7-day grace running** | **medium** (was high) | 230.9k/250.0k before this wave; 251.7k/250.0k after (+≈1.07k from the deployment). Hard limit 400.0k blocks writes outright. **Mitigated by the 2026-09-05 change request** (§1b): results now go to HOME, so the campaign no longer adds to it, and only the repo/env/data remain there. **Not resolved** — FSCRATCH is still over quota and the reclaim targets (`results/f4_topology`, `results/isalsr`, spare `repos/`) are the user's to prune | user / orchestrator (reclaim targets outside this wave's scope) |
+| HOME file quota is 35.0k, not unlimited | low | Results now land on HOME (3.3k used). Ample, but a launcher writing tens of thousands of small artefacts must still consolidate per unit | wave 3 |
 | Bundling / start-cutoff skeleton unexercised | medium | The README's loop is documented, not measured. A missing first-unit exemption livelocks an array | first wave-3 launcher |
 | `sd` pin narrows the node pool | medium | 52-core Intel family only. If queue time becomes prohibitive, the `-march=haswell` fallback exists but **invalidates timing numbers measured under `-march=native`** — do not mix arms | orchestrator |
 | Array path untested | medium | `%A_%a`, throttle, index decode never exercised (one smoke job only). Run one real task before any array | wave 3 |

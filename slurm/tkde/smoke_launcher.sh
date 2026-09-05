@@ -16,7 +16,9 @@ TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
 REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
-RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/fscratch/results/IEEETKDE}"
+# HOME, not FSCRATCH (decision 2026-09-05). This default is exported to the
+# worker, so it MUST track common.sh -- a stale value here silently overrides it.
+RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE}"
 
 WORKER="${SCRIPT_DIR}/smoke_worker.sh"
 [[ -f "${WORKER}" ]] || { echo "ERROR: worker not found: ${WORKER}" >&2; exit 1; }

@@ -185,8 +185,8 @@ Every run writes, under `<RESULTS_ROOT>/<RQ>/<experiment>/`:
 | `tables.md` | the human-readable tables (inputs for the article's figure/table designer, not the article itself) |
 
 `RESULTS_ROOT` is `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE`
-locally and `~/fscratch/results/IEEETKDE` on Picasso; the harvest script mirrors
-the second into the first. Cached `N × N` distance matrices live under
+locally and `$HOME/results/IEEETKDE` on Picasso (the permanent filesystem, not
+the purged FSCRATCH); the harvest script mirrors the second into the first. Cached `N × N` distance matrices live under
 `<RESULTS_ROOT>/matrices/<collection>/<arm>.npy` with a sidecar manifest (member
 order, arm parameters, wall-clock); every runner reads the cache before
 computing.
@@ -383,11 +383,13 @@ non-isomorphic and non-isomorphic to the source (50 resampling attempts, else
 the collection is dropped and counted). Isolated constants are legal.
 
 **Corpus B — the natural NDC series (the harder case, reported beside A).**
-Every drug class with a run of `T ≥ 4` consecutive encodable quarters (45 with
-≥ 3, 20 with ≥ 5): collection = quarters `1..T−1`, truth = quarter `T`;
-reported for all runs and for the 15 constant-preserving runs separately.
-Constants change in 75 % of natural consecutive pairs, so this is the regime
-in which the adopted encoding is at its weakest, and the paper says so.
+Every drug class with a run of `T ≥ 4` consecutive encodable quarters (frozen
+census: 42 classes with runs ≥ 3, 19 with ≥ 5): collection = quarters
+`1..T−1`, truth = quarter `T`; reported for all runs and for the
+constant-preserving runs separately. Constants change in 400 of the 528
+natural consecutive pairs (76 %), so this is the regime in which the adopted
+encoding is at its weakest, and the paper says so. Sizes come from
+`corpora/ndc_classes/census.json` (`series` block), not from this text.
 
 **Methods.** `medoid[d]` for `d ∈ {fact_rank, nauty_cert, wl_l1, netlsd,
 hpd_jsd, bipartite_ged, degree_seq_l1, size_l1}` with certified ratio where `d`

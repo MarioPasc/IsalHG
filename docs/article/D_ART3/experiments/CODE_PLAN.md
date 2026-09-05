@@ -33,7 +33,9 @@ solved by widening scope.*
   `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/data`); results root:
   `ISALHG_RESULTS_ROOT` (default
   `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE`). On
-  Picasso both are under `~/fscratch/{datasets/isalhg_tkde, results/IEEETKDE}`.
+  Picasso the data root is `~/fscratch/datasets/isalhg_tkde` and the results
+  root is **`$HOME/results/IEEETKDE`** (permanent filesystem; decided
+  2026-09-05 because FSCRATCH is purged and was over its file quota).
 - Work log: `.claude/notes/<WAVE_ID>/<task-slug>.md` inside your worktree,
   committed; everything committed before you finish.
 
@@ -215,7 +217,10 @@ Merge order within a wave: contracts first (W1: `fact-alphabet` → `kb-corpora`
   documented in `PICASSO.md`: rebuild with `-march=haswell` to run on `cpu`.
 - Data: `~/fscratch/datasets/isalhg_tkde/{raw/, corpora/}` — raw files (WD50K subsets + P31 types TSV, ARB temporal
   NDC-classes and NDC-substances) and the frozen JSONL corpora (the runners read only `corpora/`).
-- Results: `~/fscratch/results/IEEETKDE/<RQ>/...` (mirror of the local root); logs `~/execs/tkde/logs/`.
+- Results: `/mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE/<RQ>/...` on the permanent HOME filesystem
+  (mirror of the local root; HOME quota read 2026-09-05: 24 GB / 280 GB, 3.3k / 35k files soft, 150k hard); logs
+  `~/execs/tkde/logs/` (also HOME). FSCRATCH holds only the re-creatable inputs (repo, env, raw data, corpora); it is
+  purged after two months of inactivity and was over its file soft quota (251.7k / 250k, hard 400k) at wave 1.
 - Jobs: `--account=tic_163_uma --constraint=sd`, arrays throttled, units bundled to ≥ 2 h with a start-cutoff (first unit
   exempt), `$LOCALSCRATCH` staging with whole-tree copy-back and `EXIT`/`TERM` traps, `--output/--error` explicit,
   `OMP_NUM_THREADS` from `SLURM_CPUS_PER_TASK` (1 for timing arms). `sbatch --test-only` before every submission; one real

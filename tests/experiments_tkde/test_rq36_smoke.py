@@ -272,6 +272,12 @@ class TestAnalyzerLabels:
         [
             ({"method": "medoid", "arm": "netlsd", "radius": ""}, "medoid[netlsd]"),
             ({"method": "coverage", "arm": "fact_rank", "radius": "2"}, "coverage_r2"),
+            # pandas types the column as float when every consensus row in a
+            # partial file carries radius 2; a string comparison would then
+            # mislabel the default radius on every row.
+            ({"method": "coverage", "arm": "fact_rank", "radius": 2}, "coverage_r2"),
+            ({"method": "coverage", "arm": "fact_rank", "radius": 2.0}, "coverage_r2"),
+            ({"method": "coverage", "arm": "fact_rank", "radius": "2.0"}, "coverage_r2"),
             ({"method": "coverage", "arm": "fact_rank", "radius": "t"}, "coverage_rt"),
             ({"method": "majority_merge", "arm": "identities", "radius": ""}, "majority_merge"),
         ],

@@ -65,13 +65,28 @@ def read_parts(root: Path, rq_dir: str, experiment: str, table: str) -> pd.DataF
 
 
 def method_label(row: Mapping[str, Any]) -> str:
-    """Name one method for the tables: the medoid's arm, or the consensus radius."""
+    """Name one method for the tables: the medoid's arm, or the consensus radius.
+
+    The radius is read as ``"2"``, ``2`` or ``2.0`` depending on what else is in
+    the column when pandas types it, so it is normalized rather than compared as
+    a string: a partial rows file in which every consensus row happens to carry
+    radius 2 is typed as a float, and a naive comparison would then label the
+    default radius as the known-budget variant on every row.
+    """
     method = str(row["method"])
     if method == "medoid":
         return f"medoid[{row['arm']}]"
     if method == "coverage":
-        return COVERAGE_PRIMARY if str(row["radius"]) == "2" else COVERAGE_KNOWN
+        return COVERAGE_PRIMARY if _is_default_radius(row["radius"]) else COVERAGE_KNOWN
     return MAJORITY
+
+
+def _is_default_radius(value: Any) -> bool:
+    """True when a row's radius column denotes the frozen default ``r = 2``."""
+    try:
+        return float(value) == 2.0
+    except (TypeError, ValueError):
+        return str(value).strip() == "2"
 
 
 def prepare(frame: pd.DataFrame) -> pd.DataFrame:

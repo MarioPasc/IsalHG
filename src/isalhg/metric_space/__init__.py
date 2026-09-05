@@ -7,9 +7,13 @@ in :mod:`isalhg.metric_space.registry` and discovered by name.
 
 This package may import from :mod:`isalhg.core`, :mod:`isalhg.adapters`, and
 :mod:`isalhg.metrics`, and may use guarded optional external libraries (numpy,
-rapidfuzz, ...). It MUST NOT import :mod:`isalhg.iso_backends`: the shared Levi
-reduction lives in :mod:`isalhg.core.levi_reduction` so both concerns depend
-only on ``core``.
+rapidfuzz, ...). The shared Levi reduction lives in
+:mod:`isalhg.core.levi_reduction` so both concerns depend only on ``core``.
+One exception is deliberate: the fact-alphabet distances import
+:func:`isalhg.iso_backends.canonical_order.canonical_ranks` inside function
+bodies, so that the article's addressing has a single source of truth; no other
+module of this package may import :mod:`isalhg.iso_backends`, and
+:mod:`isalhg.iso_backends` never imports this package (no cycle).
 """
 
 from __future__ import annotations

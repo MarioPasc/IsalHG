@@ -51,11 +51,22 @@ RQ1, adopted). Word of a knowledge base `K` with `n` constants and `m` facts:
 T[τ(π⁻¹(0))] … T[τ(π⁻¹(n−1))]   F[ℓ₁; r₁ < … < r_a] … (m fact tokens, sorted by (ℓ, rank tuple))
 ```
 
-`π` is the isomorphism-invariant total order on constants induced by the
-canonical labelling of the coloured Levi graph (`pynauty.canon_label`,
-vertex colour = type, edge-node colour = `|Σ_V| + predicate`); `rank[v]` is the
-position of `v` in that order restricted to constant nodes. One token is one
-atomic symbol; two tokens are equal iff their whole tuple is equal. `|w| = n + m`.
+`π` is the total order on constants induced by a canonical labelling of the
+coloured Levi graph (`pynauty.canon_label`, vertex colour = type, edge-node
+colour = `|Σ_V| + predicate`); `rank[v]` is the position of `v` in that order
+restricted to constant nodes. One token is one atomic symbol; two tokens are
+equal iff their whole tuple is equal. `|w| = n + m`.
+
+**What is invariant is the word, not the rank vector.** A canonical labelling
+is canonical only up to an automorphism of the canonical form, so the rank
+vectors of `K` and of a relabelled copy need not correspond under the
+isomorphism (measured 2026-09-05: 557 of 2,000 random labelled knowledge bases;
+0 changed words). The word is invariant regardless, because such an
+automorphism fixes the type prefix and the fact multiset. Consequence for every
+algorithm in this design: never transport a rank vector between two knowledge
+bases; compare words, and obtain alignments only from canonical labellings of
+*isomorphic* objects (e.g. the isomorphic remainders of §RQ3's delete-and-match),
+where rank equality is a genuine isomorphism.
 
 **Roles.** A fact whose predicate has named argument positions carries
 `(role, rank)` pairs instead of bare ranks (`F[ℓ; (ρ₁, r₁) …]`, sorted by rank).
@@ -119,11 +130,16 @@ reproduces its census numbers as an acceptance test.
 
 | collection | members | labels on constants | labels on facts | ground truth carried | used by |
 |---|---|---|---|---|---|
-| `wd50k66` | WD50K(66) entity knowledge bases inside the envelope (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): ≈ 3,994 | none (single type) | main relation; roles S/O/Q in a side field | Wikidata P31 class of the subject (14 classes with ≥ 20 members; imbalance stated) | RQ1, RQ2, RQ4, RQ5, RQ6, RQ7 |
-| `wd50k66_full` | the same without the envelope filter (≈ 4,554) | | | | RQ7 yield row (fact alphabet only) |
-| `wd50k100` | purity control (≈ 1,847) | | | 8 usable classes | RQ5 supplement |
-| `ndc_classes` | NDC-classes quarterly co-formulation knowledge bases, encodable (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): 1,432; 555 consecutive pairs with exact `Δ` and regime flag; runs per class | FDA class type: `[epc]`, `[moa]`, `[pe]`, untyped | one predicate | NDC node identities (evaluation only); `Δ` of consecutive quarters | RQ1, RQ2, RQ3, RQ4, RQ7 |
-| `ndc_substances` | control (2,222) | none | one predicate | identities | RQ2 census, RQ7 yield (supplement) |
+| `wd50k66` | WD50K(66) entity knowledge bases inside the envelope (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): 3,988 (3,994 without the `m ≥ 3` floor) | none (single type) | main relation; roles S/O/Q in a side field | Wikidata P31 class of the subject (14 classes with ≥ 20 members covering 87.6 %; imbalance stated) | RQ1, RQ2, RQ4, RQ5, RQ6, RQ7 |
+| `wd50k66_full` | the same without the envelope filter (4,554) | | | | RQ7 yield row (fact alphabet only) |
+| `wd50k100` | purity control (1,837) | | | 8 usable classes | RQ5 supplement |
+| `ndc_classes` | NDC-classes quarterly co-formulation knowledge bases, encodable (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`, **facts of arity ≥ 2 only**): 1,381 members and 528 consecutive pairs with exact `Δ` and regime flag (1,432 / 555 when singleton products are counted as facts — the supplement's figure, reproduced to the unit); runs per class | FDA class type: `[epc]`, `[moa]`, `[pe]`, untyped | one predicate | NDC node identities (evaluation only); `Δ` of consecutive quarters | RQ1, RQ2, RQ3, RQ4, RQ7 |
+| `ndc_substances` | control (1,745; 2,222 counting singletons) | none | one predicate | identities | RQ2 census, RQ7 yield (supplement) |
+
+A singleton product (one class) is a unary statement, carries no relational
+structure and is encodable by neither alphabet; the collections therefore keep
+facts of arity ≥ 2 only, and `census.json` in each frozen collection is the
+authoritative count (expected vs obtained, both conventions recorded).
 | `synthetic_rq1` | 2,000 random connected labelled knowledge bases, `n ∈ [6,16]`, `m ∈ [6,20]`, arity 2–4, 3 types, 3 predicates (the probe's corpus) | 3 types | 3 predicates | — | RQ1 |
 | `envelope_sweep` | random connected labelled knowledge bases on the RQ7 grid | grid | grid | — | RQ7 |
 
@@ -601,8 +617,11 @@ for bipartite GED.
 
 **Sweep.** Random connected labelled knowledge bases on the grid
 `m ∈ {10, 20, 40, 80, 120, 160}` × `k ∈ {2, 3, 4, 5}` × `|Σ_E| ∈ {1, 3, 10}` ×
-`|Σ_V| ∈ {1, 4}` × density `n ∈ {⌈1.5 m⌉ (sparse), ⌈0.5 m⌉ + k (dense)}`,
-27 seeds per cell (7,776 instances). Arms: `pointer` (C++, budget 60 s),
+`|Σ_V| ∈ {1, 4}` × density `n ∈ {min(⌈1.5 m⌉, m(k−1)+1) (sparse), ⌈0.5 m⌉ + k
+(dense)}`, 27 seeds per cell (7,776 instances). The sparse cap is the largest
+connected constant count for `m` facts of arity `≤ k`; it binds only at `k = 2`,
+where the sparse cells are trees (`n = m + 1`) — without it those 36 cells are
+structurally impossible (found by the corpus generator, 2026-09-05). Arms: `pointer` (C++, budget 60 s),
 `fact_rank`, `nauty_cert`. Extension for the fact alphabet only:
 `m ∈ {320, 640, 1280}` at `k = 3`, `|Σ_E| = 3`, `|Σ_V| = 1`, both densities.
 Real collections placed by their per-member `(m, k, |Σ|)` and measured

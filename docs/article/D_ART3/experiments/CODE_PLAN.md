@@ -208,9 +208,11 @@ Merge order within a wave: contracts first (W1: `fact-alphabet` → `kb-corpora`
   never by git.
 - Env: `isalhg-tkde` (Python 3.11; `pip install -e ".[dev]"` inside the Picasso repo; `pynauty`, `rapidfuzz`, `scikit-learn`,
   `scikit-learn-extra`, `netlsd`, `scipy`, `pandas`, `pyarrow`). C++ extension built on the login node with the project's
-  default flags (`-march=native`) → **every job pins `--constraint=sd`**; the build is verified by one smoke job on an `sd`
-  compute node importing `isalhg.core._native` and canonicalizing a fixture with `backend="cpp"`. Fallback documented in
-  `PICASSO.md`: rebuild with `-march=haswell` to run on `cpu`.
+  default flags (`-march=native`) → **every job pins `--constraint=sd`**; the build was verified by smoke job `2210893` on
+  `sd030` importing the extension module `isalhg.core._core` (not `_native`) and canonicalizing a fixture with
+  `backend="cpp"`. Conda envs live under `~/fscratch/conda_envs/` on Picasso (not `~/.conda/envs`); `common.sh` exports the
+  absolute interpreter as `PY`. Single (non-array) jobs use `%j` in log names — `%a` expands to a sentinel there. Fallback
+  documented in `PICASSO.md`: rebuild with `-march=haswell` to run on `cpu`.
 - Data: `~/fscratch/datasets/isalhg_tkde/{raw/, corpora/}` — raw files (WD50K subsets + P31 types TSV, ARB temporal
   NDC-classes and NDC-substances) and the frozen JSONL corpora (the runners read only `corpora/`).
 - Results: `~/fscratch/results/IEEETKDE/<RQ>/...` (mirror of the local root); logs `~/execs/tkde/logs/`.

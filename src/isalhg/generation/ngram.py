@@ -49,8 +49,18 @@ gives ``p = sum_k (prod_{i>k} b_i) d_k + (prod_i b_i) p_0``, so one pass from
 the longest matching context down to the shortest accumulates the exact same
 distribution into a single numpy array. Sampling and scoring then index that
 array. The result is identical to the recursion -- this is an expansion, not an
-approximation -- and the per-context vectors are cached, since a sampler
+approximation -- and the per-context vectors are memoised, since a sampler
 revisits contexts constantly.
+
+The memo is a **bounded LRU** (``cache_size``). Each entry is one dense
+``float64`` vector over the whole vocabulary, so it costs ``8 * |V|`` bytes, and
+a long-lived sampler visits a new context far more often than intuition
+suggests: one 10,000-sample RQ6 unit over ``wd50k66`` (``|V| = 8,489``, i.e.
+67,912 bytes per entry) touched about 10,800 distinct contexts and grew the
+unbounded memo by 731 MB, which is how a shard reached 20.4 GB and was killed.
+Eviction cannot change a sampled sequence: the memo caches a deterministic
+function of the context, so a miss recomputes exactly the vector that was
+dropped. ``cache_size=None`` restores the unbounded behaviour.
 
 Tokens
 ------
@@ -73,6 +83,7 @@ from __future__ import annotations
 
 import math
 import random
+from collections import OrderedDict
 from collections.abc import Hashable, Iterable, Sequence
 from typing import TYPE_CHECKING, Any
 
@@ -90,6 +101,15 @@ BOS: str = "<bos>"
 EOS: str = "<eos>"
 
 SMOOTHINGS: tuple[str, ...] = ("kneser_ney", "witten_bell")
+
+# Entries in the per-context distribution memo. One entry is 8 * |V| bytes.
+# Sized against the largest frozen TKDE vocabulary, wd50k66_full's fact words
+# at |V| = 21,263: 21,263 * 8 = 170,104 B ~ 166 KiB per entry, so
+# 1024 * 170,104 = 174,186,496 B ~ 166 MiB, inside a 256 MiB budget. On the
+# collection that ran out of memory, wd50k66 at |V| = 8,489, the same 1024
+# entries cost 69.5 MB against the 731 MB the unbounded memo accumulated in one
+# 10,000-sample unit.
+DEFAULT_CACHE_SIZE: int = 1024
 
 # Per-context level record: (continuation indices, discounted probabilities,
 # backoff mass). Precomputed at fit time, consumed by _distribution.
@@ -119,12 +139,25 @@ class TokenNGram:
     discount : float, optional
         The absolute discount ``D`` of Kneser-Ney, in ``[0, 1)``. Ignored by
         ``"witten_bell"``. Defaults to 0.75.
+    cache_size : int or None, optional
+        How many per-context distributions the memo retains, least-recently-used
+        evicted first. Each entry is one dense ``float64`` vector over the
+        vocabulary, so it costs ``8 * |V|`` bytes: at the largest frozen TKDE
+        vocabulary (``wd50k66_full`` fact words, ``|V| = 21,263``) that is
+        ``21,263 * 8 = 170,104`` bytes, and the default 1024 entries therefore
+        bound the memo at ``1024 * 170,104 = 174,186,496`` bytes, about 166 MiB
+        -- inside a 256 MiB budget, and 69.5 MB on ``wd50k66``
+        (``|V| = 8,489``), whose unbounded memo grew 731 MB in a single
+        10,000-sample unit. ``None`` leaves the memo unbounded, which is the
+        historical behaviour and is safe only for short-lived models. Must be at
+        least 1 when given, so the vector just computed is always retained.
+        Defaults to :data:`DEFAULT_CACHE_SIZE`.
 
     Raises
     ------
     isalhg.generation.errors.GenerationError
-        If ``order`` is below 1, ``smoothing`` is unknown, or ``discount`` is
-        outside ``[0, 1)``.
+        If ``order`` is below 1, ``smoothing`` is unknown, ``discount`` is
+        outside ``[0, 1)``, or ``cache_size`` is below 1.
     """
 
     def __init__(
@@ -132,6 +165,7 @@ class TokenNGram:
         order: int = 3,
         smoothing: str = "kneser_ney",
         discount: float = 0.75,
+        cache_size: int | None = DEFAULT_CACHE_SIZE,
     ) -> None:
         if order < 1:
             raise GenerationError(f"order must be at least 1; got {order}")
@@ -139,16 +173,19 @@ class TokenNGram:
             raise GenerationError(f"smoothing must be one of {SMOOTHINGS}; got {smoothing!r}")
         if not 0.0 <= discount < 1.0:
             raise GenerationError(f"discount must lie in [0, 1); got {discount}")
+        if cache_size is not None and cache_size < 1:
+            raise GenerationError(f"cache_size must be at least 1 or None; got {cache_size}")
 
         self.order = order
         self.smoothing = smoothing
         self.discount = discount
+        self.cache_size = cache_size
 
         self._levels: list[dict[tuple[Hashable, ...], _Level]] = []
         self._vocabulary: tuple[Hashable, ...] = ()
         self._index: dict[Hashable, int] = {}
         self._p0: Any = None
-        self._cache: dict[tuple[Hashable, ...], Any] = {}
+        self._cache: OrderedDict[tuple[Hashable, ...], Any] = OrderedDict()
         self._fitted = False
 
     # ------------------------------------------------------------------
@@ -221,7 +258,7 @@ class TokenNGram:
         self._p0 = (raw + 1.0) / (raw.sum() + max(size, 1))
 
         self._levels = [self._build_level(counts[k], np) for k in range(self.order)]
-        self._cache = {}
+        self.reset_cache()
         self._fitted = True
         return self
 
@@ -260,16 +297,28 @@ class TokenNGram:
         if not self._fitted:
             raise GenerationError("TokenNGram must be fitted before use; call fit(words) first")
 
+    def reset_cache(self) -> None:
+        """Empty the per-context distribution memo.
+
+        The memo holds a deterministic function of the context, so dropping it
+        costs recomputation and changes no sampled or scored value. Useful when
+        one fitted model is reused across many sampling passes and the resident
+        set matters more than the recomputation.
+        """
+        self._cache = OrderedDict()
+
     def _distribution(self, context: tuple[Hashable, ...]) -> NDArray[np.float64]:
         """Dense conditional distribution over the vocabulary given ``context``.
 
         The unrolled interpolation described in the module docstring: one pass
         from the longest matching context down to the shortest, accumulating
         each level's discounted mass scaled by the backoff masses above it, and
-        finishing with the continuation distribution. Cached per context.
+        finishing with the continuation distribution. Memoised per context in a
+        bounded LRU; eviction only costs a recomputation of the same vector.
         """
         cached = self._cache.get(context)
         if cached is not None:
+            self._cache.move_to_end(context)
             return cached  # type: ignore[no-any-return]
 
         np = _import_numpy()
@@ -288,6 +337,9 @@ class TokenNGram:
         if total > 0:
             dense /= total
         self._cache[context] = dense
+        if self.cache_size is not None:
+            while len(self._cache) > self.cache_size:
+                self._cache.popitem(last=False)
         return dense  # type: ignore[no-any-return]
 
     def _context_of(self, history: Sequence[Hashable]) -> tuple[Hashable, ...]:
@@ -467,4 +519,4 @@ def words_of(hypergraphs: Iterable[Any], roles: Iterable[Any] | None = None) -> 
     return [fact_word(H, r) for H, r in zip(members, list(roles), strict=True)]
 
 
-__all__ = ["BOS", "EOS", "SMOOTHINGS", "TokenNGram", "words_of"]
+__all__ = ["BOS", "DEFAULT_CACHE_SIZE", "EOS", "SMOOTHINGS", "TokenNGram", "words_of"]

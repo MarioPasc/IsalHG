@@ -66,7 +66,9 @@ fi
 
 build_args() {   # $1 = colon-separated kinds, $2 = tag
     local kinds="$1" tag="$2" shards tasks throttle
-    shards=$("${PY}" -m experiments.tkde.rq2 --config "${CONFIG}" \
+    # --count must run from REPO_DIR: the runner is a package module of the
+    # deployed tree, not of slurm/tkde.
+    shards=$(cd "${REPO_DIR}" && "${PY}" -m experiments.tkde.rq2 --config "${CONFIG}" \
         --kinds "${kinds//:/,}" --count)
     [[ "${shards}" =~ ^[0-9]+$ ]] || { echo "FATAL: --count returned ${shards@Q}" >&2; return 1; }
     tasks=$(( (shards + BUNDLE - 1) / BUNDLE ))

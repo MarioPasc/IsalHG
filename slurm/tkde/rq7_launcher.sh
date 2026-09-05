@@ -59,7 +59,10 @@ if [[ "${MODE}" == "smoke" ]]; then
     exit 0
 fi
 
-N_SHARDS=$("${PY}" -m experiments.tkde.rq7 --config "${CONFIG}" --count)
+# The runner is a package module of the DEPLOYED tree, not of slurm/tkde,
+# so --count must run from REPO_DIR. Without the cd this dies with
+# ModuleNotFoundError and the array size is never derived.
+N_SHARDS=$(cd "${REPO_DIR}" && "${PY}" -m experiments.tkde.rq7 --config "${CONFIG}" --count)
 [[ "${N_SHARDS}" =~ ^[0-9]+$ ]] || { echo "FATAL: --count returned ${N_SHARDS@Q}" >&2; exit 1; }
 N_TASKS=$(( (N_SHARDS + BUNDLE - 1) / BUNDLE ))
 (( MAX_CONCURRENT > N_TASKS )) && MAX_CONCURRENT="${N_TASKS}"

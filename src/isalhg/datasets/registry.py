@@ -40,6 +40,7 @@ _LAZY_MODULES: dict[DatasetName, str] = {
     "stratum_a_corpus": "isalhg.datasets.synthetic.known_design_catalog",
     "arb_benson": "isalhg.datasets.arb_benson",
     "hic_atlas": "isalhg.datasets.hic_atlas",
+    "kb_collection": "isalhg.datasets.kb.io",
 }
 
 

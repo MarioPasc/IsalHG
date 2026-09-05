@@ -153,6 +153,56 @@ class RQ3Error(TkdeError):
 # ---------------------------------------------------------------------------
 
 
+SHARED_SRC_REPO = Path("/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG-tkde")
+DEPLOY_STAMP = ".tkde_deploy"
+SMOKE_MARKER = "_smoke"
+
+
+def _read_stamp(directory: Path) -> str | None:
+    """Return the one-line deploy stamp of ``directory``, or ``None``."""
+    stamp = directory / DEPLOY_STAMP
+    try:
+        return stamp.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None
+
+
+def deploy_stamps() -> dict[str, Any]:
+    """Name both trees a cluster run actually used.
+
+    A PEP 660 editable install registers a meta-path finder, which is consulted
+    before ``sys.path``, so on Picasso ``isalhg.*`` resolves to whichever
+    checkout the environment was installed from --- the shared ``IsalHG-tkde``
+    tree --- while ``experiments.*`` comes from the deployed runner tree on
+    ``PYTHONPATH``. A manifest that names only one of them misattributes the
+    code that ran.
+
+    Returns
+    -------
+    dict
+        ``src_deploy`` (the stamp of the tree ``isalhg`` was imported from),
+        ``runner_deploy`` (the stamp of the tree ``experiments`` came from) and
+        ``isalhg_path`` (the resolved package file, which settles the question
+        even when a stamp is missing).
+    """
+    import isalhg
+
+    package = Path(isalhg.__file__).resolve()
+    src_stamp: str | None = None
+    for parent in package.parents:
+        found = _read_stamp(parent)
+        if found is not None:
+            src_stamp = found
+            break
+    if src_stamp is None:
+        src_stamp = _read_stamp(SHARED_SRC_REPO)
+    return {
+        "src_deploy": src_stamp,
+        "runner_deploy": _read_stamp(io.repo_root()),
+        "isalhg_path": str(package),
+    }
+
+
 def provenance() -> tuple[str, str]:
     """Return ``(git_sha, host_cpu)`` for the universal row columns.
 
@@ -892,6 +942,7 @@ def run_shard(
     started = time.perf_counter()
     git_sha, host_cpu = provenance()
     base = {"git_sha": git_sha, "host_cpu": host_cpu}
+    stamps = deploy_stamps()
 
     units_a = enumerate_units_a(config)
     units_b = enumerate_units_b(config, data_root)
@@ -1036,16 +1087,25 @@ def run_shard(
         io.write_rows(paths_a, "variants", rows_a, columns=VARIANT_COLUMNS)
         io.write_config(paths_a, written_config)
         io.write_summary(paths_a, summary)
-        io.write_manifest(paths_a, extra={"complete": not summary["deferred"], "shard": shard})
+        io.write_manifest(
+            paths_a,
+            extra={"complete": not summary["deferred"], "shard": shard, **stamps},
+        )
     if mine_b or rows_b:
         io.write_rows(paths_b, "natural", rows_b, columns=NATURAL_COLUMNS)
         io.write_config(paths_b, written_config)
         io.write_summary(paths_b, summary)
-        io.write_manifest(paths_b, extra={"complete": not summary["deferred"], "shard": shard})
+        io.write_manifest(
+            paths_b,
+            extra={"complete": not summary["deferred"], "shard": shard, **stamps},
+        )
     if mine_a or rows_c:
         io.write_rows(paths_c, "certificate", rows_c, columns=CERTIFICATE_COLUMNS)
         io.write_config(paths_c, written_config)
-        io.write_manifest(paths_c, extra={"complete": not summary["deferred"], "shard": shard})
+        io.write_manifest(
+            paths_c,
+            extra={"complete": not summary["deferred"], "shard": shard, **stamps},
+        )
     return summary
 
 

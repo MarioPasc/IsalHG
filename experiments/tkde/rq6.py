@@ -37,7 +37,7 @@ from typing import Any
 
 from experiments.tkde import corpora, io
 from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root, seeds
-from experiments.tkde.rq3 import provenance, run_guarded
+from experiments.tkde.rq3 import deploy_stamps, provenance, run_guarded
 from isalhg.core.canonical import canonical_string, required_k
 from isalhg.core.fact_word import Word, decode_fact_word
 from isalhg.core.instructions import parse
@@ -804,7 +804,10 @@ def run_shard(
     io.write_rows(paths, "completion", rows_completion, columns=COMPLETION_COLUMNS)
     io.write_config(paths, dict(config))
     io.write_summary(paths, summary)
-    io.write_manifest(paths, extra={"complete": not summary["deferred"], "shard": shard})
+    io.write_manifest(
+        paths,
+        extra={"complete": not summary["deferred"], "shard": shard, **deploy_stamps()},
+    )
     return summary
 
 

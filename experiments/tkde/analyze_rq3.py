@@ -36,6 +36,8 @@ from experiments.tkde.rq3 import (
     MEDOID_ARMS,
     PARTS,
     RQ_DIR,
+    SMOKE_MARKER,
+    deploy_stamps,
 )
 
 logger = logging.getLogger(__name__)
@@ -51,13 +53,28 @@ H3C_TOLERANCE = 0.05
 H3D_RATIO_CEILING = 1.7
 
 
+def is_smoke_path(path: Path, root: Path) -> bool:
+    """True when ``path`` sits under a smoke folder *inside* ``root``.
+
+    A smoke task writes rows carrying the same unit ids as the real run, so a
+    merge that swept them in would report toy data as the campaign's. The test
+    is on the path relative to the root, not on the absolute path, so that
+    pointing the analyzer *at* a smoke root still analyzes it.
+    """
+    try:
+        relative = path.relative_to(root)
+    except ValueError:
+        return False
+    return any(SMOKE_MARKER in part for part in relative.parts)
+
+
 def read_parts(root: Path, rq_dir: str, experiment: str, table: str) -> pd.DataFrame:
     """Concatenate every shard's ``rows_<table>.csv`` under one experiment."""
     base = root / rq_dir / experiment / PARTS
     frames = [
         pd.read_csv(path)
         for path in sorted(base.glob(f"*/rows_{table}.csv"))
-        if path.stat().st_size > 0
+        if path.stat().st_size > 0 and not is_smoke_path(path, root)
     ]
     if not frames:
         return pd.DataFrame()
@@ -406,7 +423,7 @@ def analyze_corpus_a(root: Path, certificates: pd.DataFrame) -> dict[str, Any]:
             ),
         },
     )
-    io.write_manifest(paths, extra={"analyzer": "analyze_rq3", "corpus": "A"})
+    io.write_manifest(paths, extra={"analyzer": "analyze_rq3", "corpus": "A", **deploy_stamps()})
     return summary
 
 
@@ -462,7 +479,7 @@ def analyze_corpus_b(root: Path) -> dict[str, Any]:
             "B4 medoid ratio against 2 - 2/N": ratios,
         },
     )
-    io.write_manifest(paths, extra={"analyzer": "analyze_rq3", "corpus": "B"})
+    io.write_manifest(paths, extra={"analyzer": "analyze_rq3", "corpus": "B", **deploy_stamps()})
     return summary
 
 
@@ -509,6 +526,8 @@ def merge_drop_counts(root: Path, experiment: str) -> dict[str, Any]:
     pools: dict[str, Any] = {}
     base = root / RQ_DIR / experiment / PARTS
     for path in sorted(base.glob("*/summary.json")):
+        if is_smoke_path(path, root):
+            continue
         payload = json.loads(path.read_text(encoding="utf-8"))
         total += int(payload.get("dropped_total", 0))
         for key, value in (payload.get("dropped_by_cell") or {}).items():

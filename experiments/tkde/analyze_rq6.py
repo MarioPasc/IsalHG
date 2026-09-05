@@ -26,7 +26,9 @@ from typing import Any
 import pandas as pd
 
 from experiments.tkde import io, stats
+from experiments.tkde.analyze_rq3 import is_smoke_path
 from experiments.tkde.config import results_root
+from experiments.tkde.rq3 import deploy_stamps
 from experiments.tkde.rq6 import EXPERIMENT, MODEL_BASELINE, MODEL_OURS, PARTS, RQ_DIR
 
 logger = logging.getLogger(__name__)
@@ -41,7 +43,7 @@ def read_parts(root: Path, table: str) -> pd.DataFrame:
     frames = [
         pd.read_csv(path)
         for path in sorted(base.glob(f"*/rows_{table}.csv"))
-        if path.stat().st_size > 0
+        if path.stat().st_size > 0 and not is_smoke_path(path, root)
     ]
     if not frames:
         return pd.DataFrame()
@@ -351,7 +353,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "G7 hypotheses": hypotheses,
         },
     )
-    io.write_manifest(paths, extra={"analyzer": "analyze_rq6"})
+    io.write_manifest(paths, extra={"analyzer": "analyze_rq6", **deploy_stamps()})
     logger.info("RQ6: %d sample rows, %d alignment rows", len(samples), len(alignment))
     return 0
 

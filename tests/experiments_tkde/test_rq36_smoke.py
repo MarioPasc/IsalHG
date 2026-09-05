@@ -290,6 +290,48 @@ class TestAnalyzerLabels:
         assert analyze_rq6.main(["--root", str(tmp_path)]) == 1
 
 
+class TestSmokeIsolation:
+    """Smoke rows carry the same unit ids as the real run and must never merge in."""
+
+    def test_a_smoke_component_inside_the_root_is_skipped(self, tmp_path: Path):
+        real = tmp_path / "RQ3_representative/corpus_a/parts/shard_001of001/rows_variants.csv"
+        smoke = tmp_path / "RQ3_representative/_smoke/corpus_a/parts/s/rows_variants.csv"
+        for path in (real, smoke):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.touch()
+        assert analyze_rq3.is_smoke_path(real, tmp_path) is False
+        assert analyze_rq3.is_smoke_path(smoke, tmp_path) is True
+
+    def test_a_smoke_root_still_analyzes_itself(self, tmp_path: Path):
+        """The test is on the path relative to the root, not on the absolute path."""
+        root = tmp_path / "_smoke_rq3"
+        rows = root / "RQ3_representative/corpus_a/parts/shard_001of001/rows_variants.csv"
+        rows.parent.mkdir(parents=True, exist_ok=True)
+        rows.touch()
+        assert analyze_rq3.is_smoke_path(rows, root) is False
+
+    def test_an_unrelated_path_is_not_smoke(self, tmp_path: Path):
+        assert analyze_rq3.is_smoke_path(Path("/elsewhere/rows.csv"), tmp_path) is False
+
+
+class TestDeployStamps:
+    """A cluster manifest must name both trees, not only the runner's."""
+
+    def test_the_stamps_name_the_imported_package(self):
+        import isalhg
+
+        stamps = rq3.deploy_stamps()
+        assert set(stamps) == {"src_deploy", "runner_deploy", "isalhg_path"}
+        assert stamps["isalhg_path"] == str(Path(isalhg.__file__).resolve())
+
+    def test_a_missing_stamp_is_none_not_an_error(self, tmp_path: Path):
+        assert rq3._read_stamp(tmp_path) is None
+
+    def test_a_present_stamp_is_read_and_stripped(self, tmp_path: Path):
+        (tmp_path / rq3.DEPLOY_STAMP).write_text("sha=abc branch=b\n", encoding="utf-8")
+        assert rq3._read_stamp(tmp_path) == "sha=abc branch=b"
+
+
 def _corpora_available() -> bool:
     from experiments.tkde import corpora
 

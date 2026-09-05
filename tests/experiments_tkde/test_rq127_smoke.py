@@ -15,6 +15,7 @@ an aggregate reduction that counts pairs wrongly.
 from __future__ import annotations
 
 import os
+import random
 import time
 from pathlib import Path
 
@@ -110,6 +111,50 @@ class TestSymbolDistance:
         left, right = encode_symbols([("a", "b"), ("c", "d")])
         assert set(left).isdisjoint(set(right))
         assert symbol_distance(("a", "b"), ("c", "d")) == 2
+
+    def test_hash_equal_but_unequal_pointer_tokens_are_kept_apart(self) -> None:
+        # ``TokenP(i)`` and ``TokenN(i)`` are distinct instructions (advance vs
+        # retreat) whose frozen-dataclass hashes coincide. Handing the raw token
+        # tuples to a Levenshtein kernel that compares Python objects by hash
+        # conflates them and under-reports the pointer-arm response; the private
+        # alphabet built by ``encode_symbols`` keys on equality, not on the hash.
+        from isalhg.core.instructions import TokenN, TokenP
+
+        advance, retreat = TokenP(i=1), TokenN(i=1)
+        assert hash(advance) == hash(retreat)
+        assert advance != retreat
+        assert symbol_distance((advance,), (retreat,)) == 1
+
+    def test_the_private_alphabet_agrees_with_a_reference_levenshtein(self) -> None:
+        from isalhg.core.instructions import TokenC, TokenN, TokenP, TokenV
+
+        def reference(a: tuple, b: tuple) -> int:
+            previous = list(range(len(b) + 1))
+            for i, left_symbol in enumerate(a, start=1):
+                current = [i] + [0] * len(b)
+                for j, right_symbol in enumerate(b, start=1):
+                    current[j] = min(
+                        previous[j] + 1,
+                        current[j - 1] + 1,
+                        previous[j - 1] + (left_symbol != right_symbol),
+                    )
+                previous = current
+            return previous[-1]
+
+        alphabet = (
+            TokenV(edge_label=0, i=1, j=1, new_node_labels=(0,)),
+            TokenV(edge_label=1, i=2, j=1, new_node_labels=(1,)),
+            TokenC(edge_label=0, i=2),
+            TokenP(i=1),
+            TokenN(i=1),
+            TokenP(i=2),
+            TokenN(i=2),
+        )
+        rng = random.Random(20260905)
+        for _ in range(50):
+            left = tuple(rng.choice(alphabet) for _ in range(rng.randint(5, 40)))
+            right = tuple(rng.choice(alphabet) for _ in range(rng.randint(5, 40)))
+            assert symbol_distance(left, right) == reference(left, right)
 
 
 # ---------------------------------------------------------------------------

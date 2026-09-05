@@ -29,7 +29,10 @@
 #SBATCH --time=0-08:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
+# 24G killed job 2213221 at 20.4 GB (an unbounded memo cache in TokenNGram,
+# fixed in rq6.py by refitting per unit; peak is now a measured 3.9 GB). 64G
+# leaves headroom for RQ3's own peak, which the OOM never let us separate.
+#SBATCH --mem=64G
 #SBATCH --constraint=sd
 #SBATCH --account=tic_163_uma
 

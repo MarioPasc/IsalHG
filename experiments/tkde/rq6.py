@@ -174,21 +174,28 @@ class CollectionContext:
     n_preds: int
 
     def model(self, kind: str) -> TokenNGram:
-        """Return the fitted order-3 model of one alphabet, cached."""
-        if not hasattr(self, "_models"):
-            self._models: dict[str, TokenNGram] = {}
-        if kind not in self._models:
-            started = time.perf_counter()
-            source = self.words if kind == MODEL_OURS else self.flat
-            self._models[kind] = TokenNGram(order=3).fit(source)
-            logger.info(
-                "fitted %s on %s (%d words) in %.1f s",
-                kind,
-                self.name,
-                len(source),
-                time.perf_counter() - started,
-            )
-        return self._models[kind]
+        """Return a freshly fitted order-3 model of one alphabet.
+
+        Deliberately not cached across units. ``TokenNGram`` memoises one dense
+        vector over the whole vocabulary per distinct sampling context, in a
+        cache that is unbounded and reset only by ``fit``. A model shared across
+        the 27 seeds therefore accumulates about 0.7 GB per 2,000 samples and
+        reached 20.4 GB after eight units on ``wd50k66`` (job 2213221,
+        OUT_OF_MEMORY). Refitting costs 0.15 s at the worst measured collection,
+        and the memo cache dies with the model, so peak RSS is one unit's cache
+        rather than the whole shard's.
+        """
+        started = time.perf_counter()
+        source = self.words if kind == MODEL_OURS else self.flat
+        model = TokenNGram(order=3).fit(source)
+        logger.info(
+            "fitted %s on %s (%d words) in %.1f s",
+            kind,
+            self.name,
+            len(source),
+            time.perf_counter() - started,
+        )
+        return model
 
 
 def build_context(name: str, config: Mapping[str, Any], root: Path | None) -> CollectionContext:

@@ -19,6 +19,7 @@ import pytest
 from experiments.tkde import analyze_rq3, analyze_rq6, rq3, rq6
 from experiments.tkde.config import TkdeConfigError
 from isalhg.datasets.kb.base import make_record
+from isalhg.generation.incidence_baseline import flatten
 from isalhg.language.consensus import coverage_consensus
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
 from isalhg.metric_space.toolkit.matrix import build_matrix
@@ -262,6 +263,53 @@ class TestReach1Index:
         index = rq6.Reach1Index([record.to_hypergraph() for record in members])
         star = _record("star", ((0, (0, 1)), (0, (0, 2)), (0, (0, 3)), (0, (1, 2, 3))))
         assert index.within_one(star.to_hypergraph()) is False
+
+
+class TestModelIsNotSharedAcrossUnits:
+    """``TokenNGram`` memoises a dense vocabulary vector per sampling context.
+
+    That cache is unbounded and is reset only by ``fit``. Sharing one fitted
+    model across the 27 seeds therefore grew RSS by about 2.7 GB per unit and
+    killed job 2213221 at 20.4 GB after eight units. Each unit must get its own
+    model so the cache dies with it.
+    """
+
+    @staticmethod
+    def _context(members) -> rq6.CollectionContext:
+        hypergraphs = [record.to_hypergraph() for record in members]
+        return rq6.CollectionContext(
+            name="probe",
+            collection=None,  # type: ignore[arg-type]
+            roles=False,
+            hypergraphs=hypergraphs,
+            member_ids=[f"m{i}" for i in range(len(hypergraphs))],
+            words=[fact_word(H) for H in hypergraphs],
+            keys=[fact_word(H) for H in hypergraphs],
+            flat=[flatten(H) for H in hypergraphs],
+            n_types=1,
+            n_preds=1,
+        )
+
+    def test_each_call_returns_a_fresh_model(self, members):
+        context = self._context(members)
+        first = context.model(rq6.MODEL_OURS)
+        second = context.model(rq6.MODEL_OURS)
+        assert first is not second, "a shared model carries its memo cache across units"
+
+    def test_the_fresh_model_samples_identically(self, members):
+        """Refitting is a memory fix, not a change of measurement."""
+        context = self._context(members)
+        first = context.model(rq6.MODEL_OURS).sample(16, seed=7, max_len=40)
+        second = context.model(rq6.MODEL_OURS).sample(16, seed=7, max_len=40)
+        assert first == second
+
+    def test_a_used_model_is_not_reachable_from_the_context(self, members):
+        """No attribute may retain the model, or the cache outlives the unit."""
+        context = self._context(members)
+        model = context.model(rq6.MODEL_OURS)
+        model.sample(8, seed=1, max_len=40)
+        retained = [value for value in vars(context).values() if value is model]
+        assert not retained
 
 
 class TestAnalyzerLabels:

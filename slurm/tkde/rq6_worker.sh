@@ -23,7 +23,8 @@
 #SBATCH --time=0-04:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=24G
+# Sized with rq3_worker.sh; the sampling peak is a measured 3.9 GB per unit.
+#SBATCH --mem=64G
 #SBATCH --constraint=sd
 #SBATCH --account=tic_163_uma
 

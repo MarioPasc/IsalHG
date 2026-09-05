@@ -132,7 +132,7 @@ reproduces its census numbers as an acceptance test.
 |---|---|---|---|---|---|
 | `wd50k66` | WD50K(66) entity knowledge bases inside the envelope (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): 3,988 (3,994 without the `m ≥ 3` floor) | none (single type) | main relation; roles S/O/Q in a side field | Wikidata P31 class of the subject (14 classes with ≥ 20 members covering 87.6 %; imbalance stated) | RQ1, RQ2, RQ4, RQ5, RQ6, RQ7 |
 | `wd50k66_full` | the same without the envelope filter (4,554) | | | | RQ7 yield row (fact alphabet only) |
-| `wd50k100` | purity control (1,837) | | | 8 usable classes | RQ5 supplement |
+| `wd50k100` | purity control (1,837) | | | 7 classes with ≥ 20 members (frozen census; the 8th has 19) | RQ5 supplement |
 | `ndc_classes` | NDC-classes quarterly co-formulation knowledge bases, encodable (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`, **facts of arity ≥ 2 only**): 1,381 members and 528 consecutive pairs with exact `Δ` and regime flag (1,432 / 555 when singleton products are counted as facts — the supplement's figure, reproduced to the unit); runs per class | FDA class type: `[epc]`, `[moa]`, `[pe]`, untyped | one predicate | NDC node identities (evaluation only); `Δ` of consecutive quarters | RQ1, RQ2, RQ3, RQ4, RQ7 |
 | `ndc_substances` | control (1,745; 2,222 counting singletons) | none | one predicate | identities | RQ2 census, RQ7 yield (supplement) |
 

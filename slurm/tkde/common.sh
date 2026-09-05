@@ -8,7 +8,7 @@
 #   PY                    absolute python of the isalhg-tkde env
 #   REPO_DIR              /mnt/.../fscratch/repos/IsalHG-tkde
 #   ISALHG_DATA_ROOT      /mnt/.../fscratch/datasets/isalhg_tkde   (raw/ corpora/)
-#   ISALHG_RESULTS_ROOT   /mnt/.../fscratch/results/IEEETKDE
+#   ISALHG_RESULTS_ROOT   /mnt/.../results/IEEETKDE   (HOME, not FSCRATCH)
 #   TKDE_LOGS_DIR         /mnt/.../execs/tkde/logs
 #   PYTHONPATH            "$REPO_DIR/src:$REPO_DIR"
 #   PYTHONUNBUFFERED=1
@@ -39,7 +39,13 @@ export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 export TKDE_CONDA_ENV="${TKDE_CONDA_ENV:-isalhg-tkde}"
 export TKDE_CONDA_PREFIX="${TKDE_CONDA_PREFIX:-${TKDE_USER_ROOT}/fscratch/conda_envs/${TKDE_CONDA_ENV}}"
 export ISALHG_DATA_ROOT="${ISALHG_DATA_ROOT:-${TKDE_USER_ROOT}/fscratch/datasets/isalhg_tkde}"
-export ISALHG_RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/fscratch/results/IEEETKDE}"
+# Results live on HOME, not FSCRATCH (decision 2026-09-05). FSCRATCH is over its
+# file soft quota and is pseudo-volatile -- files unaccessed for >2 months may be
+# pre-deleted without notice, and `fscratch_files` is not installed here, so
+# purged results are not recoverable. HOME is permanent and near-empty
+# (3.3k/35.0k files, 24 GB/280 GB). Inputs stay on FSCRATCH: repo, env, raw data
+# and corpora are all reproducible; the results are not.
+export ISALHG_RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE}"
 export TKDE_LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
 
 # --------------------------------------------------------------------------
@@ -143,7 +149,9 @@ tkde_job_header() {
 # --------------------------------------------------------------------------
 # Creates ${MYLOCALSCRATCH}/out on the compute node's local disk, exports it as
 # OUT_DIR, and installs EXIT/TERM/INT traps that mirror the WHOLE out/ tree into
-# ${ISALHG_RESULTS_ROOT}/<results_subdir>/ and only then delete the node copy.
+# ${ISALHG_RESULTS_ROOT}/<results_subdir>/ -- which is on HOME, so the copy-back
+# is also the durable-storage step and no separate FSCRATCH-to-HOME rescue job is
+# needed -- and only then delete the node copy.
 #
 # Why the whole tree and never a file list: a copy-back that enumerates paths
 # returns every file it named, so a payload artefact written outside those paths

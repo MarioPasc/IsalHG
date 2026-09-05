@@ -260,13 +260,29 @@ sacct -j <ID> -X -n -P -o JobID,State,Elapsed,NodeList   # states: this IS what 
 seff <ID>_<TASK>                                          # completed jobs only
 ```
 
-### Harvest
+### Results go to HOME, not FSCRATCH
 
-`$FSCRATCH` is pseudo-volatile: files unaccessed for over two months may be
-pre-deleted without notice, and `fscratch_files` is **not installed** on this
-host, so do not plan around recovering them. The local drive is the durable
-copy. Harvest with `scripts/tkde/harvest_from_picasso.sh` as soon as a job
-completes — it never deletes local files.
+**`ISALHG_RESULTS_ROOT = /mnt/home/users/tic_163_uma/mpascual/results/IEEETKDE`**
+— on HOME (decision 2026-09-05). Inputs stay on FSCRATCH: repo, env, raw data
+and `corpora/`.
+
+`$FSCRATCH` is pseudo-volatile (files unaccessed for over two months may be
+pre-deleted without notice, and `fscratch_files` is **not installed** here, so
+do not plan around recovering them) *and* the account is currently over its
+FSCRATCH file soft quota. HOME is permanent and nearly empty (3.3k/35.0k files,
+24 GB/280 GB). The asymmetry that decides it: every input on FSCRATCH is
+reproducible — re-sync the repo, re-run the setup, re-stage the data — and a
+result is not.
+
+Consequences you get for free: `tkde_stage_localscratch`'s copy-back is now
+*also* the durable-storage step, so no separate FSCRATCH-to-HOME rescue job is
+needed, and the campaign's output no longer consumes the exhausted FSCRATCH file
+quota. What still applies: HOME's own file quota is 35.0k, so a launcher that
+would write tens of thousands of small artefacts must still consolidate them.
+
+Harvest with `scripts/tkde/harvest_from_picasso.sh` as soon as a job completes —
+it reads the HOME root, and never deletes local files. The local drive remains
+the copy a paper cites.
 
 ---
 

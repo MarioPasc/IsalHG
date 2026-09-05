@@ -6,16 +6,21 @@
 #   bash scripts/tkde/harvest_from_picasso.sh             # copy
 #   bash scripts/tkde/harvest_from_picasso.sh RQ1_addressing   # one subtree
 #
-# Never deletes local files: no --delete, ever. FSCRATCH is pseudo-volatile
-# (files unaccessed for >2 months may be pre-deleted without notice), so the
-# local drive is the durable copy and the remote is the transient one. A harvest
-# that could remove a local result would invert that.
+# The remote results root is on HOME (permanent, courtesy-backed-up), not
+# FSCRATCH, since 2026-09-05 -- FSCRATCH is over its file soft quota and is
+# purged without notice. That makes HOME a second durable copy rather than the
+# only one, but the local drive remains the copy a paper cites.
+#
+# Never deletes local files: no --delete, ever. A harvest that could remove a
+# local result would invert the direction of trust.
 
 set -euo pipefail
 
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 REMOTE="${TKDE_REMOTE:-picasso}"
-REMOTE_RESULTS="${TKDE_REMOTE_RESULTS:-${TKDE_USER_ROOT}/fscratch/results/IEEETKDE}"
+# Results live on HOME, not FSCRATCH (decision 2026-09-05): FSCRATCH is over its
+# file soft quota and is purged without notice.
+REMOTE_RESULTS="${TKDE_REMOTE_RESULTS:-${TKDE_USER_ROOT}/results/IEEETKDE}"
 LOCAL_RESULTS="${ISALHG_RESULTS_ROOT:-/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE}"
 
 SSH_OPTS=(-o ServerAliveInterval=60)

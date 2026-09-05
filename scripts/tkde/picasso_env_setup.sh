@@ -33,7 +33,9 @@ ENV_NAME="${TKDE_CONDA_ENV:-isalhg-tkde}"
 ENV_PREFIX="${TKDE_CONDA_PREFIX:-${TKDE_USER_ROOT}/fscratch/conda_envs/${ENV_NAME}}"
 SOURCE_ENV="${TKDE_SOURCE_ENV:-isalhg}"
 DATA_ROOT="${ISALHG_DATA_ROOT:-${TKDE_USER_ROOT}/fscratch/datasets/isalhg_tkde}"
-RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/fscratch/results/IEEETKDE}"
+# HOME, not FSCRATCH (decision 2026-09-05) -- setup mkdir -p's this, so a stale
+# value here would silently re-create the retired FSCRATCH results directory.
+RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE}"
 LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
 CONDA_SH="/mnt/home/soft/miniconda/programs/x86_64/miniconda3_py310_23.1.0/etc/profile.d/conda.sh"
 

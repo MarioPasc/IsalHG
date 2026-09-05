@@ -166,6 +166,8 @@ RQ1/RQ2/RQ4/RQ5/RQ7 once their campaigns complete (RQ3 and RQ6 are decided, see
 | — | direction | `rq-4-5` | asked for the idempotent `--refill-censored-arm` so HPD can be re-scored after the vendor fix without recomputing other arms |
 | — | spawn | `hpd-fix` | library defect outside every wave-3 ownership set; scoped agent instead of a FIXUP |
 | — | spawn | `common-sync`, `ngram-cache` | post-merge consolidation and the library-side fix behind the RQ6 OOM |
+| — | spawn | `rq1-gate` | the RQ1 pointer-arm gate read 0.60 vs the probe's 0.500 on the partial rows; DESIGN says a discrepancy is a bug until explained. Verdict (b): the probe compared tokens by hash (TokenP(i) == TokenN(i)), under-reporting the pointer response on 67.3 % of pairs; corrected probe 0.577. Merged `f50b25c` (regression tests + note). |
+| (fixup, after `f50b25c`) | fixup | `rq-1-2-7` | DESIGN §2 amended (pointer target 0.577 with the reason); `analyze_rq1.GATE_POINTER = 0.577`; M1 normalizer made seed-consistent (`d_abs / (len_base + 1)`, the sequence over which `d_abs` is measured). All four gates pass on the partial rows: fact_rank 0.190 / 0.214, pointer 0.588 / 0.556. Rows unchanged. PI to confirm both amendments. |
 
 ## Integration
 

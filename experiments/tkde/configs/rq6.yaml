@@ -1,0 +1,55 @@
+# RQ6 --- generation (DESIGN.md section 7).
+#
+# Order-3 token n-gram over the collection's canonical fact words against the
+# same model over a flat incidence-list serialization with a strict decoder.
+# Validity is 1.000 by theorem on the fact alphabet (Prop 6) and is asserted,
+# not filtered; the baseline's rejection rate and its causes are measured.
+
+rq: RQ6
+seed_count: 27
+
+collections: [wd50k66, ndc_classes]
+
+# DESIGN.md section 7: "wd50k66 (roles on for the exhibit: nothing abstracted
+# away) and ndc_classes". ndc_classes carries no roles.
+roles:
+  wd50k66: true
+  ndc_classes: false
+
+n_samples: 10000
+max_len: 200
+# The reach-1 neighbourhood is reported on a 1,000-sample subset (DESIGN.md
+# section 7 step 3).
+reach1_subset: 1000
+
+alignment:
+  collections: [wd50k66]
+  n_pairs: 20
+  # Small members keep the pointer alphabet affordable; the fact alphabet is
+  # unaffected by the window.
+  member_window:
+    n_max: 10
+    m_max: 8
+  # The C++ canonical-string call does not return to the interpreter, so the
+  # budget has to be enforced by killing a forked child (measured; DESIGN.md
+  # section 3 step 1).
+  pointer_budget_s: 60
+
+completion:
+  n_members: 100
+  n_seeds: 3
+
+smoke:
+  seed_count: 1
+  collections: [ndc_classes]
+  n_samples: 200
+  reach1_subset: 50
+  alignment:
+    collections: [ndc_classes]
+    n_pairs: 3
+    # ndc_classes members are symmetric enough that w*_c can exceed a minute on
+    # one; the smoke only has to prove the guard fires and the row is censored.
+    pointer_budget_s: 20
+  completion:
+    n_members: 10
+    n_seeds: 1

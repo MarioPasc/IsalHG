@@ -21,7 +21,7 @@ import pytest
 from isalhg.core.fact_word import decode_fact_word, encode_fact_word
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.generation.errors import GenerationError
-from isalhg.generation.ngram import EOS, TokenNGram, words_of
+from isalhg.generation.ngram import DEFAULT_CACHE_SIZE, EOS, TokenNGram, words_of
 
 pytestmark = pytest.mark.unit
 
@@ -301,3 +301,98 @@ class TestWordsOf:
         pytest.importorskip("pynauty")
         corpus = _corpus(5)
         assert words_of(corpus) == words_of(corpus, [None] * len(corpus))
+
+
+# ---------------------------------------------------------------------------
+# The bounded distribution memo
+# ---------------------------------------------------------------------------
+
+
+def _wide_words(
+    n_symbols: int = 3000, per_word: int = 6, seed: int = 0
+) -> list[tuple[object, ...]]:
+    """A corpus whose vocabulary is ``n_symbols`` tokens, every one of them seen.
+
+    Deliberately not fact words: the memo is keyed on opaque tokens, and what
+    the byte-footprint test needs is a vocabulary wide enough that one dense
+    ``float64`` row is expensive, which a small structural corpus cannot give.
+    Each symbol appears exactly once, so almost every context of order 3 is
+    distinct and a sampler pressures the cache immediately.
+    """
+    symbols: list[object] = [("sym", i) for i in range(n_symbols)]
+    random.Random(seed).shuffle(symbols)
+    return [tuple(symbols[i : i + per_word]) for i in range(0, n_symbols, per_word)]
+
+
+class TestDistributionCache:
+    """Eviction is invisible to every sampled and scored value (the whole point)."""
+
+    @pytest.mark.parametrize("cache_size", [None, 1, 7, DEFAULT_CACHE_SIZE])
+    def test_samples_are_identical_across_cache_sizes(self, cache_size: int | None) -> None:
+        words = _words()
+        expected = TokenNGram(order=3, cache_size=None).fit(words).sample(200, seed=11)
+        actual = TokenNGram(order=3, cache_size=cache_size).fit(words).sample(200, seed=11)
+        assert actual == expected
+
+    @pytest.mark.parametrize("cache_size", [None, 1, DEFAULT_CACHE_SIZE])
+    def test_logprobs_are_identical_across_cache_sizes(self, cache_size: int | None) -> None:
+        words = _words()
+        unbounded = TokenNGram(order=3, cache_size=None).fit(words)
+        bounded = TokenNGram(order=3, cache_size=cache_size).fit(words)
+        for word in words[:20]:
+            assert bounded.logprob(word) == unbounded.logprob(word)
+
+    def test_the_cache_never_exceeds_its_bound(self) -> None:
+        model = TokenNGram(order=3, cache_size=16).fit(_wide_words())
+        model.sample(300, seed=3, max_len=8)
+        assert len(model._cache) <= 16
+
+    def test_an_unbounded_cache_grows_past_that_bound(self) -> None:
+        """The defect this bound fixes, pinned: ``None`` still grows without limit."""
+        model = TokenNGram(order=3, cache_size=None).fit(_wide_words())
+        model.sample(300, seed=3, max_len=8)
+        assert len(model._cache) > 16
+
+    def test_fit_resets_the_cache(self) -> None:
+        words = _words()
+        model = TokenNGram(order=3).fit(words)
+        model.sample(20, seed=0)
+        assert len(model._cache) > 0
+        model.fit(words)
+        assert len(model._cache) == 0
+
+    def test_reset_cache_empties_it_and_sampling_is_unchanged(self) -> None:
+        words = _words()
+        model = TokenNGram(order=3).fit(words)
+        before = model.sample(200, seed=5)
+        assert len(model._cache) > 0
+        model.reset_cache()
+        assert len(model._cache) == 0
+        assert model.sample(200, seed=5) == before
+
+    def test_reset_cache_before_any_use_is_harmless(self) -> None:
+        model = TokenNGram(order=3).fit(_words())
+        model.reset_cache()
+        assert model.sample(10, seed=1) == TokenNGram(order=3).fit(_words()).sample(10, seed=1)
+
+    @pytest.mark.parametrize("cache_size", [0, -1])
+    def test_rejects_a_cache_size_below_one(self, cache_size: int) -> None:
+        with pytest.raises(GenerationError, match="cache_size"):
+            TokenNGram(cache_size=cache_size)
+
+    def test_the_byte_footprint_stays_under_the_bound_over_many_samples(self) -> None:
+        """5,000 samples over a 3,001-token vocabulary, bounded to 32 rows.
+
+        Without the bound this is the RQ6 leak in miniature: one row costs
+        ``8 * |V|`` bytes and the sampler keeps finding new contexts.
+        """
+        cache_size = 32
+        model = TokenNGram(order=3, cache_size=cache_size).fit(_wide_words())
+        vocabulary_size = len(model.vocabulary)
+        assert vocabulary_size >= 3000
+
+        model.sample(5000, seed=7, max_len=8)
+
+        footprint = sum(int(row.nbytes) for row in model._cache.values())
+        assert len(model._cache) <= cache_size
+        assert footprint <= cache_size * vocabulary_size * 8

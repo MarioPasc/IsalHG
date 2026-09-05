@@ -320,7 +320,8 @@ def _arm_metadata(arm: str, params: Mapping[str, Any]) -> dict[str, Any]:
     metadata["canonical_name"] = str(distance.name)
     labels_used = getattr(distance, "labels_used", None)
     if labels_used is not None:
-        metadata["labels_used"] = labels_used
+        # The ABC declares this as a frozenset, which json cannot serialise.
+        metadata["labels_used"] = sorted(str(kind) for kind in labels_used)
     return metadata
 
 

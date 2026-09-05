@@ -1,0 +1,53 @@
+# RQ4 -- the data-quality screen (DESIGN.md §5).
+#
+# Reads the inlier-inlier block from the cached matrices and computes only the
+# 5 % anomaly rows. Run `experiments.tkde.matrices` first.
+#
+# Sub-collections. `ndc_classes` is screened whole (structural repetition:
+# ~7 members per unlabelled class). WD50K is split by Wikidata P31 class --
+# anomalies must be judged against their own kind -- for the six classes with
+# >= 47 members, measured from the frozen census:
+#   Q5 human 1830 | Q11424 film 1092 | Q1549591 big city 171
+#   Q5398426 television series 74 | Q202866 animated film 49
+#   Q3624078 sovereign state 47
+# The next class down (Q23002039, 39) falls below the threshold.
+#
+# Corruptions: three standard kinds at budgets 1 and 2, plus the iso-twin.
+# `iso_twin` ignores its budget (it swaps until nauty says non-isomorphic);
+# `corrupt` requires a positive budget, so 1 is passed and recorded.
+#
+# Cost: anomaly rows dominate. Measured per-pair on `sd`-class hardware --
+# netlsd 1.75 ms, hpd_jsd 0.62 ms, bipartite_ged_path 88 us, nauty_cert 58 us,
+# wl_l1 45 us, degree_seq_l1 2.6 us, size_l1 0.2 us -- so all eight arms cost
+# ~2.56 ms per anomaly-member pair and the campaign is ~48 core-hours.
+
+n_seeds: 27
+n_jobs: null # null -> SLURM_CPUS_PER_TASK, else 1
+
+arms:
+  - fact_rank # exact (ours)
+  - nauty_cert # exact (certificate member)
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_path
+  - degree_seq_l1 # naive floor, mandatory
+  - size_l1 # naive floor, mandatory
+
+corruptions:
+  - { kind: spurious_fact, budget: 1 }
+  - { kind: spurious_fact, budget: 2 }
+  - { kind: missing_fact, budget: 1 }
+  - { kind: missing_fact, budget: 2 }
+  - { kind: wrong_argument, budget: 1 }
+  - { kind: wrong_argument, budget: 2 }
+  - { kind: iso_twin, budget: 1 } # budget ignored by construction
+
+subcollections:
+  - { name: ndc_classes, collection: ndc_classes, label: null, min_members: 0 }
+  - { name: wd50k66_Q5, collection: wd50k66, label: Q5, min_members: 47 }
+  - { name: wd50k66_Q11424, collection: wd50k66, label: Q11424, min_members: 47 }
+  - { name: wd50k66_Q1549591, collection: wd50k66, label: Q1549591, min_members: 47 }
+  - { name: wd50k66_Q5398426, collection: wd50k66, label: Q5398426, min_members: 47 }
+  - { name: wd50k66_Q202866, collection: wd50k66, label: Q202866, min_members: 47 }
+  - { name: wd50k66_Q3624078, collection: wd50k66, label: Q3624078, min_members: 47 }

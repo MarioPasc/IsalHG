@@ -23,6 +23,7 @@
 #   tkde_stage_localscratch <subdir>     OUT_DIR on the node + copy-back traps
 #   tkde_sync_partial                    mirror back mid-job, keep the node copy
 #   tkde_finalize                        force the copy-back early (idempotent)
+#   tkde_run_synced <cmd...>             run a payload backgrounded + timed sync
 #   tkde_job_footer                      elapsed wall-clock
 #
 # Environment fixes below are inherited from the working F4 probe worker
@@ -87,9 +88,20 @@ unset _m _tkde_module_loaded
 # --------------------------------------------------------------------------
 # Interpreter environment
 # --------------------------------------------------------------------------
-# PYTHONPATH ahead of the editable-install .pth entry keeps the Python half and
-# the compiled half on ONE tree. Without it a repo-relative run resolves half
-# its imports from a different checkout, with no error.
+# PYTHONPATH does NOT decide where isalhg comes from. The editable install is a
+# PEP 660 meta-path finder, and a finder runs ahead of the path entries, so
+# `isalhg.*` always resolves to the tree the env was installed from -- the
+# SHARED checkout at ~/fscratch/repos/IsalHG-tkde, the one
+# scripts/tkde/sync_to_picasso.sh targets. PYTHONPATH decides only where
+# `experiments.*` comes from: $REPO_DIR, which a private deployment may point
+# elsewhere.
+#
+# Operationally: a change under src/** reaches the cluster ONLY through
+# sync_to_picasso.sh (which also rebuilds the extension in the env); a private
+# $REPO_DIR deployment changes experiments/** and slurm/** and nothing else. The
+# two trees are recorded separately in every manifest as `src_deploy` (the
+# library half) and `runner_deploy` (the runner half), so a result is never
+# attributed to a tree that did not compute half of it.
 export PYTHONPATH="${REPO_DIR}/src:${REPO_DIR}${PYTHONPATH:+:${PYTHONPATH}}"
 export PYTHONUNBUFFERED=1
 
@@ -234,6 +246,32 @@ tkde_sync_partial() {
         rsync -a "${MYLOCALSCRATCH}/out/" "${TKDE_DEST_DIR}/" \
             || echo "[warn] partial copy-back failed; retrying at job end" >&2
     fi
+}
+
+# --------------------------------------------------------------------------
+# tkde_run_synced <command> [args...] -- run a payload in the BACKGROUND,
+# mirroring out/ back on a timer, and only then wait for it.
+# --------------------------------------------------------------------------
+# The copy-back above runs from the EXIT/TERM traps, but bash defers a trap
+# while it waits on a FOREGROUND child. Measured on job 2213210 (2026-09-05): a
+# scancel killed the step before tkde_finalize ever ran and fourteen minutes of
+# rows died on the node. Backgrounding the payload lets the trap fire, and the
+# periodic tkde_sync_partial bounds the loss to one TKDE_SYNC_INTERVAL_S
+# (default 300 s) on a TIMEOUT or an OOM kill. It also makes rows visible on
+# HOME mid-run rather than only at job end. Jobs that write straight to HOME
+# keep the wrapper anyway: there the sync is a no-op and what it buys is that
+# the TERM trap can run at all.
+tkde_run_synced() {
+    "$@" &
+    local pid=$!
+    local status=0
+    while kill -0 "${pid}" 2>/dev/null; do
+        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
+        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
+    done
+    wait "${pid}" || status=$?
+    tkde_sync_partial
+    return "${status}"
 }
 
 # --------------------------------------------------------------------------

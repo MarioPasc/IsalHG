@@ -90,12 +90,17 @@ bench = [
 ]
 
 # Developer toolchain
+# kmedoids (FasterPAM) and netlsd are pulled here as well as in [bench] so that
+# a worker env built with `pip install -e ".[dev]"` can run the metric-space
+# toolkit and its tests without the full benchmarking stack.
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "hypothesis>=6.0",
     "ruff>=0.4",
     "mypy>=1.0",
+    "kmedoids>=0.5",
+    "netlsd>=1.0",
 ]
 
 eval = [

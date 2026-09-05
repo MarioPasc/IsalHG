@@ -64,6 +64,19 @@ class VocabularyMismatchError(IsalHGError):
     """Raised when two hypergraphs declare incompatible label vocabularies."""
 
 
+class FactWordError(IsalHGError):
+    """Raised when a fact-alphabet operation receives input outside its domain.
+
+    The fact decoder is *total* on well-formed token sequences (a knowledge base
+    comes back for every such sequence), so this exception never signals a
+    "meaningless" word.  It signals a token that is not a member of the token
+    vocabulary at all --- a malformed tuple, a mixed-shape operand list, a
+    negative rank, or a type / predicate id outside the declared vocabulary ---
+    and, on the encoder side, a rank vector that is not a permutation or a roles
+    map that does not cover every incidence.
+    """
+
+
 class HypergraphEditError(IsalHGError):
     """Raised when a structural edit operation violates a precondition.
 

@@ -146,6 +146,15 @@ class FactRankLevenshtein(HypergraphDistance):
         arm refuses :meth:`pairwise`.
     """
 
+    # Both kinds, and both carried explicitly in the word rather than inferred:
+    # the type prefix writes one ``("T", type)`` token per constant and every
+    # fact token is ``("F", predicate, operands)``. The roles arm
+    # (``fact_rank_roles``) reads a third kind that no competitor sees at all
+    # -- the argument role of each incidence, which lives on the knowledge-base
+    # record and not on the SparseHypergraph -- which is why it is an ablation
+    # and not the primary arm.
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(self, roles: bool = False) -> None:
         self._roles = roles
 

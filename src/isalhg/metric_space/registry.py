@@ -46,6 +46,31 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "hypercot": "isalhg.metric_space.representations.hypercot",
     "degree_seq_l1": "isalhg.metric_space.representations.degree_seq_l1",
     "size_l1": "isalhg.metric_space.representations.size_l1",
+    # The second nauty tokenization (DESIGN.md G3): same canonical form as
+    # nauty_levi_edit, one symbol per Levi node instead of per certificate byte.
+    "nauty_cert_rows": "isalhg.metric_space.representations.nauty_levi_edit",
+    # The two readings of the bipartite GED, separated because they fail
+    # differently: the edit-path cost bounds the exact oracle, the raw
+    # assignment value has false zeros. RQ2 reports both.
+    "bipartite_ged_path": "isalhg.metric_space.distances.hged",
+    "bipartite_ged_assign": "isalhg.metric_space.distances.hged",
+    # Aliases. Each resolves to the same class as its canonical name, so
+    # ``get_distance(alias).name`` returns the canonical name, not the alias --
+    # callers that record both should take the requested string as the arm id
+    # and ``distance.name`` as the canonical id.
+    "nauty_cert": "isalhg.metric_space.representations.nauty_levi_edit",
+    "wl_l1": "isalhg.metric_space.representations.wl",
+    "netlsd": "isalhg.metric_space.representations.netlsd",
+    "exact_ged": "isalhg.metric_space.distances.hged",
+}
+
+# Alias -> canonical registered name, for callers that need to collapse the two.
+ALIASES: dict[DistanceName, DistanceName] = {
+    "nauty_cert": "nauty_levi_edit",
+    "wl_l1": "hypergraph_wl_l1",
+    "netlsd": "netlsd_l2",
+    "exact_ged": "exact_hged",
+    "bipartite_ged_path": "bipartite_hged",
 }
 
 
@@ -99,15 +124,48 @@ def available_distances() -> tuple[DistanceName, ...]:
     return tuple(sorted(_REGISTRY.keys()))
 
 
+def labels_used(name: DistanceName) -> frozenset[str]:
+    """Return the label kinds the distance registered under ``name`` reads.
+
+    Reads :attr:`isalhg.metric_space.base.HypergraphDistance.labels_used` off
+    the instantiated distance -- the class attribute is the single source of
+    truth, and it is pinned against measured relabel-sensitivity by
+    ``tests/unit/metric_space/test_representations_kb.py``. The audit table and
+    the experiment runners print this so a reader can see at a glance which
+    competitors compare the same information as ``fact_rank`` and which compare
+    less.
+
+    Parameters
+    ----------
+    name : DistanceName
+        A registered distance name or alias.
+
+    Returns
+    -------
+    frozenset[str]
+        A subset of ``{"vertex", "edge"}``. Empty for the label-blind arms
+        (``netlsd_l2``, ``hpd_jsd``, ``hypercot``, ``size_l1``,
+        ``degree_seq_l1``).
+
+    Raises
+    ------
+    isalhg.errors.DistanceUnavailableError
+        If ``name`` is not registered, or its module cannot be imported.
+    """
+    return get_distance(name).labels_used
+
+
 def _reset_for_testing() -> None:
     """Empty the registry. For test isolation only -- not public API."""
     _REGISTRY.clear()
 
 
 __all__ = [
+    "ALIASES",
     "DistanceFactory",
     "DistanceUnavailableError",
     "available_distances",
     "get_distance",
+    "labels_used",
     "register_distance",
 ]

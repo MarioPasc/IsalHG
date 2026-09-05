@@ -259,6 +259,12 @@ class FactAddressingAblation(HypergraphDistance):
         If ``arm`` is not one of the three names.
     """
 
+    # All three arms displace only the *addressing* of the constants; the word
+    # they address is still the fact word, whose type prefix and fact tokens
+    # carry both label kinds. The arms differ from ``fact_rank`` in how ranks
+    # are chosen, not in what is written.
+    labels_used = frozenset({"vertex", "edge"})
+
     def __init__(self, arm: str, *, backend: Backend | None = None) -> None:
         if arm not in ARM_NAMES:
             raise DistanceComputationError(

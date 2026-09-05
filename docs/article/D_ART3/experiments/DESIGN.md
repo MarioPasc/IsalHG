@@ -301,10 +301,24 @@ variant collections (certificate validity); real pairs stratified by `n` for
 the oracle.
 
 **Procedure.**
+0. *Exactness at zero, both directions.* For each collection and each
+   representation: on 100 isomorphic pairs (random relabellings, `permute`),
+   the fraction at distance 0 (`< 10⁻⁹` for real-valued arms) — a complete
+   invariant scores 1.000; the audit of 2026-09-05
+   (`COMPETITOR_AUDIT.md`) found the bipartite **edit-path** reading at
+   0.08–0.19, i.e. it *separates* isomorphic knowledge bases, so it does not
+   respect isomorphism classes and cannot carry a medoid certificate; HyperCOT
+   returned 3.46 on an isomorphic pair (convergence failure) — negatives are
+   clamped to 0 and the tolerance is stated.
 1. *False-merge census.* For each collection and each representation: number
-   of unordered pairs at distance 0 (or `< 10⁻⁹` for real-valued embeddings)
-   whose members are non-isomorphic by the nauty fingerprint; number of classes
-   induced by the representation vs true classes.
+   of unordered pairs at distance 0 (or `< 10⁻⁹` for real-valued embeddings —
+   NetLSD has 9 exact zeros but 186 below tolerance on 200 members, so the
+   tolerance is not optional) whose members are non-isomorphic by the nauty
+   fingerprint; number of classes induced by the representation vs true
+   classes. Every per-pair computation is bounded at the **process level**
+   (a forked child killed at the budget): the pointer alphabet's C++ call and
+   the oracles do not return to the interpreter on time-out, so `SIGALRM` and
+   the oracles' own `timeout` argument do not bound them (measured).
 2. *Bipartite metricity on real members.* 2,000 random ordered pairs per
    collection: asymmetry rate of the edit-path reading; 5,000 random triples:
    triangle-violation rate; false-zero rate of the raw assignment reading on

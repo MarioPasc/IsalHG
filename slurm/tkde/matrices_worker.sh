@@ -86,8 +86,14 @@ echo ""
 import os
 import experiments.tkde.matrices as m
 import isalhg
-repo = os.environ["REPO_DIR"]
-assert m.__file__.startswith(repo), f"experiments resolves outside {repo}: {m.__file__}"
+
+# Assert the DIRECTORY NAME, never equality with $REPO_DIR. ~/fscratch is a
+# symlink to /mnt2/fscratch/users/..., so a correct install reports the /mnt2
+# spelling and a startswith($REPO_DIR) check fails on it (PICASSO.md §1).
+name = os.path.basename(os.environ["REPO_DIR"])
+assert f"/{name}/" in m.__file__, f"experiments resolves outside {name}: {m.__file__}"
+# isalhg legitimately resolves through the editable-install finder of the
+# canonical IsalHG-tkde tree; that is correct because src/** is unchanged here.
 assert "IsalHG-tkde" in isalhg.__file__, f"isalhg resolves outside the campaign: {isalhg.__file__}"
 print(f"[ok] experiments -> {m.__file__}")
 print(f"[ok] isalhg      -> {isalhg.__file__}")
@@ -95,7 +101,31 @@ PYEOF
 
 mkdir -p "${ISALHG_RESULTS_ROOT}/matrices"
 
-"${PY}" -m experiments.tkde.matrices \
+# ---------------------------------------------------------------------------
+# tkde_run_synced -- run a payload in the BACKGROUND, mirroring out/ back on a
+# timer, and only then wait for it.
+# ---------------------------------------------------------------------------
+# common.sh mirrors the staged tree back from EXIT/TERM traps, but bash defers a
+# trap while it waits on a FOREGROUND child: measured on job 2213210
+# (2026-09-05), a scancel killed the step before tkde_finalize ever ran and
+# fourteen minutes of rows died on the node. Backgrounding the payload lets the
+# trap fire, and the periodic tkde_sync_partial bounds the loss to one interval
+# on a TIMEOUT or an OOM kill. This job writes straight to HOME, so the sync
+# itself is a no-op here; what it buys is that the TERM trap can run at all.
+tkde_run_synced() {
+    "$@" &
+    local pid=$!
+    local status=0
+    while kill -0 "${pid}" 2>/dev/null; do
+        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
+        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
+    done
+    wait "${pid}" || status=$?
+    tkde_sync_partial
+    return "${status}"
+}
+
+tkde_run_synced "${PY}" -m experiments.tkde.matrices \
     --config "${CONFIG}" \
     --out "${ISALHG_RESULTS_ROOT}" \
     --data-root "${ISALHG_DATA_ROOT}" \

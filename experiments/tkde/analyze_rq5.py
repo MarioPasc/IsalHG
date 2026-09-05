@@ -35,7 +35,8 @@ from typing import Any
 
 from experiments.tkde.config import results_root
 from experiments.tkde.io import RunPaths, write_stats, write_summary, write_tables_md
-from experiments.tkde.rq5 import FLOOR_ARMS, ROWS_SUBDIR, RQ_DIR
+from experiments.tkde.matrices import contains_smoke
+from experiments.tkde.rq5 import FLOOR_ARMS, RQ_DIR
 from experiments.tkde.stats import bca_ci, paired_family
 
 logger = logging.getLogger(__name__)
@@ -52,8 +53,18 @@ def _read(root: Path, table: str) -> Any:
     """Return the concatenation of one row table, or an empty frame."""
     import pandas as pd
 
-    pattern = str(Path(root) / RQ_DIR / ROWS_SUBDIR / f"rows_{table}__*.csv")
-    files = sorted(glob.glob(pattern))
+    # Recursive, so a row file is found wherever the runner nested it; the
+    # `_smoke` exclusion below is then what keeps smoke output out, rather
+    # than the glob happening not to reach it.
+    pattern = str(Path(root) / RQ_DIR / "**" / f"rows_{table}__*.csv")
+    # A cluster smoke task runs a REAL unit under the same unit id the full
+    # run uses, so its rows are indistinguishable once concatenated. They are
+    # written under a `_smoke` component and excluded here by path.
+    found = sorted(glob.glob(pattern, recursive=True))
+    files = [f for f in found if not contains_smoke(f)]
+    skipped = len(found) - len(files)
+    if skipped:
+        logger.info("skipped %d smoke row file(s) for table %s", skipped, table)
     if not files:
         logger.warning("no rows for table %s under %s", table, pattern)
         return pd.DataFrame()

@@ -296,3 +296,116 @@ class TestHypothesisVerdicts:
         assert verdict["n_exact_above_chance"] == 2
         assert verdict["n_incomplete_above_chance"] == 0
         assert verdict["exact_mean_auc"] > verdict["incomplete_mean_auc"]
+
+
+class TestSmokeIsolation:
+    """Smoke output must never be mistaken for campaign output.
+
+    A cluster smoke task runs a REAL unit under the REAL config, so its rows
+    carry the same unit id the full run uses and are shaped exactly like the
+    campaign's. Written into the real folder they would make the idempotent
+    full run skip that unit and ship the smoke's output as the result -- a
+    complete, plausible, wrong result set with nothing to flag it.
+    """
+
+    def test_smoke_component_is_detected_anywhere_in_the_path(self) -> None:
+        assert mx.contains_smoke("/r/RQ4_screen/_smoke/rows/rows_auc__x.csv")
+        assert mx.contains_smoke("_smoke/rows_auc__x.csv")
+        assert mx.contains_smoke("/r/matrices/_smoke/wd50k66/fact_rank.npy")
+        assert not mx.contains_smoke("/r/RQ4_screen/rows/rows_auc__x.csv")
+        # A substring is not a component: a peer's folder may legitimately be
+        # named "_smoke_rq3" without being smoke output of ours to exclude.
+        assert not mx.contains_smoke("/r/_smoke_rq3/rows/rows_auc__x.csv")
+
+    def test_smoke_matrices_cache_is_a_separate_directory(self) -> None:
+        real = mx.collection_cache_dir("/r", "wd50k66")
+        smoke = mx.collection_cache_dir("/r", "wd50k66", smoke=True)
+        assert real != smoke
+        assert not mx.contains_smoke(real)
+        assert mx.contains_smoke(smoke)
+        assert smoke.name == "wd50k66"
+
+    def test_analyzers_exclude_smoke_rows_and_keep_real_ones(self, tmp_path) -> None:
+        pytest.importorskip("pandas")
+        from experiments.tkde.analyze_rq4 import _read as read_rq4
+
+        real_dir = tmp_path / "RQ4_screen" / "rows"
+        smoke_dir = tmp_path / "RQ4_screen" / "_smoke" / "rows"
+        real_dir.mkdir(parents=True)
+        smoke_dir.mkdir(parents=True)
+        header = (
+            "rq,experiment,collection,seed,arm,secs,censored,subcollection,"
+            "corruption,budget,score,auc,n_inliers,n_anomalies,n_skipped\n"
+        )
+        row = "RQ4,e,ndc_classes,{seed},fact_rank,1.0,0,ndc_classes,iso_twin,1,knn,{auc},10,1,0\n"
+        (real_dir / "rows_auc__e__seed40000.csv").write_text(
+            header + row.format(seed=40000, auc=0.9)
+        )
+        # The same unit id with a different value -- exactly the collision.
+        (smoke_dir / "rows_auc__e__seed40000.csv").write_text(
+            header + row.format(seed=40000, auc=0.1)
+        )
+
+        frame = read_rq4(tmp_path, "auc")
+        assert len(frame) == 1, "the smoke row must not be concatenated"
+        assert float(frame["auc"].iloc[0]) == 0.9
+
+    def test_deploy_stamps_name_both_trees(self) -> None:
+        stamps = mx.deploy_stamps()
+        # Both keys are always present, so a manifest never silently describes
+        # half of what ran: `isalhg.*` comes from the shared checkout via the
+        # editable finder, `experiments.*` from the agent's own deployment.
+        assert set(stamps) == {"src_deploy", "runner_deploy"}
+
+
+class TestMatricesRootIsSeparable:
+    """The matrix cache is read from a root the task never writes to.
+
+    On Picasso ``--out`` is the node-local staging tree that
+    ``tkde_stage_localscratch`` creates EMPTY, while the matrices job wrote its
+    26 ``.npy`` files once, on another node, to the shared HOME results root.
+    A runner that reads the cache under ``--out`` therefore finds nothing and
+    raises on its first unit; a local run never shows it, because there the two
+    roots coincide.
+    """
+
+    def test_read_root_and_write_root_are_independent(self, tmp_path) -> None:
+        numpy = pytest.importorskip("numpy")
+        from isalhg.metric_space.toolkit.matrix import member_order_sha1
+
+        ids = ["a", "b"]
+        read_root = tmp_path / "home_results"
+        write_root = tmp_path / "node_scratch"
+        write_root.mkdir()
+        cache_dir = mx.collection_cache_dir(read_root, "ndc_classes")
+        cache_dir.mkdir(parents=True)
+        matrix_path, manifest_path = mx.cache_paths(cache_dir, "size_l1")
+        with matrix_path.open("wb") as handle:
+            numpy.save(handle, numpy.zeros((2, 2), dtype=numpy.float32))
+        manifest_path.write_text(
+            json.dumps({"n": 2, "member_order_sha1": member_order_sha1(ids), "arm": "size_l1"})
+        )
+
+        assert mx.load_cached_matrix(read_root, "ndc_classes", "size_l1", ids).shape == (2, 2)
+        with pytest.raises(mx.MatrixCacheMissingError):
+            mx.load_cached_matrix(write_root, "ndc_classes", "size_l1", ids)
+
+    @pytest.mark.parametrize("module", [rq4, rq5])
+    def test_runners_take_a_matrices_root(self, module) -> None:
+        import inspect
+
+        for name in ("run_unit", "ensure_smoke_matrices"):
+            params = inspect.signature(getattr(module, name)).parameters
+            assert "matrices_root" in params, f"{module.__name__}.{name}"
+            assert "out_root" not in params, f"{module.__name__}.{name} still reads under --out"
+
+    @pytest.mark.parametrize("rq", ["rq4", "rq5"])
+    def test_workers_pass_the_shared_results_root(self, rq) -> None:
+        from pathlib import Path
+
+        worker = Path(__file__).resolve().parents[2] / "slurm" / "tkde" / f"{rq}_worker.sh"
+        text = worker.read_text(encoding="utf-8")
+        # Both the smoke branch and the shard branch must read the shared root.
+        assert text.count('--matrices-root "${ISALHG_RESULTS_ROOT}"') == 2, rq
+        # The payload runs in the background so the copy-back traps can fire.
+        assert text.count('tkde_run_synced "${PY}"') == 2, rq

@@ -69,8 +69,14 @@ echo ""
 import os
 import experiments.tkde.rq5 as m
 import isalhg
-repo = os.environ["REPO_DIR"]
-assert m.__file__.startswith(repo), f"experiments resolves outside {repo}: {m.__file__}"
+
+# Assert the DIRECTORY NAME, never equality with $REPO_DIR. ~/fscratch is a
+# symlink to /mnt2/fscratch/users/..., so a correct install reports the /mnt2
+# spelling and a startswith($REPO_DIR) check fails on it (PICASSO.md §1).
+name = os.path.basename(os.environ["REPO_DIR"])
+assert f"/{name}/" in m.__file__, f"experiments resolves outside {name}: {m.__file__}"
+# isalhg legitimately resolves through the editable-install finder of the
+# canonical IsalHG-tkde tree; that is correct because src/** is unchanged here.
 assert "IsalHG-tkde" in isalhg.__file__, f"isalhg resolves outside the campaign: {isalhg.__file__}"
 print(f"[ok] experiments -> {m.__file__}")
 print(f"[ok] isalhg      -> {isalhg.__file__}")
@@ -80,6 +86,29 @@ PYEOF
 # memoizes the loaded collection and the 11 cached matrices (64 MB each on
 # wd50k66), which a per-unit subprocess would re-read ~300 times. The
 # start-cutoff and its first-unit exemption live inside that loop.
+# ---------------------------------------------------------------------------
+# tkde_run_synced -- run a payload in the BACKGROUND, mirroring out/ back on a
+# timer, and only then wait for it.
+# ---------------------------------------------------------------------------
+# common.sh mirrors the staged tree back from EXIT/TERM traps, but bash defers a
+# trap while it waits on a FOREGROUND child: measured on job 2213210
+# (2026-09-05), a scancel killed the step before tkde_finalize ever ran and
+# fourteen minutes of rows died on the node. Backgrounding the payload lets the
+# trap fire, and the periodic tkde_sync_partial bounds the loss to one interval
+# on a TIMEOUT or an OOM kill while also making rows visible on HOME mid-job.
+tkde_run_synced() {
+    "$@" &
+    local pid=$!
+    local status=0
+    while kill -0 "${pid}" 2>/dev/null; do
+        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
+        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
+    done
+    wait "${pid}" || status=$?
+    tkde_sync_partial
+    return "${status}"
+}
+
 if [[ -n "${TKDE_SMOKE_UNIT:-}" ]]; then
     # The one cluster smoke task allowed below the two-hour floor: a single
     # named unit -- a cheap balanced one, not a full-design one -- proving the
@@ -87,16 +116,24 @@ if [[ -n "${TKDE_SMOKE_UNIT:-}" ]]; then
     # the real job is queued. Passing environment self-checks is not evidence
     # that a job will run.
     echo "[smoke] running unit ${TKDE_SMOKE_UNIT} only"
-    "${PY}" -m experiments.tkde.rq5 \
+    # --tag _smoke keeps the smoke's rows OUT of the real experiment folder.
+    # The smoke runs a REAL unit (same config, same unit id), so its rows are
+    # byte-shaped exactly like the campaign's: written alongside them, the
+    # idempotent full run would see the unit as done and ship the smoke's
+    # output as the result. The analyzers also exclude any `_smoke` path.
+    tkde_run_synced "${PY}" -m experiments.tkde.rq5 \
         --config "${CONFIG}" \
         --out "${OUT_DIR}" \
         --data-root "${ISALHG_DATA_ROOT}" \
+        --matrices-root "${ISALHG_RESULTS_ROOT}" \
+        --tag _smoke \
         --unit "${TKDE_SMOKE_UNIT}"
 else
-    "${PY}" -m experiments.tkde.rq5 \
+    tkde_run_synced "${PY}" -m experiments.tkde.rq5 \
         --config "${CONFIG}" \
         --out "${OUT_DIR}" \
         --data-root "${ISALHG_DATA_ROOT}" \
+        --matrices-root "${ISALHG_RESULTS_ROOT}" \
         --shard "${TASK_IDX}/${N_TASKS}" \
         --deadline "${DEADLINE}" \
         --unit-budget "${UNIT_BUDGET_S}"

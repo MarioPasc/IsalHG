@@ -44,6 +44,7 @@ from experiments.tkde.config import TkdeConfigError, load_yaml, results_root, se
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.matrices import (
     MatrixCacheMissingError,
+    deploy_stamps,
     load_cached_matrix,
     parse_shard,
     resolve_data_root,
@@ -394,7 +395,7 @@ def _score_matrix(
 def run_unit(
     unit: Unit,
     *,
-    out_root: Path,
+    matrices_root: Path,
     corpora_root: Path | str | None,
     arms: Sequence[str],
     n_jobs: int,
@@ -405,8 +406,11 @@ def run_unit(
     Parameters
     ----------
     unit : Unit
-    out_root : Path
-        Results root holding ``matrices/``.
+    matrices_root : Path
+        Results root holding ``matrices/``. On the cluster this is the shared
+        HOME results root, NOT the node-local ``--out`` staging tree: the
+        matrices job wrote them once, on another node, and this task only
+        reads them.
     corpora_root : Path or str or None
     arms : Sequence[str]
         Representations to score.
@@ -522,7 +526,7 @@ def run_unit(
             matrix_key = f"matrix::{sub.collection}::{arm}"
             if matrix_key not in collection_cache:
                 collection_cache[matrix_key] = load_cached_matrix(
-                    out_root, sub.collection, arm, parent_ids
+                    matrices_root, sub.collection, arm, parent_ids
                 )
             full = collection_cache[matrix_key]
         except MatrixCacheMissingError as exc:
@@ -606,7 +610,7 @@ def ensure_smoke_matrices(
     subs: Sequence[SubCollection],
     arms: Sequence[str],
     *,
-    out_root: Path,
+    matrices_root: Path,
     corpora_root: Path | str | None,
     n_jobs: int = 4,
 ) -> None:
@@ -619,7 +623,7 @@ def ensure_smoke_matrices(
     ----------
     subs : Sequence[SubCollection]
     arms : Sequence[str]
-    out_root : Path
+    matrices_root : Path
     corpora_root : Path or str or None
     n_jobs : int, optional
     """
@@ -630,11 +634,11 @@ def ensure_smoke_matrices(
         collection = corpora.load_collection(name, corpora_root)
         ids = corpora.member_ids(collection)
         items = corpora.hypergraphs(collection)
-        cache_dir = collection_cache_dir(out_root, name)
+        cache_dir = collection_cache_dir(matrices_root, name)
         cache_dir.mkdir(parents=True, exist_ok=True)
         for arm in arms:
             try:
-                load_cached_matrix(out_root, name, arm, ids)
+                load_cached_matrix(matrices_root, name, arm, ids)
                 continue
             except MatrixCacheMissingError:
                 pass
@@ -668,12 +672,33 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--n-jobs", type=int, default=None)
     parser.add_argument(
+        "--matrices-root",
+        type=Path,
+        default=None,
+        help=(
+            "results root holding matrices/ (default: --out). On the cluster the "
+            "matrices job wrote them once to the shared HOME results root, while "
+            "--out is this task's node-local staging tree, so the two differ."
+        ),
+    )
+    parser.add_argument(
         "--data-root",
         type=Path,
         default=None,
         help="directory holding corpora/ (Picasso: $ISALHG_DATA_ROOT)",
     )
     parser.add_argument("--force", action="store_true")
+    parser.add_argument(
+        "--tag",
+        type=str,
+        default="",
+        help=(
+            "path component under the RQ folder. A cluster smoke task runs a REAL "
+            "unit to prove the deployment, so its rows carry the same unit id the "
+            "full run uses; written into the real folder they would make the "
+            "idempotent full run skip that unit. Smoke tasks pass `_smoke`."
+        ),
+    )
     parser.add_argument(
         "--deadline",
         type=float,
@@ -702,6 +727,9 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     out_root = Path(args.out) if args.out else results_root()
     data_root = resolve_data_root(args.data_root or config.get("data_root"))
+    # Reads come from the shared root the matrices job wrote to; writes go to
+    # --out. Defaulting to out_root keeps the single-root local runs working.
+    matrices_root = Path(args.matrices_root) if args.matrices_root else out_root
     n_jobs = args.n_jobs or int(config.get("n_jobs") or os.environ.get("SLURM_CPUS_PER_TASK", 1))
 
     if args.unit is not None:
@@ -713,11 +741,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     else:
         selected = list(range(len(units)))
 
-    rows_paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=ROWS_SUBDIR)
+    prefix = f"{args.tag}/" if args.tag else ""
+    rows_paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=f"{prefix}{ROWS_SUBDIR}")
     rows_paths.ensure()
 
     if args.smoke:
-        ensure_smoke_matrices(subs, arms, out_root=out_root, corpora_root=data_root)
+        ensure_smoke_matrices(subs, arms, matrices_root=matrices_root, corpora_root=data_root)
 
     logger.info(
         "rq4: %d unit(s) of %d, arms=%s n_jobs=%d out=%s",
@@ -755,7 +784,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         started = time.perf_counter()
         tables = run_unit(
             unit,
-            out_root=out_root,
+            matrices_root=matrices_root,
             corpora_root=data_root,
             arms=arms,
             n_jobs=n_jobs,
@@ -768,7 +797,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         logger.info("unit %d done in %.1f s", unit_index, time.perf_counter() - started)
 
     shard_tag = args.shard.replace("/", "_") if args.shard else "all"
-    shard_paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=f"shard_{shard_tag}")
+    shard_paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=f"{prefix}shard_{shard_tag}")
     shard_paths.ensure()
     write_config(
         shard_paths,
@@ -788,7 +817,14 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     write_manifest(
         shard_paths,
-        extra={"n_units_written": n_written, "n_deferred": len(deferred), "deferred": deferred},
+        extra={
+            "n_units_written": n_written,
+            "n_deferred": len(deferred),
+            "deferred": deferred,
+            "tag": args.tag,
+            "matrices_root": str(matrices_root),
+            **deploy_stamps(),
+        },
     )
     if deferred:
         logger.warning("%d unit(s) deferred by the start-cutoff: %s", len(deferred), deferred)

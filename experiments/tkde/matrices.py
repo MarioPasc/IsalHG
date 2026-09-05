@@ -125,7 +125,7 @@ class MatrixCacheMissingError(RuntimeError):
 # ---------------------------------------------------------------------------
 
 
-def collection_cache_dir(root: Path | str, collection: str) -> Path:
+def collection_cache_dir(root: Path | str, collection: str, *, smoke: bool = False) -> Path:
     """Return the cache directory of one collection's matrices.
 
     Parameters
@@ -134,13 +134,38 @@ def collection_cache_dir(root: Path | str, collection: str) -> Path:
         Results root.
     collection : str
         Frozen collection name.
+    smoke : bool, optional
+        Route under the smoke component. A smoke run builds matrices over a
+        *subset* of the members under the real arm names; sharing a directory
+        with the campaign's would let a consumer's cache lookup meet a matrix
+        built from 40 members. The member-order SHA-1 would reject it, but a
+        rejection that depends on a hash is a weaker guarantee than never
+        writing the file next to the real one.
 
     Returns
     -------
     Path
-        ``<root>/matrices/<collection>``.
+        ``<root>/matrices/<collection>``, or ``<root>/matrices/_smoke/<collection>``.
     """
-    return Path(root) / RQ_DIR / collection
+    base = Path(root) / RQ_DIR
+    if smoke:
+        base = base / SMOKE_COMPONENT
+    return base / collection
+
+
+def _read_matrix_at(cache_dir: Path, arm: str, member_ids: Sequence[str]) -> Any:
+    """Validate a cached matrix in an explicit directory (see :func:`load_cached_matrix`)."""
+    import numpy as np
+
+    matrix_path, manifest_path = cache_paths(cache_dir, arm)
+    if not matrix_path.exists() or not manifest_path.exists():
+        raise MatrixCacheMissingError(f"no cached matrix for arm={arm!r} under {cache_dir}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("member_order_sha1") != member_order_sha1(member_ids):
+        raise MatrixCacheMissingError(f"member order mismatch for arm={arm!r} under {cache_dir}")
+    if int(manifest.get("n", -1)) != len(member_ids):
+        raise MatrixCacheMissingError(f"size mismatch for arm={arm!r} under {cache_dir}")
+    return np.load(matrix_path)
 
 
 def load_cached_matrix(
@@ -391,6 +416,62 @@ def resolve_data_root(explicit: Path | str | None = None) -> Path | None:
     return None
 
 
+#: Path component that marks an artefact as produced by a smoke run. A smoke
+#: task runs ONE real unit to prove the deployment, so its rows are addressed by
+#: the same unit id the full run uses; written into the real folder they would
+#: make the idempotent full run skip that unit and ship the smoke's output as
+#: the campaign's. Everything a smoke writes therefore goes under this
+#: component, and the analyzers refuse to read any path containing it.
+SMOKE_COMPONENT = "_smoke"
+
+#: The canonical checkout whose `src/**` the editable-install finder serves.
+SRC_DEPLOY_STAMP = Path(
+    "/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG-tkde/.tkde_deploy"
+)
+
+
+def _read_stamp(path: Path) -> str | None:
+    """Return a deploy stamp's contents on one line, or None."""
+    try:
+        return " ".join(path.read_text(encoding="utf-8").split())
+    except OSError:
+        return None
+
+
+def deploy_stamps() -> dict[str, str | None]:
+    """Return both provenance stamps for the manifest.
+
+    On Picasso ``isalhg.*`` resolves through the PEP 660 editable finder of the
+    shared ``IsalHG-tkde`` checkout, while ``experiments.*`` comes from this
+    agent's own deployment. The two trees can be at different commits, so a
+    single git SHA in the manifest would describe only half of what ran.
+
+    Returns
+    -------
+    dict[str, str or None]
+        ``src_deploy`` (the library half) and ``runner_deploy`` (this half).
+    """
+    runner = os.environ.get("REPO_DIR")
+    return {
+        "src_deploy": _read_stamp(SRC_DEPLOY_STAMP),
+        "runner_deploy": _read_stamp(Path(runner) / ".tkde_deploy") if runner else None,
+    }
+
+
+def contains_smoke(path: Path | str) -> bool:
+    """Return True when any component of ``path`` marks it as smoke output.
+
+    Parameters
+    ----------
+    path : Path or str
+
+    Returns
+    -------
+    bool
+    """
+    return SMOKE_COMPONENT in Path(path).parts
+
+
 _DERIVED: dict[tuple[int, str], Any] = {}
 
 
@@ -434,6 +515,7 @@ def run_unit(
     *,
     out_root: Path,
     n_jobs: int,
+    smoke: bool = False,
 ) -> dict[str, Any]:
     """Build (or confirm) one ``(collection, arm)`` matrix and return its row.
 
@@ -464,11 +546,11 @@ def run_unit(
     roles = (
         _derived(collection_obj, "roles", corpora.roles_maps) if arm.endswith("_roles") else None
     )
-    cache_dir = collection_cache_dir(out_root, collection)
+    cache_dir = collection_cache_dir(out_root, collection, smoke=smoke)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     try:
-        load_cached_matrix(out_root, collection, arm, ids)
+        _read_matrix_at(cache_dir, arm, ids)
         cache_hit = True
         secs = 0.0
     except MatrixCacheMissingError:
@@ -577,6 +659,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arm,
             out_root=out_root,
             n_jobs=n_jobs,
+            smoke=args.smoke,
         )
         row["experiment"] = BUILD_EXPERIMENT
         rows.append(row)
@@ -588,7 +671,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             row["peak_rss_mb"],
         )
 
-    paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=BUILD_EXPERIMENT)
+    # A smoke run measures 40-member subsets under the real arm names, so its
+    # timing rows are shaped like the campaign's; they go under the same smoke
+    # component the .npy caches use rather than beside the real rows.
+    experiment = f"{SMOKE_COMPONENT}/{BUILD_EXPERIMENT}" if args.smoke else BUILD_EXPERIMENT
+    paths = RunPaths(root=out_root, rq=RQ_DIR, experiment=experiment)
     paths.ensure()
     tag = f"shard{args.shard.replace('/', '_')}" if args.shard else "all"
     if args.unit is not None:
@@ -606,7 +693,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "data_root": str(data_root) if data_root else None,
         },
     )
-    write_manifest(paths, extra={"n_rows": len(rows), "tag": tag})
+    write_manifest(paths, extra={"n_rows": len(rows), "tag": tag, **deploy_stamps()})
     return 0
 
 

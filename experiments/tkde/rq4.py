@@ -286,15 +286,27 @@ def subcollection_indices(collection: Any, sub: SubCollection) -> list[int]:
 _POOL_STATE: dict[str, Any] = {}
 
 
-def _row_worker(task: tuple[int, str]) -> tuple[int, str, list[float]]:
-    """Compute one anomaly's distance row under one arm, inside a fork child."""
+def _row_worker(task: tuple[int, str]) -> tuple[int, str, list[float] | None]:
+    """Compute one anomaly's distance row under one arm, inside a fork child.
+
+    Returns ``None`` for the row when the representation raises. A competitor
+    that cannot score one corrupted hypergraph must censor that arm, not end
+    the task: an exception crossing back out of ``imap_unordered`` kills the
+    whole process and takes every completed unit of the shard with it
+    (measured -- ``_hpd_vendor.hyperedge_portrait`` raises IndexError on some
+    corrupted NDC records, and job 2215163 lost all three tasks to it).
+    """
     from isalhg.metric_space.registry import get_distance
 
     position, arm = task
     items: Sequence[SparseHypergraph] = _POOL_STATE["items"]
-    distance = _POOL_STATE["distances"].setdefault(arm, get_distance(arm))
     anomaly = items[position]
-    return position, arm, [float(distance.pairwise(anomaly, other)) for other in items]
+    try:
+        distance = _POOL_STATE["distances"].setdefault(arm, get_distance(arm))
+        return position, arm, [float(distance.pairwise(anomaly, other)) for other in items]
+    except Exception as exc:  # noqa: BLE001 -- a competitor's failure is data, not a crash
+        logger.warning("arm %s failed on anomaly at position %d: %r", arm, position, exc)
+        return position, arm, None
 
 
 def anomaly_rows(
@@ -332,7 +344,9 @@ def anomaly_rows(
     Returns
     -------
     dict[tuple[int, str], list[float]]
-        Keyed by ``(position, arm)``.
+        Keyed by ``(position, arm)``. A key is ABSENT when that arm raised on
+        that anomaly; the caller censors the arm rather than scoring a matrix
+        with a stale row in it.
     """
     from isalhg.metric_space.distances.fact_levenshtein import word_distance
 
@@ -341,9 +355,14 @@ def anomaly_rows(
     if words is not None and WORD_ARM in arms:
         for position in positions:
             anomaly_word = words[position]
-            result[(position, WORD_ARM)] = [
-                float(word_distance(anomaly_word, other)) for other in words
-            ]
+            try:
+                result[(position, WORD_ARM)] = [
+                    float(word_distance(anomaly_word, other)) for other in words
+                ]
+            except Exception as exc:  # noqa: BLE001 -- censor the arm, do not end the shard
+                logger.warning(
+                    "arm %s failed on anomaly at position %d: %r", WORD_ARM, position, exc
+                )
 
     pairwise_arms = [a for a in arms if not (words is not None and a == WORD_ARM)]
     tasks = [(position, arm) for arm in pairwise_arms for position in positions]
@@ -355,7 +374,8 @@ def anomaly_rows(
         _POOL_STATE["distances"] = {}
         for task in tasks:
             position, arm, row = _row_worker(task)
-            result[(position, arm)] = row
+            if row is not None:
+                result[(position, arm)] = row
         return result
 
     import multiprocessing as mp
@@ -365,7 +385,8 @@ def anomaly_rows(
     context = mp.get_context("fork")
     with context.Pool(processes=n_jobs) as pool:
         for position, arm, row in pool.imap_unordered(_row_worker, tasks, chunksize=1):
-            result[(position, arm)] = row
+            if row is not None:
+                result[(position, arm)] = row
     return result
 
 
@@ -379,9 +400,18 @@ def _score_matrix(
     rows: Mapping[tuple[int, str], list[float]],
     positions: Sequence[int],
     arm: str,
-) -> NDArray[np.float64]:
-    """Return the modified collection's matrix: cached block plus fresh rows."""
+) -> NDArray[np.float64] | None:
+    """Return the modified collection's matrix: cached block plus fresh rows.
+
+    Returns ``None`` when any anomaly row is missing for ``arm``. Substituting
+    the cached row of the *pristine* member would score a collection in which
+    that anomaly was never injected, which is a wrong number rather than an
+    absent one.
+    """
     import numpy as np
+
+    if any((position, arm) not in rows for position in positions):
+        return None
 
     D = np.array(base, dtype=np.float64, copy=True)
     for position in positions:
@@ -539,6 +569,13 @@ def run_unit(
 
         base = np.asarray(full[np.ix_(indices, indices)], dtype=np.float64)
         D = _score_matrix(base, rows, realised, arm)
+        if D is None:
+            logger.error("unit %d arm %s: anomaly rows incomplete; censored", unit.index, arm)
+            for score in ("knn", "lof"):
+                tables["auc"].append(
+                    _auc_row(unit, arm, score, float("nan"), n, len(realised), n_skipped, 0.0, 1)
+                )
+            continue
 
         for score, k, fn in (("knn", KNN_K, knn_score), ("lof", LOF_K, lof_score)):
             if n <= k + 1:

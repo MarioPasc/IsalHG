@@ -409,3 +409,34 @@ class TestMatricesRootIsSeparable:
         assert text.count('--matrices-root "${ISALHG_RESULTS_ROOT}"') == 2, rq
         # The payload runs in the background so the copy-back traps can fire.
         assert text.count('tkde_run_synced "${PY}"') == 2, rq
+
+
+class TestArmFailureIsCensoredNotFatal:
+    """A competitor that raises on one corrupted record censors its arm.
+
+    Measured on job 2215163: ``_hpd_vendor.hyperedge_portrait`` raises
+    IndexError on some corrupted NDC records, the exception crossed back out of
+    ``imap_unordered``, and all three RQ4 tasks died five minutes in, losing
+    every unit they had already completed.
+    """
+
+    def test_score_matrix_returns_none_when_a_row_is_missing(self) -> None:
+        numpy = pytest.importorskip("numpy")
+
+        base = numpy.zeros((3, 3), dtype=float)
+        rows = {(0, "hpd_jsd"): [0.0, 1.0, 2.0]}
+        assert rq4._score_matrix(base, rows, [0], "hpd_jsd") is not None
+        # Position 1 has no row for this arm: substituting the pristine member's
+        # cached row would score a collection the anomaly was never injected in.
+        assert rq4._score_matrix(base, rows, [0, 1], "hpd_jsd") is None
+
+    def test_row_worker_returns_none_instead_of_raising(self, monkeypatch) -> None:
+        class _Exploding:
+            def pairwise(self, a, b):  # noqa: ANN001, ANN202
+                raise IndexError("index 1 is out of bounds for axis 0 with size 1")
+
+        monkeypatch.setitem(rq4._POOL_STATE, "items", ["h0", "h1"])
+        monkeypatch.setitem(rq4._POOL_STATE, "distances", {"hpd_jsd": _Exploding()})
+        position, arm, row = rq4._row_worker((0, "hpd_jsd"))
+        assert (position, arm) == (0, "hpd_jsd")
+        assert row is None

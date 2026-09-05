@@ -77,6 +77,28 @@ echo "Task ${TASK_ID}/${TKDE_N_TASKS} -> shards ${LO}..${HI} of ${TKDE_N_SHARDS}
 echo "Corpora root: ${TKDE_CORPORA_ROOT}"
 echo ""
 
+# ---------------------------------------------------------------------------
+# tkde_run_synced -- run a payload, mirroring out/ back every SYNC_INTERVAL_S
+# ---------------------------------------------------------------------------
+# common.sh's copy-back runs from EXIT/TERM traps, but bash defers a trap while
+# it waits on a foreground child, and on this cluster a scancel of job 2213210
+# (2026-09-05) killed the step before tkde_finalize ever ran: fourteen minutes
+# of rows died on the node. Running the payload in the background and syncing on
+# a timer bounds the loss to one interval, and makes the rows visible on HOME
+# while the job is still running.
+tkde_run_synced() {
+    "$@" &
+    local pid=$!
+    local status=0
+    while kill -0 "${pid}" 2>/dev/null; do
+        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
+        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
+    done
+    wait "${pid}" || status=$?
+    tkde_sync_partial
+    return "${status}"
+}
+
 FIRST=1
 for (( SHARD = LO; SHARD <= HI; SHARD++ )); do
     ELAPSED=$(( $(date +%s) - TKDE_START_TIME ))
@@ -86,14 +108,13 @@ for (( SHARD = LO; SHARD <= HI; SHARD++ )); do
     fi
     FIRST=0
     echo "---------- RQ6 shard ${SHARD}/${TKDE_N_SHARDS} ----------"
-    "${PY}" -m experiments.tkde.rq6 \
+    tkde_run_synced "${PY}" -m experiments.tkde.rq6 \
         --config "${REPO_DIR}/experiments/tkde/configs/rq6.yaml" \
         --out "${OUT_DIR}" \
         --data-root "${TKDE_CORPORA_ROOT}" \
         --shard "${SHARD}/${TKDE_N_SHARDS}" \
         --start-cutoff-s "$(( TKDE_START_CUTOFF_S - ELAPSED ))" \
         "${SMOKE_FLAG[@]}"
-    tkde_sync_partial
 done
 
 if [[ "${TKDE_RUN_ANALYZERS:-1}" == "1" ]]; then

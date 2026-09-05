@@ -30,6 +30,11 @@ _REGISTRY: dict[DistanceName, DistanceFactory] = {}
 # concrete distances land (d_I + WL in T-M1b; the competitors in T-M3).
 _LAZY_MODULES: dict[DistanceName, str] = {
     "isalhg_levenshtein": "isalhg.metric_space.distances.isalhg_levenshtein",
+    "fact_rank": "isalhg.metric_space.distances.fact_levenshtein",
+    "fact_rank_roles": "isalhg.metric_space.distances.fact_levenshtein",
+    "fact_local_colour": "isalhg.metric_space.distances.fact_addressing_ablations",
+    "fact_local_key": "isalhg.metric_space.distances.fact_addressing_ablations",
+    "fact_degree_key": "isalhg.metric_space.distances.fact_addressing_ablations",
     "hypergraph_wl_l1": "isalhg.metric_space.representations.wl",
     "hypergraph_wl_chi2": "isalhg.metric_space.representations.wl",
     "exact_hged": "isalhg.metric_space.distances.hged",

@@ -220,4 +220,4 @@ __marimo__/
 scratchpad/*
 
 # G3 OFAT rendered figures (large PNG outputs; JSON results are tracked)
-artifacts/g3/*.png
+artifacts/g3/*.png.claude/worktrees/

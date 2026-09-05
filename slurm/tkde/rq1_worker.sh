@@ -74,29 +74,9 @@ echo "Task ${TASK_IDX}/${N_TASKS} -> shards [${LO}, ${HI}) of ${N_SHARDS}"
 
 CUTOFF_EPOCH=$(( TKDE_START_TIME + START_CUTOFF_S ))
 
-# ---------------------------------------------------------------------------
-# tkde_run_synced -- run a payload, mirroring the staged tree back on a timer.
-# ---------------------------------------------------------------------------
-# common.sh's copy-back runs from EXIT/TERM traps, but bash defers a trap while
-# it waits on a FOREGROUND child. Measured on job 2213210 (2026-09-05): a
-# scancel killed the step before tkde_finalize ever ran and fourteen minutes of
-# rows died on the node. RQ1 is the longest job in this wave and its pointer arm
-# has a censored tail, so a TIMEOUT here is expected, not hypothetical.
-# Backgrounding the payload lets the trap fire, and the timed sync bounds the
-# loss to one interval while also making rows visible on HOME mid-run.
-tkde_run_synced() {
-    "$@" &
-    local pid=$!
-    local status=0
-    while kill -0 "${pid}" 2>/dev/null; do
-        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
-        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
-    done
-    wait "${pid}" || status=$?
-    tkde_sync_partial
-    return "${status}"
-}
-
+# RQ1 is the longest job in this wave and its pointer arm has a censored tail,
+# so the TIMEOUT that tkde_run_synced (common.sh) guards against is expected
+# here, not hypothetical.
 for (( S = LO; S < HI; S++ )); do
     ELAPSED=$(( $(date +%s) - TKDE_START_TIME ))
     # The FIRST shard of a task is exempt from the cutoff: without that

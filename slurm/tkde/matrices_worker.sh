@@ -101,30 +101,9 @@ PYEOF
 
 mkdir -p "${ISALHG_RESULTS_ROOT}/matrices"
 
-# ---------------------------------------------------------------------------
-# tkde_run_synced -- run a payload in the BACKGROUND, mirroring out/ back on a
-# timer, and only then wait for it.
-# ---------------------------------------------------------------------------
-# common.sh mirrors the staged tree back from EXIT/TERM traps, but bash defers a
-# trap while it waits on a FOREGROUND child: measured on job 2213210
-# (2026-09-05), a scancel killed the step before tkde_finalize ever ran and
-# fourteen minutes of rows died on the node. Backgrounding the payload lets the
-# trap fire, and the periodic tkde_sync_partial bounds the loss to one interval
-# on a TIMEOUT or an OOM kill. This job writes straight to HOME, so the sync
-# itself is a no-op here; what it buys is that the TERM trap can run at all.
-tkde_run_synced() {
-    "$@" &
-    local pid=$!
-    local status=0
-    while kill -0 "${pid}" 2>/dev/null; do
-        sleep "${TKDE_SYNC_INTERVAL_S:-300}"
-        kill -0 "${pid}" 2>/dev/null && tkde_sync_partial
-    done
-    wait "${pid}" || status=$?
-    tkde_sync_partial
-    return "${status}"
-}
-
+# This job writes straight to HOME, so tkde_run_synced's periodic sync
+# (common.sh) is a no-op here; what the wrapper buys is that the TERM trap can
+# run at all instead of being deferred behind a foreground child.
 tkde_run_synced "${PY}" -m experiments.tkde.matrices \
     --config "${CONFIG}" \
     --out "${ISALHG_RESULTS_ROOT}" \

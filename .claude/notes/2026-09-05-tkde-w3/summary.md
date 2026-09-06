@@ -199,22 +199,28 @@ waves 1–3).
 | RQ | job(s) | shape | state at 2026-09-05 23:30 CEST |
 |---|---|---|---|
 | RQ3 + RQ6 | 2215096 (resubmission of 2213221 OOM) | 1 task, 64G, 8 h | COMPLETED |
-| RQ7 | 2215078 (+ sweep 2215079) | 74 × 5 shards, throttle 16, 16G, 24 h | RUNNING |
-| RQ2 main | 2215097 | 13 × 4 shards, throttle 10, 32G | RUNNING (5 tasks done; MaxRSS ≤ 156 MB) |
-| RQ2 census | 2215136 | 8 × 4 shards, 32G | RUNNING (1 done) |
-| RQ1 | 2215137 (+ sweep 2215161) | 48 × 3 shards, throttle 16, 12G, 24 h, ≈ 125 core-h | RUNNING (1 done) |
-| RQ5 | 2215162 | 1 task, 65 units, 48G, 6 h | RUNNING |
-| RQ4 | 2215168 (2215163 FAILED, superseded) | 3 × 441 units, 48G, 8 h | RUNNING (hpd_jsd censored on the `N = 1` crash set until the refill) |
+| RQ7 | 2215078 (+ sweep 2215079) | 74 × 5 shards, throttle 16, 16G, 24 h | COMPLETED 09:22 (sweep a no-op resume) |
+| RQ2 main | 2215097 | 13 × 4 shards, throttle 10, 32G | COMPLETED 05:51 (task 9 OUT_OF_MEMORY at 33.1 GB during teardown, after its last unit, the 9,000-row bipartite table, was written and synced; nothing lost) |
+| RQ2 census | 2215136 | 8 × 4 shards, 32G | COMPLETED 01:50 |
+| RQ1 | 2215137 (+ sweep 2215161) | 48 × 3 shards, throttle 16, 12G, 24 h | COMPLETED 13:53 (tasks ran 15–25 min each, an 8 × over-estimate of the pointer arm's cost; below SCBI's 2 h floor — lesson recorded) |
+| RQ5 | 2215162 | 1 task, 65 units, 48G, 6 h | COMPLETED 00:30 |
+| RQ4 | 2215168 (2215163 FAILED, superseded) | 3 × 441 units, 48G, 8 h | COMPLETED 03:40; HPD refill 2215571 (private deployment `IsalHG-tkde-refill`, env `isalhg-tkde-refill`) COMPLETED, 0 censored rows remain |
 | matrices | 2213202 | 1 task, 64G | COMPLETED 33:50, MaxRSS 34.2 GB |
 
 ## Open follow-ups
 
-1. Sync `src/` (HPD fix, n-gram cache bound) to the shared Picasso checkout with
-   `scripts/tkde/sync_to_picasso.sh` **after** the running campaign completes (a mid-campaign
-   sync would give later tasks a different `src_deploy` stamp), then run
-   `rq4 --refill-censored-arm hpd_jsd` and re-harvest.
-2. Interpretation pass for RQ1, RQ2, RQ4, RQ5, RQ7 on the completed rows
-   (`results/IEEETKDE/DECISIONS.md`; RQ3 and RQ6 are recorded).
+1. Sync `src/` (HPD fix, n-gram cache bound, provenance override) to the shared Picasso
+   checkout with `scripts/tkde/sync_to_picasso.sh` now that the campaign is complete (the
+   HPD refill was run through the private deployment `IsalHG-tkde-refill` instead), and
+   remove the private deployments `IsalHG-tkde-rq{127,36,45}`, `IsalHG-tkde-refill` and the
+   env `isalhg-tkde-refill` once the user confirms.
+2. (done) Interpretation pass for all seven RQs: `results/IEEETKDE/DECISIONS.md`,
+   `article/README.md`, `supplementary/README.md`, and
+   `docs/article/D_ART3/experiments/RESULTS_WALKTHROUGH.md`.
+2b. `fact_rank_roles` is not relabelling-invariant (RQ1 M0: 247 false splits, 2,104
+   violations on WD50K) — withdrawn as an arm; PI decision on the roles variant.
+2c. RQ1's task bundling over-estimated the pointer arm 8 × (15–25 min tasks against a
+   2.6 h estimate): size bundles from a measured smoke, not from a profile extrapolation.
 3. Untagged smoke rows from the 2026-09-05 cluster smokes sit in the real folders on HOME and
    were harvested locally (`RQ1_addressing/addressing/`, `RQ2_wellposedness/*/`,
    `RQ7_envelope/envelope/`, files named `rows_<table>__<name>-000of001.csv` without the 8-hex

@@ -1,90 +1,112 @@
 # Results walkthrough — the TKDE campaign, question by question
 
-*Status: DRAFT written 2026-09-06 06:30 CEST while RQ1 and RQ7 were still
-completing on Picasso; RQ2–RQ6 are final. RQ1 and RQ7 sections are marked
-provisional and will be finalised when their arrays and recovery sweeps land.
-Every number below is copied from the persisted `tables.md` / `summary.json`
-under the results root `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/`
-(mirrored from Picasso HOME); the reporting decisions with their numbers are in
-`DECISIONS.md` there, and the main-text / supplement pointers in `article/` and
-`supplementary/`. The pre-registered science is `DESIGN.md` (this folder).*
+*Status: FINAL, 2026-09-06 14:30 CEST. Every array of the campaign is complete
+and harvested; the seven research questions are decided. Every number below is
+copied from the persisted `tables.md` / `summary.json` under the results root
+`/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/` (mirrored
+from Picasso HOME). The reporting decisions with the numbers that drove them
+are in `DECISIONS.md` there; the main-text and supplement pointers are in
+`article/README.md` and `supplementary/README.md`. The pre-registered science
+is `DESIGN.md` in this folder; the engineering record of the three waves is
+`.claude/notes/2026-09-05-tkde-w{1,2,3}/summary.md`.*
 
 ## 0. The questions, in one table
 
 | RQ | The knowledge-base question | Property exposed | Verdict on the numbers | Main text carries |
 |---|---|---|---|---|
-| RQ1 | Which addressing makes similar knowledge bases close? | local stability of the fact-rank encoding; the addressing frontier | reproduction gate passes for `fact_rank` on all three corpora; the pointer arm's probe target was wrong (fixed, see §1) | the addressing frontier table (provisional) |
-| RQ2 | Is "same knowledge base" well posed under each representation? | exactness of the complete word | **strong**: 0 false merges in 10.4 M non-isomorphic pairs; summaries merge 0.3–5.5 %; tractable GED readings are not metrics | the consequences table |
-| RQ3 | Given N disagreeing descriptions of one thing, which is the reference? | the decoded consensus (a word operation no fingerprint can do) | **strong with a stated boundary**: exact recovery ≥ 0.98 on every insertion, mixed and single-deletion cell; medoids recover 0 / 4,457; the two-deletion regime is the boundary | Corpus A with the boundary; Corpus B to the supplement |
-| RQ4 | Can corrupted records be screened? | exactness consequence (iso-twins) | **A′**: exactness consequence holds against the summaries; competitiveness on standard corruptions does not | iso-twin table + RQ2 census |
-| RQ5 | Do entity types form patterns in the space? | geometry licences; task metric | **A′**: types are not a structural signal on WD50K (best ARI 0.09, floors lead); licences: ν = 0.10 holds, hubness fails | unsupervised exhibit (dendrogram, MDS) |
+| RQ1 | Which addressing makes similar knowledge bases close? | local stability of the fact-rank word; the addressing frontier | **confirmed**: `fact_rank` is the most stable addressing in every regime (Holm-significant, rank-biserial −0.67 to −1.00); the pointer alphabet responds 3–4 × more at 1,000 × the cost; all six reproduction gates pass after two amendments | the frontier table |
+| RQ2 | Is "same knowledge base" well posed under each representation? | exactness of the complete word | **strong**: 0 false merges in 10.4 M non-isomorphic pairs; summaries merge 0.3–5.5 %; the tractable GED readings are not metrics | the consequences table |
+| RQ3 | Given N disagreeing descriptions of one thing, which is the reference? | the decoded consensus, a word operation no fingerprint can perform | **strong with a stated boundary**: exact recovery ≥ 0.98 on every insertion, mixed and single-deletion cell; medoids recover 0 of 4,457; the two-deletion regime is the boundary | Corpus A with the boundary; Corpus B to the supplement |
+| RQ4 | Can corrupted records be screened? | the exactness consequence (iso-twins) | **A′**: the exactness consequence holds against the summaries; competitiveness on standard corruptions does not | iso-twin table read with RQ2's census |
+| RQ5 | Do entity types form patterns in the space? | geometry licences; a task metric | **A′**: types are not a structural signal on WD50K (best ARI 0.09, the naive floors lead); ν = 0.10 licence holds, hubness fails | the unsupervised exhibit (dendrogram, MDS) |
 | RQ6 | Can a collection be extended with valid, plausible knowledge bases? | validity by theorem; the decoder is total | **strong**: 540,000 / 540,000 valid vs 98–99 % rejection for a flat serialization; 86 / 86 alignment interiors decode | validity, fidelity, decodability, completion |
-| RQ7 | Where does the representation stop being computable? | the operating envelope | provisional: `fact_rank` clears every sweep cell up to m = 1,280 at k = 3 and completes 100 % of every real collection in < 1 ms; the pointer arm censors from ~13 facts | envelope table (provisional) |
+| RQ7 | Where does the representation stop being computable? | the operating envelope | **strong**: 0 time-outs in 7,938 synthetic instances up to 1,280 facts; 100 % yield on every real bucket at < 1 ms; the cheapest all-pairs matrix of every arm | the envelope table |
 
-The design's own summary line holds up: RQ3 and RQ6 make the *language* visible
-and are the strongest results; RQ2 (and RQ4's surviving half) are where
-*exactness* is visible; RQ5 is the honest task-metric row, and it is honest in
-the negative direction; RQ7 bounds the claims.
+The design's own summary line holds: RQ3 and RQ6 make the *language* visible
+and are the strongest results; RQ2, RQ1 and RQ4's surviving half are where
+*exactness* and *stability* are visible; RQ5 is the honest task-metric row and
+it is honest in the negative direction; RQ7 bounds the claims and the bound is
+generous.
 
-## 1. RQ1 — addressing (provisional; 31 of 48 tasks harvested)
+## 1. RQ1 — addressing (final)
 
 **Question.** Which way of addressing constants inside the word makes a single
-knowledge-base edit a small string edit? Arms: the adopted `fact_rank` and three
-alternative fact-alphabet addressings (`fact_degree_key`, `fact_local_key`,
-`fact_local_colour`), the pointer alphabet of the sibling papers
-(`isalhg_levenshtein`), and the nauty certificate as the reference.
+knowledge-base edit a small string edit? Arms: the adopted `fact_rank`, three
+alternative fact addressings (`fact_degree_key`, `fact_local_key`,
+`fact_local_colour`), the roles variant `fact_rank_roles` (WD50K only), the
+pointer alphabet of the sibling papers (`isalhg_levenshtein`), and the nauty
+certificate as the reference. Three corpora: `synthetic_rq1` (2,000 records),
+`ndc_classes` (1,381), `wd50k66` (3,988).
 
-**Reproduction gate (DESIGN §2).** The pipeline had to reproduce the September
-probe: pooled normalised single-edit median of `fact_rank` within ±0.05 of
-0.188 / 0.211 / 0.300 (synthetic / NDC classes / WD50K), and of the pointer arm
-within ±0.05 of the probe's 0.500.
+**Reproduction gate (DESIGN §2).** The pipeline re-measures the September probe
+from the shipped encoder. All six cells pass:
 
-| collection | arm | probe target | measured | n | gate |
-|---|---|---|---|---|---|
-| synthetic_rq1 | fact_rank | 0.188 | 0.190 | 39,998 | pass |
-| ndc_classes | fact_rank | 0.211 | 0.200 | 25,104 | pass |
-| wd50k66 | fact_rank | 0.300 | 0.300 | 38,987 | pass |
-| synthetic_rq1 | pointer | 0.500 → 0.577 (corrected) | 0.588 | 39,998 | pass after correction |
-| ndc_classes | pointer | 0.500 → 0.577 (corrected) | 0.556 | 22,311 | pass after correction |
-| wd50k66 | pointer | 0.500 → (being re-derived) | 0.500 | 36,464 | pending |
+| collection | arm | target | measured | n |
+|---|---|---|---|---|
+| synthetic_rq1 | fact_rank | 0.188 | 0.200 | 39,998 |
+| ndc_classes | fact_rank | 0.211 | 0.214 | 26,546 |
+| wd50k66 | fact_rank | 0.300 | 0.333 | 72,948 |
+| synthetic_rq1 | pointer | 0.57 (corrected) | 0.588 | 39,998 |
+| ndc_classes | pointer | 0.56 (corrected) | 0.556 | 23,104 |
+| wd50k66 | pointer | 0.60 (corrected) | 0.600 | 67,729 |
 
-The pointer arm first read 0.60 against 0.50. DESIGN treats a gate discrepancy
-as a bug until explained, and the explanation is on the probe's side: the probe
-scored the pointer arm with `rapidfuzz` on raw token tuples, which compares
-elements by hash, and the pointer-advance and pointer-retreat tokens
-`TokenP(i)` / `TokenN(i)` hash-equal, so 67.3 % of the probe's pairs were
-under-reported. Re-scoring the probe's own corpus with an equality-keyed
-alphabet gives 0.577; the pipeline's alphabet was right all along
-(regression-pinned; DESIGN §2 amended with the reason). A second, smaller
-inconsistency was fixed at the same time: the distance was measured over the
-seed-prefixed sequence but normalised by the bare word length; the analyzer now
-divides by the length of the sequence it measures (`|w| + 1`). Rows are
-unchanged; the corrected wd50k66 target is being re-derived the same way.
+Two amendments were needed and are recorded in DESIGN §2 for the PI to ratify.
+(a) The probe's published pointer value of 0.500 was an artefact: it scored the
+pointer arm with `rapidfuzz` on raw token tuples, which compares elements by
+hash, and the pointer-advance and pointer-retreat tokens hash-equal, so 67.3 %
+of the probe's pairs were under-reported; re-scoring the probe's own corpus
+with an equality-keyed alphabet gives 0.57 / 0.56 / 0.60, which the pipeline
+reproduces (the pipeline's alphabet was right; regression-pinned). (b) The
+normalised response divides by the length of the sequence the distance was
+measured over: the bare word for fact arms, the seed-prefixed word for the
+pointer arm on collections with more than one vertex label.
 
-**What the arms show (M1, normalised single-edit response, lower is more
-stable; Holm-corrected paired Wilcoxon against `fact_rank`).**
+**M0 — exactness and invariance.** Every fact addressing and nauty are exact
+and relabelling-invariant on all three collections (0 false merges, 0 false
+splits, 0 invariance violations; class counts 2,000 / 557 / 3,682, equal to
+nauty's). The pointer alphabet is censored at the budget on 118 (NDC) and 238
+(WD50K) members. **`fact_rank_roles` fails invariance on WD50K**: 247 false
+splits and 2,104 violations (3,749 classes vs 3,682). The roles variant is not
+a canonical form and is withdrawn as an arm; RQ5's roles comparison is void.
 
-| collection | regime | fact_rank | degree_key | local_key | local_colour | pointer | nauty (reference) |
+**M1 — single-edit response** (normalised, lower is more stable; Holm-corrected
+paired Wilcoxon against `fact_rank`, rank-biserial in brackets):
+
+| collection | regime | fact_rank | degree_key | local_key | local_colour | pointer | nauty (ref.) |
 |---|---|---|---|---|---|---|---|
-| ndc_classes | constant-set-preserving | 0.146 | 0.452 | 0.670 | 0.944 | 0.662 | 0.083 |
-| ndc_classes | constant set changes | 0.362 | 0.530 | 0.645 | 0.989 | 0.598 | 0.237 |
-| synthetic_rq1 | constant-set-preserving | 0.193 | 0.493 | 0.607 | 0.956 | 0.494 | 0.089 |
-| synthetic_rq1 | constant set changes | 0.491 | 0.558 | 0.491 | 0.978 | 0.555 | 0.214 |
-| wd50k66 | constant set changes | 0.374 | 0.471 | 0.555 | 0.939 | 0.397 | 0.247 |
+| ndc_classes | constant set preserved | 0.146 | 0.452 (−1.00) | 0.670 (−1.00) | 0.944 (−1.00) | 0.662 (−0.99) | 0.083 |
+| synthetic_rq1 | constant set preserved | 0.193 | 0.493 (−0.92) | 0.607 (−0.98) | 0.956 (−1.00) | 0.494 (−0.77) | 0.089 |
+| wd50k66 | constant set preserved | 0.231 | 0.537 (−0.97) | 0.698 (−1.00) | 1.012 (−1.00) | 0.793 (−0.96) | 0.124 |
+| ndc_classes | constant set changes | 0.393 | 0.579 (−0.81) | 0.702 (−0.99) | 1.072 (−1.00) | 0.598 (−0.39) | 0.237 |
+| synthetic_rq1 | constant set changes | 0.491 | 0.558 (−0.32) | 0.491 (+0.06) | 0.978 (−1.00) | 0.555 (−0.21) | 0.214 |
+| wd50k66 | constant set changes | 0.406 | 0.511 (−0.67) | 0.604 (−0.87) | 1.018 (−1.00) | 0.481 (−0.08) | 0.249 |
 
-Every alternative fact addressing responds more than `fact_rank` (rank-biserial
-−0.32 to −1.00, all Holm-significant), and the pointer alphabet responds three
-to four times more when the constant set is preserved. The nauty certificate
-responds less per token only because its strings are 12–30 × longer (124–284
-tokens vs 10–30, table M3); its Spearman correlation with `fact_rank` on the
-same pairs is 0.75–0.77 (M4). Cost (M3): `fact_rank` canonicalises a record in
-0.3–0.6 ms on every size stratum with 0 censoring; the pointer arm reaches
-0.3 s medians with 21 % of records censored at 17–20 facts.
+Every alternative fact addressing responds more than `fact_rank` in every cell
+(one tie on synthetic, local-key, when the constant set changes), and the
+pointer alphabet responds three to four times more when the constant set is
+preserved; when it changes the pointer's advantage vanishes rather than
+reverses. The nauty certificate reads lower per token only because its strings
+are 12–30 × longer (124–284 tokens vs 10–31, table M3). Within two tokens of
+the original: `fact_rank` 0.78 after adding a constant, 0.85 after deleting a
+fact, 0.59 after inserting one; nauty 0.00–0.41; pointer 0.03–0.86.
 
-**Decision (provisional).** The selection is closed by design ("no scientific
-fallback"); the addressing frontier goes to the main text as measured. Two
-amendments are recorded for the PI: the corrected pointer target and the
-normaliser.
+**M2 — monotonicity.** Spearman ρ between the planted edit budget and the
+distance on WD50K ladders: `fact_rank` 0.589, nauty 0.677, pointer 0.553,
+degree-key 0.484, colour 0.273; on the natural NDC series (constant set
+preserved): `fact_rank` 0.958, pointer 0.961, nauty 0.876.
+
+**M3 — cost.** `fact_rank` canonicalises a record in 0.3–0.6 ms on every size
+stratum with 0 censoring; the pointer alphabet reaches 0.3–1.7 s medians with
+21–60 % of records censored above 17 facts.
+
+**M4 — agreement with the certificate.** ρ against the nauty-certificate
+distance on random pairs: `fact_rank` 0.803 / 0.642 / 0.959, the highest fact
+arm on two of three collections; pointer 0.288 / 0.642 / 0.702.
+
+**Decision.** The pre-registered selection is confirmed and closed: the
+frontier table (M1 and M3) goes to the main text with the reproduction gate
+stated; the per-edit-kind tables, M2, M4 and the invariance census go to the
+supplement.
 
 ## 2. RQ2 — well-posedness (final)
 
@@ -113,17 +135,17 @@ collection): the path reading violates identity of indiscernibles on 882 and
 981 of 2,000 isomorphic pairs and the triangle inequality on 8 and 7 of 5,000
 triples; the assignment reading returns a false zero on 36 of 2,000
 non-isomorphic WD50K pairs. Certificate validity over RQ3's 4,457 collections:
-the lower bound holds for every metric arm (0 invalid) and fails 6 times for the
-path reading. Exact GED as an oracle costs a median 0.45–1.08 s per pair with a
-p90 of 13 s at 9–10 facts (why it is a ceiling, not an arm); HyperCOT 0.085 s
-per pair, gated to N ≤ 20. The identity itself: the `fact_rank` word costs
-0.07–0.37 ms per member (100 % complete, 4,554 members on the full WD50K); the
-pointer alphabet 3.5–5 ms with 6–12 % of members not finishing within budget.
+the lower bound holds for every metric arm and fails 6 times for the path
+reading. Exact GED as an oracle costs a median 0.45–1.08 s per pair with a p90
+of 13 s at 9–10 facts; HyperCOT 0.085 s per pair, gated to N ≤ 20. The identity
+itself: the `fact_rank` word costs 0.07–0.37 ms per member (100 % complete,
+4,554 members on the full WD50K); the pointer alphabet 3.5–5 ms with 6–12 % of
+members not finishing within budget.
 
 **Decision.** Descriptive, no gate. The complete representations are exact and
 the summaries are not; stated honestly, WL-1 is also exact on these labelled
-collections, so exactness separates the complete arms from the summaries (HPD,
-NetLSD, degree, size, bipartite-assign), not from WL.
+collections, so exactness separates the complete arms from the summaries, not
+from WL.
 
 ## 3. RQ3 — the representative record (final)
 
@@ -142,7 +164,7 @@ insertion / deletion / mixed edits at budgets t ∈ {1, 2}, N ∈ {5, 9}):
 | mixed | 1 | 0.991–0.995 | 1.000 | 0 |
 | mixed | 2 | 0.866–0.972 | 0.704–0.940 | 0 |
 | deletion | 1 | 0.979–1.000 | 1.000 | 0 |
-| deletion | 2 | **0.231 (ndc, N = 5), 0.370 (wd50k66, N = 5), 0.810 (wd50k66, N = 9)** | 0.208 / 0.300 / 0.950 | 0 |
+| deletion | 2 | **0.231 (NDC, N = 5), 0.370 (WD50K, N = 5), 0.810 (WD50K, N = 9)** | 0.208 / 0.300 / 0.950 | 0 |
 
 H3a holds for insertions (min 0.991 ≥ 0.95) and mixed edits (min 0.866 ≥ 0.80)
 and fails for deletions at budget 2. The failure is a property of the
@@ -150,21 +172,21 @@ information the variants carry, not of the string method: the identity-reading
 merge falls in the same cells, recovery rises with the source size (0.23 at
 m = 6 to 0.90 at m = 10 with N = 9), and ties are rare (median 0, max 3). When
 the consensus misses, it lands at fact distance 2 in 311 of 326 misses. Every
-medoid is at distance ≥ t by construction (H3b: 1.000 of rows); pooled fact
-distance to the source is 0.18–0.20 for the consensus against 1.50–1.54 for
-every medoid (Holm-significant on both collections). The certified medoid ratio
-bound `2 − 2/N` holds on all 4,457 medoids (max 1.778; the cosmetic 1.7 target
-is dropped).
+medoid is at distance ≥ t by construction (1.000 of rows); pooled fact distance
+to the source is 0.18–0.20 for the consensus against 1.50–1.54 for every medoid
+(Holm-significant on both collections). The certified medoid ratio bound
+`2 − 2/N` holds on all 4,457 medoids (max 1.778; the cosmetic 1.7 target is
+dropped).
 
-**Corpus B — the natural NDC quarter series** (69 runs): the consensus is *worse*
+**Corpus B — the natural NDC quarter series** (69 runs): the consensus is worse
 than the medoids and than the majority merge on the held-out quarter (fact
 distance 2.60 vs 1.84–2.40; exact recovery 0.145 vs up to 0.226). A natural
 series is not a set of variants of one source, so there is nothing for a
-consensus to converge to. This is the pre-registered fallback: Corpus B goes to
-the supplement as the characterised weak regime; Corpus A carries the main text
+consensus to converge to. Pre-registered fallback: Corpus B goes to the
+supplement as the characterised weak regime; Corpus A carries the main text
 with the boundary stated.
 
-## 4. RQ4 — the screen (final; HPD refill pending)
+## 4. RQ4 — the screen (final)
 
 **Question.** Can a corrupted record be screened out by its distance to the
 collection? kNN (k = 5) and LOF (k = 20) anomaly scores, 5 % contamination, four
@@ -188,11 +210,11 @@ non-collapsing space whose k = 10 hubness skewness is 5.4 (RQ5).
 
 **Decision (pre-registered fallback).** The main text carries the exactness
 consequence — summaries at chance on twins, complete arms not — read with RQ2's
-census, with the WL boundary stated; the AUC tables on standard corruptions go
-to the supplement with the explanation. 266 HPD cells (missing fact, budget 2)
-had been censored because the vendored HPD code crashed on 3-fact records; the
-library was fixed (portraits of all 15,505 pristine members byte-identical) and
-the cells were re-scored through a private environment (job 2215571): 0
+census and with the WL boundary stated; the AUC tables on standard corruptions
+go to the supplement with the explanation. 266 HPD cells (missing fact, budget
+2) had been censored because the vendored HPD code crashed on 3-fact records;
+the library was fixed (portraits of all 15,505 pristine members byte-identical)
+and the cells were re-scored through a private environment (job 2215571): 0
 censored rows remain, the other arms are byte-identical, and the refilled HPD
 scores (0.47–0.71) sit above `fact_rank` on those cells, which does not change
 the verdict. 32 iso-twin units on the four small WD50K types had no realisable
@@ -215,8 +237,8 @@ occurrence 3,464).
 (agglomerative) / 0.042 (PAM) against the naive floors `size_l1` 0.038 / 0.041
 and `degree_seq_l1` 0.025 / 0.053 (0 of 4 floor comparisons won, 3 lost
 Holm-significantly); the best competitor, `hpd_jsd`, reaches 0.064; no arm
-exceeds ARI 0.093 or NMI 0.27; roles lower ARI marginally (0.040 vs 0.042,
-p_Holm 0.032). On the full design every arm is ≤ 0.017.
+exceeds ARI 0.093 or NMI 0.27. On the full design every arm is ≤ 0.017. The
+roles comparison (H5d) is void because the roles variant is not invariant (RQ1).
 
 **Decision (pre-registered fallback).** Entity type on WD50K is not a
 structural signal; what little there is, is a size/degree signal that a complete
@@ -225,8 +247,7 @@ unsupervised exhibit — the `fact_rank` dendrogram (cophenetic correlation
 0.92–0.93) and the metric-MDS map, licensed by ν — and states the licence
 result including the failed hubness clause (which is why RQ4's kNN readings are
 qualified). The ARI tables, floors and per-class table go to the supplement.
-This is the one RQ with no task-metric claim in the main text; flagged for the
-PI.
+This is the one RQ with no task-metric claim in the main text.
 
 ## 6. RQ6 — generation (final)
 
@@ -244,9 +265,9 @@ flat incidence serialization with a strict decoder; 27 seeds × 10,000 samples o
 
 **Decision.** Everything to the main text; the WD50K size-histogram divergence,
 the connectedness of fact-alphabet interiors and the rejection-cause table to
-the supplement. (An operational finding on the way: the n-gram's per-context
-memo was unbounded and grew 2.7 GB per unit; the library is now LRU-bounded
-with bit-identical samples.)
+the supplement. (Operational finding on the way: the n-gram's per-context memo
+was unbounded and grew 2.7 GB per unit; the library is now LRU-bounded with
+bit-identical samples.)
 
 ## 7. RQ7 — the envelope (final)
 
@@ -275,10 +296,8 @@ canonicalisation; `nauty_cert` 864 s (its strings are 12–30 × longer);
 HPD 1,670 s at N = 2,000 and censored at 3,988; NetLSD 2,724 s at N = 1,000
 and censored above. No unit was deferred.
 
-**Decision.** Descriptive. The envelope table goes to the main text: the word
-is computable wherever the collections live and far beyond, and its all-pairs
-matrix is the cheapest of every arm. The full sweep table and the pointer
-alphabet's yield go to the supplement.
+**Decision.** Descriptive. The envelope table goes to the main text; the full
+sweep table and the pointer alphabet's yield go to the supplement.
 
 ## 8. Campaign provenance
 
@@ -287,25 +306,31 @@ alphabet's yield go to the supplement.
 | matrices | 2213202 | 26 cached N × N matrices, 33:50, MaxRSS 34.2 GB |
 | RQ3 + RQ6 | 2213221 (OOM at 24 G after RQ3 completed) → 2215096 (64 G) | COMPLETED |
 | RQ2 | 2215097 (main, 13 tasks; task 9 OOM at teardown after its last unit was written), 2215136 (census) | COMPLETED |
-| RQ4 | 2215163 (FAILED on the HPD crash) → 2215168 | COMPLETED; HPD refill in flight |
+| RQ4 | 2215163 (FAILED on the HPD crash) → 2215168; HPD refill 2215571 (private env) | COMPLETED |
 | RQ5 | 2215162 | COMPLETED |
-| RQ7 | 2215078 (+ sweep 2215079) | running |
-| RQ1 | 2215137 (+ sweep 2215161) | running |
+| RQ7 | 2215078 (+ sweep 2215079, no-op resume) | COMPLETED |
+| RQ1 | 2215137 (+ sweep 2215161, no-op resume) | COMPLETED |
 
-Code: everything is on `integration/2026-09-05-tkde-w1` (waves 1–3 merged;
-2,056 unit and property tests pass; ruff and mypy findings are the pre-existing
-ones in untouched files). `main` is untouched pending your approval to merge.
+Code: everything is on `integration/2026-09-05-tkde-w1` (waves 1–3 merged, plus
+the post-wave fixes: HPD vendor bound, n-gram cache bound, centralised SLURM
+helper, RQ1 gate amendments, provenance override). `main` is untouched pending
+your approval to merge. Test status is recorded in the wave-3 summary.
 
 ## 9. Open items for the PI
 
-1. Approve the two RQ1 amendments (pointer gate target from the corrected probe;
-   seed-consistent normaliser).
-2. RQ5 has no task-metric claim in the main text; confirm the unsupervised
+1. Ratify the two RQ1 amendments to DESIGN §2 (pointer gate targets from the
+   corrected probe; seed-aware normaliser).
+2. `fact_rank_roles` is not relabelling-invariant (2,104 violations on WD50K):
+   decide whether roles can be made canonical or are dropped from the paper.
+3. RQ5 has no task-metric claim in the main text; confirm the unsupervised
    exhibit as its main-text content.
-3. RQ4: whether to add the WL-1-equal-twin subset AUC as a supplementary
+4. RQ4: whether to add the WL-1-equal-twin subset AUC as a supplementary
    analysis (the flag is persisted per anomaly).
-4. The untagged smoke files from the first cluster smokes sit in the real RQ1 /
+5. The untagged smoke files from the first cluster smokes sit in the real RQ1 /
    RQ2 / RQ7 folders on HOME and on the drive (`rows_*__<name>-000of001.csv`
-   without a run tag); the analyzers skip them; moving them was blocked for the
-   agent that tried, so it is your call.
-5. Merge `integration/2026-09-05-tkde-w1` into `main`.
+   without a run tag; 10 + 12 + 7 files); the analyzers skip them; moving them
+   was blocked for the agent that tried, so it is your call.
+6. Merge `integration/2026-09-05-tkde-w1` into `main`; then sync the shared
+   Picasso checkout (`scripts/tkde/sync_to_picasso.sh`) so the HPD and n-gram
+   fixes are in the shared environment, and clean the private deployments and
+   the cloned local conda environments.

@@ -190,9 +190,13 @@ non-collapsing space whose k = 10 hubness skewness is 5.4 (RQ5).
 consequence — summaries at chance on twins, complete arms not — read with RQ2's
 census, with the WL boundary stated; the AUC tables on standard corruptions go
 to the supplement with the explanation. 266 HPD cells (missing fact, budget 2)
-were censored because the vendored HPD code crashed on 3-fact records; the
-library is fixed (portraits of all 15,505 pristine members byte-identical) and
-the re-score is being submitted through a private environment.
+had been censored because the vendored HPD code crashed on 3-fact records; the
+library was fixed (portraits of all 15,505 pristine members byte-identical) and
+the cells were re-scored through a private environment (job 2215571): 0
+censored rows remain, the other arms are byte-identical, and the refilled HPD
+scores (0.47–0.71) sit above `fact_rank` on those cells, which does not change
+the verdict. 32 iso-twin units on the four small WD50K types had no realisable
+non-isomorphic twin and carry no AUC row (hence 15–23 seeds in those cells).
 
 ## 5. RQ5 — patterns (final)
 

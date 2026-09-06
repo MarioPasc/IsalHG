@@ -425,8 +425,16 @@ def resolve_data_root(explicit: Path | str | None = None) -> Path | None:
 SMOKE_COMPONENT = "_smoke"
 
 #: The canonical checkout whose `src/**` the editable-install finder serves.
-SRC_DEPLOY_STAMP = Path(
-    "/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG-tkde/.tkde_deploy"
+#: A private environment installed from another checkout overrides it with
+#: ``$ISALHG_SRC_REPO`` (the same override ``rq1.deploy_stamps`` honours).
+SRC_DEPLOY_STAMP = (
+    Path(
+        os.environ.get(
+            "ISALHG_SRC_REPO",
+            "/mnt/home/users/tic_163_uma/mpascual/fscratch/repos/IsalHG-tkde",
+        )
+    )
+    / ".tkde_deploy"
 )
 
 

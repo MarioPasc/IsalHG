@@ -28,6 +28,11 @@ same to its own CDLL.
 a ``C`` token, swept in ascending ``K_C``. The CDLL no longer changes here, so ``pos`` is
 computed once.
 
+*Move rule (no-crossing).* Both phases move pointers in backward-position coordinates
+from the root, never wrapping: see :meth:`_Emitter._move`. This is what keeps the word
+local -- a run's length counts slots on the root-free arc, and chaining new constants
+after ``p_1`` leaves those counts alone.
+
 This module is stdlib-only: the rank vector is a parameter, never computed here.
 """
 
@@ -197,21 +202,35 @@ class _Emitter:
     # Movement
     # ------------------------------------------------------------------
 
+    def _pos(self, slot: int) -> int:
+        """Backward steps from the root's slot to ``slot``; the root itself is ``0``."""
+        size = len(self._order)
+        return (size - self._index_of[slot]) % size
+
     def _move(self, targets: dict[int, int]) -> None:
         """Move the given 1-based pointers to the given slots and emit the block.
 
-        Each pointer takes the shorter circular direction; a tie goes backward, so the
-        block is rendered ``N`` first (ascending pointer index) then ``P``, the H2S
-        convention that ``_movement_tokens`` implements.
+        The **no-crossing rule**: every move is computed in backward-position
+        coordinates from the root and never wraps. A pointer at ``pos = a`` moving to a
+        target at ``pos = b`` retreats ``b - a`` steps when ``b > a`` and advances
+        ``a - b`` steps when ``b < a`` -- in both cases a displacement of ``a - b``,
+        which ``_movement_tokens`` renders as ``N`` for a negative value and ``P`` for a
+        positive one (all ``N`` by ascending pointer index, then all ``P``).
+
+        No move passes over the root's slot, so a run's length is the number of slots
+        strictly between the two positions on the root-free arc. That is what makes the
+        word local: the decoder chains new constants immediately after ``p_1``, which
+        leaves the backward position of every slot beyond ``p_1`` untouched, so an
+        insertion elsewhere never changes an existing run. The shorter-direction rule
+        this replaces did change them -- a forward-rendered run has length ``size - gap``
+        and therefore grows with the constant count.
+
+        Every run is at most ``n - 1`` tokens long, because positions live in
+        ``[0, n - 1]``.
         """
-        size = len(self._order)
         displacement = [0] * self._n_ptr
         for t, target_slot in targets.items():
-            current = self._index_of[self._ptr[t - 1]]
-            wanted = self._index_of[target_slot]
-            forward = (wanted - current) % size
-            backward = (current - wanted) % size
-            displacement[t - 1] = forward if forward < backward else -backward
+            displacement[t - 1] = self._pos(self._ptr[t - 1]) - self._pos(target_slot)
             self._ptr[t - 1] = target_slot
         self._tokens.extend(_movement_tokens(tuple(displacement)))
 
@@ -302,10 +321,8 @@ class _Emitter:
     # ------------------------------------------------------------------
 
     def _c_phase(self) -> None:
-        size = len(self._order)
-        pos = {
-            self._cdll.get_value(slot): (size - idx) % size for idx, slot in enumerate(self._order)
-        }
+        # The CDLL no longer changes, so every ``pos`` is computed once here.
+        pos = {self._cdll.get_value(slot): self._pos(slot) for slot in self._order}
         remaining = [e for e in self._H.edges() if e not in self._consumed]
         remaining.sort(
             key=lambda e: (

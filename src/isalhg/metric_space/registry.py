@@ -32,6 +32,11 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "isalhg_levenshtein": "isalhg.metric_space.distances.isalhg_levenshtein",
     "fact_rank": "isalhg.metric_space.distances.fact_levenshtein",
     "fact_rank_roles": "isalhg.metric_space.distances.fact_levenshtein",
+    # The ordered-walk Isal word (Theorem C): the default policy and its two
+    # emission-policy ablations. All three are exact; they differ in the word.
+    "isal_ow_struct": "isalhg.metric_space.distances.isal_ordered",
+    "isal_ow_rank": "isalhg.metric_space.distances.isal_ordered",
+    "isal_ow_rank0": "isalhg.metric_space.distances.isal_ordered",
     "fact_local_colour": "isalhg.metric_space.distances.fact_addressing_ablations",
     "fact_local_key": "isalhg.metric_space.distances.fact_addressing_ablations",
     "fact_degree_key": "isalhg.metric_space.distances.fact_addressing_ablations",

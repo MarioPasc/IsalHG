@@ -49,17 +49,33 @@ CERT_ARM = "nauty_cert"
 
 # DESIGN.md section 2, "Gate and fallback": the pooled normalized median of
 # fact_rank must land within +-0.05 of these probe values, in the order the
-# section lists the corpora, and the pointer arm within +-0.05 of 0.577 -- the
-# probe's own pointer number re-scored with an equality-keyed alphabet. The
-# probe's published 0.500 compared tokens by hash, and TokenP(i) == TokenN(i)
-# under hashing, so it under-reported the pointer response (DESIGN section 2,
+# section lists the corpora, and the pointer arm within +-0.05 of the probe's
+# own pointer numbers re-scored with an equality-keyed alphabet. The probe's
+# published 0.500 compared tokens by hash, and TokenP(i) == TokenN(i) under
+# hashing, so it under-reported the pointer response (DESIGN section 2,
 # amendment of 2026-09-06).
 GATE_FACT_RANK: dict[str, float] = {
     "synthetic_rq1": 0.188,
     "ndc_classes": 0.211,
     "wd50k66": 0.300,
 }
-GATE_POINTER = 0.577
+GATE_POINTER: dict[str, float] = {
+    "synthetic_rq1": 0.57,
+    "ndc_classes": 0.56,
+    "wd50k66": 0.60,
+}
+# The pointer word is seed-prefixed (the fingerprint F = (seed label, w*)) only
+# on collections with more than one vertex label; fact words never are. The
+# normalized response divides d_abs by the length of the sequence it was
+# measured over, so the denominator is len_base + 1 only for the pointer arm on
+# a multi-label collection. The label count is read from
+# corpora/<collection>/vocab.json under the results root; this map is the
+# frozen-census fallback when the root is not at hand.
+SEED_PREFIXED_FALLBACK: dict[str, bool] = {
+    "synthetic_rq1": True,
+    "ndc_classes": True,
+    "wd50k66": False,
+}
 GATE_TOLERANCE = 0.05
 WITHIN_TOKENS = 2
 
@@ -237,7 +253,31 @@ def _cross_pairs(frame: Any, group_key: str, split_key: str) -> int:
 # ---------------------------------------------------------------------------
 
 
-def m1_response(m1: Any) -> Any:
+def seed_prefixed(collection: str, root: Path | None) -> bool:
+    """Whether the pointer word of ``collection`` carries the seed-label symbol.
+
+    Parameters
+    ----------
+    collection : str
+        Collection name.
+    root : Path or None
+        Results root holding ``corpora/<collection>/vocab.json``; when None or
+        when the file is absent, the frozen-census fallback map is used.
+
+    Returns
+    -------
+    bool
+        True when the collection has more than one vertex label.
+    """
+    if root is not None:
+        vocab = Path(root) / "corpora" / collection / "vocab.json"
+        if vocab.is_file():
+            with vocab.open() as handle:
+                return len(json.load(handle).get("type_names", [])) > 1
+    return SEED_PREFIXED_FALLBACK.get(collection, False)
+
+
+def m1_response(m1: Any, root: Path | None = None) -> Any:
     """Add the normalized response and drop censored or failed measurements."""
     import numpy as np
     import pandas as pd
@@ -248,11 +288,17 @@ def m1_response(m1: Any) -> Any:
     frame["d_abs"] = pd.to_numeric(frame["d_abs"], errors="coerce")
     frame["len_base"] = pd.to_numeric(frame["len_base"], errors="coerce")
     frame = frame[(frame["censored"] == 0) & frame["d_abs"].notna()]
-    # d_abs is measured over the seed-prefixed symbol sequence (the fingerprint
-    # F = (seed label, w*)), which has len_base + 1 symbols; the denominator must
-    # be the length of the same sequence, not of the bare word.
+    # The denominator is the length of the sequence d_abs was measured over:
+    # the bare word for every fact arm, the seed-prefixed word (len_base + 1)
+    # for the pointer arm on a multi-label collection.
+    prefixed = {name: seed_prefixed(name, root) for name in frame["collection"].unique()}
+    offset = np.where(
+        (frame["arm"] == POINTER_ARM) & frame["collection"].map(prefixed).fillna(False),
+        1,
+        0,
+    )
     frame["normalized"] = np.where(
-        frame["len_base"] > 0, frame["d_abs"] / (frame["len_base"] + 1), np.nan
+        frame["len_base"] > 0, frame["d_abs"] / (frame["len_base"] + offset), np.nan
     )
     return frame
 
@@ -340,7 +386,10 @@ def gate_check(frame: Any) -> list[dict[str, Any]]:
     if frame.empty:
         return rows
     for collection, group in frame.groupby("collection", sort=True):
-        for arm, target in ((OURS, GATE_FACT_RANK.get(collection)), (POINTER_ARM, GATE_POINTER)):
+        for arm, target in (
+            (OURS, GATE_FACT_RANK.get(collection)),
+            (POINTER_ARM, GATE_POINTER.get(collection)),
+        ):
             subset = group[group["arm"] == arm]
             if subset.empty or target is None:
                 rows.append(
@@ -646,7 +695,7 @@ def analyze(root: Path) -> dict[str, Any]:
     if not m0.empty:
         m0.to_csv(paths.dir / "rows_m0.csv", index=False)
 
-    response = m1_response(m1)
+    response = m1_response(m1, root)
     response_rows, _ = m1_tables(response)
     summary = {
         "rq": 1,

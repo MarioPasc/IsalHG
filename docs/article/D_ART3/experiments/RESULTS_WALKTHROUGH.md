@@ -8,7 +8,8 @@ from Picasso HOME). The reporting decisions with the numbers that drove them
 are in `DECISIONS.md` there; the main-text and supplement pointers are in
 `article/README.md` and `supplementary/README.md`. The pre-registered science
 is `DESIGN.md` in this folder; the engineering record of the three waves is
-`.claude/notes/2026-09-05-tkde-w{1,2,3}/summary.md`.*
+`.claude/notes/2026-09-05-tkde-w{1,2,3}/summary.md`. The hub over the results
+folder and this document is `INDEX.md` at the results root.*
 
 ## 0. The questions, in one table
 

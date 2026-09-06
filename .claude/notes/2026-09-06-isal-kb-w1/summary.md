@@ -86,7 +86,21 @@ inside each worktree, committed.
 
 ## Interventions
 
-- (none yet)
+- 21:20 — `orbit-prune` scope extended by message with the fourth ablation
+  cell `canonical_rank` (`wstar_rank`): the family's greedy walk with the
+  residual tie and the new-vertex order resolved by nauty's rank; contract
+  in the message and in the design doc §3b. Priority: after its items 1–4.
+- 21:35 — `ow-emitter` reported Prop. C.5 partially falsified under the
+  frozen "shorter circular direction" move rule (forward-rendered runs have
+  length `N − gap`, grow under every insertion, flip at `N/2`; measured max
+  22 on 400 random binary stars vs exactly 2 in the backward regime).
+  **Decision (orchestrator): the move rule is replaced by the no-crossing
+  rule** — moves computed in backward-position coordinates from the root
+  without wrapping, both phases, all pointers. Proof file (Def. 3.2, the
+  star-shape lemma, Prop. C.5(b) now ≤ 3 with the signature-shift mechanism,
+  new Remark "Why the move rule is not shorter direction") and the design
+  record updated; corrected contract sent to `ow-emitter` with the request
+  to pin (a) ≤ 2 unconditionally and report the word-length price.
 
 ## Merge record
 

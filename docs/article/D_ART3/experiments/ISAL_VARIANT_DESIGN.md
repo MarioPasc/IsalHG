@@ -112,9 +112,16 @@ Default policy **`ow-struct`** (structural keys first, canonical rank last):
   C-phase — a sweep of the closing facts in CDLL order; `p_t` takes the
   `t`-th member by `pos`. In a star `pos = c` (creation order), so the sweep
   is monotone and a leaf insertion changes exactly one run.
-- Move rule: each pointer takes the shorter circular direction to its target;
-  tie → backward (`N`); the move block is rendered in the H2S convention (all
-  `N` by pointer index, then all `P`).
+- Move rule (**no crossing**, revised 2026-09-06 after the emitter agent
+  measured the "shorter direction" rule: a run rendered forward has length
+  `N − gap`, grows under every insertion and flips at `N/2` — max cost 22 on
+  400 random binary stars vs exactly 2 in the backward regime): every move
+  is computed in backward-position coordinates from the root's slot without
+  wrapping, `Δ = pos(target) − pos(current)`; `Δ > 0` → `Δ` tokens `N`,
+  `Δ < 0` → `|Δ|` tokens `P`. No move passes over the root; every run length
+  is the number of slots between the two positions on the root-free arc, so
+  an insertion elsewhere never changes it. Rendered in the H2S convention
+  (all `N` by pointer index, then all `P`).
 
 Ablation policies (option D of the brief): **`ow-rank`** — `K_V` with the
 new constants' ranks *before* the predicate (the order is nauty's, the

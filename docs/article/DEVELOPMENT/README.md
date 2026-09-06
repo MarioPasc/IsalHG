@@ -240,6 +240,15 @@ on 320/320 (pooled median 1.441, p = 1.6e-54); E1' ρ = 0.622. **T-M8f
 **Runnable now:** S7 (article-gating). S6 remains optional stretch (T-M4a ∥
 T-TBe, then T-M6; explicit human opt-in; after S7 if both are wanted).
 
+**D-ART4 (2026-09-06, PI-ruled).** The paper's representation is the **Isal
+instruction string**; the fact-rank word of the TKDE campaign leaves the paper
+(rows kept as the record). nauty may be used *inside* the Isal canonical form;
+the comparison is "nauty+Isal" (a language) vs "nauty" (a certificate) on
+knowledge-base tasks. Restrictions R1–R6, the design space, and the re-aimed
+RQs are in `DECISIONS.md` D-ART4; the refinement agent's brief is
+`../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md`; the campaign audit is
+`../D_ART3/experiments/RESULTS_AUDIT_2026-09-06.md`.
+
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"
 pillar. **D-ART2 (2026-07-18, PI-RATIFIED same day — `DECISIONS.md`) retired

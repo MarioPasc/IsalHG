@@ -288,3 +288,155 @@
   *[Resolved 2026-07-18: PI chose (b) promote, extended to the full
   Kaski–Östergård catalog (orders 3–15); executed same day — see
   `T-M0/CLOSED/T-M0c.md`.]*
+
+- **D-ART4** — **[PI-RULED 2026-09-06; author decisions (1)–(3) recorded the
+  same day, assessed below]** *The paper's representation is the instruction
+  string of the Isal family.* This reverses the encoding half of D-ART3 v7 /
+  `../D_ART3/START_HERE.md` §6.0 (the fact-rank word adopted on 2026-09-04 under
+  a fact-list reading of "F4"). Background and the PI's three questions answered
+  with measurements: `../D_ART3/experiments/PI_QA_2026-09-06_isal_string.md`;
+  the worked example of the three encodings on one record:
+  `../D_ART3/experiments/ENCODINGS_WORKED_EXAMPLE.md`; the campaign audit:
+  `../D_ART3/experiments/RESULTS_AUDIT_2026-09-06.md`.
+
+  **(1) Remove the fact-rank word from the paper** — *author decision, ACCEPTED
+  with one refinement.* The fact-rank word is retired as a representation, and
+  with it the addressing arms (`fact_degree_key`, `fact_local_key`,
+  `fact_local_colour`, `fact_rank_roles`), the addressing-frontier result and
+  Prop 13 (all fact-alphabet results), and the two RQ1 gate amendments (moot).
+  Nothing on disk is deleted (`results/IEEETKDE/` keeps every row as the
+  record); the rows simply do not appear in the article. *Refinement:* the
+  certificate baseline must be kept in **two standard tokenisations** — the
+  raw certificate bytes (`nauty_cert`) and the canonical adjacency rows
+  (`nauty_cert_rows`, already implemented and run in RQ2/5/7) — because the
+  bytes-only comparison is a tokenisation confound (audit §1.2 item 2). A
+  canonical adjacency list under a canonical labelling is nauty's own
+  canonical form written row-wise, i.e. a standard object, not something we
+  made up; it is the honest per-token comparator for locality and cost.
+  *Consequence to own in the prose:* against that comparator the Isal string
+  is less local and slower; the paper's advantages are the language
+  operations (decoded consensus, generation, decodable interiors — RQ3, RQ6)
+  and its own completeness theorem. The paper is written as "a language vs a
+  certificate".
+
+  **(2) Restrictions of the Isal methodology on knowledge bases** — recorded
+  for iteration (numbers in the PI Q&A):
+  - **R1 locality.** `w*_c` = lex-min over walks ⇒ an edit that moves the seed
+    or a tie rewrites the walk: normalised single-edit response 0.49–0.79 vs
+    0.08–0.25 (certificate bytes); within two tokens 0.03–0.86.
+  - **R2 cost on symmetric inputs.** C++ engine, 60 s: censored 5.7 % (WD50K)
+    / 12.3 % (NDC classes); censoring tracks `|Aut(Levi)|` (0.00 at ≤ 10,
+    0.41–0.48 at 10³–10⁶, 1.00 at ≥ 10⁸) more than `m` (at 9–12 facts:
+    symmetric 0.53 vs asymmetric 0.02). Real KBs are symmetric by nature.
+  - **R3 domain.** Connected only; isolated constants not representable
+    (RQ3's deletion variants and RQ6's interiors must respect this).
+  - **R4 roles / argument order** not carried (facts are sets); shared with
+    every set-based encoding; future work.
+  - **R5 alphabet scoping.** One `k` per collection; fingerprint
+    `(seed label, w*_c)` on labelled inputs.
+  - **R6 identity speed** vs canonical-labelling engines: conceded.
+
+  **(2a) "A canonical string over something other than the lex-min over
+  walks"** — *assessed: yes, and it is the lever that addresses R1 and R2
+  together.* Theorem A's proof is parametric in the iso-invariant rule that
+  fixes the string; nothing forces the lex-min over all walks. Options, in
+  order of promise:
+  - *(i) Canonical-order walk.* Obtain an iso-invariant total order of the
+    constants by individualisation–refinement (the canonical-labelling
+    paradigm; Isal-native if implemented, borrowed from nauty otherwise) and
+    emit the program deterministically along it: constants enter through `V`
+    in order, facts in order through `V`/`C`, pointers moved with `P`/`N`.
+    Completeness immediate. Locality = the order's stability under edits,
+    measured for nauty's order at 0.68–0.85 of edits leaving it intact, with
+    a few-token response otherwise. Symmetry handled by the same machinery
+    (orbit pruning is native to individualisation–refinement). **Hypothesis
+    unique to Isal, to be measured:** pointer moves are *relative* addresses,
+    so inserting a constant should cost O(1) tokens where absolute
+    addressing (ranks / adjacency rows) renumbers everything after it — a
+    potential locality advantage over every rank-based serialisation.
+  - *(ii) Lex-min over a restricted walk family* (e.g. a BFS/DFS from the
+    refinement root with children ordered by refinement colour — the gSpan
+    DFS-code family): still a lex-min, but over a tree-shaped family whose
+    minimum moves less under edits.
+  - *(iii) Status quo* (`w*_c`): locality bounded by the avalanche; only
+    typical-case gains from pruning.
+  Theoretical ceiling for all three: every complete invariant is
+  discontinuous near symmetric inputs (the frontier prose survives); the
+  target is typical-case locality.
+
+  **(2b) The sibling engines' pruning** — *checked in the sources; would not
+  help the symmetric tail.* IsalGraph `pruned_canonical_string`
+  (`core/native/src/canonical.cpp`): structural-triplet candidate filter +
+  branch-and-bound on string length. IsalSR (`core/native/src/canonical.cpp`,
+  `wl.cpp`): candidate key `(label, WL hash)`, all tied candidates explored,
+  lex-min. Both are *invariant-based*: they discard candidates an invariant
+  distinguishes and explore every candidate it cannot. Automorphic nodes share
+  every invariant, so on symmetric records the filter is a no-op (the IsalHG
+  `greedy_min_wl_pruned` docstring states the same for vertex-transitive
+  designs), and the IsalHG C++ engine already carries this class (neighbour-
+  degree seed cascade, structural tuples, cost-class enumeration + bound,
+  Rounds 9–11 of `docs/engineering/CPP_OPTIMIZATION_LOG.md`). What R2 needs is
+  **stabiliser-orbit pruning** — one branch per orbit of the automorphism
+  group fixing the placed prefix — which is value-preserving (Prop 6.0 of the
+  completeness proof) and unimplemented in all three engines. Practical route:
+  an automorphism oracle at tie points (`pynauty.autgrp` on the Levi graph
+  with the placed constants individualised), giving bit-identical `w*_c` with
+  polynomial oracle calls in place of exponential branching; nauty then
+  appears as a *pruning subroutine*, not as the canonical form — the PI must
+  accept that, or orbit detection is implemented natively (research). Option
+  (2a)(i) sidesteps R2 entirely.
+
+  **(3) Re-think the RQs** — *assessed: re-aim, do not restart.* The seven
+  questions are about knowledge-base collections and are encoder-agnostic
+  (`DESIGN.md` §0); that is the campaign's asset. Changes:
+  - **RQ0 (new, thesis).** Why a language rather than a certificate: the
+    capability matrix (decode any string, edit, prefix, interior, generate,
+    consensus as a decoded object) filled by theorem or counterexample for
+    every arm. Makes the paper's fight explicit.
+  - **RQ1 → canonical-string design within the Isal language.** Arms:
+    `w*_c` (60 s; 600 s on the censored tail), the canonical-order walk
+    (2a-i) in its Isal-native and borrowed-order forms, `nauty_cert`,
+    `nauty_cert_rows`. Axes: exactness, single-edit response (absolute
+    tokens first), zero-shift fraction, the relative-vs-absolute addressing
+    hypothesis under constant-set changes, cost and censoring by `|Aut|`.
+  - **RQ2** unchanged; the Isal arm brings its own theorem.
+  - **RQ3** unchanged (the consensus is fact-level; candidate key = the Isal
+    string; interiors connected by construction — stronger). The deletion
+    boundary's mechanism must be corrected regardless (audit §3.3). Variant
+    generator: reject stranding deletions (R3).
+  - **RQ4** keep the iso-twin exactness consequence; the standard-corruption
+    AUC is pre-stated as characterisation (the certificate already behaves
+    like every canonical-string metric there: expected negative).
+  - **RQ5** licences (`ν`, hubness) + one exhibit; no task claim (expected
+    negative for every arm).
+  - **RQ6** unchanged and stronger: validity *and connectivity* by
+    construction under `S2H`.
+  - **RQ7** the envelope gains the symmetry axis: cells over
+    `(m, k, |Aut|)`, since `|Aut|` is the measured frontier, not `m`.
+  Corpus policy: connected-only; censored members dropped and reported per
+  bucket, or the source window restricted — decided from the RQ1 table.
+
+  **Also noted.** (a) The retired fact-rank rows remain evidence: the RQ4/RQ5
+  negatives hold for `nauty_cert` too and will hold for any canonical-string
+  metric. (b) Before launching RQ3 under the Isal arm, pilot one NDC cell: the
+  consensus canonicalises hundreds of candidates per collection and NDC
+  sources are symmetric (R2). (c) Documents to reverse: `START_HERE.md`
+  §0/§0.1/§6.0, `prose.md` §2.1–2.3, `DESIGN.md` G1; the `fact_rank` arm stays
+  registered in code as a baseline, not as ours. (d) Order of work: RQ1 first,
+  the primary representation chosen from its table, then the encoder swap
+  for RQ2–RQ7.
+
+  **Addendum 2026-09-06 (author) — nauty inside the Isal methodology is
+  accepted, and framed.** The author's ruling: *"We can integrate nauty inside
+  the Isal methodology without a problem … when comparing to the nauty
+  certificate, we are comparing something like 'nauty+Isal' vs 'nauty', which
+  is really defensible and perfectly scoped, but always under the knowledge
+  databases preface and measuring things that have an impact."* Consequences: (i) the PI's supersession of D-TA2 is required only if
+  the canonical *value* changes (`lem:pruning` of the completeness proof:
+  invariant tie refinement is complete but yields a different string;
+  stabiliser-orbit pruning is value-preserving); (ii) nauty's role must be
+  stated in one sentence in the paper, whichever variant wins. An agent is
+  spawned to design and measure the variants; its binding brief is
+  [`../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md`](../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md)
+  (reading list, fixed facts, theory constraints, the A–D design space with
+  hypotheses, code map, pitfalls, deliverables).

@@ -43,6 +43,21 @@ members with the natural series reported beside them. The knowledge-base
 framing and the canonical-word metric are verified novel
 (`foundation/literature_verified.md`).
 
+> **Superseded in part, 2026-09-06 (D-ART4, `../DEVELOPMENT/DECISIONS.md`).**
+> The PI ruled that the paper's representation is the **Isal instruction
+> string**, not the fact-rank word adopted below; the fact-rank word and its
+> addressing arms leave the paper (they stay on disk as the record). The
+> measured restrictions of the Isal string on knowledge bases (locality;
+> symmetric-input cost; connected-only domain; roles), the design options for
+> a canonical string other than the lex-min over walks, and the re-aimed RQ
+> set are recorded there. Read `experiments/PI_QA_2026-09-06_isal_string.md`,
+> `experiments/ENCODINGS_WORKED_EXAMPLE.md` and
+> `experiments/RESULTS_AUDIT_2026-09-06.md` before §0–§8 below, which describe
+> the superseded encoding decision and the campaign run under it.
+> An agent is being spawned to design the nauty-assisted Isal variants; its
+> brief is `experiments/ISAL_REFINEMENT_BRIEF.md` (read it first if that is
+> your task).
+
 ## 0.1 What a takeover agent should do next
 
 Nothing is blocked on a decision; the next work is implementation.

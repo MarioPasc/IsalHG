@@ -183,6 +183,24 @@ not as ours. Corpora: `synthetic_rq1`, `ndc_classes`, `wd50k66` (the RQ1 three).
 | H-M4 | Spearman ρ(`d°`, `d_cert_rows`) ≥ 0.6 on every corpus (the two are serialisations of one canonical labelling; the residual is the emission) | ≥ | the "is nauty doing the work" reading |
 | H-A (bit-exactness) | `wstar_orbit` reproduces the frozen `w*_c` on Fano, STS(9), `C_13(0,1,3)`, GQ(2,2), the `n=4` counterexample, both STS(13); and equals the unpruned Python engine on ≥ 500 random labelled hypergraphs (`n ≤ 8`) | equality | acceptance gate for option A |
 
+### 3b. The nauty ablation (author's ruling, 2026-09-06)
+
+The author accepted both uses of nauty and asked for a four-cell ablation —
+*no nauty / order only / oracle only / both*. The cells, as canonical
+programs of the same machine (every one decoded by `S2H`):
+
+| cell | arm | canonical program | nauty's job | completeness | expected R1 / R2 |
+|---|---|---|---|---|---|
+| no nauty | `wstar` | tie-complete lex-min over walks (`w*_c`, C++ engine) | none | Theorem A | non-local / censored on symmetric inputs |
+| oracle only | `wstar_orbit` | the same `w*_c`, search pruned to one branch per stabiliser orbit | automorphism oracle at ties and seeds | Theorem A (value preserved, Prop. C.7) | non-local / computable |
+| order only | `isal_ow_struct` (+ `ow_rank`, `ow_rank0`) | deterministic ordered walk along the canonical order | supplies the order | Theorem C | local (measured) / microseconds |
+| both | `wstar_rank` | the family's greedy walk (displacement search + 7-rung cascade) with the residual tie set and the new-vertex order resolved by rank — D-ART4 option (2a)(i) | the order, used *inside* the Isal search as the tie key (`lem:pruning`); the oracle is unnecessary because ties collapse | Theorem C's argument (deterministic function of `H_ρ` that round-trips) | between `wstar` and `ow` on both axes (measured) |
+
+Reading the table answers the reviewer's "is nauty doing the work?" twice:
+the oracle cell shows what symmetry handling alone buys (R2, not R1); the
+rank cell shows what borrowing only the *tie key* buys while keeping the
+family's own walk. `wstar_rank` is a new canonical value, not `w*_c`.
+
 **Selection rule (pre-registered).** Among the `ow_*` arms passing H-M0 with
 0 censoring, adopt the one with the highest constant-set-preserved
 "within ≤ 2 instructions" fraction pooled over the three corpora, ties broken

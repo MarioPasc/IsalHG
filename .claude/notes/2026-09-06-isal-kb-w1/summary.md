@@ -1,0 +1,99 @@
+# Wave 2026-09-06-isal-kb-w1 — the Isal instruction word for knowledge bases
+
+*Orchestrator: the `[IsalHG-Refinement]` session (Fable 5.1, xhigh). Written
+continuously; appended, never rewritten. If this session ends, a takeover
+agent starts here, then reads `docs/article/D_ART3/experiments/ISAL_VARIANT_DESIGN.md`.*
+
+## Date and base
+
+- 2026-09-06. Branch `feature/isal-kb-word` cut from
+  `integration/2026-09-05-tkde-w1` (df61eda).
+- Commits before the wave: `85c565b` (the auditor's uncommitted D-ART4 record:
+  brief, PI Q&A, audit, worked example, three probes) and `99b8574` (the
+  pre-registered design). **BASE_SHA = 99b8574f768b6f3dc53cc6ef9414cef5505dda04.**
+- Proof written and compiled (pdflatex, clean):
+  `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/proofs/completeness/theorem_c_ordered_walk.tex` (+ .pdf).
+
+## The user's prompt (verbatim)
+
+> CONTEXT: Read docs/article/D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md docs/article/D_ART3/START_HERE.md You are allowed to spawn sonnet agents to brief you on the results if needed or aggregate them for you (/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/INDEX.md) TASK: I have been wrong on what the original agent proposed, the fact-rank proposal with nauty is completly off the table for this article, since it would not be a Isal member of the family, with our distinguishable CDLL+Alphabet structure. However, the Isal approach, as intended, would not exactly work 100% on this problem, as stated in docs/article/D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md. You are tasked with exploring the options we have to steer IsalHG to fit better the knowledge databases scope of the paper, basically our main problems are the locallity and symmetry, but we also need to keep our main characteristics and correct representation. ACCEPTANCE CRITERIA: You have not spawned more than 2 opus subagents at thee same time and you have only spawned them for implementation and monitoring, checking their work when they have finished ( /parallel-agents ) ; You have modified, if needed, or created, the completeness or more proofs in /media/mpascual/Sandisk2TB/research/ISAL/isalhg/proofs ; You have correctly found and implemented (implementation for opus xhigh) a IsalHG variant that fits better the knowledge databases and the RQs we already have, although, and this rule is very important: If we can't max out any of the RQs prosed, we can settle for a representation that does for most and move the RQ to supplementary as a limitation, or find something else that has a real application at which our isalhg is the best at. If needed, update the project docs in docs/article/D_ART3/prose.md (I encourage you to do at the end). Think step by step, reason. Ask me anything you need from me. Stay aligned. You may message VERY OCCASIONALLY (HIGH-USAGE CONSUMER MODEL) the agent [Experimental-Interpreter] to interpret any results for you or give more context. The main goal at the end will be to have another entry to each RQ with the Isal representation.
+
+## The user's rulings (2026-09-06, batched question, answered)
+
+1. **nauty role — both accepted, with a four-cell ablation:** *no nauty* /
+   *order only* / *oracle only* / *both*. Orchestrator's reading, recorded in
+   the design doc §3b: the cells are the canonical programs `wstar` (the
+   family's tie-complete lex-min, no nauty), `isal_ow_*` (the ordered walk:
+   nauty's order drives the walk), `wstar_orbit` (the same `w*_c`, nauty as
+   the automorphism oracle that prunes the search), and `wstar_rank` (the
+   family's greedy walk with nauty's rank as the residual tie key — D-ART4
+   option 2a-i — which uses the order *inside* the Isal search and needs no
+   oracle because ties collapse). If the user meant a different fourth cell,
+   this is the place to correct it.
+2. **RQ4 / RQ5:** to the supplement as characterised limitations if the Isal
+   row sits at the certificate's level.
+3. **Picasso:** the orchestrator submits, using the `picasso-sbatch` skill.
+4. **Roles (R4):** ledger task, later (`docs/article/DEVELOPMENT/T-KB/OPEN/T-KBa.md`).
+5. **Quota:** the plan is at 78 % usage, reset in ~2 h 10 min; subagents may
+   be cut off. Everything decided is on disk (this file, the design doc, the
+   proof); the wave is recoverable from the agents' committed branches.
+
+## Design decisions taken by the orchestrator (not the user)
+
+- Representation candidate = the **ordered walk** `w°` (policy `ow-struct`:
+  structural keys, local signature, nauty rank last); ablations `ow-rank`,
+  `ow-rank0`. Reason: removes the search (the root of R1 and R2) while
+  keeping CDLL + `Σ_HG` + `S2H`; complete by Theorem C; locality provable on
+  binary stars (Prop. C.5) and otherwise measured.
+- `w*_c` kept as the family's search-based form, made computable by
+  **stabiliser-orbit pruning** (value-preserving, D-TA2 untouched).
+- Alphabet unchanged. No new instruction.
+- The tokens of `w°` are independent of `k` for every `k ≥ max arity`, so
+  the arm's fingerprint needs no corpus `k` (validation and decoding do).
+
+## Agents of this wave
+
+| name | model / effort | mission | ownership | status |
+|---|---|---|---|---|
+| `ow-emitter` | opus5-xhigh (model pinned `opus`; `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` is set in this env, so the model is passed per call) | ordered-walk emitter (core), nauty entry point (iso_backends), distance arm `isal_ow_{struct,rank,rank0}`, tests, corpus probe | `core/algorithms/ordered_walk.py`, `iso_backends/isal_ordered.py`, `metric_space/distances/isal_ordered.py` (+ registry entry), 3 test files, `scripts/diagnostics/ordered_walk_corpus_probe.py` | running |
+| `orbit-prune` | opus5-xhigh (`opus`) | `OrbitOracle` protocol + pynauty oracle; hook in the Python tie-branch; `algorithm="canonical_orbit"`; frozen-pin bit-exactness; differentials; branch-count table; censored-tail probe; **added by message:** `canonical_rank` (`wstar_rank`) arm | `core/orbit_oracle.py`, `core/hypergraph_to_string.py`, `core/canonical.py`, `core/algorithms/registry.py`, `iso_backends/orbit_oracle.py`, 2 test files, `scripts/diagnostics/orbit_pruning_probe.py` | running |
+
+Worktrees: created by the harness under `.claude/worktrees/agent-*` on
+branches `worktree-agent-*`; logs at `.claude/notes/2026-09-06-isal-kb-w1/<name>.md`
+inside each worktree, committed.
+
+## Plan after this wave
+
+1. Verify both logs against the diffs; re-run their fast tests in their
+   worktrees with their cloned envs (`~/.conda/envs/isalhg-owemit`,
+   `~/.conda/envs/isalhg-orbit`); merge into `feature/isal-kb-word`
+   (`--no-ff`), fast suite after each merge.
+2. **Wave 2 (one agent, opus xhigh):** harness integration —
+   `experiments/tkde/matrices.py` (WORD_ARMS + DEFAULT_SPECS: `isal_ow_struct`,
+   `isal_ow_rank`, `isal_ow_rank0`, `wstar_rank`; `wstar_orbit` where the
+   budget allows), `rq1.py` (arm branches with the forked-child budget for the
+   Python engines; instruction-granularity distances beside `symbol_distance`;
+   `zero_shift` and `|Aut|` columns), `rq7.py` (the `|Aut|` axis), RQ3
+   `MEDOID_ARMS`, RQ4 `DEFAULT_ARMS` + cache, RQ5 cache, RQ6 (`_ow_word`,
+   interiors, and an n-gram generator over the `w°` alphabet mirroring
+   `fact_ngram`); local smoke on subsamples; then Picasso RQ1 (`RQ1_isal`).
+3. Selection from the RQ1 table by the pre-registered rule; then RQ2–RQ7 on
+   Picasso with the adopted arm; harvest to the drive; stats harness G5.
+4. Prose: `docs/article/D_ART3/prose.md` §2.1–2.3, §3 RQ1, §4 theory table,
+   §6, §11 — the Isal word replaces the fact-rank word; `START_HERE.md`
+   §0/§0.1/§6.0 reversal note; `DESIGN.md` G1. One-page PI reading. Ledger
+   notes. Dated summary here.
+
+## Interventions
+
+- (none yet)
+
+## Merge record
+
+- (pending)
+
+## Open follow-ups
+
+- Roles variant (T-KBa). C++ port of orbit pruning (T-KBb). nauty-free ordered
+  walk = structural keys + orbit-pruned tie-complete residual (option C; T-KBc,
+  future work).

@@ -194,6 +194,130 @@ Recommended shape if adopted: keep `word_tokens` as it is, and in `run_m1` emit
 `analyze_rq1.GATE_POINTER` (= 0.500) mirrors the DESIGN constant and was left
 untouched pending that amendment.
 
+---
+
+# Follow-up (2026-09-06) — wd50k66 has no seed symbol, so the unconditional `+1` is wrong there
+
+Coordinator's question: re-score the probe's pointer number on `wd50k66`, put the
+three corpora on one normalizer definition, and say whether the pipeline's 0.500 on
+`wd50k66` is consistent. Harvest at the time of writing: 86 tagged `rows_m1` files
+(`ndc_classes` 25,104 pairs/arm, `synthetic_rq1` 39,998, `wd50k66` 38,987).
+
+## The structural finding
+
+`experiments/tkde/budget.py::pointer_symbols` prepends `("seed", label)` **only when
+`augment` is true**, and `rq1._augment` is `max(n_vertex_labels) > 1`. Measured on the
+frozen corpora:
+
+| collection | `n_vertex_labels` | `_augment` | seed symbol in the pointer word? |
+|---|---|---|---|
+| synthetic_rq1 | 3 | True | yes |
+| ndc_classes | 4 | True | yes |
+| **wd50k66** | **1** | **False** | **no** |
+
+The probe agrees: `run_probe.ArmA.word` prepends the seed iff `kb.n_types > 1`, and
+`f4_corpora.load_wd50k66` leaves WD50K constants untyped.
+
+Consequences for the normalizer now in `analyze_rq1`:
+
+1. On `wd50k66` the pointer arm has **no seed token**, so `d_abs / (len_base + 1)`
+   divides by a symbol that is not in the measured sequence. With median
+   `len_base = 6` that deflates the response by ~14 % — exactly what turns the
+   honest 0.5833 into the reported 0.5000.
+2. The `+1` is also being applied to **every non-pointer arm**, which never carries a
+   seed symbol (`arm_distance` for those arms measures over the bare word). That is
+   confirmed by the coordinator's own number: `fact_rank` on `wd50k66` reads 0.300
+   under `+1`, whereas `d/len_base` gives 0.3333.
+
+The correct rule is **`normalized = d / |w_measured(base)|`**: parse tokens `+ 1`
+for the pointer arm on a collection with more than one vertex label, and parse
+tokens exactly otherwise.
+
+## Pipeline, all three corpora, both normalizers (86-file harvest)
+
+Pointer arm (`isalhg_levenshtein`), censored rows excluded:
+
+| collection | n used | censored | abs med | `len_base` med | `d/len_base` | `d/(len_base+1)` | **correct (`d/|w_measured|`)** |
+|---|---|---|---|---|---|---|---|
+| synthetic_rq1 | 39,998 | 0 / 39,998 | 19 | 37 | 0.6071 | 0.5882 | **0.5882** (augment) |
+| ndc_classes | 22,311 | 2,793 / 25,104 (11.1 %) | 4 | 6 | 0.6000 | 0.5556 | **0.5556** (augment) |
+| wd50k66 | 36,464 | 2,523 / 38,987 (6.5 %) | 3 | 6 | 0.5833 | 0.5000 | **0.5833** (no augment) |
+
+`fact_rank`, no censoring on any collection:
+
+| collection | n | abs med | `len_base` med | `d/len_base` = **correct** | `d/(len_base+1)` | probe target |
+|---|---|---|---|---|---|---|
+| synthetic_rq1 | 39,998 | 4 | 24 | **0.2000** | 0.1898 | 0.188 |
+| ndc_classes | 25,104 | 3 | 12 | **0.2222** | 0.2000 | 0.211 |
+| wd50k66 | 38,987 | 4 | 13 | **0.3333** | 0.3000 | 0.300 |
+
+`fact_rank` passes the ±0.05 gate on the correct definition too (|Δ| = 0.012 / 0.011 /
+0.033), so the `+1` is not needed to make that arm reproduce.
+
+`wd50k66` pointer arm per edit kind — the absolute medians match the probe's §9 row
+exactly, while the normalized ones sit uniformly above it (the hash-collision
+signature, unchanged from the main analysis):
+
+| edit kind | n | pipeline abs | probe abs | pipeline `d/len_base` | probe nrm |
+|---|---|---|---|---|---|
+| insert_fact | 7,951 | 5 | 5 | 1.0000 | 0.800 |
+| delete_fact | 7,094 | 1 | 1 | 0.2500 | 0.211 |
+| add_constant | 7,995 | 4 | 4 | 0.6667 | 0.583 |
+| remove_constant | 5,441 | 2 | 2 | 0.3333 | 0.308 |
+| insert_fact_new_constant | 7,983 | 3 | 3 | 0.6667 | 0.571 |
+
+## Probe re-scored on its own members and edits, all three corpora
+
+`run_probe.stage_m1` replayed exactly — same corpus construction, same
+`SEED_CORPUS`/`SEED_EDITS` streams, same `EDITS_PER_KIND = 10`, same `k` = pair
+maximum, same 60 s budget, same `ArmA.word` seed rule — scoring the first `EA` base
+KBs (the probe's own `ea_kbs` mechanism). Two distance functions on the identical
+words: the probe's `token_levenshtein` (rapidfuzz on raw token tuples) and the
+correct `symbol_distance`.
+
+| corpus | EA | pairs | censored | `n_types` | probe as published (`d_buggy/|w|`) | **corrected (`d/|w_measured|`)** | corrected `/(parse+1)` | under-reported |
+|---|---|---|---|---|---|---|---|---|
+| synthetic | 40 | 1,973 | 0 | 3 | 0.4783 | **0.5686** | 0.5686 | 67.3 % |
+| ndc_classes_quarter | 12 | 419 | 60 | 4 | 0.5000 | **0.5556** | 0.5556 | 33.4 % |
+| wd50k66 | 25 | 975 | 65 | **1** | 0.5000 | **0.6000** | 0.5000 | 22.8 % |
+
+The published-column values reproduce §9's 0.500 / 0.500 / 0.500 (synthetic at
+0.478 on a 40-base prefix of the 300 the probe used). For `wd50k66` the two
+right-hand columns differ because `n_types = 1`: `|w_measured| = parse tokens`,
+so the `+1` there is spurious — and it lands exactly on 0.500, which is why the
+unconditional `+1` made the pipeline's `wd50k66` cell *look* like the published
+figure while moving it away from the truth.
+
+## The three targets on one definition, and the answer on `wd50k66`
+
+Definition: `normalized = d / |w_measured(base)|` — parse tokens plus the seed
+symbol iff the pointer arm is measured on a collection with more than one vertex
+label.
+
+| corpus | corrected probe | pipeline | Δ | within ±0.05 |
+|---|---|---|---|---|
+| synthetic_rq1 | 0.5686 | 0.5882 | +0.020 | yes |
+| ndc_classes | 0.5556 | 0.5556 | 0.000 | yes |
+| wd50k66 | 0.6000 | 0.5833 | −0.017 | yes |
+
+**The pipeline reproduces the corrected probe on all three corpora.** NDC agrees to
+four decimals; the two others to within 0.02.
+
+**Is 0.500 on `wd50k66` consistent with the other two? No — and it should not be
+read as a failure of the pipeline.** 0.500 is what the unconditional `+1`
+produces on a collection whose pointer word has no seed symbol; the honest
+pipeline value there is **0.5833**, which agrees with the corrected probe's
+0.6000. Under the correct denominator the three pointer values are mutually
+consistent (0.556–0.600 probe, 0.556–0.588 pipeline); under the unconditional
+`+1` they are 0.588 / 0.556 / 0.500, with `wd50k66` pulled 0.083 below its own
+corrected target purely by the arithmetic.
+
+Recommended per-collection pointer targets, on the correct definition:
+**synthetic_rq1 0.57, ndc_classes 0.56, wd50k66 0.60** (±0.05). `fact_rank` keeps
+0.188 / 0.211 / 0.300 and passes on `d/len_base` without any `+1`
+(0.2000 / 0.2222 / 0.3333; |Δ| = 0.012 / 0.011 / 0.033); its published targets are
+unaffected by the probe's defect (0/2,400 pairs under-reported on E-B words).
+
 ## Files
 
 - `tests/experiments_tkde/test_rq127_smoke.py` — two regression tests in

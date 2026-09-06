@@ -186,7 +186,7 @@ re-ran the generation, metric-space and RQ6 smoke tests)
 
 | Check | Command | Result |
 |---|---|---|
-| Full test suite | `pytest tests/unit tests/property -q -x --hypothesis-seed=0` | 2,056 passed, 7 skipped, 588 s |
+| Full test suite | `pytest tests/unit tests/property -q -x --hypothesis-seed=0` | 2,056 passed, 7 skipped, 588 s (on `21da071`); **final head `26a5b5f`: `pytest tests/unit tests/property tests/experiments_tkde` → 2,300 passed, 7 skipped, 857 s** |
 | Lint | `ruff check src/ tests/ experiments/` | 38 findings — identical count per directory on the wave base `2e7d811` (src 2, tests 1, experiments 35, all in `experiments/article/**` and `experiments/preprint/**`, untouched by this wave); `experiments/tkde` clean |
 | Type check | `mypy src/isalhg/` | 20 errors in 6 files — the pre-existing set recorded in the handoff (untouched core files) |
 | Real-data check | harvest + `analyze_rq3`, `analyze_rq6` on the local results root | RQ3: 49,027 / 690 / 35,656 rows analysed; RQ6: 108 sample rows, 40 alignment rows; tables written |

@@ -248,28 +248,37 @@ the supplement. (An operational finding on the way: the n-gram's per-context
 memo was unbounded and grew 2.7 GB per unit; the library is now LRU-bounded
 with bit-identical samples.)
 
-## 7. RQ7 — the envelope (provisional; 66 of 74 tasks harvested)
+## 7. RQ7 — the envelope (final)
 
 **Question.** Where does the representation stop being computable? A synthetic
-sweep over facts m, arity k, alphabet sizes and density with a process-level
-time budget; yield on the real collections by size; N-scaling of the pairwise
-matrices.
+sweep over facts m (10 … 1,280), arity k (2 … 5), alphabet sizes and density
+with a process-level time budget (27 instances per cell); yield on the real
+collections by size; N-scaling of the pairwise matrices.
 
-| arm | largest m cleared with no time-out, by k (2 / 3 / 4 / 5) |
-|---|---|
-| `fact_rank` | 160 / 1,280 / 160 / 160 (sweep ceiling per k; 0 time-outs so far) |
-| `nauty_cert` | 160 / 1,280 / 160 / 160 |
-| pointer alphabet | 160 / 160 / 40 / 40 |
+| arm | time-outs in the sweep | largest m cleared, by k (2 / 3 / 4 / 5) |
+|---|---|---|
+| `fact_rank` | 0 of 7,938 | 160 / 1,280 / 160 / 160 (= the sweep ceiling per k) |
+| `nauty_cert` | 0 of 7,938 | 160 / 1,280 / 160 / 160 |
+| pointer alphabet | 3,074 of 7,776 (39.5 %) | 160 / 160 / 40 / 40 |
 
-Yield on real collections: `fact_rank` completes every member of every
-collection (medians 0.25–0.8 ms, all buckets up to > 24 facts); the pointer
-alphabet completes 57 of 176 WD50K members with 21–24 facts (median 5.2 s, p90
-35 s) and 19 of 85 on `wd50k100`. N-scaling: the bipartite-GED assignment
-reading needs 525 s for the 3,988 × 3,988 WD50K matrix; the `fact_rank` matrix
-is dominated by 0.3 ms canonicalisations.
+The pointer alphabet times out on essentially every instance from m = 120
+upward at k ≥ 3; the fact alphabet never does, at medians of 2.5–17 ms even at
+1,280 facts. Yield on the real collections: `fact_rank` completes 100 % of the
+members of every size bucket of every collection (medians 0.21–0.78 ms, p90
+≤ 0.9 ms, including the 546 full-WD50K members with more than 24 facts); the
+pointer alphabet completes 100 % at ≤ 8 facts but only 57 / 176 (WD50K),
+30 / 133 (`wd50k100`), 4 / 10 (NDC classes) and 0 / 80 (NDC substances) at
+21–24 facts, with medians of 1.6–12.7 s. N-scaling of the all-pairs matrix on
+WD50K (N = 3,988): `fact_rank` 1.5 s of pair distances plus 0.31 s of
+canonicalisation; `nauty_cert` 864 s (its strings are 12–30 × longer);
+`degree_seq_l1` 43 s; bipartite assignment 525 s and bipartite path 913 s;
+HPD 1,670 s at N = 2,000 and censored at 3,988; NetLSD 2,724 s at N = 1,000
+and censored above. No unit was deferred.
 
-**Decision (provisional).** Descriptive; the envelope table goes to the main
-text once the last sweep cells land.
+**Decision.** Descriptive. The envelope table goes to the main text: the word
+is computable wherever the collections live and far beyond, and its all-pairs
+matrix is the cheapest of every arm. The full sweep table and the pointer
+alphabet's yield go to the supplement.
 
 ## 8. Campaign provenance
 

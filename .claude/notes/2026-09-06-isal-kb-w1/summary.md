@@ -317,6 +317,16 @@ wherever they special-case the pointer arm. Checked: RQ2's `POINTER_ARMS`
 fine); the RQ7 *sweep* per-instance path still needs an audit before the
 RQ7 re-run (no `engine_word` call found by grep).
 
+## 2026-09-07 13:41 — rank experiment submitted
+
+Branch synced at `7ed77aa` (the budgeted-rank fix). Rank smoke completed in
+40 s (the unbudgeted one had hung > 12 min). Array **2248781** (8 tasks, 24
+shards bundled 3×) + recovery sweep **2248782** for experiment
+`addressing_rank` (arms `wstar_rank`, `nauty_cert`, `nauty_cert_rows`) on
+the same seeded units as `rq1.yaml`. Main array 2247394 still running.
+Harvest both with `bash scripts/tkde/harvest_from_picasso.sh RQ1_addressing`
+and join the two experiments on (collection, base_id, edit_kind, edit_idx).
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

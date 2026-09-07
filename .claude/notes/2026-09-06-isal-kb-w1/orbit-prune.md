@@ -134,11 +134,68 @@ same tie-break site in `_best_v_for_displacement`.
 
 ## 3. Changes made
 
-Filled in at close — see `git diff --name-only 99b8574..HEAD`.
+**Created**
+
+| Path | Purpose |
+|---|---|
+| `src/isalhg/core/orbit_oracle.py` | The `OrbitOracle` `Protocol` + `TrivialOrbitOracle`. Stdlib only, so it can live in `core`. |
+| `src/isalhg/iso_backends/orbit_oracle.py` | `PynautyOrbitOracle` (the real groups, via `autgrp` on the individualised Levi graph) and the four entry points `canonical_{string,fingerprint}_{orbit,rank}`. |
+| `tests/unit/core/test_orbit_pruning.py` | Value-neutrality of the hook, bit-exactness of the pins, the differentials, the error paths, and the `canonical_rank` invariance/completeness census. |
+| `tests/integration/test_orbit_pruning_corpus.py` | The `wd50k66` differential against the C++ `w*_c`, both engines under `run_with_budget`. Skips without the drive. |
+| `scripts/diagnostics/orbit_pruning_probe.py` | Four sub-commands: `branch-table`, `star20`, `censored-tail`, `rank-timing`. |
+| `.claude/notes/2026-09-06-isal-kb-w1/orbit-prune.md` | This log. |
+
+**Modified**
+
+| Path | Change | Reason |
+|---|---|---|
+| `src/isalhg/core/hypergraph_to_string.py` | `_State.placed_inputs()`; `orbit_oracle` / `ranks` / `stats` threaded through `_encode_from`, `_python_greedy_h2s`, `greedy_h2s`; orbit pruning applied in the V-branch; `_rank_tiebreak` + the rank-ordered new-vertex order; validation that raises instead of falling back; module docstring. | The V-branch is the only place the tie set is enumerated, so both the pruning and the rank tie-break belong there. |
+| `src/isalhg/core/canonical.py` | `CANONICAL_ORBIT_ALGORITHM` / `CANONICAL_RANK_ALGORITHM`; `orbit_oracle` / `ranks` on `canonical_string` and `canonical_fingerprint`; seed reduction by `seed_representatives`; `_python_canonical_rank_string`. | The seed loop is here, and it is the third place the proposition prunes. |
+
+**Removed** — nothing.
+
+**Commits**
+
+| SHA | Message |
+|---|---|
+| `3c23499` | `feat(core): stabiliser-orbit pruning of the tie-complete search` |
+| `498e723` | `test(orbit-prune): wip — orbit-pruning suites, corpus differential, probe` |
+| `0a35b40` | `test(orbit-prune): tier the suite by measured cost, fix the pair generator` |
+
+<!-- must match `git diff --name-only 99b8574..HEAD` exactly -->
 
 ## 4. Tests
 
-Filled in at close.
+**Tests created or extended**
+
+| Test | File | What it verifies | Why it matters |
+|---|---|---|---|
+| `TestTrivialOracleIsValueNeutral` (5) | `tests/unit/core/test_orbit_pruning.py` | Hook-off output == `TrivialOrbitOracle` output on Fano, the n=4 counterexample and 40 / 200 random instances; `TrivialOrbitOracle` satisfies the `Protocol` | Separates a plumbing bug from a group-theory bug. If this fails, the hook itself changed the search. |
+| `TestFrozenPins` (7) | same | `canonical_string_orbit` reproduces the frozen `(len, sha256)` of Fano, STS(9), `C_13(0,1,3)`, the n=4 counterexample and both true STS(13); equals the C++ `w*_c` on GQ(2, 2) | The whole licence for pruning is that it is value-preserving. These are the definitional pins. |
+| `TestDifferentialAgainstUnprunedSearch` (4) | same | Pruned == unpruned Python on 40 / 500 random connected labelled instances and 200 random stars; the q=7 star collapses 13,700 frames to 8 | The pins cover five fixtures; the differential covers a distribution, including the symmetric regime. |
+| `TestUnhonourableRequestsRaise` (8) | same | Oracle on `backend="cpp"`, oracle without `tie_branch`, `canonical_orbit` without an oracle or on cpp, oracle with another algorithm, `canonical_rank` without ranks, ranks with `tie_branch`, ranks of the wrong length | A silent fallback would return a correct string from an unpruned search and hide the failure as a timeout. |
+| `TestExistingProgramsAreUntouched` (4) | same | Python and C++ still agree byte for byte on `canonical`, `greedy_min`, `greedy_min_nbrdeg`, `greedy_single` | The hooks sit inside the shared encoder; this pins that they are inert when unused. |
+| `TestOrbitFingerprint` (1) | same | `canonical_fingerprint_orbit` == the unpruned fingerprint on a labelled instance | The seed-label half of `F` also has to survive seed-orbit reduction. |
+| `TestCanonicalRankInvariance` (5) | same | `F_rank` constant under 30 / 100 relabellings of Fano and STS(9), and on 40 / 200 random instances | The rank arm has no frozen pin, so invariance is its correctness criterion. |
+| `TestCanonicalRankCompleteness` (2) | same | `F_rank` equality agrees with `pynauty_levi` on 50 / 500 random pairs at a shared vocabulary | Completeness in both directions, against an independent oracle. |
+| `TestCanonicalRankIsADifferentProgram` (2) | same | Differs from `w*_c` on the n=4 counterexample; equals it on Fano | Pins that the arm is a distinct canonical form, so nobody mistakes it for `w*_c`. |
+| `test_orbit_engine_matches_cpp_wstar_c_on_wd50k66` | `tests/integration/test_orbit_pruning_corpus.py` | 300 sampled `wd50k66` members: pruned Python == C++ `w*_c` wherever both complete | Moves the value-preservation claim from synthetic instances onto the real corpus. |
+
+**Coverage of the behaviour that matters.** The three failure modes of orbit
+pruning are: pruning a branch that is not an automorphic duplicate (caught by
+the pins and both differentials), failing to prune at all (caught by the frame
+counts in `test_pruning_actually_collapses_a_symmetric_star`), and pruning with
+a group computed at the wrong state — the inherited-stabiliser bug the proof's
+recursion remark warns about. The last one is the subtle one: it does not show
+up on rigid inputs, only where the stabiliser shrinks below the root's. The 200
+random stars and the STS/GQ fixtures are the inputs where it would.
+
+**Not tested, and why.** No C++ path (out of scope). No property test under
+`hypothesis` — the differentials are already distribution-level and the
+reference search is too slow to run under shrinking. `TrivialOrbitOracle` is
+not exercised through `canonical_string(algorithm="canonical_orbit")`, only
+through `greedy_h2s`, because the seed-reduction half of the contract is
+meaningful only for the real oracle.
 
 ## 5. Test results
 
@@ -181,6 +238,29 @@ calls") exactly.
 - **A3.** The `canonical_rank` seed loop collapses to the minimum-rank member
   of `S(H)` per the scope addition. `S(H)` is iso-invariant and the ranks are a
   canonical total order on the vertices, so the choice is canonical.
+- **A4 (test tiering).** The definition of done asks for a differential
+  against the *unpruned* Python search at scale. That reference is expensive
+  on precisely the inputs pruning exists for — measured 3.40 s on the Fano
+  plane and past 120 s on STS(9), GQ(2, 2) and `C_13(0,1,3)`. The suite is
+  therefore tiered: the unmarked tier runs reduced counts (40 instead of 200 /
+  500, 50 pairs instead of 500, 30 relabellings instead of 100) and stays near
+  60 s; the full counts and the expensive fixtures carry `slow`. Every number
+  the definition of done names is measured — in the `slow` tier.
+- **F1 (finding, out of scope).** Fingerprint comparison is only defined
+  *within a shared vocabulary*, and the first version of my random-pair
+  generator drew `n_vertex_labels` / `n_edge_labels` independently per member.
+  It produced a pair of structurally identical 2-vertex/1-edge hypergraphs
+  with identical labels but declared sizes `(3, 1)` and `(2, 2)`;
+  `pynauty_levi` calls them **non-isomorphic** (the Levi colouring places
+  edge-node colours at `|Sigma_v| + edge_label`, so the edge node is colour 3
+  in one and colour 2 in the other, and `color_signature` pins that), while
+  `canonical_fingerprint` with the frozen `w*_c` calls them **equal**
+  (`(1, 'V[0;1;1;0]')` for both). The disagreement is a property of comparing
+  across vocabularies, not of `canonical_rank`, and it reproduces on `w*_c`
+  itself. I fixed my generator to pin the vocabulary across a pair and did not
+  touch either engine. Whether `w*_c` *should* encode the declared vocabulary
+  size — so that `IsalHGBackend` and `PynautyLeviBackend` cannot disagree even
+  on ill-posed inputs — is a question for the PI, not for this task.
 
 ## 8. Coordination
 

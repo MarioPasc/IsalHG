@@ -30,6 +30,7 @@ requires it.
 from __future__ import annotations
 
 from collections.abc import Callable, Sequence
+from dataclasses import dataclass
 from typing import Any, TypeVar
 
 from isalhg.core.canonical import (
@@ -51,6 +52,21 @@ _CACHE_LIMIT = 4096
 _T = TypeVar("_T")
 
 
+@dataclass
+class _HypergraphCache:
+    """Everything :class:`PynautyOrbitOracle` memoises for one hypergraph.
+
+    Holding the hypergraph itself keeps the ``id()`` key from being recycled,
+    and bundling the generator sets here means they are dropped together with
+    the entry rather than outliving the object they describe.
+    """
+
+    hypergraph: SparseHypergraph
+    levi: LeviGraph
+    adjacency: dict[int, list[int]]
+    generators: dict[tuple[NodeId, ...], tuple[tuple[int, ...], ...]]
+
+
 def _import_pynauty() -> Any:
     """Return the ``pynauty`` module, or raise with an install hint."""
     try:
@@ -65,9 +81,13 @@ def _import_pynauty() -> Any:
 class PynautyOrbitOracle:
     """Stabiliser orbits of the tie-complete search, via ``pynauty.autgrp``.
 
-    One instance may serve many hypergraphs; the Levi graph and the adjacency
-    dict are cached per hypergraph (keyed by identity, with the hypergraph kept
-    alive by the cache so the key cannot be recycled).
+    One instance may serve many hypergraphs. Everything cached for a hypergraph
+    -- its Levi graph, the adjacency dict, and the per-state generator sets --
+    hangs off a single :class:`_HypergraphCache` entry that also holds a
+    reference to the hypergraph itself. Two properties follow, and both matter:
+    the ``id()`` key cannot be recycled while the entry lives, and evicting the
+    entry drops its generator sets with it, so a state's group can never be
+    served from a different hypergraph that happened to reuse the address.
 
     Attributes
     ----------
@@ -77,26 +97,30 @@ class PynautyOrbitOracle:
     """
 
     def __init__(self) -> None:
-        self._levi: dict[int, tuple[SparseHypergraph, LeviGraph, dict[int, list[int]]]] = {}
-        self._gens: dict[tuple[int, tuple[NodeId, ...]], tuple[tuple[int, ...], ...]] = {}
+        self._cache: dict[int, _HypergraphCache] = {}
         self.autgrp_calls: int = 0
 
     # -- graph construction -------------------------------------------------
 
-    def _levi_of(self, H: SparseHypergraph) -> tuple[LeviGraph, dict[int, list[int]]]:
+    def _entry(self, H: SparseHypergraph) -> _HypergraphCache:
         key = id(H)
-        hit = self._levi.get(key)
-        if hit is not None and hit[0] is H:
-            return hit[1], hit[2]
+        hit = self._cache.get(key)
+        if hit is not None and hit.hypergraph is H:
+            return hit
         levi = to_levi(H)
         adjacency: dict[int, list[int]] = {node: [] for node in range(levi.n_nodes)}
         for u, v in levi.edges:
             adjacency[u].append(v)
             adjacency[v].append(u)
-        if len(self._levi) >= _CACHE_LIMIT:
-            self._levi.clear()
-        self._levi[key] = (H, levi, adjacency)
-        return levi, adjacency
+        if len(self._cache) >= _CACHE_LIMIT:
+            self._cache.clear()
+        entry = _HypergraphCache(hypergraph=H, levi=levi, adjacency=adjacency, generators={})
+        self._cache[key] = entry
+        return entry
+
+    def _levi_of(self, H: SparseHypergraph) -> tuple[LeviGraph, dict[int, list[int]]]:
+        entry = self._entry(H)
+        return entry.levi, entry.adjacency
 
     def _coloring(
         self,
@@ -140,15 +164,22 @@ class PynautyOrbitOracle:
     def _state_generators(
         self, H: SparseHypergraph, placed: Sequence[NodeId]
     ) -> tuple[tuple[int, ...], ...]:
-        """Generators of ``G_sigma``, cached per ``(hypergraph, placed prefix)``."""
-        key = (id(H), tuple(placed))
-        hit = self._gens.get(key)
+        """Generators of ``G_sigma``, memoised per placed prefix within ``H``.
+
+        This memoises identical *states*; it never inherits a group from an
+        ancestor state. The proof's recursion remark is explicit that ``G_sigma``
+        shrinks as the search descends, so a coarser ancestor group would prune
+        branches that are not automorphic duplicates.
+        """
+        entry = self._entry(H)
+        key = tuple(placed)
+        hit = entry.generators.get(key)
         if hit is not None:
             return hit
         generators, _ = self._autgrp(H, list(placed))
-        if len(self._gens) >= _CACHE_LIMIT:
-            self._gens.clear()
-        self._gens[key] = generators
+        if len(entry.generators) >= _CACHE_LIMIT:
+            entry.generators.clear()
+        entry.generators[key] = generators
         return generators
 
     # -- the OrbitOracle protocol ------------------------------------------

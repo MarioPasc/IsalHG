@@ -59,6 +59,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import permutations, product
 from typing import Any
 
@@ -88,14 +89,21 @@ class H2SStuckError(IsalHGError):
 # ---------------------------------------------------------------------------
 
 
-def _enum_displacements(k: int, radius: int) -> list[tuple[int, ...]]:
-    """All ``k``-tuples in ``[-radius, radius]^k`` sorted by ``(sum|d|, |d|, d)``."""
+@lru_cache(maxsize=128)
+def _enum_displacements(k: int, radius: int) -> tuple[tuple[int, ...], ...]:
+    """All ``k``-tuples in ``[-radius, radius]^k`` sorted by ``(sum|d|, |d|, d)``.
+
+    A pure function of ``(k, radius)`` that the encoder calls once per search
+    frame, so it is memoised. The result is shared across callers and must be
+    treated as read-only; it is only ever iterated. Returning a tuple rather
+    than a list makes that immutability structural.
+    """
     if radius <= 0:
-        return [(0,) * k]
+        return ((0,) * k,)
     rng = range(-radius, radius + 1)
     tuples = list(product(*([rng] * k)))
     tuples.sort(key=lambda t: (sum(abs(d) for d in t), tuple(abs(d) for d in t), t))
-    return tuples
+    return tuple(tuples)
 
 
 def _movement_tokens(displacement: tuple[int, ...]) -> list[Token]:

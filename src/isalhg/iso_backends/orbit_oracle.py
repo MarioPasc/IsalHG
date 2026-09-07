@@ -64,7 +64,7 @@ class _HypergraphCache:
     hypergraph: SparseHypergraph
     levi: LeviGraph
     adjacency: dict[int, list[int]]
-    generators: dict[tuple[NodeId, ...], tuple[tuple[int, ...], ...]]
+    groups: dict[tuple[NodeId, ...], tuple[tuple[tuple[int, ...], ...], list[int]]]
 
 
 def _import_pynauty() -> Any:
@@ -114,7 +114,7 @@ class PynautyOrbitOracle:
             adjacency[v].append(u)
         if len(self._cache) >= _CACHE_LIMIT:
             self._cache.clear()
-        entry = _HypergraphCache(hypergraph=H, levi=levi, adjacency=adjacency, generators={})
+        entry = _HypergraphCache(hypergraph=H, levi=levi, adjacency=adjacency, groups={})
         self._cache[key] = entry
         return entry
 
@@ -161,10 +161,15 @@ class PynautyOrbitOracle:
         generators, _size1, _size2, orbits, _n_orbits = pynauty.autgrp(graph)
         return tuple(tuple(g) for g in generators), list(orbits)
 
-    def _state_generators(
+    def _state_group(
         self, H: SparseHypergraph, placed: Sequence[NodeId]
-    ) -> tuple[tuple[int, ...], ...]:
-        """Generators of ``G_sigma``, memoised per placed prefix within ``H``.
+    ) -> tuple[tuple[tuple[int, ...], ...], list[int]]:
+        """``(generators, orbits)`` of ``G_sigma``, memoised per placed prefix.
+
+        Both consumers at a state -- the tie-set orbits and the short-circuit
+        that skips the ordering oracle when ``G_sigma`` is trivial -- need the
+        same group, so it is computed once per state rather than once per
+        consumer.
 
         This memoises identical *states*; it never inherits a group from an
         ancestor state. The proof's recursion remark is explicit that ``G_sigma``
@@ -173,14 +178,14 @@ class PynautyOrbitOracle:
         """
         entry = self._entry(H)
         key = tuple(placed)
-        hit = entry.generators.get(key)
+        hit = entry.groups.get(key)
         if hit is not None:
             return hit
-        generators, _ = self._autgrp(H, list(placed))
-        if len(entry.generators) >= _CACHE_LIMIT:
-            entry.generators.clear()
-        entry.generators[key] = generators
-        return generators
+        group = self._autgrp(H, list(placed))
+        if len(entry.groups) >= _CACHE_LIMIT:
+            entry.groups.clear()
+        entry.groups[key] = group
+        return group
 
     # -- the OrbitOracle protocol ------------------------------------------
 
@@ -201,7 +206,7 @@ class PynautyOrbitOracle:
         """
         if len(seeds) <= 1:
             return list(seeds)
-        _, orbits = self._autgrp(H, ())
+        _generators, orbits = self._state_group(H, ())
         return _first_per_class(seeds, lambda v: orbits[v])
 
     def edge_representatives(
@@ -232,9 +237,8 @@ class PynautyOrbitOracle:
         """
         if len(tied_edges) <= 1:
             return list(tied_edges)
-        levi, _ = self._levi_of(H)
-        offset = levi.n_vertex_nodes
-        _, orbits = self._autgrp(H, list(placed))
+        offset = self._entry(H).levi.n_vertex_nodes
+        _generators, orbits = self._state_group(H, placed)
         return _first_per_class(tied_edges, lambda e: orbits[offset + e])
 
     def ordering_representatives(
@@ -269,9 +273,10 @@ class PynautyOrbitOracle:
         """
         if len(orderings) <= 1:
             return list(orderings)
-        if not self._state_generators(H, placed):
+        state_generators, _orbits = self._state_group(H, placed)
+        if not state_generators:
             return list(orderings)
-        levi, _ = self._levi_of(H)
+        levi = self._entry(H).levi
         individualised = [*placed, levi.n_vertex_nodes + edge]
         generators, _ = self._autgrp(H, individualised)
         if not generators:

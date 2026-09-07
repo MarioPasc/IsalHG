@@ -710,3 +710,85 @@ behind Levi+nauty but no longer a scaling wall.
 The remaining lever is unchanged: **stabiliser-orbit pruning** for the
 automorphism-rich designs and the tie-branch entry count (Round 10, still the
 open Algorithm-R&D item).
+
+## Round 12 — the rank-keyed greedy walk in C++ (`canonical_rank`, variant 8)
+
+**Target.** Not speed on `w*_c` this time: *reach*. `canonical_rank` — the
+family's greedy walk with the residual V tie and the new-vertex order resolved
+by nauty's canonical rank — existed only on the Python engine, whose
+displacement search materialises all `(2r+1)^k` tuples per frame. Arity 5
+already asks for `1e8`–`7e11` tuples, so the arm was capped at arity 4
+(`experiments/tkde/budget.py::PYTHON_ENGINE_MAX_K`). Measured on the frozen
+collections: that cap excludes **409/3,988 wd50k66 members (10.3 %)** and
+**1,264/1,381 ndc_classes members (91.5 %,** arity median 6**)**. The C++
+engine's Round-11 hybrid enumeration has no such ceiling, so the port is what
+makes the ablation's "both" cell runnable on NDC at all.
+
+**A defect first.** The Python reference accepted `ranks` but forwarded it to
+none of the four recursive `_encode_from` calls, so the rank key governed only
+depth 0; below it the walk fell back to the min-edge-id residual and to
+branching over every label-respecting permutation. Measured consequence: the
+string changed under a permutation of the **edge insertion order** on 3/400
+random connected labelled hypergraphs — i.e. it was not a canonical form, and
+not the single deterministic path the program is defined to be. The existing
+invariance tests could not see it because `permute` relabels vertices and
+preserves edge ids. Fixed before the port (one `ranks=ranks` per recursive
+call); edge-order sensitivity 3/400 → 0/400, now pinned by
+`TestCanonicalRankInvariance::test_invariant_under_edge_insertion_order_on_400_instances`.
+**Any `wstar_rank` row measured before that fix is void.**
+
+**The port.** `AlgorithmVariant::GreedyMinRank = 8`. The rank vector rides in
+`WorkArena`, so `encode_from`'s recursive signature is unchanged and every
+existing variant keeps its instruction sequence:
+
+- `compare_v_keys` splits into `compare_v_key_prefix` (the iso-invariant
+  cascade `(i, j, ℓ_E, sorted new labels, η)`) plus a residual. Null ranks →
+  the historical min-edge-id residual; non-null → `compare_rank_residual`,
+  the lex comparison of `(sorted ranks of the unplaced members, sorted ranks
+  of the pointed members)`. The pointed component is derived from the
+  displacement's `tentative_inputs` instead of being stored on `VCandidate`,
+  so the hot 88-byte candidate struct does not grow by the 76 bytes two
+  rank arrays would have cost every variant.
+- the label-respecting permutation enumerator is bypassed: ranks are a total
+  order, so the orderings collapse to the single ascending `(label, rank)`
+  one. The branch body is factored out of the enumerator's lambda into
+  `run_branch` and shared by both paths.
+- the seed loop collapses to the minimum-rank member of the neighbour-degree
+  seed set (`S(H)` is iso-invariant and the ranks are canonical on it).
+
+Both branch sets are therefore singletons: no tie branching, no permutation
+branching, **no backtracking at all**. The bindings take an optional rank
+vector, validated as a permutation of `0..n-1`.
+
+**Validation (byte-identical to the fixed Python engine).**
+
+| Differential | N | identical |
+|---|---:|---:|
+| conftest design fixtures (Fano, STS(9), doily, C13 orbit pair, Qin Fig. 1, iso/non-iso pairs, n=4 counterexample) | 13 | 13 |
+| random connected labelled, `n ≤ 12`, arity ≤ 4, ≤ 3 labels a side | 1,000 | 1,000 |
+| random stars (hub + 3–10 leaves, arity 3–4 facts, leaves in two facts) | 300 | 300 |
+| wd50k66 members satisfying the Python guard | 300 | 300 |
+
+C++-only regime (`ndc_classes`, arity median 6, Python engine unreachable):
+300 members × 20 random relabellings — **6,000/6,000** fingerprints invariant;
+300 pairs (150 isomorphic via `permute`) — **300/300** agree with
+`pynauty_levi` on isomorphism. `test_wstar_c_frozen.py` and
+`test_orbit_pruning.py` unchanged and green, so no existing variant moved.
+
+**Result — wall-clock (i7-13620H, 300 members per corpus, non-PGO).**
+
+| Corpus | `canonical_rank` (C++), median / p90 | of which the engine | `w*_c` (C++, 60 s budget), median / p90 | Python `canonical_rank` on the guard subset |
+|---|---:|---:|---:|---:|
+| wd50k66 | TBD | TBD | TBD | TBD |
+| ndc_classes | TBD | TBD | TBD | TBD |
+
+The comparison is not like-for-like and is not meant to be: `canonical_rank`
+buys its single path with a `pynauty.canon_label` call, and it computes a
+different canonical form. What the table establishes is that the arm is
+**corpus-viable at arities `w*_c` cannot reach in the budget**, which is the
+whole reason the port exists.
+
+**Not done.** The orbit oracle stays Python-only (T-KBb). `greedy_h2s` still
+refuses `ranks` on the C++ backend: ranks are a property of the canonical
+program (they fix the seed too), not of a single seed run, so the per-seed
+entry point is the wrong place for them.

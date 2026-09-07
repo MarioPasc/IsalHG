@@ -11,6 +11,15 @@ killed in a forked child rather than interrupted. Members the C++ engine cannot
 finish inside the budget are skipped here (they are the subject of the probe's
 censored-tail measurement, not of an equality assertion).
 
+Members whose displacement table would be astronomically large are skipped as
+well, and this is a precondition of the Python backend rather than a property
+of orbit pruning: the encoder materialises ``(2*radius+1)**k`` displacement
+tuples, so a member with ``k = 5`` and ``n = 24`` asks for 49**5 = 2.8e8 of
+them and a member with ``k = 7`` for 49**7 = 6.8e11. Those exhaust memory
+before any pruning decision is reached, with or without the oracle. The C++
+engine enumerates displacements without materialising them and is unaffected.
+:data:`MAX_DISPLACEMENT_TABLE` is the cutoff.
+
 Skipped whole when the frozen corpora are not mounted.
 """
 
@@ -34,6 +43,15 @@ COLLECTION = "wd50k66"
 N_MEMBERS = 300
 BUDGET_S = 60.0
 SEED = 20260906
+MAX_DISPLACEMENT_TABLE = 4_000_000
+
+
+def _python_backend_feasible(H: object) -> bool:
+    """True when ``(2n+1)**k`` displacement tuples fit in memory."""
+    from isalhg.core.canonical import required_k
+
+    k = required_k(H)  # type: ignore[arg-type]
+    return (2 * H.n_nodes + 1) ** k <= MAX_DISPLACEMENT_TABLE  # type: ignore[attr-defined]
 
 
 def _load_members() -> list:
@@ -50,7 +68,7 @@ def _load_members() -> list:
     rng = random.Random(SEED)
     if len(members) > N_MEMBERS:
         members = rng.sample(members, N_MEMBERS)
-    return members
+    return [H for H in members if _python_backend_feasible(H)]
 
 
 def _cpp_wstar(H: object) -> str:
@@ -86,5 +104,9 @@ def test_orbit_engine_matches_cpp_wstar_c_on_wd50k66() -> None:
         compared += 1
     assert compared > 0, (
         f"no member of {COLLECTION!r} completed on both engines "
+        f"({cpp_censored} C++ censored, {len(orbit_censored)} orbit censored)"
+    )
+    assert compared >= len(members) // 2, (
+        f"only {compared} of {len(members)} members compared "
         f"({cpp_censored} C++ censored, {len(orbit_censored)} orbit censored)"
     )

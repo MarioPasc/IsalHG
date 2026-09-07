@@ -378,11 +378,16 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
         # r up to n-1, and the orbit engine caches the enumeration per (k, r);
         # 5.8e6 tuples (k=4, n=24) already cost ~1 GB, so both bounds are
         # needed: the arity bound and a tuple-count bound.
-        n_tuples = (2 * (H.n_nodes - 1) + 1) ** k_eff
+        # The search enumerates radius 1, 2, ... up to n-1 and the orbit engine
+        # caches every radius, so the bound must be the SUM over radii, not the
+        # largest term: with the largest-term bound alone, k=4, n=24 members
+        # grew to 9.8 GB inside their 60 s budget and the node's memory limit
+        # killed whole array tasks (RQ1 array 2247394, tasks 5/7/8, 2026-09-07).
+        n_tuples = sum((2 * r + 1) ** k_eff for r in range(1, max(2, H.n_nodes)))
         refused = (
             f"k_eff={k_eff} > {PYTHON_ENGINE_MAX_K}"
             if k_eff > PYTHON_ENGINE_MAX_K
-            else f"(2n-1)^k_eff={n_tuples} > {PYTHON_ENGINE_MAX_TUPLES}"
+            else f"sum_r(2r+1)^k_eff={n_tuples} > {PYTHON_ENGINE_MAX_TUPLES}"
             if n_tuples > PYTHON_ENGINE_MAX_TUPLES
             else None
         )

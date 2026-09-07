@@ -327,6 +327,22 @@ the same seeded units as `rq1.yaml`. Main array 2247394 still running.
 Harvest both with `bash scripts/tkde/harvest_from_picasso.sh RQ1_addressing`
 and join the two experiments on (collection, base_id, edit_kind, edit_idx).
 
+## 2026-09-07 13:55 — main array: five tasks OUT_OF_MEMORY (Python orbit engine)
+
+`sacct` on 2247394: 8 COMPLETED, 16 RUNNING, 1 PENDING, **5 OUT_OF_MEMORY**
+(task 5 peaked at 9.8 GB of the 12 GB allocation after a 66-min M1 block;
+tasks 7, 8 likewise). Cause: the memory guard bounded the displacement
+enumeration at the largest radius only, but the Python search enumerates
+every radius and the orbit engine caches them all, so the cumulative
+allocation for `k = 4, n = 24` reaches gigabytes inside the 60 s budget and
+the cgroup kills the task before the budget kills the child. Fix: the
+guard now bounds `Σ_{r<n} (2r+1)^k_eff ≤ 2e6` (Python engines confined to
+small members; every refused row is censored with the reason). Synced so
+the recovery sweep 2247395 and any task started after the sync pick it
+up; the tasks still running under the old guard may still fail and are
+re-run by the sweep. Under the article rule the Python `wstar_orbit` rows
+are provisional anyway; the C++ orbit port replaces them.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

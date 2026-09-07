@@ -139,6 +139,12 @@ inside each worktree, committed.
 - `harness-isal` spawned 2026-09-07 on base `4037e67` (opus xhigh, worktree):
   harness arms + RQ runners + local RQ1 smoke. Runs concurrently with the
   resumed `orbit-prune` (2 opus agents — the ceiling).
+- Intervention: `WORD_ARMS` lives in `src/isalhg/metric_space/toolkit/matrix.py`
+  (not in `experiments/tkde/matrices.py` as the prompt assumed). Ownership of
+  that file granted to `harness-isal`; instruction: route any arm whose
+  distance object returns a non-None `fingerprint(H)` through
+  `distance.matrix(items)` (fingerprint-once + cdist) before the pairwise
+  fallback; fact path untouched; routing unit test.
 
 ## Open follow-ups
 

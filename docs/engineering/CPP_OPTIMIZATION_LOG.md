@@ -946,3 +946,54 @@ counters exactly (`test_orbit_pruning.py` pins 13,700 / 8 / 7), so the two
 engines are consulting the oracle at the same ties, not merely agreeing on the
 answer.
 
+**R2 — the censored tail.** The article's symmetric-input claim, re-measured on
+the engine the article runs on. Population: the 100 highest-`|Aut(Levi)|`
+members of each collection that the *unpruned* C++ engine censored at the 60 s
+pointer budget in the RQ1 campaign (`rows_m3__*`, arm `isalhg_levenshtein`,
+`pointer_budget_s: 60.0`). Each is re-run here with the C++ **orbit** engine at
+the same 60 s budget, through `engine_word` — the harness path, forked child.
+`|Aut|` is the symmetry probe's measure (`pynauty.autgrp` on the coloured Levi
+graph). Middle bucket is `[1e3, 1e7)`.
+
+| Collection | `\|Aut\|` bucket | n | completed | fraction | median s |
+|---|---|---:|---:|---:|---:|
+| wd50k66 | `[1e3, 1e7)` | 63 | 61 | **0.97** | 0.185 |
+| wd50k66 | `>= 1e7` | 37 | 37 | **1.00** | 0.003 |
+| wd50k66 | all | 100 | 98 | 0.98 | 0.030 |
+| ndc_classes | `< 1e3` | 95 | 45 | 0.47 | 12.855 |
+| ndc_classes | `[1e3, 1e7)` | 5 | 3 | 0.60 | 0.015 |
+| ndc_classes | all | 100 | 48 | 0.48 | 12.846 |
+
+wd50k66 reproduces the claim and slightly exceeds it: **every** member with
+`|Aut| >= 1e7` completes, at a median of 3 ms. The two survivors have median
+`k = 7`.
+
+**ndc_classes is the honest counterweight, and it says what the lever is.** Its
+censored tail is not symmetric — the top-100 `|Aut|` there runs from 1.45e6 down
+to 6, so 95 of the 100 fall in the lowest bucket. Split by outcome, the members
+the oracle rescues have median `k = 9` and median `log10 |Aut| = 2.1`; the ones
+it does not have median `k = 10` and median `log10 |Aut| = 1.1`. Arity 10 is
+exactly the Round-12 displacement tail (`k_disp` saturating at `K_MAX = 10`
+against the cost-8 brute loop), which is a property of the displacement search
+and has no symmetry for an orbit oracle to exploit. **Orbit pruning rescues
+symmetry-driven censoring, not cost-driven censoring**, and ndc_classes'
+censored tail is mostly the latter. The Round-12 "open lever" — making
+`INVERSION_COST_CAP` a function of `k_disp` — remains the one that would move
+these rows.
+
+**Full suite after the round.** `tests/unit tests/property -m "not slow"
+--hypothesis-seed=0`: **2,262 passed, 7 skipped, 41 deselected** (224 s), so no
+existing variant moved; `test_wstar_c_frozen.py` and `test_orbit_pruning.py`
+green. `ruff` 38 findings, `ruff format` 2 files, `mypy` 20 errors in 6 files —
+each identical to the base commit's count, verified by running all three
+against a `git archive` of the base tree.
+
+**Not done.** The oracle is consulted at every tie and `PynautyOrbitOracle`
+memoises per *state*, never inheriting a coarser ancestor group (the proof is
+explicit that `G_sigma` shrinks as the search descends). On rigid inputs that
+is pure overhead — STS(13) #1 costs 50.4 s pruned. A cheap iso-invariant
+pre-filter proving `G_sigma` trivial without an `autgrp` call would remove most
+of it; it is a speed question with no effect on the value, and it is not taken
+here. `greedy_h2s` still refuses the oracle on the C++ backend, for the reason
+Round 12 gave for `ranks`: the seed reduction is a property of the canonical
+program, not of a single seed run.

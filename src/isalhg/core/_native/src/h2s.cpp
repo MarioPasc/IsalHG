@@ -946,11 +946,12 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
     // ``best_prefix`` is identical across every branch -- the emitted
     // V[le; i; j; labels] token is a function of the shared key-prefix -- so
     // comparing bare sub_completion vectors is sound. The permutation
-    // enumerator is callback-driven so no intermediate
-    // ``vector<vector<NodeId>>`` perm list is materialised. Under ``ranks``
-    // both sets are singletons: the rank residual separates the tie set and
-    // the (label, rank) order replaces the permutations, so no branching
-    // happens at all and the whole walk is one path.
+    // enumerator is callback-driven so no intermediate perm list is
+    // materialised -- except on the orbit path below, where the oracle needs
+    // the list. Under ``ranks`` both sets are singletons: the rank residual
+    // separates the tie set and the (label, rank) order replaces the
+    // permutations, so no branching happens at all and the whole walk is one
+    // path.
     std::vector<VCandidate> tied;
     if (tie_branch) {
         std::array<NodeId, K_MAX> tent{};

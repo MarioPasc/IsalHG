@@ -126,10 +126,13 @@ class TestArmResolution:
             if not available:
                 assert arm in ORBIT_ARMS, f"{arm} is unavailable for an unexpected reason: {reason}"
 
-    def test_budgeted_arms_are_the_two_unbounded_engines(self) -> None:
-        # wstar_rank must NOT be here: budgeting it would fork thousands of
-        # times for a computation that finishes in milliseconds.
-        assert set(BUDGETED_ARMS) == {"isalhg_levenshtein", "wstar_orbit"}
+    def test_budgeted_arms_are_the_three_search_engines(self) -> None:
+        # wstar_rank IS budgeted: the fork costs ~10-30 ms per call (a wd50k66
+        # M1 block runs in ~35 s), while an unbudgeted in-process call blocked
+        # for more than twelve minutes on an arity-10 ndc_classes member
+        # (RQ1 rank smoke 2248491, 2026-09-07). Every Isal engine that
+        # searches forks under the budget.
+        assert set(BUDGETED_ARMS) == {"isalhg_levenshtein", "wstar_orbit", "wstar_rank"}
         assert set(BUDGETED_ARMS.values()) <= set(ENGINES)
 
 

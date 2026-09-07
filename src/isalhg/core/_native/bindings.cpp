@@ -11,9 +11,11 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <nanobind/nanobind.h>
@@ -25,6 +27,7 @@
 #include "isalhg/canonical.hpp"
 #include "isalhg/errors.hpp"
 #include "isalhg/h2s.hpp"
+#include "isalhg/orbit_oracle.hpp"
 #include "isalhg/s2h.hpp"
 #include "isalhg/sparse_hypergraph.hpp"
 #include "isalhg/structural_tuples.hpp"
@@ -137,6 +140,123 @@ isalhg::SHG shg_from_python(nb::handle py_H) {
     return H;
 }
 
+// ---------------------------------------------------------------------------
+// Stabiliser-orbit oracle: C++ interface over a Python OrbitOracle object.
+//
+// The encoder runs with the GIL released, so every call re-acquires it. The
+// oracle also needs the *Python* SparseHypergraph -- the production
+// implementation (PynautyOrbitOracle) caches its Levi graph and its per-state
+// generator sets under ``id(H)`` -- so the same handle the caller passed to
+// ``canonical_string`` is stored here and forwarded verbatim. Node and edge
+// ids need no remapping: ``shg_from_python`` keeps the Python numbering.
+//
+// A Python exception raised inside a callback is converted to an
+// ``isalhg::IsalHGError`` carrying its formatted text *while the GIL is still
+// held*, so no ``PyObject`` refcount is ever touched on the GIL-free side of
+// the unwind.
+// ---------------------------------------------------------------------------
+
+class PyOrbitOracle final : public isalhg::OrbitOracleIface {
+public:
+    PyOrbitOracle(nb::object oracle, nb::object py_H)
+        : oracle_(std::move(oracle)), py_H_(std::move(py_H)) {}
+
+    std::vector<isalhg::NodeId> seed_representatives(
+        const std::vector<isalhg::NodeId>& seeds) override {
+        nb::gil_scoped_acquire gil;
+        try {
+            nb::object out = oracle_.attr("seed_representatives")(py_H_, id_list(seeds));
+            return to_vector<isalhg::NodeId>(out);
+        } catch (nb::python_error& e) {
+            throw isalhg::IsalHGError(std::string("orbit oracle seed_representatives failed: ")
+                                      + e.what());
+        }
+    }
+
+    std::vector<isalhg::EdgeId> edge_representatives(
+        const isalhg::NodeId* placed, int n_placed,
+        const std::vector<isalhg::EdgeId>& tied) override {
+        nb::gil_scoped_acquire gil;
+        try {
+            nb::object out = oracle_.attr("edge_representatives")(
+                py_H_, id_list(placed, n_placed), id_list(tied));
+            return to_vector<isalhg::EdgeId>(out);
+        } catch (nb::python_error& e) {
+            throw isalhg::IsalHGError(std::string("orbit oracle edge_representatives failed: ")
+                                      + e.what());
+        }
+    }
+
+    std::vector<isalhg::NodeId> ordering_representatives(
+        const isalhg::NodeId* placed, int n_placed, isalhg::EdgeId edge,
+        const isalhg::NodeId* orderings, int n_orderings, int n_new) override {
+        nb::gil_scoped_acquire gil;
+        try {
+            // The reference implementation keys a dict by each ordering, so
+            // the rows must be hashable: tuples, not lists.
+            nb::list rows;
+            for (int r = 0; r < n_orderings; ++r) {
+                nb::list row;
+                for (int c = 0; c < n_new; ++c) {
+                    row.append(static_cast<int>(
+                        orderings[static_cast<std::size_t>(r) * static_cast<std::size_t>(n_new)
+                                  + static_cast<std::size_t>(c)]));
+                }
+                rows.append(nb::tuple(row));
+            }
+            nb::object out = oracle_.attr("ordering_representatives")(
+                py_H_, id_list(placed, n_placed), static_cast<int>(edge), rows);
+            std::vector<isalhg::NodeId> flat;
+            for (auto row : out) {
+                int count = 0;
+                for (auto v : row) {
+                    flat.push_back(nb::cast<isalhg::NodeId>(v));
+                    ++count;
+                }
+                if (count != n_new) {
+                    throw isalhg::IsalHGError(
+                        "orbit oracle returned an ordering of length " + std::to_string(count)
+                        + ", expected " + std::to_string(n_new));
+                }
+            }
+            return flat;
+        } catch (nb::python_error& e) {
+            throw isalhg::IsalHGError(std::string("orbit oracle ordering_representatives failed: ")
+                                      + e.what());
+        }
+    }
+
+private:
+    template <typename T>
+    static std::vector<T> to_vector(nb::handle obj) {
+        std::vector<T> out;
+        for (auto item : obj) out.push_back(nb::cast<T>(item));
+        return out;
+    }
+
+    template <typename T>
+    static nb::list id_list(const std::vector<T>& ids) {
+        return id_list(ids.data(), static_cast<int>(ids.size()));
+    }
+
+    template <typename T>
+    static nb::list id_list(const T* ids, int count) {
+        nb::list out;
+        for (int i = 0; i < count; ++i) out.append(static_cast<int>(ids[i]));
+        return out;
+    }
+
+    nb::object oracle_;
+    nb::object py_H_;
+};
+
+// Build the oracle adapter for a ``canonical_string`` call, or nullptr when
+// the caller passed none.
+std::unique_ptr<PyOrbitOracle> make_orbit_oracle(nb::object orbit_oracle, nb::object py_H) {
+    if (orbit_oracle.is_none()) return nullptr;
+    return std::make_unique<PyOrbitOracle>(std::move(orbit_oracle), std::move(py_H));
+}
+
 }  // namespace
 
 NB_MODULE(_core, m) {
@@ -207,35 +327,76 @@ NB_MODULE(_core, m) {
     m.def(
         "canonical_string",
         [](nb::object py_H, int k, int structural_depth, int algorithm_id,
-           int max_expansions,
-           std::optional<std::vector<std::int32_t>> ranks) -> std::string {
+           int max_expansions, std::optional<std::vector<std::int32_t>> ranks,
+           nb::object orbit_oracle) -> std::string {
             // Build the SHG view under the GIL (touches Python objects).
             const isalhg::SHG H = shg_from_python(py_H);
             const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
             // ``ranks`` is materialised here so the borrowed pointer handed to
             // the compute phase stays valid while the GIL is released.
             const std::vector<std::int32_t>* ranks_ptr = ranks ? &*ranks : nullptr;
+            std::unique_ptr<PyOrbitOracle> oracle =
+                make_orbit_oracle(std::move(orbit_oracle), py_H);
             // The compute phase is GIL-free so the seed loop can fan
             // out across hardware threads without contending with Python.
+            // With an oracle the seed loop is sequential and re-acquires the
+            // GIL per callback (see canonical_string_compute).
             std::string result;
             {
                 nb::gil_scoped_release release;
                 result = isalhg::canonical_string_compute(
-                    H, k, structural_depth, variant, max_expansions, ranks_ptr);
+                    H, k, structural_depth, variant, max_expansions, ranks_ptr, oracle.get());
             }
             return result;
         },
         "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a, "max_expansions"_a = 0,
-        "ranks"_a = nb::none(),
+        "ranks"_a = nb::none(), "orbit_oracle"_a = nb::none(),
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
         "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
         "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned,\n"
         "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = canonical,\n"
-        "  8 = canonical_rank.\n"
+        "  8 = canonical_rank, 9 = canonical_orbit.\n"
         "max_expansions: V-branch (tie-branch) budget per seed; 0 = unlimited.\n"
         "  Raises CanonicalizationTimeoutError when any seed exceeds the limit.\n"
         "ranks: per-vertex canonical ranks, a permutation of 0..n-1. Required by\n"
-        "  algorithm_id 8 and rejected by every other variant.");
+        "  algorithm_id 8 and rejected by every other variant.\n"
+        "orbit_oracle: an isalhg.core.orbit_oracle.OrbitOracle. Required by\n"
+        "  algorithm_id 9 and rejected by every other variant. Value-preserving:\n"
+        "  the string equals the algorithm_id 7 string bit for bit.");
+
+    m.def(
+        "canonical_string_stats",
+        [](nb::object py_H, int k, int structural_depth, int algorithm_id,
+           int max_expansions, std::optional<std::vector<std::int32_t>> ranks,
+           nb::object orbit_oracle) -> nb::tuple {
+            const isalhg::SHG H = shg_from_python(py_H);
+            const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
+            const std::vector<std::int32_t>* ranks_ptr = ranks ? &*ranks : nullptr;
+            std::unique_ptr<PyOrbitOracle> oracle =
+                make_orbit_oracle(std::move(orbit_oracle), py_H);
+            isalhg::SearchCounters counters;
+            std::string result;
+            {
+                nb::gil_scoped_release release;
+                result = isalhg::canonical_string_compute(H, k, structural_depth, variant,
+                                                          max_expansions, ranks_ptr, oracle.get(),
+                                                          &counters);
+            }
+            nb::dict stats;
+            stats["frames"] = counters.frames.load();
+            stats["v_branches"] = counters.v_branches.load();
+            stats["oracle_calls"] = counters.oracle_calls.load();
+            stats["seed_oracle_calls"] = counters.seed_oracle_calls.load();
+            stats["seeds_run"] = counters.seeds_run.load();
+            return nb::make_tuple(result, stats);
+        },
+        "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a, "max_expansions"_a = 0,
+        "ranks"_a = nb::none(), "orbit_oracle"_a = nb::none(),
+        "As canonical_string, plus the search counters as a dict.\n"
+        "Keys: frames (encode_from entries), v_branches (V branches run),\n"
+        "oracle_calls (edge + ordering oracle invocations by the encoder),\n"
+        "seed_oracle_calls (0 or 1), seeds_run. Diagnostic only: the returned\n"
+        "string is identical to the canonical_string one.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).

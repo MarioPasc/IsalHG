@@ -325,6 +325,7 @@ def canonical_string_orbit(
     *,
     k: int | None = None,
     structural_depth: int = 3,
+    backend: Backend | None = None,
 ) -> str:
     """Compute ``w*_c(H)`` through the orbit-pruned tie-complete search.
 
@@ -336,6 +337,11 @@ def canonical_string_orbit(
         Pointer count; ``None`` uses ``required_k(H)``.
     structural_depth : int, optional
         Structural-tuple depth. Defaults to 3.
+    backend : {"cpp", "python"} or None, optional
+        Engine running the pruned search. ``None`` (the default) resolves to
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`, i.e. ``"cpp"`` when the
+        extension is importable. The two backends return the identical
+        string; the oracle itself stays in Python either way.
 
     Returns
     -------
@@ -353,7 +359,7 @@ def canonical_string_orbit(
         k=k,
         structural_depth=structural_depth,
         algorithm=CANONICAL_ORBIT_ALGORITHM,
-        backend="python",
+        backend=backend,
         orbit_oracle=PynautyOrbitOracle(),
     )
 
@@ -363,6 +369,7 @@ def canonical_fingerprint_orbit(
     *,
     k: int | None = None,
     structural_depth: int = 3,
+    backend: Backend | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute ``F(H) = (seed label, w*_c(H))`` through the orbit-pruned search.
 
@@ -374,6 +381,9 @@ def canonical_fingerprint_orbit(
         Pointer count; ``None`` uses ``required_k(H)``.
     structural_depth : int, optional
         Structural-tuple depth. Defaults to 3.
+    backend : {"cpp", "python"} or None, optional
+        Engine running the pruned search; ``None`` resolves to
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`.
 
     Returns
     -------
@@ -390,7 +400,7 @@ def canonical_fingerprint_orbit(
         k=k,
         structural_depth=structural_depth,
         algorithm=CANONICAL_ORBIT_ALGORITHM,
-        backend="python",
+        backend=backend,
         orbit_oracle=PynautyOrbitOracle(),
     )
 

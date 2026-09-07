@@ -343,6 +343,44 @@ up; the tasks still running under the old guard may still fail and are
 re-run by the sweep. Under the article rule the Python `wstar_orbit` rows
 are provisional anyway; the C++ orbit port replaces them.
 
+## Wave 4A — `cpp-orbit` (2026-09-07 15:1x) — ACCEPT (merge in progress)
+
+Head `04fa4d7`, 5 commits, clean tree, all files inside ownership (one
+agreed deletion: the test that pinned the old `backend="cpp"` refusal).
+Built: `isalhg::OrbitOracleIface` + `SearchCounters`
+(`include/isalhg/orbit_oracle.hpp`), `AlgorithmVariant::GreedyMinCompleteOrbit = 9`,
+`PyOrbitOracle` nanobind adapter (holds the Python oracle and the caller's
+`SparseHypergraph` handle; `gil_scoped_acquire` per callback; Python
+exceptions → `IsalHGError`), sequential seed loop for this variant,
+`canonical_string_stats(...) -> (word, counters)`; `canonical_orbit`
+defaults to C++; `_runs_in_python("orbit")` is False. Tests: 2,262 passed
+(fast suite), 2 slow, 3 slow integration; ruff/format/mypy at base.
+Differentials bit-identical: 700/700 three-way (cpp-orbit / python-orbit /
+unpruned cpp) on 500 random + 200 stars; 600/600 corpus members (300
+wd50k66 + 300 ndc_classes) through `engine_word` at 60 s. **STS(13) pins
+through C++ orbit: 50.4 s and 7.4 s** (the Python engine never finished in
+50 min). Branch collapse (q-stars, k = 2): frames 326→6 (q = 5) …
+9,864,101→11 (q = 10); pruned search = a single path; q = 7 matches the
+Python counters exactly. **R2 at 60 s on the 100 highest-|Aut| censored
+members:** wd50k66 [1e3,1e7) 61/63 = 0.97 (median 0.19 s), ≥ 1e7 37/37 =
+1.00 (median 0.003 s), all 98/100; ndc_classes < 1e3 45/95 = 0.47 (median
+12.9 s), [1e3,1e7) 3/5, all 48/100 — NDC's censored tail is low-symmetry,
+median arity 10: the displacement (`k_disp`) tail, which pruning cannot
+touch. Reported as the counterweight. Follow-up (speed only): a
+trivial-stabiliser pre-filter to skip `autgrp` on rigid inputs.
+
+## 2026-09-07 15:2x — rank array rows lost: runner hardcoded the experiment name
+
+The first completed task of array 2248781 copied back nothing. Cause:
+`rq1.py` built `RunPaths(..., experiment=EXPERIMENT)` with the constant
+`"addressing"` regardless of the config, so the rank run wrote to
+`<stage>/RQ1_addressing/addressing/` (a plain directory) while the worker
+staged and copied back `.../addressing_rank` (the symlinked leaf); the rows
+died with the node scratch. Same mechanism emptied the rank smoke. Fix:
+`experiment_name(config)` drives `RunPaths`, the run/shard records and the
+row stamps (default unchanged for `rq1.yaml`). Plan: sync, cancel 2248781;
+its recovery sweep 2248782 (`afterany`) re-runs every unit under the fix.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

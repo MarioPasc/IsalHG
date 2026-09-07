@@ -128,6 +128,81 @@ inside each worktree, committed.
   files; tests, probe and log left uncommitted in its worktree). Resumed
   in place on 2026-09-07 with a message listing its state and priorities.
 
+- **`orbit-prune` — ACCEPT** (head `467e6a4`, 10 commits; clean tree; 8 files
+  all inside ownership; 35 orbit + frozen-pin tests pass in its env).
+  Pins bit-exact on Fano, STS(9), `C_13(0,1,3)`, n=4 and GQ(2,2) vs the C++
+  `w*_c`; the two STS(13) pins are written, slow-marked, never completed
+  (> 50 min in Python). Branch collapse on symmetric stars: unpruned frames
+  326 / 1,957 / 13,700 / 109,601 for q = 5..8 (= Σ q!/(q−d)!) → 6 / 7 / 8 / 9
+  pruned, q − 1 oracle calls, same string. 20-leaf star (|Aut| = 2.4e18):
+  0.024 s. Censored tail (C++-censored wd50k66 members, highest |Aut| first,
+  60 s): 41/52 complete — 97 % at |Aut| ≥ 1e7 (median 0.30 s), 33 % at
+  1e3–1e7. Corpus differential 267/267 wd50k66 members agree. Added the
+  `canonical_rank` arm (invariant under 200 relabellings, complete on 500
+  pairs). Two facts to carry: (i) `_enum_displacements` is now `lru_cache`d
+  (byte-identical, 7–20× on the pruned engine); (ii) **the Python encoder
+  materialises `(2r+1)^k` displacement tuples and OOMs at `k ≥ 5`** —
+  pre-existing; it makes every Python engine (`wstar_orbit`, `wstar_rank`)
+  infeasible on arity ≥ 5 members (≈ 9 % of wd50k66, most of ndc_classes);
+  the C++ engine's Round-11 inversion avoids it. Also flagged for the PI:
+  `pynauty_levi` and `w*_c` disagree on inputs declaring different
+  vocabulary sizes (fingerprint contract).
+- **`harness-isal` — ACCEPT** (head `022abcc`, 5 commits; 27 files all inside
+  the extended ownership; 22 integration tests pass + 7 skipped pending the
+  orbit merge). All seven runners produce Isal rows; fingerprint-first
+  matrices (`ndc_classes` N = 1,381 `isal_ow_struct` in 0.21 s vs 183 s
+  pairwise); RQ1 has `d_instr`, `n_instr`, `zero_shift`, `aut_bucket`, the
+  selection table, Holm vs `nauty_cert_rows`, censoring per (arm, m, |Aut|);
+  RQ6 `ow_ngram`: validity 1,000/1,000 **and connectivity 1,000/1,000**
+  (Prop. C.4) vs `fact_ngram` 1,000/1,000 valid but **256/1,000 connected**.
+  Two defects it found, not its own: a forked child deadlocks after any
+  in-process C++ `canonical_string` call (guarded in `engine_word`;
+  `rq3.run_guarded` unguarded — audit needed); `fact_rank_roles` fails M0
+  invariance 43/60 on wd50k66 (a retired arm; the known roles defect).
+
+## The local RQ1 preview (60 members × 3 corpora, 1 replication) — the diagnosis
+
+Median `d_instr` (one symbol per instruction / row / token) and the ≤ 2
+fraction, uncensored rows, constant-preserving and changing kinds:
+
+| corpus | edit | `isal_ow_struct` | `w*_c` | `nauty_cert_rows` | `fact_rank` |
+|---|---|---|---|---|---|
+| wd50k66 | delete_fact | **1** (0.61) | **1** (0.77) | 15.5 (0.00) | 6 (0.12) |
+| wd50k66 | remove_constant | **2** (0.51) | **2** (0.66) | 14.5 (0.07) | 6.5 (0.12) |
+| wd50k66 | insert_fact_new_constant | 13 (0.09) | **4** (0.31) | 17 (0.00) | 7 (0.08) |
+| wd50k66 | add_constant | 7 (0.08) | **4** (0.16) | 11 (0.18) | 5 (0.32) |
+| wd50k66 | insert_fact (existing) | 14 (0.02) | 6 (0.07) | 8 (0.00) | **3** (0.49) |
+| ndc_classes | delete_fact | **3** (0.43) | **3** (0.47) | 12 (0.00) | 5 (0.20) |
+| ndc_classes | remove_constant | **2** (0.51) | **2** (0.58) | 10 (0.13) | 3 (0.39) |
+| ndc_classes | insert_fact_new_constant | 14.5 (0.02) | 7 (0.04) | 13 (0.00) | **4** (0.18) |
+| ndc_classes | add_constant | 6 (0.05) | 4 (0.14) | 4.5 (0.32) | **2** (0.66) |
+| ndc_classes | insert_fact | 17 (0.00) | 8 (0.03) | 10 (0.00) | **2** (0.52) |
+| synthetic_rq1 | all five | 13–19.5 | 12–23.5 | 7–23 | **1–13** |
+
+Reading. (1) **The Isal walks — both of them — are the most local
+representation under deletions** on the real corpora: removing a fact or a
+constant removes tokens without renumbering anything, while rank-addressed
+serialisations renumber. (2) **On insertions `w*_c` is 2–3× more local than
+the ordered walk**: the greedy walk creates a constant's facts while the
+constant is still adjacent to `p_1` (one `P` step), whereas the ordered
+walk's breadth-first-by-anchor order defers them until the constant has been
+pushed far from the root and then pays the excursion twice. That is a policy
+defect of the ordered walk, not a limit of the machine. The displacement-
+aware deterministic walk already exists: **`wstar_rank`**, the family's
+greedy walk with the canonical labelling as the residual tie key (the
+"both" cell of the ablation). (3) The pre-registered H-M1a is falsified for
+the ordered walk; H-M1b (relative addressing) holds only for root-anchored
+growth (the emitter's probe: median 1 vs 12) and fails for leaf-anchored
+insertions. (4) `synthetic_rq1` (random KBs) is bad for every Isal arm and
+is not the paper's data.
+
+Consequence for the plan: measure `wstar_rank` on the same protocol;
+if it tracks `w*_c`'s locality, it becomes the representation candidate
+(complete, deterministic, one greedy run, no exponential case); the
+ordered walk stays as the order-only ablation with its named mechanism. The
+Python engines need the C++ engine for arity ≥ 5 (NDC), so the rank tie
+key must be ported to `h2s.cpp` (wave 3) before the Picasso RQ1.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

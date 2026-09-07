@@ -283,6 +283,19 @@ ordered-walk emitter in C++ with the golden-pin table as the acceptance
 gate. Until then, the article's candidate tables are built from the C++
 arms only.
 
+## 2026-09-07 13:25 — wave 4A spawned; rank experiment on the cluster
+
+- `cpp-orbit` (opus xhigh, worktree from `45ce493`): the orbit oracle as a
+  nanobind callback inside the C++ tie-complete search; acceptance = frozen
+  pins incl. both STS(13) through C++, differentials vs the Python orbit
+  engine and vs unpruned C++ `w*_c`, branch collapse, and the article's R2
+  table (censored tail per |Aut| bucket on both corpora). `cpp-ow` (T-KBd)
+  runs after it (shared `bindings.cpp`).
+- Branch synced to the cluster at `6d5a579` (`configs/rq1_rank.yaml`,
+  `RQ1_CONFIG` in launcher/worker); rank smoke 2248491 submitted 13:2x;
+  the full rank array (`addressing_rank`, 24 shards) follows its completion.
+  Main array 2247394: 218 row files at 13:22.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

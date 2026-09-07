@@ -33,6 +33,7 @@ import pytest
 from experiments.tkde.budget import (
     ENGINES,
     TkdeBudgetError,
+    cpp_fork_is_healthy,
     engine_word,
     pointer_word,
     run_with_budget_detail,
@@ -55,10 +56,26 @@ pytestmark = pytest.mark.integration
 
 ORBIT_ARMS: tuple[str, ...] = ("wstar_rank", "wstar_orbit")
 ORBIT_SKIP = "orbit-prune not merged"
+POISONED_SKIP = (
+    "the C++ engine has already run in this pytest process, so a forked child "
+    "deadlocks on it (see budget.cpp_fork_is_healthy)"
+)
 
 
 def _orbit_available(arm: str) -> bool:
     return arm_is_available(arm)[0]
+
+
+def _require_healthy_fork() -> None:
+    """Skip when this process can no longer fork a working C++ canonicalizer.
+
+    Running this file alone, it can; running it after a suite that exercised the
+    engine directly, it cannot, and the budget would report a censoring that
+    never happened. The defect itself is pinned by
+    :meth:`TestBudget.test_a_poisoned_process_refuses_rather_than_censoring`.
+    """
+    if not cpp_fork_is_healthy():
+        pytest.skip(POISONED_SKIP)
 
 
 @pytest.fixture
@@ -145,10 +162,53 @@ class TestBudget:
         assert result.value == "finished"
 
     def test_engine_word_cpp_matches_pointer_word(self, two_facts: SparseHypergraph) -> None:
+        _require_healthy_fork()
         through_alias = pointer_word(two_facts, 3, 30.0)
         through_engine = engine_word(two_facts, 3, 30.0, engine="cpp")
         assert through_alias.ok and through_engine.ok
         assert through_alias.value == through_engine.value
+
+    def test_a_poisoned_process_refuses_rather_than_censoring(
+        self, two_facts: SparseHypergraph
+    ) -> None:
+        """The measured hazard, pinned: a false censoring must become an error.
+
+        A parent that has already run the C++ canonicalizer leaves the extension
+        in a state its forked children deadlock on. The budget cannot tell that
+        deadlock from a genuine time-out, so a whole campaign column could read
+        "censored" without a single computation having been attempted;
+        ``engine_word`` therefore refuses. This runs in a subprocess so the
+        poisoning does not leak into the rest of the session.
+        """
+        import subprocess
+        import sys
+        import textwrap
+
+        program = textwrap.dedent(
+            """
+            from isalhg.core.canonical import canonical_string
+            from isalhg.core.sparse_hypergraph import SparseHypergraph
+            from experiments.tkde.budget import TkdeBudgetError, engine_word
+
+            H = SparseHypergraph(4, [frozenset({0, 1, 2}), frozenset({0, 1, 3})])
+            assert engine_word(H, 3, 30.0, engine="cpp").ok, "healthy before"
+            canonical_string(H, k=3, algorithm="canonical", backend="cpp")
+            try:
+                engine_word(H, 3, 30.0, engine="cpp")
+            except TkdeBudgetError as exc:
+                print("REFUSED:", "already run in this process" in str(exc))
+            else:
+                print("REFUSED: False")
+            """
+        )
+        completed = subprocess.run(
+            [sys.executable, "-c", program],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=True,
+        )
+        assert "REFUSED: True" in completed.stdout, completed.stdout + completed.stderr
 
     def test_engine_word_rejects_an_unknown_engine(self, two_facts: SparseHypergraph) -> None:
         with pytest.raises(TkdeBudgetError, match="unknown engine"):
@@ -171,6 +231,7 @@ class TestBudget:
         # Orbit pruning is value-preserving, so the orbit engine's word IS w*_c.
         if not _orbit_available("wstar_orbit"):
             pytest.skip(ORBIT_SKIP)
+        _require_healthy_fork()
         cpp = engine_word(two_facts, 3, 60.0, engine="cpp")
         orbit = engine_word(two_facts, 3, 60.0, engine="orbit")
         assert cpp.ok and orbit.ok
@@ -208,6 +269,7 @@ class TestInstructionDistance:
     def test_budgeted_arm_instructions_carry_the_seed_prefix(
         self, two_facts: SparseHypergraph
     ) -> None:
+        _require_healthy_fork()
         word, _secs, censored = member_word("isalhg_levenshtein", two_facts, None, k=3, budget=30.0)
         assert not censored
         bare = instruction_symbols("isalhg_levenshtein", word, augment=False)

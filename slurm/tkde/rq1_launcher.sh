@@ -13,7 +13,10 @@ TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 LOGS_DIR="${TKDE_USER_ROOT}/execs/tkde/logs"
 PY="${PY:-${TKDE_USER_ROOT}/fscratch/conda_envs/isalhg-tkde/bin/python}"
-CONFIG="${REPO_DIR}/experiments/tkde/configs/rq1.yaml"
+# RQ1_CONFIG selects another RQ1 experiment on the same seeded units (e.g. the
+# re-run of one arm under configs/rq1_rank.yaml); the worker reads the same
+# variable, so launcher and worker can never disagree on the config.
+CONFIG="${RQ1_CONFIG:-${REPO_DIR}/experiments/tkde/configs/rq1.yaml}"
 mkdir -p "${LOGS_DIR}"
 
 # One shard is about one core-hour (measured pointer profile, see rq1.yaml), so
@@ -48,7 +51,7 @@ MODE="array"
 NO_SWEEP=0
 [[ "${1:-}" == "--no-sweep" || "${2:-}" == "--no-sweep" ]] && NO_SWEEP=1
 
-COMMON_EXPORT="ALL,REPO_DIR=${REPO_DIR}"
+COMMON_EXPORT="ALL,REPO_DIR=${REPO_DIR},RQ1_CONFIG=${CONFIG}"
 
 if [[ "${MODE}" == "smoke" ]]; then
     # %j, not %A_%a: on a non-array job %a expands to SLURM's sentinel

@@ -33,6 +33,7 @@ import pytest
 from experiments.tkde.budget import (
     ENGINES,
     TkdeBudgetError,
+    _runs_in_python,
     cpp_fork_is_healthy,
     engine_word,
     pointer_word,
@@ -221,6 +222,10 @@ class TestBudget:
         if not _orbit_available(arm):
             pytest.skip(ORBIT_SKIP)
         engine = BUDGETED_ARMS.get(arm, "rank")
+        if not _runs_in_python(engine):
+            # The rank engine runs in the C++ extension since wave 3, so in a
+            # poisoned process it must refuse, not answer (pinned elsewhere).
+            _require_healthy_fork()
         result = engine_word(two_facts, 3, 60.0, engine=engine)
         assert result.ok, result.error
         word, seed_label = result.value

@@ -23,8 +23,12 @@ export TKDE_THREADS=1
 source "${REPO_DIR}/slurm/tkde/common.sh"
 
 RQ_FOLDER="RQ1_addressing"
-EXPERIMENT="addressing"
-CONFIG="${REPO_DIR}/experiments/tkde/configs/rq1.yaml"
+# RQ1_CONFIG (exported by the launcher) selects another RQ1 experiment on the
+# same seeded units; the experiment name comes from that config so the staging
+# subtree and the runner's own <RQ>/<experiment> path can never disagree.
+CONFIG="${RQ1_CONFIG:-${REPO_DIR}/experiments/tkde/configs/rq1.yaml}"
+EXPERIMENT="$(sed -n 's/^experiment:[[:space:]]*\([A-Za-z0-9_-]*\).*/\1/p' "${CONFIG}" | head -n 1)"
+EXPERIMENT="${EXPERIMENT:-addressing}"
 
 tkde_job_header "tkde-rq1"
 # The smoke writes to its OWN results subtree. It must not share the real one:

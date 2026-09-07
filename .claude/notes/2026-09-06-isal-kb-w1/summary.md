@@ -238,6 +238,51 @@ key must be ported to `h2s.cpp` (wave 3) before the Picasso RQ1.
   `wstar_rank` locality numbers will come from the Picasso RQ1 (Python engine
   on guard-satisfying members) and, with full coverage, after the C++ port.
 
+## Wave 3 — `cpp-rank` (2026-09-07) — ACCEPT, merged `9f29962`
+
+Head `7161357`, 7 commits, clean tree; the one file outside the listed
+ownership is `src/isalhg/core/_core.pyi` (the extension's type stub — part of
+the bindings, accepted). 34 fast tests pass in its env; full suite 2,233
+passed / 7 skipped in its log. Built: C++ `AlgorithmVariant::GreedyMinRank = 8`
+(rank vector in the arena; residual tie key computed on demand; single
+`(label, rank)` ordering; min-rank seed; no branching), bindings validate
+the permutation; `canonical_string_rank` / `canonical_fingerprint_rank`
+default to C++. **Fixed the Python `ranks` path** (forwarded through every
+frame; edge-order shuffle invariance 0/400 after, 3/400 before; pinned).
+Differentials, all bit-identical: fixtures 13/13, random 1,000/1,000, stars
+300/300, relabelled 200/200, guard-satisfying wd50k66 300/300;
+`ndc_classes` C++-only: 6,000/6,000 invariant, 300/300 pairs agree with
+pynauty; Round-11 three-way check under the rank key 90/90. Timing (N = 200
+per corpus, engine time): `wstar_rank` 0.47 ms / 0 censored (wd50k66),
+0.59 ms / 6 censored (ndc_classes) vs `w*_c` 0.55 ms / 10 and 1.14 ms / 23.
+Censoring is exactly the arity-10 members (0/294 at arity 3–9, 16/41 at
+arity 10): the displacement search's `k_disp` blow-up, not the key — filed
+as a Round-13 lever in the optimisation log. Slow orbit STS(13) pins never
+got a clean run (long processes were killed by the session limit); the
+frozen `w*_c` STS(13) pins pass. Its post-completion turn hit the plan's
+session limit (resets 13:10); no work lost.
+
+Consequence: `wstar_rank` is now runnable on every corpus member at ms
+cost; it must be (re-)submitted on Picasso as its own RQ1 experiment on the
+same seeded edits, then merged into the RQ1 table with the other arms.
+
+## User rule (2026-09-07, mid-turn): "Everything that will go in the final article must be run in the C++ engine"
+
+Consequences for the arms: `w*_c` (C++) and `wstar_rank` (C++ since wave 3)
+qualify; `wstar_orbit` (Python oracle hook) and `isal_ow_*` (Python emitter)
+do **not** yet — both need bit-identical C++ ports (T-KBb for the orbit hook;
+a new task for the ordered-walk emitter) before their rows count in a final
+table. Because the ports must be bit-identical, the locality rows measured
+under the Python implementations remain valid evidence during design; the
+timing rows (M3) must be re-measured in C++. The RQ6 decoder already has a
+C++ backend (`string_to_hypergraph(backend="cpp")`); the n-gram sampler is
+harness code, not the engine. Planned: wave 4 after the quota window
+reopens (13:10): (a) `cpp-orbit` — the orbit oracle as a nanobind callback
+or native automorphism orbits inside `encode_from`; (b) `cpp-ow` — the
+ordered-walk emitter in C++ with the golden-pin table as the acceptance
+gate. Until then, the article's candidate tables are built from the C++
+arms only.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

@@ -33,18 +33,32 @@ from the root, never wrapping: see :meth:`_Emitter._move`. This is what keeps th
 local -- a run's length counts slots on the root-free arc, and chaining new constants
 after ``p_1`` leaves those counts alone.
 
-This module is stdlib-only: the rank vector is a parameter, never computed here.
+The rank vector is a parameter, never computed here, so the emitter needs nothing
+outside the standard library. Two implementations of it are registered: the pure-Python
+one below -- the reference the definition is read off -- and the C++ port in
+``isalhg.core._core`` (``src/isalhg/core/_native/src/ordered_walk.cpp``), which returns
+the same tokens bit for bit. ``backend=`` picks one; the default is the extension when
+it is importable, mirroring :func:`isalhg.core.canonical.canonical_string`.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
-from typing import Literal
+from typing import Any, Literal
 
+from isalhg.core.backends import resolve
 from isalhg.core.cdll import CircularDoublyLinkedList
 from isalhg.core.hypergraph_to_string import _movement_tokens
-from isalhg.core.instructions import Token, TokenC, TokenV, validate
+from isalhg.core.instructions import (
+    Token,
+    TokenC,
+    TokenN,
+    TokenP,
+    TokenV,
+    TokenW,
+    validate,
+)
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.errors import (
     DegenerateHypergraphError,
@@ -52,6 +66,11 @@ from isalhg.errors import (
     IsalHGError,
 )
 from isalhg.types import EdgeId, NodeId, VertexLabel
+
+try:
+    from isalhg.core._core import ordered_walk as _core_ordered_walk
+except ImportError:  # pragma: no cover - exercised only without a built extension
+    _core_ordered_walk = None  # type: ignore[assignment]
 
 # ``(type of u, sorted multiset of (predicate, arity) over the facts containing u)``.
 # Isomorphism-invariant, and it changes only when u's own facts change -- which is what
@@ -346,12 +365,72 @@ class _Emitter:
         return tuple(self._tokens), tuple(self._creation)
 
 
+# ---------------------------------------------------------------------------
+# Backends
+# ---------------------------------------------------------------------------
+
+
+def _python_ordered_walk(
+    H: SparseHypergraph, ranks: Sequence[int], policy: OrderedWalkPolicy
+) -> OrderedWalkResult:
+    """Pure-Python ordered walk -- the reference implementation of Definition 3.2."""
+    max_arity = max((len(H.members(e)) for e in H.edges()), default=2)
+    root = _select_root(H, ranks, policy)
+    tokens, creation = _Emitter(H, ranks, policy, max(2, max_arity), root).run()
+    return OrderedWalkResult(
+        root=root,
+        root_label=H.vertex_label(root),
+        tokens=tokens,
+        creation_order=creation,
+    )
+
+
+def _token_from_tuple(raw: tuple[Any, ...]) -> Token:
+    """Re-hydrate one ``(kind, *fields)`` tuple from the extension into a ``Token``."""
+    kind = raw[0]
+    if kind == "N":
+        return TokenN(i=raw[1])
+    if kind == "P":
+        return TokenP(i=raw[1])
+    if kind == "V":
+        return TokenV(edge_label=raw[1], i=raw[2], j=raw[3], new_node_labels=raw[4])
+    if kind == "C":
+        return TokenC(edge_label=raw[1], i=raw[2])
+    return TokenW()
+
+
+def _cpp_ordered_walk(
+    H: SparseHypergraph, ranks: Sequence[int], policy: OrderedWalkPolicy
+) -> OrderedWalkResult:
+    """C++-backed ordered walk; token-for-token equal to :func:`_python_ordered_walk`."""
+    root, root_label, raw_tokens, creation = _core_ordered_walk(
+        H,
+        list(ranks),
+        1 if policy.root_rule == "rank0" else 0,
+        policy.rank_first,
+    )
+    return OrderedWalkResult(
+        root=root,
+        root_label=root_label,
+        tokens=tuple(_token_from_tuple(raw) for raw in raw_tokens),
+        creation_order=tuple(creation),
+    )
+
+
+_ORDERED_WALK_BACKENDS: dict[str, Callable[..., OrderedWalkResult]] = {
+    "python": _python_ordered_walk,
+}
+if _core_ordered_walk is not None:
+    _ORDERED_WALK_BACKENDS["cpp"] = _cpp_ordered_walk
+
+
 def ordered_walk(
     H: SparseHypergraph,
     ranks: Sequence[int],
     *,
     policy: OrderedWalkPolicy = DEFAULT_POLICY,
     k: int | None = None,
+    backend: str | None = None,
 ) -> OrderedWalkResult:
     """Emit the ordered-walk program of ``H`` under ``ranks`` and ``policy``.
 
@@ -374,6 +453,10 @@ def ordered_walk(
         When given, the emitted program is checked against
         :func:`isalhg.core.instructions.validate` at this pointer count before it is
         returned. ``None`` (the default) skips the check.
+    backend : {"cpp", "python"} or None, optional
+        Implementation to run. ``None`` takes the C++ extension when it is importable
+        and the Python reference otherwise. Both return the same tokens and the same
+        creation order; the choice is a speed decision, never a semantic one.
 
     Returns
     -------
@@ -390,6 +473,8 @@ def ordered_walk(
         If ``ranks`` is not a permutation of ``range(H.n_nodes)``.
     isalhg.errors.InvalidInstructionError
         If ``k`` is given and the program does not validate at that pointer count.
+    ValueError
+        If ``backend`` is neither ``"cpp"`` nor ``"python"``.
     """
     if H.n_nodes == 0:
         raise DegenerateHypergraphError("the ordered walk requires at least one constant")
@@ -402,24 +487,20 @@ def ordered_walk(
             "the ordered walk requires a connected hypergraph (decision B11)"
         )
 
-    max_arity = max((len(H.members(e)) for e in H.edges()), default=2)
-    root = _select_root(H, ranks, policy)
-    tokens, creation = _Emitter(H, ranks, policy, max(2, max_arity), root).run()
+    chosen = backend
+    if chosen is None and "cpp" not in _ORDERED_WALK_BACKENDS:
+        chosen = "python"
+    result = resolve(chosen, _ORDERED_WALK_BACKENDS)(H, ranks, policy)
 
     if k is not None:
         validate(
-            list(tokens),
+            list(result.tokens),
             k=k,
             n_vertex_labels=H.n_vertex_labels,
             n_edge_labels=H.n_edge_labels,
         )
 
-    return OrderedWalkResult(
-        root=root,
-        root_label=H.vertex_label(root),
-        tokens=tokens,
-        creation_order=creation,
-    )
+    return result
 
 
 __all__ = [

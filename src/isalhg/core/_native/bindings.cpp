@@ -28,6 +28,7 @@
 #include "isalhg/errors.hpp"
 #include "isalhg/h2s.hpp"
 #include "isalhg/orbit_oracle.hpp"
+#include "isalhg/ordered_walk.hpp"
 #include "isalhg/s2h.hpp"
 #include "isalhg/sparse_hypergraph.hpp"
 #include "isalhg/structural_tuples.hpp"
@@ -103,8 +104,45 @@ void translate_exception(const std::exception_ptr& p) {
     }
 }
 
+// Render a token vector as the ``(kind, *fields)`` tuple list the Python shims
+// re-hydrate into ``isalhg.core.instructions`` dataclasses.
+nb::list tokens_to_pylist(const std::vector<isalhg::Token>& toks) {
+    nb::list out;
+    for (const isalhg::Token& t : toks) {
+        switch (t.kind) {
+        case isalhg::TokenKind::W:
+            out.append(nb::make_tuple(std::string("W")));
+            break;
+        case isalhg::TokenKind::N:
+            out.append(nb::make_tuple(std::string("N"), static_cast<int>(t.i)));
+            break;
+        case isalhg::TokenKind::P:
+            out.append(nb::make_tuple(std::string("P"), static_cast<int>(t.i)));
+            break;
+        case isalhg::TokenKind::V: {
+            nb::list labels;
+            for (std::size_t idx = 0; idx < t.n_labels; ++idx) {
+                labels.append(static_cast<int>(t.labels[idx]));
+            }
+            out.append(nb::make_tuple(std::string("V"), static_cast<int>(t.edge_label),
+                                      static_cast<int>(t.i), static_cast<int>(t.j),
+                                      nb::tuple(labels)));
+            break;
+        }
+        case isalhg::TokenKind::C:
+            out.append(nb::make_tuple(std::string("C"), static_cast<int>(t.edge_label),
+                                      static_cast<int>(t.i)));
+            break;
+        }
+    }
+    return out;
+}
+
 // Build an SHG view from a Python SparseHypergraph.
-isalhg::SHG shg_from_python(nb::handle py_H) {
+//
+// ``depth`` is the xi/eta cache depth. Callers that never read eta (the ordered
+// walk) pass 0 and skip the per-vertex depth-3 BFS entirely.
+isalhg::SHG shg_from_python(nb::handle py_H, int depth = isalhg::DEFAULT_STRUCTURAL_DEPTH) {
     isalhg::SHG H{};
     H.n_nodes = nb::cast<std::int32_t>(py_H.attr("n_nodes"));
     H.n_edges = nb::cast<std::int32_t>(py_H.attr("n_edges"));
@@ -136,7 +174,7 @@ isalhg::SHG shg_from_python(nb::handle py_H) {
         H.edge_labels[static_cast<std::size_t>(eid)] = nb::cast<std::int32_t>(t[2]);
     }
 
-    H.finalise(isalhg::DEFAULT_STRUCTURAL_DEPTH);
+    H.finalise(depth);
     return H;
 }
 
@@ -446,37 +484,40 @@ NB_MODULE(_core, m) {
         [](nb::object py_H, isalhg::NodeId seed_node, int k,
            bool tie_branch) -> nb::list {
             const isalhg::SHG H = shg_from_python(py_H);
-            const std::vector<isalhg::Token> toks =
-                isalhg::greedy_h2s_tokens(H, seed_node, k, tie_branch);
-            nb::list out;
-            for (const isalhg::Token& t : toks) {
-                switch (t.kind) {
-                case isalhg::TokenKind::W:
-                    out.append(nb::make_tuple(std::string("W")));
-                    break;
-                case isalhg::TokenKind::N:
-                    out.append(nb::make_tuple(std::string("N"), static_cast<int>(t.i)));
-                    break;
-                case isalhg::TokenKind::P:
-                    out.append(nb::make_tuple(std::string("P"), static_cast<int>(t.i)));
-                    break;
-                case isalhg::TokenKind::V: {
-                    nb::list labels;
-                    for (std::size_t k_ = 0; k_ < t.n_labels; ++k_) {
-                        labels.append(static_cast<int>(t.labels[k_]));
-                    }
-                    out.append(nb::make_tuple(std::string("V"), static_cast<int>(t.edge_label),
-                                              static_cast<int>(t.i), static_cast<int>(t.j),
-                                              nb::tuple(labels)));
-                    break;
-                }
-                case isalhg::TokenKind::C:
-                    out.append(nb::make_tuple(std::string("C"), static_cast<int>(t.edge_label),
-                                              static_cast<int>(t.i)));
-                    break;
-                }
-            }
-            return out;
+            return tokens_to_pylist(isalhg::greedy_h2s_tokens(H, seed_node, k, tie_branch));
         },
         "H"_a, "seed_node"_a, "k"_a, "tie_branch"_a = false);
+
+    m.def(
+        "ordered_walk",
+        [](nb::object py_H, std::vector<std::int32_t> ranks, int root_rule,
+           bool rank_first) -> nb::tuple {
+            // depth 0: the ordered walk never reads xi/eta, so the depth-3 BFS
+            // that shg_from_python runs for the canonical encoder is skipped.
+            const isalhg::SHG H = shg_from_python(py_H, 0);
+            isalhg::OwPolicy policy{};
+            policy.root_rule = root_rule == 1 ? isalhg::OwRootRule::Rank0
+                                              : isalhg::OwRootRule::Hub;
+            policy.rank_first = rank_first;
+            isalhg::OwResult result;
+            {
+                nb::gil_scoped_release release;
+                result = isalhg::ordered_walk_compute(H, ranks, policy);
+            }
+            nb::list creation;
+            for (const isalhg::NodeId v : result.creation_order) {
+                creation.append(static_cast<int>(v));
+            }
+            return nb::make_tuple(static_cast<int>(result.root),
+                                  static_cast<int>(result.root_label),
+                                  tokens_to_pylist(result.tokens), creation);
+        },
+        "H"_a, "ranks"_a, "root_rule"_a = 0, "rank_first"_a = false,
+        "Emit the ordered-walk program OW_pi of H under ``ranks``.\n"
+        "root_rule: 0 = hub (argmax (deg, type, -rank)), 1 = rank0.\n"
+        "rank_first: False = ow-struct, True = ow-rank (the K_V field order).\n"
+        "Returns (root, root_label, tokens, creation_order); tokens are\n"
+        "(kind, *fields) tuples as in greedy_h2s_tokens. Bit-identical to\n"
+        "isalhg.core.algorithms.ordered_walk with backend='python'.\n"
+        "The caller owns the domain checks (n > 0, connected, ranks a permutation).");
 }

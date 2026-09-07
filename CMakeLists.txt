@@ -65,6 +65,7 @@ nanobind_add_module(_core
     src/isalhg/core/_native/src/structural_tuples.cpp
     src/isalhg/core/_native/src/wl.cpp
     src/isalhg/core/_native/src/canonical.cpp
+    src/isalhg/core/_native/src/ordered_walk.cpp
     src/isalhg/core/_native/src/thread_pool.cpp
 )
 

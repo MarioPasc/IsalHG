@@ -832,3 +832,117 @@ validation.
 refuses `ranks` on the C++ backend: ranks are a property of the canonical
 program (they fix the seed too), not of a single seed run, so the per-seed
 entry point is the wrong place for them.
+
+## Round 13 — the stabiliser-orbit oracle in C++ (`canonical_orbit`, variant 9)
+
+*(2026-09-07, wave `2026-09-07-isal-kb-w4`.)*
+
+**Target: reach again, not speed.** `w*_c` is the *unpruned* tie-complete
+lex-min (D-TA2), and on symmetric inputs its branch set is dominated by
+automorphic duplicates — a star with `q` interchangeable leaves is explored
+`q!` times at the root alone. Proposition 7.3 of the ordered-walk completeness
+note licenses keeping one representative per orbit of the automorphism group
+fixing the placed prefix: two candidates in the same orbit yield equal
+completions, so the shortlex minimum is unchanged. That makes the pruning
+**value-preserving** — it returns `w*_c` bit for bit, which is exactly what
+separates it from a tie-set *refinement* (also complete, but a different
+canonical form, forbidden by D-TA2).
+
+The hook existed only on the Python engine (wave 1), and the Python engine
+materialises `(2r+1)^k` displacement tuples per frame, so it is capped at
+arity 4 (`budget.py::PYTHON_ENGINE_MAX_K`). Every number in the final article
+runs on the C++ engine, so the article's symmetric-input result (R2) was not
+reproducible where it is claimed.
+
+**The port.** `AlgorithmVariant::GreedyMinCompleteOrbit = 9` — variant 7 with
+three branch sets reduced:
+
+- the seed set, to one seed per `Aut(H)`-orbit, before the loop;
+- the residual V tie set, at every tie;
+- the label-respecting orderings of a tied edge's new vertices, at every tie.
+
+The groups are **not** computed natively. `core/` is stdlib-only and owns no
+automorphism engine, so `include/isalhg/orbit_oracle.hpp` declares an abstract
+`OrbitOracleIface` with the three protocol methods, and `bindings.cpp`
+implements it with `PyOrbitOracle`, which forwards to the Python
+`isalhg.iso_backends.orbit_oracle.PynautyOrbitOracle` (individualised Levi
+colouring → `pynauty.autgrp` → union–find orbits). Three details decide
+whether that works:
+
+1. **The hypergraph handle.** The adapter stores the Python `SparseHypergraph`
+   object the caller passed to `canonical_string` and hands it to every
+   callback. `PynautyOrbitOracle` caches its Levi graph and its per-state
+   generator sets under `id(H)`; a reconstructed object would silently defeat
+   the cache and turn a memoised lookup into an `autgrp` call per tie. No id
+   remapping is needed — `shg_from_python` keeps the Python numbering.
+2. **The GIL.** The compute phase runs under `gil_scoped_release`, so each
+   callback re-acquires with `nb::gil_scoped_acquire`, and the variant's seed
+   loop is forced sequential (`parallel = … && orbit_oracle == nullptr`): the
+   persistent Round-5 worker pool must never call into Python from two threads.
+   The cost is bounded, because the seed set has already been reduced to one
+   member per orbit.
+3. **Python exceptions.** A `nb::python_error` escaping the callback would
+   have its destructor run on the GIL-free side of the unwind. It is caught
+   inside the `gil_scoped_acquire` scope, converted to text, and rethrown as
+   `isalhg::IsalHGError`, so no `PyObject` refcount is ever touched without
+   the GIL.
+
+The orbit path is also the only one that **materialises** the label-respecting
+orderings: Round 6 made `enumerate_label_perms_cb` callback-driven precisely to
+avoid a `vector<vector<NodeId>>`, but the oracle needs the list. Every other
+variant keeps the streaming enumerator untouched, and the orbit path skips the
+oracle entirely when the list is a singleton — mirroring the Python reference,
+so the `oracle_calls` counters of the two engines agree.
+
+**A debug hook.** `canonical_string_stats(...) -> (word, dict)` returns the
+search counters (`frames`, `v_branches`, `oracle_calls`, `seed_oracle_calls`,
+`seeds_run`) for **any** variant. It is what makes the collapse measurable, and
+it is observational: the string it returns is the `canonical_string` string.
+
+**Correctness — the frozen pins, through the C++ orbit path.** Same
+`(length, sha256)` values as `test_wstar_c_frozen.py`, so the canonical form
+did not move. GQ(2,2) is newly pinned here because it is the cheapest fixture
+where the two searches are visibly different programs.
+
+| Fixture | orbit | unpruned | equal |
+|---|---:|---:|:--:|
+| Fano STS(7) | 0.001 s | 0.004 s | yes |
+| STS(9) | 0.001 s | 0.078 s | yes |
+| `C_13(0,1,3)` | 0.092 s | 0.132 s | yes |
+| n=4 counterexample | <0.001 s | <0.001 s | yes |
+| GQ(2,2) doily | 0.008 s | 0.485 s | yes |
+| true STS(13) #1 | 50.4 s | — | pin ok |
+| true STS(13) #2 | 7.4 s | — | pin ok |
+
+The STS(13) rows are the honest caveat: rigid-ish instances have little
+symmetry to exploit, so the oracle buys nothing there and its `autgrp` calls
+are pure overhead. The pruning is a *symmetric-input* lever, not a general one.
+
+**Correctness — differentials.** All bit-identical, no exceptions:
+
+| Corpus | n | vs Python orbit | vs unpruned C++ |
+|---|---:|:--:|:--:|
+| random connected labelled (n ≤ 8, arity ≤ 4, 3 labels/side) | 500 | 500/500 | 500/500 |
+| random stars (q = 2..9) | 200 | 200/200 | 200/200 |
+| wd50k66 members, both arms through `engine_word` @ 60 s | 300 | — | 300/300 |
+| ndc_classes members, both arms through `engine_word` @ 60 s | 300 | — | 300/300 |
+
+**The branch collapse.** `q`-star, `k = 2`, counters from
+`canonical_string_stats`; the string is equal on every row.
+
+| q | frames unpruned | frames pruned | oracle calls | ratio | secs unpruned | secs pruned |
+|---:|---:|---:|---:|---:|---:|---:|
+| 5 | 326 | 6 | 4 | 54× | 0.000 | 0.000 |
+| 6 | 1,957 | 7 | 5 | 280× | 0.001 | 0.000 |
+| 7 | 13,700 | 8 | 6 | 1,713× | 0.004 | 0.000 |
+| 8 | 109,601 | 9 | 7 | 12,178× | 0.031 | 0.000 |
+| 9 | 986,410 | 10 | 8 | 98,641× | 0.284 | 0.000 |
+| 10 | 9,864,101 | 11 | 9 | 896,737× | 2.833 | 0.000 |
+
+The pruned search visits `q + 1` frames and runs `q` V branches: one branch per
+level, i.e. the search has collapsed to a single path, which is what `S_q`
+acting on the leaves predicts. The `q = 7` row reproduces the Python engine's
+counters exactly (`test_orbit_pruning.py` pins 13,700 / 8 / 7), so the two
+engines are consulting the oracle at the same ties, not merely agreeing on the
+answer.
+

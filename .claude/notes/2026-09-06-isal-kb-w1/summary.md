@@ -102,9 +102,43 @@ inside each worktree, committed.
   record updated; corrected contract sent to `ow-emitter` with the request
   to pin (a) ≤ 2 unconditionally and report the word-length price.
 
+## Verdicts
+
+- **`ow-emitter` — ACCEPT** (branch `worktree-agent-aa0166cf355893a2a`, head
+  `1863553`, 4 commits). Verified: clean tree; 9 changed files = the log's
+  list; 114 owned tests pass in its env and again from the main checkout
+  after the merge; `get_distance("isal_ow_struct")` resolves (the agent added
+  three rows to `metric_space/registry.py::_LAZY_MODULES`). Corpus probe
+  (`scripts/diagnostics/ordered_walk_corpus_probe.py`, seed 20260906):
+  wd50k66 3,988 / ndc_classes 1,381 — 0 disconnected, 0 degenerate; median
+  0.08 ms per member (max 0.9 ms); word median 6 (wd50k66) / 8 (ndc)
+  instructions vs `nauty_certificate_rows` median 12; round trip 300/300 and
+  invariance 300/300 per policy per corpus. Single-edit `{hub, new constant}`
+  on 200 wd50k66 members: `ow_struct` median 1 instruction, ≤ 2 in 0.815;
+  `ow_rank` 2 / 0.545; `ow_rank0` 2 / 0.625; `nauty_cert_rows` median 12,
+  ≤ 2 in 0.000. Prop. C.5 under the no-crossing rule on 400 binary stars:
+  (a) max 2, (b) max 3 (position kept: max 1); forward runs 0/400.
+  Word-length price of the rule is a tail: 300 wd50k66 words median 6→6,
+  max 96→137. Flag: H-M1d only half confirmed (median order holds; on the
+  ≤ 2 fraction `rank0` 0.625 > `rank` 0.545; `struct` wins either way).
+  Note: `ordered_walk.py` imports the private `_movement_tokens` from
+  `hypergraph_to_string.py` (orbit-prune's file) — harmless; keep at merge.
+- **`orbit-prune`** — cut off by the plan's rate limit mid-work
+  (2026-09-06 ~22:30; one commit `3c23499` with the four core/iso_backends
+  files; tests, probe and log left uncommitted in its worktree). Resumed
+  in place on 2026-09-07 with a message listing its state and priorities.
+
 ## Merge record
 
-- (pending)
+- 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`
+  (`--no-ff`); OW tests green from the main checkout (114 passed).
+- (orbit-prune pending)
+
+## Wave 2
+
+- `harness-isal` spawned 2026-09-07 on base `4037e67` (opus xhigh, worktree):
+  harness arms + RQ runners + local RQ1 smoke. Runs concurrently with the
+  resumed `orbit-prune` (2 opus agents — the ceiling).
 
 ## Open follow-ups
 

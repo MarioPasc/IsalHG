@@ -423,6 +423,23 @@ New config `configs/rq1_cpp.yaml` (experiment `addressing_cpp`: `wstar_orbit`,
 the C++ engines and covers the members the Python orbit engine refused; to
 be submitted after the sync.
 
+## 2026-09-07 17:0x — C++ re-run submitted; merge tool
+
+- `addressing_cpp` smoke completed; array **2248907** (48 shards → 16
+  tasks) + recovery sweep **2248908** submitted from the cluster tree at
+  `6e5b200`+ (all three C++ ports). Rank sweep 2248782 copying back
+  (`addressing_rank`: 40+ files at 16:2x). Main array 2247394 and its sweep
+  2247395 still running.
+- `experiments/tkde/merge_rq1_experiments.py`: one source experiment per
+  arm (`--prefer arm=experiment` overrides; plan: `wstar_orbit` and
+  `isal_ow_*` from `addressing_cpp`, `wstar_rank` from `addressing_rank`,
+  everything else from `addressing`), filtered row files keep their tags,
+  `--out-root` puts the merged experiment as `addressing` under a separate
+  root so `analyze_rq1 --root` reads it unchanged and the campaign's own
+  `addressing` directory stays the frozen record. Local end-to-end test of
+  the merge + analyzer on the partial pull was declined by the user (no
+  local runs); it will be exercised on the harvested data.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

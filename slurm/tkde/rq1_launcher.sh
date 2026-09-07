@@ -10,7 +10,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
-REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde-rq127}"
+REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 LOGS_DIR="${TKDE_USER_ROOT}/execs/tkde/logs"
 PY="${PY:-${TKDE_USER_ROOT}/fscratch/conda_envs/isalhg-tkde/bin/python}"
 CONFIG="${REPO_DIR}/experiments/tkde/configs/rq1.yaml"

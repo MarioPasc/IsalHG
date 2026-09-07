@@ -19,7 +19,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
-export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde-rq45}"
+export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
 CONFIG="${RQ4_CONFIG:-experiments/tkde/configs/rq4.yaml}"
 mkdir -p "${LOGS_DIR}"

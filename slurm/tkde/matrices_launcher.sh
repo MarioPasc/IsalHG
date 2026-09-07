@@ -16,9 +16,9 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
-# rq-4-5 deploys to its OWN remote tree so that three wave-3 agents can run
-# concurrently without overwriting each other's checkouts.
-REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde-rq45}"
+# The campaign now deploys one shared remote tree (the per-agent trees of the
+# 2026-09-05 waves are retired); override REPO_DIR to point elsewhere.
+REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-tkde}"
 LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
 CONFIG="${MATRICES_CONFIG:-experiments/tkde/configs/matrices.yaml}"
 mkdir -p "${LOGS_DIR}"

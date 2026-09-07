@@ -408,24 +408,42 @@ def arm_is_available(arm: str) -> tuple[bool, str]:
     return True, ""
 
 
+def available_arms(arms: Sequence[str], *, context: str) -> list[str]:
+    """Drop the arms this tree cannot compute, warning once per arm.
+
+    Shared by every runner that resolves an arm list up front, so a partial
+    deployment produces a smaller table rather than one exception per word.
+
+    Parameters
+    ----------
+    arms : Sequence[str]
+        Requested arm names.
+    context : str
+        What the list is for (a collection, a grid cell); named in the warning.
+
+    Returns
+    -------
+    list[str]
+        The subset that resolves.
+    """
+    kept: list[str] = []
+    for arm in arms:
+        available, reason = arm_is_available(arm)
+        if available:
+            kept.append(arm)
+        else:
+            logger.warning("%s: dropping arm %s (%s)", context, arm, reason)
+    return kept
+
+
 def arms_for(collection: str, arms: Sequence[str], k_max_roles: bool) -> list[str]:
     """The arms that apply to one collection.
 
     ``fact_rank_roles`` exists only where the corpus carries roles (WD50K); it
     is dropped elsewhere rather than silently degenerating into the primary arm.
-    An arm whose engine is absent from this tree is dropped with a warning
-    naming it, so a partial deployment produces a smaller table rather than a
-    table of blanks.
     """
     wanted = list(arms) if k_max_roles else [arm for arm in arms if arm != ROLES_ARM]
-    kept: list[str] = []
-    for arm in wanted:
-        available, reason = arm_is_available(arm)
-        if available:
-            kept.append(arm)
-        else:
-            logger.warning("collection %s: dropping arm %s (%s)", collection, arm, reason)
-    return kept
+    return available_arms(wanted, context=f"collection {collection}")
 
 
 def member_word(

@@ -890,7 +890,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     corruptions = build_corruptions(config, smoke=args.smoke)
     n_seeds = 2 if args.smoke else int(config.get("n_seeds", 27))
     arms = (
-        ("fact_rank", "nauty_cert", "size_l1")
+        ("fact_rank", "isal_ow_struct", "nauty_cert", "size_l1")
         if args.smoke
         else tuple(str(a) for a in config.get("arms", DEFAULT_ARMS))
     )

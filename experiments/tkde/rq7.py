@@ -42,6 +42,7 @@ from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.rq1 import (
     aut_bucket,
+    available_arms,
     block_slice,
     corpora_root,
     deploy_stamps,
@@ -201,7 +202,7 @@ def enumerate_units(config: Mapping[str, Any]) -> list[Unit]:
     for collection in config.get("yield_collections") or []:
         total = max(1, int((config.get("yield_blocks") or {}).get(collection, 1)))
         units.extend(Unit("yield", collection, block=b, n_blocks=total) for b in range(total))
-    for arm in config.get("nscaling_arms") or []:
+    for arm in available_arms(config.get("nscaling_arms") or [], context="nscaling"):
         for size in config.get("nscaling_N") or []:
             units.append(Unit("nscaling", f"{arm}-N{size}", extra={"arm": arm, "N": int(size)}))
     return units
@@ -219,10 +220,11 @@ def run_sweep(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]
     cell = dict(unit.extra["cell"])
     config = ctx["config"]
     budget = float(config.get("pointer_budget_s", 60.0))
-    arms = (
+    arms = available_arms(
         list(FACT_ALPHABET_ARMS)
         if cell.get("fact_alphabet_only")
-        else list(config.get("sweep_arms") or DEFAULT_SWEEP_ARMS)
+        else list(config.get("sweep_arms") or DEFAULT_SWEEP_ARMS),
+        context=f"sweep cell {unit.label}",
     )
     seed_list = seeds(RQ_INDEX, int(config.get("sweep_seeds", 27)))
 
@@ -279,10 +281,11 @@ def run_yield(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]
     config = ctx["config"]
     budget = float(config.get("pointer_budget_s", 60.0))
     fact_only = set(config.get("yield_fact_alphabet_only") or ())
-    arms = (
+    arms = available_arms(
         ["fact_rank"]
         if unit.label in fact_only
-        else list(config.get("yield_arms") or DEFAULT_YIELD_ARMS)
+        else list(config.get("yield_arms") or DEFAULT_YIELD_ARMS),
+        context=f"yield {unit.label}",
     )
     master = seeds(RQ_INDEX)[0]
 

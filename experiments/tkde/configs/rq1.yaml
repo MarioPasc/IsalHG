@@ -23,14 +23,26 @@ collections:
   - ndc_classes
   - wd50k66
 
+# The four-cell nauty ablation of the Isal word (D-ART4), plus the fact arms
+# kept on the table as the record, plus the two certificate tokenizations:
+#   no nauty     isalhg_levenshtein  w*_c, C++ engine        (budgeted)
+#   oracle only  wstar_orbit         w*_c, orbit-pruned      (budgeted)
+#   order only   isal_ow_*           the ordered walk        (unbudgeted)
+#   both         wstar_rank          rank as the tie key     (unbudgeted)
 arms:
-  - isalhg_levenshtein     # arm A, pointer; the only budgeted one
-  - fact_rank              # arm B, adopted
+  - isalhg_levenshtein     # arm A, pointer w*_c; budgeted
+  - wstar_orbit            # w*_c via the automorphism oracle; budgeted
+  - wstar_rank             # the greedy walk keyed by nauty's rank
+  - isal_ow_struct         # the ordered walk, default policy
+  - isal_ow_rank           # the ordered walk, rank before predicate
+  - isal_ow_rank0          # the ordered walk, rank-0 root
+  - fact_rank              # arm B, the record (D-ART4 (1))
   - fact_rank_roles        # arm B', WD50K only (dropped where roles are absent)
   - fact_local_colour      # arm C
   - fact_local_key         # arm D
   - fact_degree_key        # arm D1
   - nauty_cert             # the certificate member, for M4's rho
+  - nauty_cert_rows        # the certificate at instruction granularity
 
 pointer_budget_s: 60.0
 
@@ -73,7 +85,20 @@ smoke:
   collections: [synthetic_rq1, ndc_classes]
   member_limit: 5
   pointer_budget_s: 5.0
-  arms: [isalhg_levenshtein, fact_rank, fact_local_key, fact_degree_key, nauty_cert]
+  arms:
+    [
+      isalhg_levenshtein,
+      wstar_orbit,
+      wstar_rank,
+      isal_ow_struct,
+      isal_ow_rank,
+      isal_ow_rank0,
+      fact_rank,
+      fact_local_key,
+      fact_degree_key,
+      nauty_cert,
+      nauty_cert_rows,
+    ]
   m3_blocks: {synthetic_rq1: 1, ndc_classes: 1}
   m1_blocks: {synthetic_rq1: 1, ndc_classes: 1}
   m1_edits_per_kind: 2

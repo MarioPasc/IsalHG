@@ -56,6 +56,8 @@ PARTS = "parts"
 
 MEDOID_ARMS: tuple[str, ...] = (
     "fact_rank",
+    "isal_ow_struct",
+    "wstar_rank",
     "nauty_cert",
     "wl_l1",
     "netlsd",
@@ -196,10 +198,12 @@ def deploy_stamps() -> dict[str, Any]:
             break
     if src_stamp is None:
         src_stamp = _read_stamp(SHARED_SRC_REPO)
+    from experiments.tkde.rq1 import library_provenance
+
     return {
         "src_deploy": src_stamp,
         "runner_deploy": _read_stamp(io.repo_root()),
-        "isalhg_path": str(package),
+        **library_provenance(),
     }
 
 

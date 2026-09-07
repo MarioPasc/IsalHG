@@ -64,6 +64,10 @@ RQ_INDEX = 5
 DEFAULT_ARMS: tuple[str, ...] = (
     "fact_rank",
     "fact_rank_roles",
+    "isal_ow_struct",
+    "isal_ow_rank",
+    "isal_ow_rank0",
+    "wstar_rank",
     "nauty_cert",
     "nauty_cert_rows",
     "wl_l1",
@@ -78,6 +82,10 @@ DEFAULT_ARMS: tuple[str, ...] = (
 #: reports have cached matrices for this collection.
 CONTROL_ARMS: tuple[str, ...] = (
     "fact_rank",
+    "isal_ow_struct",
+    "isal_ow_rank",
+    "isal_ow_rank0",
+    "wstar_rank",
     "nauty_cert",
     "wl_l1",
     "size_l1",

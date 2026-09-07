@@ -37,6 +37,11 @@ _LAZY_MODULES: dict[DistanceName, str] = {
     "isal_ow_struct": "isalhg.metric_space.distances.isal_ordered",
     "isal_ow_rank": "isalhg.metric_space.distances.isal_ordered",
     "isal_ow_rank0": "isalhg.metric_space.distances.isal_ordered",
+    # The two nauty-assisted engines of the family's own walk: rank as the
+    # residual tie key (a new canonical value), and orbit pruning (the frozen
+    # w*_c, value-preserving).
+    "wstar_rank": "isalhg.metric_space.distances.isal_engine",
+    "wstar_orbit": "isalhg.metric_space.distances.isal_engine",
     "fact_local_colour": "isalhg.metric_space.distances.fact_addressing_ablations",
     "fact_local_key": "isalhg.metric_space.distances.fact_addressing_ablations",
     "fact_degree_key": "isalhg.metric_space.distances.fact_addressing_ablations",

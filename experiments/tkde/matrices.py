@@ -69,6 +69,18 @@ ROWS_MATRICES_COLUMNS: tuple[str, ...] = (
     "n_jobs",
 )
 
+#: The Isal instruction words that get an ``N x N`` matrix. ``wstar_orbit`` and
+#: ``isalhg_levenshtein`` are deliberately absent: both compute ``w*_c``, whose
+#: per-member cost is unbounded without the forked-child budget, and a budget is
+#: a per-member notion that a whole-matrix build has nowhere to record. They are
+#: measured per member in RQ1 and RQ7 instead.
+ISAL_MATRIX_ARMS: tuple[str, ...] = (
+    "isal_ow_struct",
+    "isal_ow_rank",
+    "isal_ow_rank0",
+    "wstar_rank",
+)
+
 #: Arms per collection, frozen by the wave-3 brief. ``fact_rank_roles`` runs
 #: only where roles exist (WD50K); ``wd50k100`` is RQ5's purity control and
 #: needs only the arms its supplementary table reports.
@@ -76,6 +88,7 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
     "wd50k66": (
         "fact_rank",
         "fact_rank_roles",
+        *ISAL_MATRIX_ARMS,
         "nauty_cert",
         "nauty_cert_rows",
         "wl_l1",
@@ -88,6 +101,7 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
     ),
     "ndc_classes": (
         "fact_rank",
+        *ISAL_MATRIX_ARMS,
         "nauty_cert",
         "nauty_cert_rows",
         "wl_l1",
@@ -100,6 +114,7 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
     ),
     "wd50k100": (
         "fact_rank",
+        *ISAL_MATRIX_ARMS,
         "nauty_cert",
         "wl_l1",
         "size_l1",
@@ -110,8 +125,15 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
 #: A tiny configuration for ``--smoke``: two collections, the fast arms, a
 #: handful of members. Must finish well inside five minutes.
 SMOKE_SPECS: dict[str, tuple[str, ...]] = {
-    "wd50k66": ("fact_rank", "fact_rank_roles", "nauty_cert", "wl_l1", "size_l1"),
-    "ndc_classes": ("fact_rank", "nauty_cert", "degree_seq_l1"),
+    "wd50k66": (
+        "fact_rank",
+        "fact_rank_roles",
+        "isal_ow_struct",
+        "nauty_cert",
+        "wl_l1",
+        "size_l1",
+    ),
+    "ndc_classes": ("fact_rank", "isal_ow_struct", "nauty_cert", "degree_seq_l1"),
 }
 SMOKE_MEMBERS = 40
 
@@ -457,12 +479,17 @@ def deploy_stamps() -> dict[str, str | None]:
     Returns
     -------
     dict[str, str or None]
-        ``src_deploy`` (the library half) and ``runner_deploy`` (this half).
+        ``src_deploy`` (the library half) and ``runner_deploy`` (this half),
+        plus ``isalhg_path`` and ``isalhg_git_sha``, which name the tree that
+        actually served the library even when no deploy stamp was written.
     """
+    from experiments.tkde.rq1 import library_provenance
+
     runner = os.environ.get("REPO_DIR")
     return {
         "src_deploy": _read_stamp(SRC_DEPLOY_STAMP),
         "runner_deploy": _read_stamp(Path(runner) / ".tkde_deploy") if runner else None,
+        **library_provenance(),
     }
 
 

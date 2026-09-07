@@ -10,8 +10,18 @@ Two computation paths, chosen by the arm name:
   only way the roles arm is computable at all: a roles map cannot travel through
   ``HypergraphDistance.pairwise(H1, H2)``, which sees hypergraphs and nothing
   else.
-* every other arm -- ``get_distance(arm).pairwise`` over the upper triangle, in
-  a ``fork`` multiprocessing pool when ``n_jobs > 1``.
+* any arm whose distance object amortizes -- i.e. whose ``fingerprint(H)``
+  returns a value rather than ``None`` -- **fingerprint first**, through that
+  object's own :meth:`HypergraphDistance.matrix`. The pairwise loop would
+  recompute each member's representation ``N - 1`` times; the Isal instruction
+  words (``isal_ow_*``, ``wstar_rank``, ``wstar_orbit``) and the certificate and
+  vector arms all amortize, so the loop is quadratic work for a linear
+  quantity. ``isalhg_levenshtein`` deliberately reports ``fingerprint(H) is
+  None`` unless ``k`` is pinned, because ``w*_c`` is a family indexed by ``k``
+  and the corpus maximum is not known to a per-member call; it therefore stays
+  on the pairwise path, where the campaign's per-pair budget applies.
+* every remaining arm -- ``get_distance(arm).pairwise`` over the upper triangle,
+  in a ``fork`` multiprocessing pool when ``n_jobs > 1``.
 
 The cache is ``<cache_dir>/<arm>.npy`` plus ``<cache_dir>/<arm>.manifest.json``.
 A cached matrix is reused only when the arm, the parameters, the member count
@@ -162,6 +172,8 @@ def build_matrix(
     started = time.perf_counter()
     if arm in WORD_ARMS:
         matrix = _build_from_words(items, arm, roles, n_jobs)
+    elif _amortizes(arm, items, normalized_params):
+        matrix = _build_from_fingerprints(items, arm, normalized_params)
     else:
         matrix = _build_from_pairwise(items, arm, n_jobs, normalized_params)
     secs_total = time.perf_counter() - started
@@ -215,6 +227,48 @@ def _build_from_words(
         words, words, scorer=levenshtein.distance, workers=n_jobs, dtype=np.float32
     )
     return np.asarray(result, dtype=np.float32)
+
+
+def _amortizes(arm: str, items: Sequence[SparseHypergraph], params: Mapping[str, Any]) -> bool:
+    """True when this arm's representation can be computed once per member.
+
+    Decided by asking the distance object itself: ``fingerprint`` is the ABC's
+    declaration that a member has a standalone representation, and returning
+    ``None`` is how a distance declares it has none (or, for
+    ``isalhg_levenshtein``, that the representation depends on a corpus-level
+    ``k`` this call cannot know). The probe uses the first member, so an arm
+    that raises on a particular input degrades to the pairwise path rather than
+    aborting the build.
+    """
+    if not items:
+        return False
+    try:
+        distance = _make_distance(arm, params)
+        return distance.fingerprint(items[0]) is not None
+    except Exception as exc:  # noqa: BLE001 - an unavailable probe is not a build failure
+        logger.debug("arm %s does not amortize (%s); using the pairwise path", arm, exc)
+        return False
+
+
+def _build_from_fingerprints(
+    items: Sequence[SparseHypergraph],
+    arm: str,
+    params: Mapping[str, Any],
+) -> NDArray[np.float32]:
+    """Fingerprint-first path: the distance object's own ``matrix``.
+
+    Every amortizing distance in the registry implements ``matrix`` as "encode
+    each member once, then one vectorised pass", so the work is linear in the
+    corpus instead of quadratic. It is single-process by construction; the
+    ``n_jobs`` the caller asked for prices the pairwise loop this path replaces,
+    not this one.
+    """
+    import numpy as np
+
+    if not items:
+        return np.zeros((0, 0), dtype=np.float32)
+    distance = _make_distance(arm, params)
+    return np.asarray(distance.matrix(items), dtype=np.float32)
 
 
 def _build_from_pairwise(

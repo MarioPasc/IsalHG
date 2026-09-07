@@ -200,18 +200,82 @@ def _pointer_payload(H: Any, k: int) -> tuple[str, int]:
     return word, int(seed_vertex_label(H, word))
 
 
-def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
-    """Canonical pointer string ``w*_c(H)`` under a process-level budget.
+def _engine_payload(H: Any, k: int, engine: str) -> tuple[str, int]:
+    """``(word, seed vertex label)`` of one nauty-assisted Python engine.
+
+    The two engines return the fingerprint the other way round -- ``(seed
+    label, word)`` -- because that is the shape the completeness proof states;
+    the tuple is flipped here so every budgeted engine, C++ or Python, hands
+    back one shape and :func:`pointer_symbols` reads all of them.
+    """
+    import importlib
+
+    module = importlib.import_module("isalhg.iso_backends.orbit_oracle")
+    entry = {
+        "rank": "canonical_fingerprint_rank",
+        "orbit": "canonical_fingerprint_orbit",
+    }[engine]
+    seed_label, word = getattr(module, entry)(H, k=k)
+    return str(word), int(seed_label)
+
+
+#: The engines :func:`engine_word` can drive, in the order the design lists them.
+ENGINES: tuple[str, ...] = ("cpp", "rank", "orbit")
+
+
+def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> BudgetResult:
+    """A canonical ``Sigma_HG`` word under a process-level budget.
+
+    Three engines produce a ``Sigma_HG`` word that cannot be bounded from inside
+    Python: ``"cpp"`` (``w*_c`` in the C++ extension -- the SIGALRM handler never
+    runs), and the two nauty-assisted Python engines ``"rank"`` and ``"orbit"``,
+    whose search is a deep recursion with no time check of its own. All three go
+    through the same forked child, so a censored row means the same thing for
+    each.
 
     Parameters
     ----------
     H : SparseHypergraph
-        A **connected** knowledge base; the arm raises on disconnected input
+        A **connected** knowledge base; the arms raise on disconnected input
         (decision B11, restated in ``COMPETITOR_AUDIT.md`` §3).
     k : int
         Pointer count. Two knowledge bases compared through their strings must
         be encoded with the same ``k`` (``DESIGN.md`` RQ1 arm A: the pair
         maximum).
+    seconds : float, optional
+        Budget. Default 60, the design's value.
+    engine : {"cpp", "rank", "orbit"}, optional
+        Which engine computes the word. Default ``"cpp"``.
+
+    Returns
+    -------
+    BudgetResult
+        ``value`` is ``(word, seed_vertex_label)``.
+
+    Raises
+    ------
+    TkdeBudgetError
+        If ``engine`` is not one of the three, or ``seconds`` is not positive.
+    """
+    if engine not in ENGINES:
+        raise TkdeBudgetError(f"unknown engine {engine!r}; expected one of {ENGINES}")
+    if engine == "cpp":
+        return run_with_budget_detail(_pointer_payload, (H, k), seconds)
+    return run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
+
+
+def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
+    """Canonical pointer string ``w*_c(H)`` under a process-level budget.
+
+    The ``engine="cpp"`` case of :func:`engine_word`, kept as its own name
+    because that is what the campaign's existing rows were measured under.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        A **connected** knowledge base.
+    k : int
+        Pointer count.
     seconds : float, optional
         Budget. Default 60, the design's value.
 
@@ -220,7 +284,7 @@ def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
     BudgetResult
         ``value`` is ``(w_star, seed_vertex_label)``.
     """
-    return run_with_budget_detail(_pointer_payload, (H, k), seconds)
+    return engine_word(H, k, seconds, engine="cpp")
 
 
 def pointer_symbols(word: str, seed_label: int, *, augment: bool) -> tuple[Any, ...]:

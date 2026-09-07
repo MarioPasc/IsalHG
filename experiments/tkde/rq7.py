@@ -41,6 +41,7 @@ from experiments.tkde.budget import run_with_budget_detail
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.rq1 import (
+    aut_bucket,
     block_slice,
     corpora_root,
     deploy_stamps,
@@ -58,8 +59,18 @@ RQ_FOLDER = "RQ7_envelope"
 EXPERIMENT = "envelope"
 
 POINTER_ARM = "isalhg_levenshtein"
-DEFAULT_SWEEP_ARMS: tuple[str, ...] = (POINTER_ARM, "fact_rank", "nauty_cert")
-DEFAULT_YIELD_ARMS: tuple[str, ...] = (POINTER_ARM, "fact_rank")
+#: The envelope is swept over the four-cell nauty ablation of D-ART4: ``w*_c``
+#: with no nauty at all, ``w*_c`` with the automorphism oracle, the ordered walk
+#: (order only) and the greedy walk keyed by rank (both).
+DEFAULT_SWEEP_ARMS: tuple[str, ...] = (
+    POINTER_ARM,
+    "wstar_orbit",
+    "isal_ow_struct",
+    "wstar_rank",
+    "fact_rank",
+    "nauty_cert",
+)
+DEFAULT_YIELD_ARMS: tuple[str, ...] = (POINTER_ARM, "isal_ow_struct", "fact_rank")
 FACT_ALPHABET_ARMS: tuple[str, ...] = ("fact_rank", "nauty_cert")
 
 BUCKETS: tuple[tuple[str, int, int], ...] = (
@@ -84,6 +95,7 @@ COLUMNS_SWEEP: tuple[str, ...] = (
     "density",
     "seed",
     "n",
+    "aut_bucket",
     "arm",
     "secs",
     "censored",
@@ -225,6 +237,10 @@ def run_sweep(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]
             seed,
         )
         H = record.to_hypergraph()
+        # One autgrp call per instance, shared by every arm's row: symmetry is
+        # what censors the tie-complete engines, so the envelope is tabulated
+        # over (m, k, |Aut|) rather than over (m, k) alone.
+        symmetry = aut_bucket(H)
         for arm in arms:
             # The pointer arm is encoded at the CELL's k, not at the instance's
             # required_k: the envelope statement is about the alphabet the user
@@ -242,6 +258,7 @@ def run_sweep(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]
                     "density": cell["density"],
                     "seed": seed,
                     "n": record.n,
+                    "aut_bucket": symmetry,
                     "arm": arm,
                     "secs": round(secs, 6),
                     "censored": int(censored),

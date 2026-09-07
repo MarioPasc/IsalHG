@@ -47,6 +47,7 @@ from isalhg.datasets.kb.base import KBCollection
 from isalhg.generation.fidelity import PROFILE_KEYS, fidelity, novelty
 from isalhg.generation.incidence_baseline import flatten, strict_decode, strict_decode_reason
 from isalhg.generation.ngram import TokenNGram
+from isalhg.iso_backends.isal_ordered import ordered_fingerprint
 from isalhg.language.alignment import alignment_path
 from isalhg.language.reach import RemainderIndex, reach
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
@@ -61,6 +62,13 @@ PARTS = "parts"
 
 MODEL_OURS = "fact_ngram"
 MODEL_BASELINE = "incidence_ngram"
+#: The Isal instruction word of the ordered walk, modelled at the same order
+#: over its own token alphabet. Its decoder is total *and* its image is
+#: connected (Theorem C, Proposition 5.1), so validity and connectivity are both
+#: 1.000 by theorem -- a strictly stronger guarantee than the fact alphabet's,
+#: which is total but says nothing about connectivity.
+MODEL_OW = "ow_ngram"
+SAMPLE_MODELS: tuple[str, ...] = (MODEL_OURS, MODEL_OW, MODEL_BASELINE)
 
 SAMPLE_COLUMNS: tuple[str, ...] = (
     "rq",
@@ -78,7 +86,9 @@ SAMPLE_COLUMNS: tuple[str, ...] = (
     "n_samples",
     "n_valid",
     "n_rejected",
+    "n_connected",
     "validity",
+    "connectivity",
     "rejection_rate",
     "jsd_n",
     "jsd_m",
@@ -172,6 +182,9 @@ class CollectionContext:
     flat: list[tuple[tuple[Any, ...], ...]]
     n_types: int
     n_preds: int
+    ow_words: list[tuple[str, ...]]
+    ow_roots: list[int]
+    k: int
 
     def model(self, kind: str) -> TokenNGram:
         """Return a freshly fitted order-3 model of one alphabet.
@@ -186,7 +199,13 @@ class CollectionContext:
         rather than the whole shard's.
         """
         started = time.perf_counter()
-        source = self.words if kind == MODEL_OURS else self.flat
+        source: Sequence[Any]
+        if kind == MODEL_OURS:
+            source = self.words
+        elif kind == MODEL_OW:
+            source = self.ow_words
+        else:
+            source = self.flat
         model = TokenNGram(order=3).fit(source)
         logger.info(
             "fitted %s on %s (%d words) in %.1f s",
@@ -198,6 +217,60 @@ class CollectionContext:
         return model
 
 
+def _ow_word(H: SparseHypergraph) -> tuple[int, str]:
+    """``(root vertex label, ordered-walk word)`` of ``H`` under the default policy."""
+    root_label, word = ordered_fingerprint(H)
+    return int(root_label), word
+
+
+def _ow_tokens(word: str) -> tuple[str, ...]:
+    """Tokenize an ordered-walk word into its surface tokens.
+
+    Same rule as the pointer alphabet's: the instruction parser, never a split
+    on ``";"``, because a token carries its own semicolons inside brackets
+    (``V[0;1;2;0,2]``).
+    """
+    return tuple(token.serialize() for token in parse(word))
+
+
+def _ow_decode(tokens: Sequence[str], k: int, n_types: int, n_preds: int, root: int) -> Any:
+    """Decode one ordered-walk token sequence back to a hypergraph."""
+    return string_to_hypergraph(
+        ";".join(str(token) for token in tokens),
+        k=k,
+        n_vertex_labels=n_types,
+        n_edge_labels=n_preds,
+        seed_label=root,
+        backend="python",
+    )
+
+
+def _ow_interiors(
+    left: str,
+    right: str,
+    k: int,
+    n_types: int,
+    n_preds: int,
+    root: int,
+) -> tuple[int, int, list[tuple[int, int, bool]]]:
+    """Decode every interior word of an ordered-walk alignment path.
+
+    Proposition 5.1 says every one of them is a *connected* hypergraph, which
+    is what the ``n_connected`` column of the row records against ``n_decoded``.
+    """
+    path = alignment_path(_ow_tokens(left), _ow_tokens(right))
+    interiors = path[1:-1] if len(path) >= 2 else []
+    decoded: list[tuple[int, int, bool]] = []
+    for tokens in interiors:
+        try:
+            H = _ow_decode(tokens, k, n_types, n_preds, root)
+        except Exception as exc:  # noqa: BLE001 - the closed alphabet must not reject
+            logger.error("ordered-walk interior did not decode: %s", exc)
+            continue
+        decoded.append((H.n_nodes, H.n_edges, H.is_connected()))
+    return len(path), len(interiors), decoded
+
+
 def build_context(name: str, config: Mapping[str, Any], root: Path | None) -> CollectionContext:
     """Load one collection and precompute its words, keys and flat serializations."""
     collection = corpora.load_collection(name, root)
@@ -207,6 +280,7 @@ def build_context(name: str, config: Mapping[str, Any], root: Path | None) -> Co
     roles_maps = corpora.roles_maps(collection) if roles else [None] * len(hypergraphs)
     words = [fact_word(H, rm) for H, rm in zip(hypergraphs, roles_maps, strict=True)]
     keys = words if not roles else [fact_word(H) for H in hypergraphs]
+    ordered = [_ow_word(H) for H in hypergraphs]
     return CollectionContext(
         name=name,
         collection=collection,
@@ -218,6 +292,11 @@ def build_context(name: str, config: Mapping[str, Any], root: Path | None) -> Co
         flat=[flatten(H) for H in hypergraphs],
         n_types=n_types,
         n_preds=n_preds,
+        ow_words=[_ow_tokens(word) for _root, word in ordered],
+        ow_roots=[root_label for root_label, _word in ordered],
+        # The collection's k: every member has to decode under one alphabet, and
+        # a sample's arity is bounded by the widest fact the model ever saw.
+        k=max((required_k(H) for H in hypergraphs), default=2),
     )
 
 
@@ -319,10 +398,27 @@ def run_sample_unit(
     decoded: list[SparseHypergraph] = []
     reasons: dict[str, int] = {}
     n_rejected = 0
+    # The ordered walk never writes the root's own type into the word, so a
+    # sample needs one supplied. It is drawn from the fit corpus's empirical
+    # root-type distribution under this unit's seed, which keeps the type
+    # profile the fidelity table scores comparable to the collection's.
+    root_rng = random.Random(f"rq6-ow-root|{unit.collection}|{unit.seed}")
     for word in words:
         if unit.model == MODEL_OURS:
             H, _ = decode_fact_word(word, n_types=context.n_types, n_preds=context.n_preds)
             decoded.append(H)
+            continue
+        if unit.model == MODEL_OW:
+            root = root_rng.choice(context.ow_roots) if context.ow_roots else 0
+            try:
+                decoded.append(_ow_decode(word, context.k, context.n_types, context.n_preds, root))
+            except Exception as exc:  # noqa: BLE001 - a total decoder must not raise
+                # Proposition 5.1 says this branch is unreachable; it is kept so
+                # a falsification is counted and named rather than crashing the
+                # shard and losing the measurement that found it.
+                logger.error("ordered-walk sample did not decode: %s", exc)
+                n_rejected += 1
+                reasons[type(exc).__name__] = reasons.get(type(exc).__name__, 0) + 1
             continue
         H_or_none = strict_decode(word, n_types=context.n_types, n_preds=context.n_preds)
         if H_or_none is None:
@@ -336,6 +432,7 @@ def run_sample_unit(
         decoded.append(H_or_none)
 
     n_valid = len(decoded)
+    n_connected = sum(1 for H in decoded if H.is_connected())
     row: dict[str, Any] = {
         **base,
         "rq": RQ,
@@ -349,7 +446,9 @@ def run_sample_unit(
         "n_samples": n_samples,
         "n_valid": n_valid,
         "n_rejected": n_rejected,
+        "n_connected": n_connected,
         "validity": n_valid / n_samples if n_samples else "",
+        "connectivity": n_connected / n_valid if n_valid else "",
         "rejection_rate": n_rejected / n_samples if n_samples else "",
         "censored": 0,
     }
@@ -534,6 +633,27 @@ def run_alignment_unit(
 
         started = time.perf_counter()
         k = max(required_k(left_H), required_k(right_H))
+        left_root, left_ow = _ow_word(left_H)
+        _right_root, right_ow = _ow_word(right_H)
+        path_len, n_interior, decoded = _ow_interiors(
+            left_ow, right_ow, k, context.n_types, context.n_preds, left_root
+        )
+        rows.append(
+            _alignment_row(
+                shared,
+                "isal_ow_struct",
+                pair_id,
+                context.member_ids[i],
+                context.member_ids[j],
+                path_len,
+                n_interior,
+                decoded,
+                time.perf_counter() - started,
+                censored=0,
+            )
+        )
+
+        started = time.perf_counter()
         status, value = run_guarded(
             lambda left_H=left_H, right_H=right_H, k=k: (
                 _pointer_word(left_H, k),
@@ -698,7 +818,7 @@ def enumerate_units(config: Mapping[str, Any]) -> list[Any]:
     schedule = seeds(RQ_INDEX, int(config.get("seed_count", 27)))
     units: list[Any] = []
     for name in config["collections"]:
-        for model in (MODEL_OURS, MODEL_BASELINE):
+        for model in SAMPLE_MODELS:
             units.extend(SampleUnit(name, model, seed) for seed in schedule)
     for name in config["alignment"]["collections"]:
         units.append(AlignmentUnit(name))

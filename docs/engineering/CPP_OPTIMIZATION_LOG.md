@@ -770,23 +770,63 @@ vector, validated as a permutation of `0..n-1`.
 | wd50k66 members satisfying the Python guard | 300 | 300 |
 
 C++-only regime (`ndc_classes`, arity median 6, Python engine unreachable):
-300 members × 20 random relabellings — **6,000/6,000** fingerprints invariant;
-300 pairs (150 isomorphic via `permute`) — **300/300** agree with
-`pynauty_levi` on isomorphism. `test_wstar_c_frozen.py` and
-`test_orbit_pruning.py` unchanged and green, so no existing variant moved.
+300 members × 20 random relabellings — **6,000/6,000** fingerprints invariant
+(sample drawn from members that complete inside a 2 s per-member budget; 20 of
+the 320 scanned were censored, all at arity 8–10); 300 pairs (150 isomorphic
+via `permute`) — **300/300** agree with `pynauty_levi` on isomorphism.
 
-**Result — wall-clock (i7-13620H, 300 members per corpus, non-PGO).**
+The Round-11 three-way check, redone under the rank key on 90 sparse instances
+(`n = 12..36`, `m = 4..27`, `k = 3..6`): builds with `INVERSION_COST_CAP` set to
+`-1` (inversion decides **every** frame), `10^6` (brute decides every frame) and
+the shipped `8` agree **90/90 on all three pairings**. `test_wstar_c_frozen.py`
+and `test_orbit_pruning.py` unchanged and green, and the full
+`tests/unit tests/property -m "not slow"` suite is 2,233 passed / 7 skipped, so
+no existing variant moved.
 
-| Corpus | `canonical_rank` (C++), median / p90 | of which the engine | `w*_c` (C++, 60 s budget), median / p90 | Python `canonical_rank` on the guard subset |
-|---|---:|---:|---:|---:|
-| wd50k66 | TBD | TBD | TBD | TBD |
-| ndc_classes | TBD | TBD | TBD | TBD |
+**Result — wall-clock (i7-13620H, non-PGO).** Each member is timed in a forked
+child under a 10 s budget, because the naive loop does not terminate (below);
+`N = 200` random connected members per corpus, engine time only.
 
-The comparison is not like-for-like and is not meant to be: `canonical_rank`
-buys its single path with a `pynauty.canon_label` call, and it computes a
-different canonical form. What the table establishes is that the arm is
-**corpus-viable at arities `w*_c` cannot reach in the budget**, which is the
-whole reason the port exists.
+| Corpus | arm | completed | censored @ 10 s | median | p90 | max |
+|---|---|---:|---:|---:|---:|---:|
+| wd50k66 | `canonical_rank` | 200 | **0** | 0.47 ms | 0.81 ms | 3.21 s |
+| wd50k66 | `w*_c` (variant 7) | 190 | 10 (5.0 %) | 0.55 ms | 56.6 ms | 2.28 s |
+| ndc_classes | `canonical_rank` | 194 | 6 (3.0 %) | 0.59 ms | 99.7 ms | 3.18 s |
+| ndc_classes | `w*_c` (variant 7) | 177 | 23 (11.5 %) | 1.14 ms | 740.0 ms | 4.52 s |
+
+The Python `canonical_rank` reference, on the 300 guard-satisfying wd50k66
+members it can run at all, has a median of 0.42 ms — the two engines are the
+same order on the easy members; what the port buys is the 10 % of wd50k66 and
+the 91.5 % of ndc_classes the Python guard refuses outright.
+
+The `w*_c` column is a reference, not a like-for-like rival: `canonical_rank`
+buys its single path with a `pynauty.canon_label` call (excluded from the
+engine time above; measured at ~0.05–0.1 ms per member on these corpora) and
+it computes a different canonical form. What the table establishes is the
+ordering that matters for the ablation: the rank walk is faster in the tail
+and censors between a third and a fifth as often as `w*_c` on the same members.
+
+**The tail, and where it comes from.** The censored members are *exactly the
+arity-10 ones*. Per-arity completion on a 400-member ndc_classes sample at the
+same budget:
+
+| arity | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| completed | 9 | 27 | 122 | 76 | 60 | 26 | 39 | 25 |
+| censored | 0 | 0 | 0 | 0 | 0 | 0 | 0 | **16** |
+
+`k_disp = min(k, max_arity, K_MAX)` saturates at the compiled `K_MAX = 10`, and
+the brute cost-class loop enumerates every `k_disp`-tuple of cost `<= 8`: at
+`k_disp = 10` that is up to ~10^5–10^6 tuples **per cost class per frame**,
+which the Round-11 inversion only rescues when the brute loop finds *nothing*
+by cost 8. So the tail is a property of the displacement search, not of the
+rank key — it is worse for `w*_c` on the same members, and it predates this
+round. Arity 10 is 145/1381 (10.5 %) of ndc_classes and 0 % of the sampled
+wd50k66 rank cell. **Open lever for a Round 13**: make `INVERSION_COST_CAP`
+a function of `k_disp` (the cap was tuned at `k_disp <= 6` on the design
+fixtures), or skip the brute loop entirely above some `k_disp`. Not taken here:
+it changes the search for every variant and needs its own byte-identity
+validation.
 
 **Not done.** The orbit oracle stays Python-only (T-KBb). `greedy_h2s` still
 refuses `ranks` on the C++ backend: ranks are a property of the canonical

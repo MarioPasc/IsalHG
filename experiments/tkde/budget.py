@@ -222,6 +222,14 @@ def _engine_payload(H: Any, k: int, engine: str) -> tuple[str, int]:
 #: The engines :func:`engine_word` can drive, in the order the design lists them.
 ENGINES: tuple[str, ...] = ("cpp", "rank", "orbit")
 
+#: Largest ``min(k, max arity)`` the pure-Python engines accept. The Python
+#: displacement search materialises ``(2r+1)^k`` tuples per frame (the C++
+#: engine's Round-11 inversion does not), so arity-5 members already ask for
+#: 1e8--7e11 tuples and exhaust memory (measured 2026-09-07 on wd50k66). Above
+#: this bound the Python engines are refused up front and the row is censored
+#: with the reason in ``error``, instead of taking the machine down.
+PYTHON_ENGINE_MAX_K: int = 4
+
 _CPP_FORK_HEALTH: bool | None = None
 
 _POISONED = (
@@ -329,6 +337,23 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
     if engine not in ENGINES:
         raise TkdeBudgetError(f"unknown engine {engine!r}; expected one of {ENGINES}")
     if engine != "cpp":
+        from isalhg.core.canonical import required_k
+
+        k_eff = min(int(k), required_k(H))
+        if k_eff > PYTHON_ENGINE_MAX_K:
+            logger.warning(
+                "python engine %r refused: min(k, max arity) = %d > %d; "
+                "the row is censored with the reason",
+                engine,
+                k_eff,
+                PYTHON_ENGINE_MAX_K,
+            )
+            return BudgetResult(
+                value=None,
+                secs=0.0,
+                censored=True,
+                error=f"python engine refused: k_eff={k_eff} > {PYTHON_ENGINE_MAX_K}",
+            )
         return run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
 
     if not cpp_fork_is_healthy():

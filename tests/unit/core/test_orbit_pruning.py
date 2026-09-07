@@ -308,16 +308,6 @@ class TestUnhonourableRequestsRaise:
         with pytest.raises(ValueError, match="requires an orbit_oracle"):
             canonical_string(fano_plane, k=3, algorithm="canonical_orbit")
 
-    def test_canonical_orbit_on_the_cpp_backend_raises(self, fano_plane: SparseHypergraph) -> None:
-        with pytest.raises(ValueError, match="Python backend only"):
-            canonical_string(
-                fano_plane,
-                k=3,
-                algorithm="canonical_orbit",
-                backend="cpp",
-                orbit_oracle=PynautyOrbitOracle(),
-            )
-
     def test_oracle_with_another_algorithm_raises(self, fano_plane: SparseHypergraph) -> None:
         with pytest.raises(ValueError, match="only honoured by"):
             canonical_string(

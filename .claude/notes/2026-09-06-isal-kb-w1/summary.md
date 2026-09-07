@@ -381,6 +381,25 @@ died with the node scratch. Same mechanism emptied the rank smoke. Fix:
 row stamps (default unchanged for `rq1.yaml`). Plan: sync, cancel 2248781;
 its recovery sweep 2248782 (`afterany`) re-runs every unit under the fix.
 
+## 2026-09-07 15:4x — state
+
+- `cpp-orbit` merged (`907edfc`); main env rebuilt; 118/119 engine +
+  harness tests pass after the merge, one failure under investigation
+  (expected: a harness test's Python-engine assumption for `wstar_orbit`,
+  now C++).
+- Runner fix (`cf391fe`) + notes synced at `33010ad`; rank array 2248781
+  cancelled; its recovery sweep **2248782** (8 tasks, PENDING) re-runs all
+  24 shards of `addressing_rank` under the fix. Main array 2247394: 9
+  completed, 16 running, 5 OOM, 1 pending; its sweep 2247395 pending; both
+  sweeps run the cumulative memory guard and the C++ orbit engine.
+- **Wave 5 spawned:** `cpp-ow` (opus xhigh, worktree from `33010ad`): the
+  ordered-walk emitter in C++, bit-identical to the Python emitter (golden
+  table + both full corpora × 3 policies as the gate).
+- After both sweeps and cpp-ow: harvest `RQ1_addressing` (experiments
+  `addressing` + `addressing_rank`), join on (collection, base_id,
+  edit_kind, edit_idx), build the RQ1 table; a third experiment re-measures
+  M3 for `wstar_orbit` and `isal_ow_*` on the C++ engines.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

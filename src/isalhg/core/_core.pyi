@@ -48,6 +48,12 @@ def canonical_string_stats(
     ranks: Sequence[int] | None = None,
     orbit_oracle: OrbitOracle | None = None,
 ) -> tuple[str, dict[str, int]]: ...
+def ordered_walk(
+    H: SparseHypergraph,
+    ranks: Sequence[int],
+    root_rule: int = 0,
+    rank_first: bool = False,
+) -> tuple[int, int, list[tuple], list[int]]: ...
 def string_to_hypergraph_raw(
     s: str,
     k: int,

@@ -230,6 +230,11 @@ ENGINES: tuple[str, ...] = ("cpp", "rank", "orbit")
 #: with the reason in ``error``, instead of taking the machine down.
 PYTHON_ENGINE_MAX_K: int = 4
 
+#: Largest displacement-tuple count ``(2(n-1)+1)^min(k, max arity)`` the
+#: pure-Python engines accept; about 0.4 GB of tuples, measured on the
+#: workstation that went out of memory at 5.8e6 (k = 4, n = 24).
+PYTHON_ENGINE_MAX_TUPLES: int = 2_000_000
+
 _CPP_FORK_HEALTH: bool | None = None
 
 _POISONED = (
@@ -340,19 +345,29 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
         from isalhg.core.canonical import required_k
 
         k_eff = min(int(k), required_k(H))
-        if k_eff > PYTHON_ENGINE_MAX_K:
+        # The displacement search enumerates (2r+1)^k_eff tuples per frame with
+        # r up to n-1, and the orbit engine caches the enumeration per (k, r);
+        # 5.8e6 tuples (k=4, n=24) already cost ~1 GB, so both bounds are
+        # needed: the arity bound and a tuple-count bound.
+        n_tuples = (2 * (H.n_nodes - 1) + 1) ** k_eff
+        refused = (
+            f"k_eff={k_eff} > {PYTHON_ENGINE_MAX_K}"
+            if k_eff > PYTHON_ENGINE_MAX_K
+            else f"(2n-1)^k_eff={n_tuples} > {PYTHON_ENGINE_MAX_TUPLES}"
+            if n_tuples > PYTHON_ENGINE_MAX_TUPLES
+            else None
+        )
+        if refused is not None:
             logger.warning(
-                "python engine %r refused: min(k, max arity) = %d > %d; "
-                "the row is censored with the reason",
+                "python engine %r refused (%s); the row is censored with the reason",
                 engine,
-                k_eff,
-                PYTHON_ENGINE_MAX_K,
+                refused,
             )
             return BudgetResult(
                 value=None,
                 secs=0.0,
                 censored=True,
-                error=f"python engine refused: k_eff={k_eff} > {PYTHON_ENGINE_MAX_K}",
+                error=f"python engine refused: {refused}",
             )
         return run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
 

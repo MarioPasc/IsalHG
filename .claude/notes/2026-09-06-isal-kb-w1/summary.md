@@ -400,11 +400,40 @@ its recovery sweep 2248782 (`afterany`) re-runs every unit under the fix.
   edit_kind, edit_idx), build the RQ1 table; a third experiment re-measures
   M3 for `wstar_orbit` and `isal_ow_*` on the C++ engines.
 
+## Wave 5 — `cpp-ow` (2026-09-07 16:2x) — ACCEPT (merge in progress)
+
+Head `ca10791` (base `33010ad`), clean tree, all files inside ownership.
+Built `_core.ordered_walk` (`ordered_walk.{hpp,cpp}` + binding): a
+transcription of Definition 3.2 with explicit three-way tuple compares and
+a stable C-phase sort; `ordered_walk(..., backend=)` resolves like
+`canonical_string` (default cpp, guarded import → Python fallback);
+threaded through `ordered_word` / `ordered_fingerprint` / `ordered_symbols`
+and the `isal_ow_*` arm; the Python emitter byte-unchanged; the golden
+table imported by path. **Differential: 0 mismatches in 23,379 (member,
+policy) comparisons** — fixtures 24×3, random 2,000×3, stars 400×3,
+wd50k66 3,988×3, ndc_classes 1,381×3 — on tokens, creation order, root and
+root type; 936 round trips; 46,800 relabelling checks; k-independence;
+error parity. Timing: median 12.5–16.3 µs (C++) vs 48.7–53.6 µs (Python).
+Tests: 2,336 passed / 7 skipped; the one integration failure it saw is the
+budgeted-arms test already fixed at `768bae7`. All three article-rule ports
+are now in: rank (w3), orbit (w4), ordered walk (w5).
+
+New config `configs/rq1_cpp.yaml` (experiment `addressing_cpp`: `wstar_orbit`,
+`isal_ow_*`, the two certificate arms; same units/seeds) re-measures M3 on
+the C++ engines and covers the members the Python orbit engine refused; to
+be submitted after the sync.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`
   (`--no-ff`); OW tests green from the main checkout (114 passed).
-- (orbit-prune pending)
+- 2026-09-07 `02e42c5` lineage: merge(orbit-prune) then merge(harness-isal);
+  105 + 60 tests green after each.
+- 2026-09-07 `9f29962` merge(cpp-rank); main env rebuilt; 108 tests green.
+- 2026-09-07 `907edfc` merge(cpp-orbit); rebuilt; 118/119 (the one failure
+  was the budgeted-arms test, fixed at `768bae7`).
+- 2026-09-07 `6e5b200` merge(cpp-ow); rebuilt; 213 engine tests green with
+  C++ as the default for rank, orbit and the ordered walk.
 
 ## Wave 2
 

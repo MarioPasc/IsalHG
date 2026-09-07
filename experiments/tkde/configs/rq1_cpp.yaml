@@ -1,0 +1,81 @@
+# RQ1 -- the C++-engine re-run of the arms that the campaign array measured
+# under Python implementations (2026-09-07).
+#
+# The author's rule: everything in the final article runs on the C++ engine.
+# The campaign array (job 2247394, configs/rq1.yaml) measured `wstar_orbit`
+# with the Python orbit engine (guarded to small members) and `isal_ow_*` with
+# the Python emitter. Waves 4 and 5 ported both to the extension, bit-identical
+# (orbit: 700/700 + 600/600 differentials; ordered walk: 23,379/23,379), so the
+# locality rows (M0, M1, M2, M4) are unchanged by construction and this
+# experiment exists to (i) re-measure M3 (cost, censoring per |Aut| bucket) on
+# the C++ engines and (ii) cover the members the Python orbit engine refused.
+# Same units, members and seeded edits as rq1.yaml (same blocks, same seed
+# index); rows join the campaign table on (collection, base_id, edit_kind,
+# edit_idx). The certificate arms ride along for M4 within one run.
+#
+# Launch: RQ1_CONFIG=$REPO_DIR/experiments/tkde/configs/rq1_cpp.yaml \
+#         bash slurm/tkde/rq1_launcher.sh
+rq: 1
+rq_folder: RQ1_addressing
+experiment: addressing_cpp
+
+collections:
+  - synthetic_rq1
+  - ndc_classes
+  - wd50k66
+
+arms:
+  - wstar_orbit            # oracle only: w*_c, orbit-pruned, C++ (budgeted)
+  - isal_ow_struct         # order only: the ordered walk, C++
+  - isal_ow_rank
+  - isal_ow_rank0
+  - nauty_cert             # for M4's rho
+  - nauty_cert_rows        # the certificate at instruction granularity
+
+pointer_budget_s: 60.0
+
+m3_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 5
+  wd50k66: 6
+
+m1_edits_per_kind: 4
+m1_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 55
+  wd50k66: 62
+
+m2_natural: [ndc_classes]
+m2_ladders: [wd50k66]
+m2_ladders_count: 1000
+m2_ladder_t_max: 5
+m2_blocks:
+  ndc_classes: 2
+  wd50k66: 4
+
+m4_random_pairs: 1000
+m4_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 4
+  wd50k66: 2
+
+# The orbit engine has a censored tail on arity-10 ndc_classes members (the
+# displacement tail, 60 s each), so the shards are sized like the campaign's.
+n_shards: 48
+
+smoke:
+  collections: [synthetic_rq1, ndc_classes]
+  member_limit: 5
+  pointer_budget_s: 5.0
+  arms: [wstar_orbit, isal_ow_struct, isal_ow_rank, isal_ow_rank0, nauty_cert, nauty_cert_rows]
+  m3_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_edits_per_kind: 2
+  m2_natural: [ndc_classes]
+  m2_ladders: [synthetic_rq1]
+  m2_ladders_count: 3
+  m2_natural_limit: 4
+  m2_blocks: {ndc_classes: 1, synthetic_rq1: 1}
+  m4_random_pairs: 5
+  m4_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  n_shards: 1

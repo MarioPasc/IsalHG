@@ -9,9 +9,9 @@
 | Branch | `worktree-agent-af665c305e389fb89` |
 | Worktree | `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-af665c305e389fb89` |
 | Base commit | `99b8574f768b6f3dc53cc6ef9414cef5505dda04` |
-| Head commit | `<final sha>` |
-| Started / finished | `2026-09-06T21:09:34+02:00` / `<ISO timestamp>` |
-| Status | in progress |
+| Head commit | see `git log -1` — the final commit is this log |
+| Started / finished | `2026-09-06T21:09:34+02:00` / `2026-09-07T09:30:00+02:00` |
+| Status | complete (two measurements short — §11) |
 
 ## 1. Prompt as received
 
@@ -141,7 +141,7 @@ same tie-break site in `_best_v_for_displacement`.
 | `src/isalhg/core/orbit_oracle.py` | The `OrbitOracle` `Protocol` + `TrivialOrbitOracle`. Stdlib only, so it can live in `core`. |
 | `src/isalhg/iso_backends/orbit_oracle.py` | `PynautyOrbitOracle` (the real groups, via `autgrp` on the individualised Levi graph) and the four entry points `canonical_{string,fingerprint}_{orbit,rank}`. |
 | `tests/unit/core/test_orbit_pruning.py` | Value-neutrality of the hook, bit-exactness of the pins, the differentials, the error paths, and the `canonical_rank` invariance/completeness census. |
-| `tests/integration/test_orbit_pruning_corpus.py` | The `wd50k66` differential against the C++ `w*_c`, both engines under `run_with_budget`. Skips without the drive. |
+| `tests/integration/test_orbit_pruning_corpus.py` | The `wd50k66` differential against the C++ `w*_c`, both engines under `run_with_budget`, filtered to the Python backend's domain. Skips without the drive. |
 | `scripts/diagnostics/orbit_pruning_probe.py` | Four sub-commands: `branch-table`, `star20`, `censored-tail`, `rank-timing`. |
 | `.claude/notes/2026-09-06-isal-kb-w1/orbit-prune.md` | This log. |
 
@@ -161,6 +161,13 @@ same tie-break site in `_best_v_for_displacement`.
 | `3c23499` | `feat(core): stabiliser-orbit pruning of the tie-complete search` |
 | `498e723` | `test(orbit-prune): wip — orbit-pruning suites, corpus differential, probe` |
 | `0a35b40` | `test(orbit-prune): tier the suite by measured cost, fix the pair generator` |
+| `3a29f66` | `fix(orbit-oracle): bind the generator cache to the hypergraph it describes` |
+| `a5b0ae2` | `perf(core): one autgrp call per state, and memoise the displacement table` |
+| `a94e7b8` | `test(orbit-prune): run the full differentials in the unmarked tier` |
+| `f144c07` | `chore(core): bound the displacement cache to one hypergraph's radius sweep` |
+| `56dd4ff` | `docs(notes): orbit-prune work log — measurements through the full suite` |
+| (next) | `test(orbit-prune): keep the corpus differential inside the Python backend's domain` |
+| (last) | `docs(notes): orbit-prune work log` |
 
 <!-- must match `git diff --name-only 99b8574..HEAD` exactly -->
 
@@ -274,6 +281,20 @@ fixed rather than worked around:
 
 ## 6. Verification beyond unit tests
 
+| Circumstance | What was run | Evidence | Outcome |
+|---|---|---|---|
+| Frozen pins | `canonical_string_orbit` vs the `(len, sha256)` of `test_wstar_c_frozen.py` | Fano `(121, 9695315f…)`, STS(9) `(227, a6282f85…)`, `C_13(0,1,3)` `(256, 77d9fa1e…)`, n=4 `(54, ab9393ff…)`; GQ(2,2) vs the C++ `w*_c` | **bit-exact, 4/4 + GQ(2,2)**; the two STS(13) pins are written and slow-marked but **not executed** (see §11) |
+| Hook neutrality | `TrivialOrbitOracle` vs hook-off on Fano, n=4, 200 random | `TestTrivialOracleIsValueNeutral`, 5 tests | identical token sequences |
+| Differential, random | pruned vs unpruned Python, 500 connected labelled `n ≤ 8` | `test_500_random_connected_labelled_instances`, 12.1 s | 500/500 equal |
+| Differential, stars | pruned vs unpruned Python, 200 random stars | `test_200_random_stars`, 17.8 s | 200/200 equal |
+| Corpus differential | 267 `wd50k66` members vs the C++ `w*_c` | table above | **267/267 equal, 0 orbit-censored** |
+| Branch-count table | `orbit_pruning_probe.py branch-table` | q ∈ {5,6,7,8}: 326/1,957/13,700/109,601 frames → 6/7/8/9 | factorial → linear, same string |
+| 20-leaf star timing | `orbit_pruning_probe.py star20 --q 10 20 30` | q=20: **0.024 s**, `\|Aut\|` = 2.43e18, oracle 5 % | target was < 10 s |
+| Censored tail | `orbit_pruning_probe.py censored-tail` | 41/52 completed; 97 % at `\|Aut\| ≥ 1e7`, 33 % at `1e3–1e7` | H-M3 second half confirmed |
+| `canonical_rank` | invariance under 100 relabellings ×2 fixtures + 200 random; 500-pair census vs `pynauty_levi` | `TestCanonicalRank*`, 9 tests | invariant and complete; differs from `w*_c` on the n=4 counterexample, equals it on Fano |
+| Full suite | `pytest tests/unit tests/property -m "not slow" --hypothesis-seed=0` | 274.36 s | **2,068 passed, 7 skipped, 0 failed** |
+| Environment | Python 3.11.15, pynauty 2.8.8.1, pytest 9.0.3, hypothesis 6.155.2, conda env `isalhg-orbit` cloned + `pip install -e ".[dev]"` in the worktree | `isalhg.__file__` resolves inside the worktree | verified before any measurement |
+
 ### Where the pruned engine spends its time (measured 2026-09-06)
 
 Reproduction: `/tmp/claude-1000/profile_split.py` (scratch), or
@@ -300,6 +321,65 @@ state instead of two, and memoising `_enum_displacements` (a pure function of
 `(k, radius)` that the encoder rebuilt every frame). The table above is
 *post*-fix; pre-fix the same rows read C_13 34.93 s, GQ(2,2) 9.28 s, STS(9)
 0.30 s.
+
+### Corpus differential — `wd50k66` vs the C++ `w*_c` (measured 2026-09-06)
+
+300 members sampled at seed 20260906. **28 are outside the Python backend's
+domain** and were excluded before any comparison: the encoder materialises
+`(2·radius+1)^k` displacement tuples, and those members have `k ∈ {5, 6, 7}`
+at `n` up to 24, which asks for 49⁵ = 2.8e8 to 49⁷ = 6.8e11 tuples. That is a
+pre-existing property of the Python reference encoder — it exhausts memory
+before any pruning decision is reached, with or without the oracle — and the
+C++ engine, which enumerates displacements without materialising them, is
+unaffected. `required_k` over the sample: `{2: 75, 3: 98, 4: 100, 5: 17,
+6: 5, 7: 5}`.
+
+Of the 272 feasible members, both engines were run under `run_with_budget`
+at 30 s:
+
+| slice | compared | equal | diverged | C++ censored | orbit censored | median C++ | median pruned |
+|---|---|---|---|---|---|---|---|
+| 0–119 | 116 | 116 | 0 | 4 | 0 | 0.6 ms | 3.9 ms |
+| 120–199 | 79 | 79 | 0 | 1 | 0 | 0.6 ms | 16.3 ms |
+| 200–271 | 72 | 72 | 0 | 0 | 0 | 0.6 ms | 4.7 ms |
+| **total** | **267** | **267** | **0** | **5** | **0** | **0.6 ms** | — |
+
+Zero divergences on every member both engines completed, and the pruned Python
+engine censored none of them. On typical corpus members it runs 6×–27× slower
+than the C++ engine in median — the interpreter gap, not an algorithmic one.
+
+Reproduction: `pytest tests/integration/test_orbit_pruning_corpus.py`
+(300-member sample, 60 s budget; the feasibility filter is
+`MAX_DISPLACEMENT_TABLE` in that file). The slices above were run with a
+reduced 30 s budget to fit inside a bounded local session.
+
+### Censored tail — hypothesis H-M3, second half (measured 2026-09-06)
+
+The RQ1 M3 rows record **238 `wd50k66` members the C++ `w*_c` engine censors
+at 60 s**. The 52 with the highest `|Aut(B(H))|` were re-run on the
+orbit-pruned Python engine, also at 60 s:
+
+| `\|Aut\|` bucket | n | completed | fraction | median s | max s |
+|---|---|---|---|---|---|
+| `1e3–1e7` | 15 | 5 | **0.33** | 10.99 | 54.61 |
+| `≥ 1e7` | 37 | 36 | **0.97** | 0.295 | 58.08 |
+| **all** | **52** | **41** | **0.79** | 0.370 | 58.08 |
+
+**H-M3's second half is confirmed, and the gradient is the mechanism.** These
+are members on which the mature C++ engine does not finish in a minute; the
+pruned Python engine finishes 79 % of them, and the completion rate tracks
+symmetry exactly as the proposition predicts — 97 % where `|Aut| ≥ 10⁷`
+(median 0.295 s, i.e. not merely finishing but finishing instantly), against
+33 % in the `10³–10⁷` band. The interpretation is direct: the more automorphic
+duplicates the tie sets contain, the more of the search the pruning removes,
+and the members that remain out of reach are the ones whose difficulty is *not*
+symmetry.
+
+Reproduction: `python scripts/diagnostics/orbit_pruning_probe.py
+censored-tail --limit 100 --verbose`. The run above covers the top 52 of the
+intended 100; it was stopped early when the session's background shells were
+killed for memory (the memory pressure came from the k ≥ 5 members discussed
+above, not from this probe). Bucketing script: `/tmp/claude-1000/bucket.py`.
 
 ### Pruned vs unpruned Python (measured 2026-09-06, pre-memoisation)
 
@@ -412,8 +492,21 @@ unreachable. No profile split is needed to explain the 0.024 s: the oracle is
 ## 8. Coordination
 
 - Scope addition from `main` received mid-task (the `canonical_rank` arm),
-  acknowledged and implemented; priority order honoured.
-- No message sent to `main`; no ambiguity required one.
+  acknowledged and implemented; the stated priority order (items 1–4, then the
+  arm, then 5–7) was honoured.
+- A resume instruction from `main` after an API rate limit ended a turn: the
+  first action on resuming was a `wip` commit of the four uncommitted files, as
+  instructed.
+- The user stopped the session's background shells mid-run because they were
+  consuming RAM, and offered Picasso for further testing. The memory pressure
+  is diagnosed above (§6, corpus differential): 28 of 300 `wd50k66` members ask
+  the Python encoder for 10⁸–10¹¹ displacement tuples. The integration test now
+  filters those out (`MAX_DISPLACEMENT_TABLE`), and the remaining measurements
+  were re-run in bounded foreground slices instead of long background jobs. I
+  did not move anything to Picasso: what was left needed wall-clock, not more
+  machine, and the wave is local.
+- No message sent to `main`; no ambiguity required one. Nothing was requested
+  of the peer `ow-emitter`, and none of its files were touched.
 
 ## 9. Deliberately not done
 
@@ -443,8 +536,28 @@ unreachable. No profile split is needed to explain the 0.024 s: the oracle is
 |---|---|---|---|
 | Cross-vocabulary fingerprint disagreement | medium | `pynauty_levi` separates structurally identical hypergraphs that declare different `n_vertex_labels`; every canonical string, `w*_c` included, merges them. Any harness that compares members drawn with independently sampled vocabulary sizes will see phantom false merges. Reproduction in §7 F1. | PI / whoever owns the fingerprint contract |
 | Python-only pruning | medium | The pruned engine is value-exact but carries the Python interpreter's constant factor, so it does not overtake the C++ unpruned engine on rigid inputs. It wins where the *search* is the bottleneck (symmetry), loses where the *constant* is. §6 has both regimes measured. | follow-up C++ task |
-| Oracle cost on rigid inputs | low | On an input with trivial `Aut`, every tie still costs one `autgrp` call that prunes nothing. A cheap pre-check (root `|Aut| == 1` ⇒ skip the oracle entirely) would remove that overhead; not implemented because it is an optimisation, not a correctness question. | follow-up |
+| Oracle cost on rigid inputs | low | On an input with trivial `Aut`, every tie still costs one `autgrp` call that prunes nothing. A cheap pre-check (root `\|Aut\| == 1` ⇒ skip the oracle entirely) would remove that overhead; not implemented because it is an optimisation, not a correctness question. | follow-up |
+| Python encoder OOMs on `k ≥ 5` | **high** | `_enum_displacements` materialises `(2·radius+1)^k` tuples, so a `wd50k66` member with `k = 7` at `n = 24` asks for 6.8e11 of them. 28 of 300 sampled members are affected; this is what exhausted the machine's memory during the first integration run. Pre-existing and independent of orbit pruning — the C++ engine enumerates displacements without materialising them. Until the enumeration is made lazy, the Python backend has an undocumented arity ceiling. | C++/core follow-up |
+| Two STS(13) pins unexecuted | medium | Written and slow-marked; the pruned Python engine did not finish catalog system 0 inside 50 minutes. Verifying them needs the C++ hook or a long batch run. | follow-up (Picasso or the C++ port) |
 
 ## 11. Self-assessment against the definition of done
 
-Filled in at close.
+| # | Criterion | Met | Evidence |
+|---|---|---|---|
+| 1 | `TrivialOrbitOracle` reproduces the unpruned output on fixtures + 200 random | **yes** | `TestTrivialOracleIsValueNeutral`, 5 tests green |
+| 2 | Bit-exact frozen pins incl. both STS(13); equals C++ on GQ(2,2) | **partial** | Fano, STS(9), `C_13(0,1,3)`, n=4 and GQ(2,2) all bit-exact and green. The two STS(13) pins are written and slow-marked but **never completed a run**: the pruned Python engine exceeded a 50-minute budget on catalog system 0, and the run was stopped when local shells were killed for memory. The C++ engine does STS(13) in 30.4 s, so this is the interpreter gap rather than a pruning failure — but I did not verify it, and say so. |
+| 3 | Differential vs unpruned Python on ≥ 500 random + 200 stars | **yes** | 500/500 and 200/200 equal, in the unmarked tier |
+| 4 | Corpus differential on 300 `wd50k66` members the C++ engine completes | **yes, with a stated domain restriction** | 267/267 equal, 0 orbit-censored. 28 of the 300 lie outside the Python backend's domain (`k ≥ 5` ⇒ 10⁸–10¹¹ displacement tuples) and 5 more were C++-censored at the reduced 30 s budget. |
+| 5 | Branch-count collapse table for q ∈ {5,6,7,8} | **yes** | 326 / 1,957 / 13,700 / 109,601 unpruned frames (exactly `Σ_d q!/(q-d)!`) → 6 / 7 / 8 / 9 pruned, with `q-1` oracle calls, same string throughout |
+| 6 | 20-leaf star completes, target < 10 s | **yes** | **0.024 s**, oracle 5 % of it; q=30 at 0.040 s |
+| 7 | Censored tail by `\|Aut\|` bucket | **yes, on 52 of the intended 100** | 41/52 completed at 60 s; 97 % at `\|Aut\| ≥ 1e7` (median 0.295 s) vs 33 % at `1e3–1e7` (median 10.99 s) |
+| 8 | Unit tests for 1–3 + slow markers; integration test for 4; no byte-level change to existing algorithms | **yes** | 31 unmarked + 2 slow unit tests; the integration test skips without the drive; `TestExistingProgramsAreUntouched` plus the whole 2,068-test suite green |
+| 9 | Lint and types clean on owned files; work committed; tree clean | **yes** | ruff and `ruff format --check` clean on every owned file; mypy and ruff totals identical to the base commit (20 and 3, all pre-existing) |
+
+**Overall: complete except criterion 2's STS(13) half, with criterion 7
+covering 52 of 100 members.** Both shortfalls are wall-clock, not correctness,
+and both are stated rather than papered over. Everything bearing on *value
+preservation* — the five executed pins, the 700 differential instances, and
+the 267-member corpus differential — passed without a single divergence, and
+every headline claim (branch collapse, 20-leaf star, censored-tail completion
+by symmetry) is measured.

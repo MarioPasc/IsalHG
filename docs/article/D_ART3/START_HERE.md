@@ -57,6 +57,15 @@ framing and the canonical-word metric are verified novel
 > An agent is being spawned to design the nauty-assisted Isal variants; its
 > brief is `experiments/ISAL_REFINEMENT_BRIEF.md` (read it first if that is
 > your task).
+>
+> **Done 2026-09-06/07 — read `experiments/HANDOFF_2026-09-07_isal.md`
+> first.** The design is pre-registered in
+> `experiments/ISAL_VARIANT_DESIGN.md` (with its measured deviations in §9),
+> the theory is `theorem_c_ordered_walk.tex` on the drive, three canonical
+> programs run on the C++ engine, and the RQ1 campaign of the four-cell
+> nauty ablation is on Picasso. `prose.md` §2–§4, §6 and §11 are rewritten
+> for the Isal word; §0–§8 below and §6.0 describe the superseded fact-rank
+> decision.
 
 ## 0.1 What a takeover agent should do next
 

@@ -292,6 +292,44 @@ branch per orbit; the string returned is the frozen `w*_c`."
 
 ---
 
+## 9. Measured deviations from this pre-registration (appended 2026-09-07)
+
+Recorded here so the pre-registration above stays as written; the full
+record is `.claude/notes/2026-09-06-isal-kb-w1/summary.md` and the handoff
+`HANDOFF_2026-09-07_isal.md`.
+
+1. **Move rule revised** (§1): the "shorter direction" rule was measured on
+   400 random binary stars and falsified Prop. C.5 (forward-rendered runs
+   grow with the word); replaced by the no-crossing rule, under which the
+   proposition holds exactly (max 2 / max 3).
+2. **H-M1a falsified for the ordered walk on insertions** (local preview,
+   60 members × 3 corpora): the breadth-first-by-anchor order defers a
+   constant's facts and pays excursions (median 13–17 instructions) where
+   `w*_c`'s greedy walk pays 4–8. H-M1b holds for root-anchored growth
+   (median 1 vs 12 certificate rows) and fails elsewhere. **Unpredicted:**
+   every Isal walk is the most local representation under deletions
+   (median 1–3 vs 10–15.5 rows). The "both" cell `wstar_rank` is therefore
+   the representation candidate; its own row is being measured.
+3. **H-M3 confirmed** for the ordered walk (0.08 ms, 0 censoring) and, in
+   C++, for orbit pruning: 98/100 of the highest-|Aut| censored WD50K members
+   complete (37/37 at |Aut| ≥ 1e7, median 3 ms); NDC 48/100 because its tail
+   is arity-10 displacement, not symmetry.
+4. **H-M1d only half confirmed**: `struct` wins; `rank0` beats `rank` on the
+   ≤ 2 fraction.
+5. **Article rule (author, 2026-09-07):** everything in the final article
+   runs on the C++ engine. All three programs were ported, bit-identical
+   (rank: 1,000 + 300 + 300; orbit: 700 + 600; ordered walk: 23,379
+   member-policy comparisons incl. both full corpora).
+6. **Defects found:** the first Python `canonical_rank` applied ranks at
+   depth 0 only (fixed, pinned); the Python engines' memory grows with the
+   cumulative displacement enumeration (guarded); the rank engine ran
+   unbudgeted in-process (budgeted); the runner hardcoded the experiment
+   name and lost a run's rows (fixed). Listed in the handoff §6.
+7. **Campaign status:** three RQ1 experiments on identical seeded units
+   (jobs 2247394+2247395, 2248782, 2248907+2248908); merged by one source
+   per arm with `experiments/tkde/merge_rq1_experiments.py`; the campaign
+   table and the selection are pending their completion.
+
 ## 8. Points that need the PI (flagged, not decided here)
 
 1. **D-TA2 and the representation.** `w°` is a second canonical form of the

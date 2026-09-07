@@ -440,6 +440,24 @@ be submitted after the sync.
   the merge + analyzer on the partial pull was declined by the user (no
   local runs); it will be exercised on the harvested data.
 
+## 2026-09-07 22:10 — handoff written; session closing
+
+- `docs/article/D_ART3/experiments/HANDOFF_2026-09-07_isal.md`: state, rules,
+  jobs, the monitor command, the harvest → merge → analyze → decide path,
+  the RQ2–RQ7 plan with its budgeting hazards, the writing plan, the
+  defects table, the follow-ups, and the model recommendation (Opus xhigh
+  suffices; re-engage a top-tier session only if the RQ1 table reopens the
+  design).
+- `prose.md` §2.1 (roles), §2.2, §2.3, §3 RQ1, §4 (Thm 3, Props 10–12,
+  Obs 13–14, the retired record row), §6 (nauty's sentence), §11.1, §11.2,
+  §12 rewritten for the Isal word; campaign numbers marked *pending*.
+- Design record §9 (measured deviations); `START_HERE.md` pointer;
+  `DEVELOPMENT/README.md` row; ledger: T-KBb/T-KBd → IN-PROGRESS (code
+  done, re-measure pending), T-KBe (harvest/table/decision), T-KBf
+  (RQ2–RQ7 swap), T-KBg (prose + PI reading) opened.
+- Cluster at 22:0x: main array 22 completed / 8 OOM (pre-guard) / 16
+  running, sweep pending; rank sweep 6/8; cpp array 12/16.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

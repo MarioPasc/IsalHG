@@ -374,6 +374,19 @@ class TestOrbitFingerprint:
 class TestCanonicalRankInvariance:
     """``F_rank`` is constant on isomorphism classes."""
 
+    @staticmethod
+    def _reorder_edges(H: SparseHypergraph, order: list[int]) -> SparseHypergraph:
+        """The same hypergraph, with its edges inserted in ``order``."""
+        eids = list(H.edges())
+        return SparseHypergraph(
+            n_nodes=H.n_nodes,
+            hyperedges=[H.members(eids[i]) for i in order],
+            n_vertex_labels=H.n_vertex_labels,
+            n_edge_labels=H.n_edge_labels,
+            vertex_labels=[H.vertex_label(v) for v in H.nodes()],
+            edge_labels=[H.edge_label(eids[i]) for i in order],
+        )
+
     @pytest.mark.parametrize("fixture_name", ["fano_plane", "sts_9"])
     def test_invariant_under_100_relabellings(
         self, fixture_name: str, request: pytest.FixtureRequest
@@ -394,6 +407,26 @@ class TestCanonicalRankInvariance:
             rng.shuffle(order)
             assert canonical_fingerprint_rank(H) == canonical_fingerprint_rank(permute(H, order)), (
                 f"instance {i} not invariant"
+            )
+
+    def test_invariant_under_edge_insertion_order_on_400_instances(self) -> None:
+        """Edge ids must not be observable.
+
+        ``permute`` relabels vertices but preserves edge ids, so the relabelling
+        tests above cannot see a residual tie broken by edge id. This one
+        rebuilds the same hypergraph with its edges inserted in a shuffled
+        order, which is exactly what the rank key exists to make irrelevant.
+        """
+        rng = random.Random(20260907)
+        for i in range(400):
+            H = _random_connected(rng)
+            k = _arity_k(H)
+            expected = canonical_fingerprint_rank(H, k=k)
+            order = list(range(H.n_edges))
+            rng.shuffle(order)
+            G = self._reorder_edges(H, order)
+            assert canonical_fingerprint_rank(G, k=k) == expected, (
+                f"instance {i} depends on edge insertion order"
             )
 
 

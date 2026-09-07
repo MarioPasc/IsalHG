@@ -65,7 +65,7 @@ There are two extension paths:
 from __future__ import annotations
 
 from collections import Counter
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from isalhg.core._core import canonical_string as _core_canonical_string
 from isalhg.core.algorithms.registry import get_algorithm
@@ -98,8 +98,8 @@ CANONICAL_ORBIT_ALGORITHM: str = "canonical_orbit"
 # A *different* canonical program: the family's greedy walk (no tie branching)
 # with the residual V tie and the new-vertex ordering resolved by a supplied
 # canonical rank vector instead of by raw ids. Complete and iso-invariant
-# because the ranks are, but its string is not ``w*_c``. Python backend only,
-# and requires ``ranks``.
+# because the ranks are, but its string is not ``w*_c``. Requires ``ranks``;
+# available on both backends (C++ variant 8).
 CANONICAL_RANK_ALGORITHM: str = "canonical_rank"
 
 # Registry of C++ ``AlgorithmVariant`` ids — see
@@ -122,6 +122,12 @@ _CPP_VARIANT_IDS: dict[str, int] = {
     # rest resolve the residual V tie by raw edge id. Renamed at T-TAg to
     # reflect the output (the canonical form w*_c) rather than the search strategy.
     CANONICAL_ALGORITHM: 7,
+    # T-KB — the greedy walk keyed by a supplied canonical rank vector. Both
+    # branch sets collapse to a singleton, so the walk is a single
+    # deterministic path; unlike variant 7 it does not compute ``w*_c``.
+    # Dispatched through its own branch in :func:`canonical_string` because it
+    # needs the extra ``ranks`` argument at the FFI boundary.
+    CANONICAL_RANK_ALGORITHM: 8,
 }
 
 
@@ -225,6 +231,41 @@ def _python_canonical_rank_string(
     return serialize(list(tokens))
 
 
+def _cpp_canonical_rank_string(
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    ranks: Sequence[int],
+) -> str:
+    """C++-backed twin of :func:`_python_canonical_rank_string`.
+
+    Emits the identical string. The C++ engine enumerates displacements by
+    ascending cost class with an inverted fallback rather than materialising
+    ``(2r+1)^k`` tuples, so it stays feasible at the arities the Python
+    reference cannot reach.
+    """
+    if not H.is_connected():
+        raise DisconnectedHypergraphError(
+            f"{CANONICAL_RANK_ALGORITHM} requires a connected hypergraph (decision B11)"
+        )
+    if len(ranks) != H.n_nodes:
+        raise ValueError(f"ranks has length {len(ranks)}, expected {H.n_nodes}")
+    return _core_canonical_string(
+        H,
+        k,
+        structural_depth,
+        _CPP_VARIANT_IDS[CANONICAL_RANK_ALGORITHM],
+        0,
+        list(ranks),
+    )
+
+
+_CANONICAL_RANK_STRING_BACKENDS: dict[str, Callable[..., str]] = {
+    "python": _python_canonical_rank_string,
+    "cpp": _cpp_canonical_rank_string,
+}
+
+
 def _cpp_canonical_string(
     H: SparseHypergraph,
     k: int,
@@ -296,7 +337,9 @@ def canonical_string(
         returned string is ``w*_c``, bit for bit.
     ranks : Sequence[int] or None, optional
         Required by, and accepted only for, ``algorithm="canonical_rank"``:
-        a canonical rank per vertex, ``len(ranks) == H.n_nodes``.
+        a canonical rank per vertex, a permutation of ``range(H.n_nodes)``.
+        Both backends implement the variant and return the identical string;
+        ``"cpp"`` is the default and the only one feasible above arity 4.
 
     Returns
     -------
@@ -354,12 +397,8 @@ def canonical_string(
     if algorithm == CANONICAL_RANK_ALGORITHM:
         if ranks is None:
             raise ValueError(f"algorithm={CANONICAL_RANK_ALGORITHM!r} requires ranks")
-        if backend not in (None, "python"):
-            raise ValueError(
-                f"algorithm={CANONICAL_RANK_ALGORITHM!r} is implemented on the Python "
-                f"backend only; got backend={backend!r}"
-            )
-        return _python_canonical_rank_string(H, effective_k, structural_depth, ranks)
+        rank_impl = resolve(backend, _CANONICAL_RANK_STRING_BACKENDS)
+        return rank_impl(H, effective_k, structural_depth, ranks)
     if algorithm in _CPP_VARIANT_IDS:
         impl = resolve(backend, _CANONICAL_STRING_BACKENDS)
         return impl(H, effective_k, structural_depth, algorithm, max_expansions)

@@ -43,9 +43,12 @@ altering what it returns or how it decides:
   so the shortlex minimum is unchanged: the emitted tokens are the unpruned
   ones bit for bit. Only honoured together with ``tie_branch=True``.
 - ``ranks`` replaces the residual edge-id tie-break by a canonical rank key
-  and the label-respecting orderings by the single ``(label, rank)`` order.
-  That is a *different* canonical program (``canonical_rank``), not a
-  pruning of this one; it is mutually exclusive with ``tie_branch=True``.
+  and the label-respecting orderings by the single ``(label, rank)`` order,
+  at *every* frame of the walk. Both branch sets collapse to a singleton, so
+  the walk is one deterministic path and its output is a function of the
+  labelled hypergraph rather than of the edge insertion order. That is a
+  *different* canonical program (``canonical_rank``), not a pruning of this
+  one; it is mutually exclusive with ``tie_branch=True``.
 
 Neither hook exists on the C++ path; requesting one there raises rather than
 silently running the unhooked search.
@@ -484,6 +487,7 @@ def _encode_from(
                 inplace=True,
                 tie_branch=tie_branch,
                 orbit_oracle=orbit_oracle,
+                ranks=ranks,
                 stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
@@ -503,6 +507,7 @@ def _encode_from(
             inplace=False,
             tie_branch=tie_branch,
             orbit_oracle=orbit_oracle,
+            ranks=ranks,
             stats=stats,
             _counter=_counter,
             _max_expansions=_max_expansions,
@@ -586,6 +591,7 @@ def _encode_from(
                 inplace=True,
                 tie_branch=tie_branch,
                 orbit_oracle=orbit_oracle,
+                ranks=ranks,
                 stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
@@ -618,6 +624,7 @@ def _encode_from(
                 inplace=False,
                 tie_branch=tie_branch,
                 orbit_oracle=orbit_oracle,
+                ranks=ranks,
                 stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,

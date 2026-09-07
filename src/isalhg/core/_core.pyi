@@ -9,6 +9,8 @@ Python shims that consume it.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 
 def ping() -> str: ...
@@ -33,6 +35,7 @@ def canonical_string(
     structural_depth: int,
     algorithm_id: int,
     max_expansions: int = 0,
+    ranks: Sequence[int] | None = None,
 ) -> str: ...
 def string_to_hypergraph_raw(
     s: str,

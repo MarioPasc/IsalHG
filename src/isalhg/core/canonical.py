@@ -65,6 +65,7 @@ There are two extension paths:
 from __future__ import annotations
 
 from collections import Counter
+from collections.abc import Sequence
 
 from isalhg.core._core import canonical_string as _core_canonical_string
 from isalhg.core.algorithms.registry import get_algorithm
@@ -72,6 +73,7 @@ from isalhg.core.backends import Backend, resolve
 from isalhg.core.hypergraph_to_string import _python_greedy_h2s
 from isalhg.core.hypergraph_wl import _python_wl_hash
 from isalhg.core.instructions import TokenV, parse, sequence_sort_key, serialize
+from isalhg.core.orbit_oracle import OrbitOracle
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import (
     _python_max_neighbor_degree_nodes,
@@ -85,6 +87,20 @@ from isalhg.types import VertexLabel
 # Referenced by :class:`isalhg.metric_space.distances.IsalHGLevenshtein`
 # to guard against misuse of the greedy one-sided heuristics for ``d_I``.
 CANONICAL_ALGORITHM: str = "canonical"
+
+# Same canonical form as CANONICAL_ALGORITHM, computed by the orbit-pruned
+# search: at every residual tie the branch set is reduced to one representative
+# per stabiliser orbit. Value-preserving (the pruning proposition), so the
+# string is ``w*_c`` bit for bit; Python backend only, and requires an
+# ``orbit_oracle``.
+CANONICAL_ORBIT_ALGORITHM: str = "canonical_orbit"
+
+# A *different* canonical program: the family's greedy walk (no tie branching)
+# with the residual V tie and the new-vertex ordering resolved by a supplied
+# canonical rank vector instead of by raw ids. Complete and iso-invariant
+# because the ranks are, but its string is not ``w*_c``. Python backend only,
+# and requires ``ranks``.
+CANONICAL_RANK_ALGORITHM: str = "canonical_rank"
 
 # Registry of C++ ``AlgorithmVariant`` ids — see
 # ``src/isalhg/core/_native/include/isalhg/canonical.hpp``. Extend via
@@ -137,6 +153,7 @@ def _python_canonical_string(
     structural_depth: int,
     algorithm: str,
     max_expansions: int | None = None,
+    orbit_oracle: OrbitOracle | None = None,
 ) -> str:
     """Pure-Python multi-seed canonical-string for the native variants.
 
@@ -163,6 +180,8 @@ def _python_canonical_string(
         min_colour = min(colours[s] for s in seeds)
         seeds = tuple(s for s in seeds if colours[s] == min_colour)
     tie_branch = algorithm == CANONICAL_ALGORITHM
+    if orbit_oracle is not None:
+        seeds = tuple(orbit_oracle.seed_representatives(H, list(seeds)))
     candidates = [
         _python_greedy_h2s(
             H,
@@ -171,11 +190,39 @@ def _python_canonical_string(
             inplace=tie_branch,
             tie_branch=tie_branch,
             max_expansions=max_expansions,
+            orbit_oracle=orbit_oracle,
         )
         for s in seeds
     ]
     best = min(candidates, key=sequence_sort_key)
     return serialize(list(best))
+
+
+def _python_canonical_rank_string(
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    ranks: Sequence[int],
+) -> str:
+    """Single-run greedy walk with the residual tie broken by canonical rank.
+
+    The seed loop collapses too: the seed set ``S(H)`` is iso-invariant and the
+    ranks are a canonical total order on it, so the minimum-rank member is a
+    canonical choice and the remaining seeds cannot improve on it in any
+    isomorphism-invariant way.
+    """
+    if not H.is_connected():
+        raise DisconnectedHypergraphError(
+            f"{CANONICAL_RANK_ALGORITHM} requires a connected hypergraph (decision B11)"
+        )
+    if len(ranks) != H.n_nodes:
+        raise ValueError(f"ranks has length {len(ranks)}, expected {H.n_nodes}")
+    seeds = _python_max_neighbor_degree_nodes(H)
+    if not seeds:
+        return ""
+    seed = min(seeds, key=lambda v: ranks[v])
+    tokens = _python_greedy_h2s(H, seed_node=seed, k=k, inplace=True, ranks=ranks)
+    return serialize(list(tokens))
 
 
 def _cpp_canonical_string(
@@ -209,6 +256,8 @@ def canonical_string(
     algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
     max_expansions: int | None = None,
+    orbit_oracle: OrbitOracle | None = None,
+    ranks: Sequence[int] | None = None,
 ) -> str:
     """Compute the canonical ``Sigma_HG*`` string of ``H``.
 
@@ -241,6 +290,13 @@ def canonical_string(
         variants (``exhaustive``, ``pruned_exhaustive``, plus any
         user-registered Python algorithm) ignore this flag and use the
         Python algorithm registry.
+    orbit_oracle : OrbitOracle or None, optional
+        Required by, and accepted only for, ``algorithm="canonical_orbit"``:
+        the stabiliser-orbit oracle that prunes the tie-complete search. The
+        returned string is ``w*_c``, bit for bit.
+    ranks : Sequence[int] or None, optional
+        Required by, and accepted only for, ``algorithm="canonical_rank"``:
+        a canonical rank per vertex, ``len(ranks) == H.n_nodes``.
 
     Returns
     -------
@@ -266,6 +322,44 @@ def canonical_string(
             "breaks identity of indiscernibles for d_I. Restrict your corpus to n ≥ 1."
         )
     effective_k = required_k(H) if k is None else k
+    if orbit_oracle is not None and algorithm != CANONICAL_ORBIT_ALGORITHM:
+        raise ValueError(
+            f"orbit_oracle is only honoured by algorithm={CANONICAL_ORBIT_ALGORITHM!r}, "
+            f"got {algorithm!r}"
+        )
+    if ranks is not None and algorithm != CANONICAL_RANK_ALGORITHM:
+        raise ValueError(
+            f"ranks is only honoured by algorithm={CANONICAL_RANK_ALGORITHM!r}, got {algorithm!r}"
+        )
+    if algorithm == CANONICAL_ORBIT_ALGORITHM:
+        if orbit_oracle is None:
+            raise ValueError(
+                f"algorithm={CANONICAL_ORBIT_ALGORITHM!r} requires an orbit_oracle; "
+                "pass isalhg.iso_backends.orbit_oracle.PynautyOrbitOracle(), or use "
+                f"algorithm={CANONICAL_ALGORITHM!r} for the unpruned search"
+            )
+        if backend not in (None, "python"):
+            raise ValueError(
+                f"algorithm={CANONICAL_ORBIT_ALGORITHM!r} is implemented on the Python "
+                f"backend only; got backend={backend!r}"
+            )
+        return _python_canonical_string(
+            H,
+            effective_k,
+            structural_depth,
+            CANONICAL_ALGORITHM,
+            max_expansions,
+            orbit_oracle=orbit_oracle,
+        )
+    if algorithm == CANONICAL_RANK_ALGORITHM:
+        if ranks is None:
+            raise ValueError(f"algorithm={CANONICAL_RANK_ALGORITHM!r} requires ranks")
+        if backend not in (None, "python"):
+            raise ValueError(
+                f"algorithm={CANONICAL_RANK_ALGORITHM!r} is implemented on the Python "
+                f"backend only; got backend={backend!r}"
+            )
+        return _python_canonical_rank_string(H, effective_k, structural_depth, ranks)
     if algorithm in _CPP_VARIANT_IDS:
         impl = resolve(backend, _CANONICAL_STRING_BACKENDS)
         return impl(H, effective_k, structural_depth, algorithm, max_expansions)
@@ -332,6 +426,8 @@ def canonical_fingerprint(
     algorithm: str = CANONICAL_ALGORITHM,
     backend: Backend | None = None,
     max_expansions: int | None = None,
+    orbit_oracle: OrbitOracle | None = None,
+    ranks: Sequence[int] | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute the augmented fingerprint ``F(H) = (seed label, w*(H))``.
 
@@ -350,6 +446,8 @@ def canonical_fingerprint(
         Forwarded verbatim to :func:`canonical_string`.
     max_expansions : int or None, optional
         V-branch expansion budget per seed run; ``None`` (default) is unlimited.
+        Forwarded verbatim to :func:`canonical_string`.
+    orbit_oracle, ranks
         Forwarded verbatim to :func:`canonical_string`.
 
     Returns
@@ -371,5 +469,7 @@ def canonical_fingerprint(
         algorithm=algorithm,
         backend=backend,
         max_expansions=max_expansions,
+        orbit_oracle=orbit_oracle,
+        ranks=ranks,
     )
     return seed_vertex_label(H, w), w

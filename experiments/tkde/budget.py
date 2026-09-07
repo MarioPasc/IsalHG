@@ -200,18 +200,159 @@ def _pointer_payload(H: Any, k: int) -> tuple[str, int]:
     return word, int(seed_vertex_label(H, word))
 
 
-def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
-    """Canonical pointer string ``w*_c(H)`` under a process-level budget.
+def _engine_payload(H: Any, k: int, engine: str) -> tuple[str, int]:
+    """``(word, seed vertex label)`` of one nauty-assisted Python engine.
+
+    The two engines return the fingerprint the other way round -- ``(seed
+    label, word)`` -- because that is the shape the completeness proof states;
+    the tuple is flipped here so every budgeted engine, C++ or Python, hands
+    back one shape and :func:`pointer_symbols` reads all of them.
+    """
+    import importlib
+
+    module = importlib.import_module("isalhg.iso_backends.orbit_oracle")
+    entry = {
+        "rank": "canonical_fingerprint_rank",
+        "orbit": "canonical_fingerprint_orbit",
+    }[engine]
+    seed_label, word = getattr(module, entry)(H, k=k)
+    return str(word), int(seed_label)
+
+
+#: The engines :func:`engine_word` can drive, in the order the design lists them.
+ENGINES: tuple[str, ...] = ("cpp", "rank", "orbit")
+
+_CPP_FORK_HEALTH: bool | None = None
+
+_POISONED = (
+    "the C++ canonicalizer has already run in this process, so a forked child "
+    "deadlocks on it and every result here would be a false censoring; route "
+    "every cpp canonicalization through engine_word, or run this measurement in "
+    "a fresh process"
+)
+
+
+def _canary() -> str:
+    """The cheapest possible C++ canonicalization: two vertices, one edge."""
+    from isalhg.core.canonical import canonical_string
+    from isalhg.core.sparse_hypergraph import SparseHypergraph
+
+    return canonical_string(
+        SparseHypergraph(2, [frozenset({0, 1})]), k=2, algorithm="canonical", backend="cpp"
+    )
+
+
+def cpp_fork_is_healthy(*, recheck: bool = False) -> bool:
+    """Whether a forked child of *this* process can still run the C++ engine.
+
+    **A forked child cannot use the C++ canonicalizer if the parent has already
+    used it.** Measured 2026-09-07: a first ``canonical_string(...,
+    backend="cpp")`` in the parent leaves the extension in a state the child
+    inherits and deadlocks on, so every subsequent budgeted call runs to its
+    budget and is reported ``censored=True`` -- a *false* censoring,
+    indistinguishable in the rows from a genuine one. A child of the same
+    poisoned parent computing the *python* backend, or anything else at all, is
+    unaffected; only the C++ path hangs.
+
+    The campaign's runners route every C++ canonicalization through
+    :func:`engine_word`, so the parent never touches the engine and the hazard
+    does not arise there. It arises in any process that mixes the two -- a
+    notebook, a probe, or a pytest session whose earlier tests exercised the
+    engine directly.
+
+    This canary is a single fork of a two-vertex hypergraph, memoised per
+    process, so it costs milliseconds once and converts a silently corrupted
+    censoring column into a loud failure. Poisoning is one-way and permanent, so
+    a ``True`` verdict can go stale but a ``False`` one cannot;
+    :func:`engine_word` therefore rechecks on -- and only on -- a censored
+    result, which is the one outcome the two states are confusable in.
+
+    Parameters
+    ----------
+    recheck : bool, optional
+        Re-run the canary instead of answering from the memo.
+
+    Returns
+    -------
+    bool
+        True when a forked child completed the canary.
+    """
+    global _CPP_FORK_HEALTH
+    if recheck or _CPP_FORK_HEALTH is None:
+        _CPP_FORK_HEALTH = run_with_budget_detail(_canary, (), seconds=20.0).ok
+        if not _CPP_FORK_HEALTH:
+            logger.error(
+                "the C++ canonicalizer has already run in this process, so a forked "
+                "child deadlocks on it; every budgeted cpp call here would be "
+                "reported censored without having been computed"
+            )
+    return _CPP_FORK_HEALTH
+
+
+def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> BudgetResult:
+    """A canonical ``Sigma_HG`` word under a process-level budget.
+
+    Three engines produce a ``Sigma_HG`` word that cannot be bounded from inside
+    Python: ``"cpp"`` (``w*_c`` in the C++ extension -- the SIGALRM handler never
+    runs), and the two nauty-assisted Python engines ``"rank"`` and ``"orbit"``,
+    whose search is a deep recursion with no time check of its own. All three go
+    through the same forked child, so a censored row means the same thing for
+    each.
 
     Parameters
     ----------
     H : SparseHypergraph
-        A **connected** knowledge base; the arm raises on disconnected input
+        A **connected** knowledge base; the arms raise on disconnected input
         (decision B11, restated in ``COMPETITOR_AUDIT.md`` §3).
     k : int
         Pointer count. Two knowledge bases compared through their strings must
         be encoded with the same ``k`` (``DESIGN.md`` RQ1 arm A: the pair
         maximum).
+    seconds : float, optional
+        Budget. Default 60, the design's value.
+    engine : {"cpp", "rank", "orbit"}, optional
+        Which engine computes the word. Default ``"cpp"``.
+
+    Returns
+    -------
+    BudgetResult
+        ``value`` is ``(word, seed_vertex_label)``.
+
+    Raises
+    ------
+    TkdeBudgetError
+        If ``engine`` is not one of the three, ``seconds`` is not positive, or
+        the C++ engine has already run in this process (see
+        :func:`cpp_fork_is_healthy`) -- in which case every censored row this
+        call could produce would be a fiction, so it refuses instead.
+    """
+    if engine not in ENGINES:
+        raise TkdeBudgetError(f"unknown engine {engine!r}; expected one of {ENGINES}")
+    if engine != "cpp":
+        return run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
+
+    if not cpp_fork_is_healthy():
+        raise TkdeBudgetError(_POISONED)
+    result = run_with_budget_detail(_pointer_payload, (H, k), seconds)
+    # A censoring is the only outcome a deadlocked child and a genuinely slow
+    # one produce alike, so it is the only one worth paying a second canary for.
+    if result.censored and not cpp_fork_is_healthy(recheck=True):
+        raise TkdeBudgetError(_POISONED)
+    return result
+
+
+def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
+    """Canonical pointer string ``w*_c(H)`` under a process-level budget.
+
+    The ``engine="cpp"`` case of :func:`engine_word`, kept as its own name
+    because that is what the campaign's existing rows were measured under.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        A **connected** knowledge base.
+    k : int
+        Pointer count.
     seconds : float, optional
         Budget. Default 60, the design's value.
 
@@ -220,7 +361,7 @@ def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:
     BudgetResult
         ``value`` is ``(w_star, seed_vertex_label)``.
     """
-    return run_with_budget_detail(_pointer_payload, (H, k), seconds)
+    return engine_word(H, k, seconds, engine="cpp")
 
 
 def pointer_symbols(word: str, seed_label: int, *, augment: bool) -> tuple[Any, ...]:

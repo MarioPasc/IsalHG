@@ -65,10 +65,14 @@ RQ_DIR = "RQ4_screen"
 ROWS_SUBDIR = "rows"
 RQ_INDEX = 4
 
-#: DESIGN.md §5 Scores. ``fact_rank`` and ``nauty_cert`` are the exact arms
-#: H4a is about; the last two are the mandatory naive floors.
+#: DESIGN.md §5 Scores. The exact arms H4a is about are ``fact_rank``,
+#: ``nauty_cert`` and the two Isal instruction words (both complete invariants:
+#: Theorem C for the ordered walk, the tie-complete argument for ``wstar_rank``);
+#: the last two are the mandatory naive floors.
 DEFAULT_ARMS: tuple[str, ...] = (
     "fact_rank",
+    "isal_ow_struct",
+    "wstar_rank",
     "nauty_cert",
     "wl_l1",
     "netlsd",
@@ -77,7 +81,7 @@ DEFAULT_ARMS: tuple[str, ...] = (
     "degree_seq_l1",
     "size_l1",
 )
-EXACT_ARMS: tuple[str, ...] = ("fact_rank", "nauty_cert")
+EXACT_ARMS: tuple[str, ...] = ("fact_rank", "isal_ow_struct", "wstar_rank", "nauty_cert")
 FLOOR_ARMS: tuple[str, ...] = ("degree_seq_l1", "size_l1")
 
 #: ``(corruption, budget)``. ``iso_twin`` ignores its budget -- it applies as
@@ -886,7 +890,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     corruptions = build_corruptions(config, smoke=args.smoke)
     n_seeds = 2 if args.smoke else int(config.get("n_seeds", 27))
     arms = (
-        ("fact_rank", "nauty_cert", "size_l1")
+        ("fact_rank", "isal_ow_struct", "nauty_cert", "size_l1")
         if args.smoke
         else tuple(str(a) for a in config.get("arms", DEFAULT_ARMS))
     )

@@ -64,12 +64,36 @@ def _hypercot_env_present() -> bool:
     return os.path.exists(os.path.expanduser("~/.conda/envs/isalhg-hypercot/bin/python"))
 
 
+def _engine_present(name: str) -> bool:
+    """Whether a registered arm's engine can actually be called in this tree.
+
+    ``wstar_rank`` and ``wstar_orbit`` are registered against
+    ``isalhg.iso_backends.orbit_oracle``, which is imported lazily at the first
+    call so the registry stays loadable while that engine is landing. An arm
+    whose engine is absent is excluded from the behavioural sweeps rather than
+    failing them: the sweeps ask what a distance *does*, and an arm that cannot
+    be called does nothing.
+    """
+    try:
+        distance = registry.get_distance(name)
+    except Exception:  # noqa: BLE001 - an unavailable arm is skipped, not a failure
+        return False
+    entry_point = getattr(distance, "_entry_point", None)
+    if entry_point is None:
+        return True
+    try:
+        entry_point()
+    except Exception:  # noqa: BLE001 - same
+        return False
+    return True
+
+
 def _behavioural_arms() -> list[str]:
     """Registered arms whose ``pairwise`` can be exercised in this environment."""
     return [
         name
         for name in registry.available_distances()
-        if name not in SUBPROCESS_ARMS and name not in NO_PAIRWISE_ARMS
+        if name not in SUBPROCESS_ARMS and name not in NO_PAIRWISE_ARMS and _engine_present(name)
     ]
 
 

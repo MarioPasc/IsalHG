@@ -40,7 +40,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.tkde import corpora as corpora_io
-from experiments.tkde.budget import pointer_symbols, pointer_word, symbol_distance
+from experiments.tkde.budget import engine_word, pointer_symbols, symbol_distance
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 
@@ -53,15 +53,37 @@ EXPERIMENT = "addressing"
 POINTER_ARM = "isalhg_levenshtein"
 ROLES_ARM = "fact_rank_roles"
 CERT_ARM = "nauty_cert"
+CERT_ROWS_ARM = "nauty_cert_rows"
+
+#: The Isal instruction word of the ordered walk (Theorem C), one arm per
+#: emission policy. Exact, `k`-free and cheap enough to run unbudgeted.
+OW_ARMS: tuple[str, ...] = ("isal_ow_struct", "isal_ow_rank", "isal_ow_rank0")
+
+#: Arm -> :func:`experiments.tkde.budget.engine_word` engine, for the arms whose
+#: search does not return to the interpreter on time-out and must therefore be
+#: bounded by a forked child. ``wstar_rank`` is deliberately absent: its greedy
+#: walk terminates in milliseconds, so it goes through ``get_distance`` like the
+#: ordered-walk arms and pays no fork.
+BUDGETED_ARMS: dict[str, str] = {POINTER_ARM: "cpp", "wstar_orbit": "orbit"}
+
+#: ``|Aut|`` strata of the coloured Levi graph. The labels are decade
+#: groupings, so the middle bucket is ``[1e3, 1e7)`` and the three are
+#: exhaustive.
+AUT_BUCKETS: tuple[tuple[float, str], ...] = ((1e3, "<1e3"), (1e7, "1e3-1e6"))
+AUT_BUCKET_TOP = ">=1e7"
 
 DEFAULT_ARMS: tuple[str, ...] = (
     POINTER_ARM,
+    "wstar_rank",
+    "wstar_orbit",
+    *OW_ARMS,
     "fact_rank",
     ROLES_ARM,
     "fact_local_colour",
     "fact_local_key",
     "fact_degree_key",
     CERT_ARM,
+    CERT_ROWS_ARM,
 )
 
 UNIVERSAL_COLUMNS: tuple[str, ...] = ("rq", "experiment", "git_sha", "host_cpu")
@@ -87,8 +109,11 @@ COLUMNS_M1: tuple[str, ...] = (
     "edit_idx",
     "regime",
     "zero_shift",
+    "aut_bucket",
     "arm",
     "d_abs",
+    "d_instr",
+    "n_instr",
     "len_base",
     "len_edit",
     "secs_canon",
@@ -117,8 +142,10 @@ COLUMNS_M3: tuple[str, ...] = (
     "n",
     "m",
     "k",
+    "aut_bucket",
     "arm",
     "tokens",
+    "n_instr",
     "secs",
     "censored",
 )
@@ -227,7 +254,10 @@ def deploy_stamps(repo_dir: Path | str | None = None) -> dict[str, str]:
     -------
     dict
         ``runner_deploy`` and ``src_deploy``, each the stamp's text or a short
-        note saying why it is unavailable.
+        note saying why it is unavailable, plus ``isalhg_path`` and
+        ``isalhg_git_sha`` -- the resolved package file and the head of the tree
+        it came out of. The deploy stamps are written by the cluster sync and
+        are absent on a local run, where those last two are the whole answer.
     """
     import os
 
@@ -245,7 +275,42 @@ def deploy_stamps(repo_dir: Path | str | None = None) -> dict[str, str]:
             stamps[name] = stamp.read_text(encoding="utf-8").strip()
         except OSError:
             stamps[name] = f"absent at {stamp}"
+    stamps.update(library_provenance())
     return stamps
+
+
+def library_provenance() -> dict[str, str]:
+    """Name the tree that actually served ``isalhg``, and its git head.
+
+    The PEP 660 editable finder is consulted before ``sys.path``, so the
+    library half of a run comes from whichever checkout the environment was
+    installed from -- which on a worktree-per-agent layout is *not* the tree the
+    runner was read from. ``isalhg.__file__`` settles it without depending on a
+    deploy stamp existing.
+
+    Returns
+    -------
+    dict
+        ``isalhg_path`` and ``isalhg_git_sha`` (``"unknown"`` when the tree is
+        not a git checkout or git is unavailable).
+    """
+    import subprocess
+
+    import isalhg
+
+    package = Path(isalhg.__file__).resolve()
+    sha = "unknown"
+    try:
+        sha = subprocess.run(
+            ["git", "-C", str(package.parent), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=10,
+        ).stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        logger.debug("no git head for %s", package.parent)
+    return {"isalhg_path": str(package), "isalhg_git_sha": sha}
 
 
 def _blocks_for(config: Mapping[str, Any], key: str, collection: str) -> int:
@@ -307,15 +372,78 @@ def _m2_series(config: Mapping[str, Any], collection: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def arm_is_available(arm: str) -> tuple[bool, str]:
+    """Whether an arm can be computed in this tree, and why not when it cannot.
+
+    Asked once per run rather than once per call: an arm whose engine has not
+    landed would otherwise fork, raise and be recorded for every one of the
+    thousands of words a unit computes, filling the rows with empty distances
+    and the log with the same traceback.
+
+    Parameters
+    ----------
+    arm : str
+        Registered arm name.
+
+    Returns
+    -------
+    tuple
+        ``(available, reason)``; ``reason`` is ``""`` when available.
+    """
+    if arm == ROLES_ARM:
+        return True, ""
+    try:
+        from isalhg.metric_space.registry import get_distance
+
+        distance = get_distance(arm)
+    except Exception as exc:  # noqa: BLE001 - an absent arm is data, not a crash
+        return False, f"{type(exc).__name__}: {exc}"
+    entry_point = getattr(distance, "_entry_point", None)
+    if entry_point is None:
+        return True, ""
+    try:
+        entry_point()
+    except Exception as exc:  # noqa: BLE001 - same
+        return False, f"{type(exc).__name__}: {exc}"
+    return True, ""
+
+
+def available_arms(arms: Sequence[str], *, context: str) -> list[str]:
+    """Drop the arms this tree cannot compute, warning once per arm.
+
+    Shared by every runner that resolves an arm list up front, so a partial
+    deployment produces a smaller table rather than one exception per word.
+
+    Parameters
+    ----------
+    arms : Sequence[str]
+        Requested arm names.
+    context : str
+        What the list is for (a collection, a grid cell); named in the warning.
+
+    Returns
+    -------
+    list[str]
+        The subset that resolves.
+    """
+    kept: list[str] = []
+    for arm in arms:
+        available, reason = arm_is_available(arm)
+        if available:
+            kept.append(arm)
+        else:
+            logger.warning("%s: dropping arm %s (%s)", context, arm, reason)
+    return kept
+
+
 def arms_for(collection: str, arms: Sequence[str], k_max_roles: bool) -> list[str]:
     """The arms that apply to one collection.
 
     ``fact_rank_roles`` exists only where the corpus carries roles (WD50K); it
     is dropped elsewhere rather than silently degenerating into the primary arm.
     """
-    if k_max_roles:
-        return list(arms)
-    return [arm for arm in arms if arm != ROLES_ARM]
+    wanted = list(arms) if k_max_roles else [arm for arm in arms if arm != ROLES_ARM]
+    return available_arms(wanted, context=f"collection {collection}")
 
 
 def member_word(
@@ -337,18 +465,20 @@ def member_word(
     roles : RolesMap or None
         Consumed only by ``fact_rank_roles``.
     k : int
-        Pointer count for the pointer arm (ignored by every other arm).
+        Pointer count for the budgeted engines (ignored by every other arm).
     budget : float
-        Process-level budget for the pointer arm.
+        Process-level budget for the budgeted engines.
 
     Returns
     -------
     tuple
         The word (``None`` when censored or failed), the wall-clock seconds and
-        the censoring flag. The pointer arm's word is ``(w_star, seed_label)``.
+        the censoring flag. A budgeted engine's word is ``(word, seed_label)``;
+        every other arm's is whatever its ``fingerprint`` returns -- for the
+        ordered-walk and ``wstar_rank`` arms, the seed-prefixed symbol tuple.
     """
-    if arm == POINTER_ARM:
-        result = pointer_word(H, k, budget)
+    if arm in BUDGETED_ARMS:
+        result = engine_word(H, k, budget, engine=BUDGETED_ARMS[arm])
         return (result.value, result.secs, result.censored)
 
     start = time.perf_counter()
@@ -367,18 +497,56 @@ def word_tokens(arm: str, word: Any) -> int:
     """Token count of an arm word (bytes for the certificate, per ``DESIGN.md`` §8)."""
     if word is None:
         return 0
-    if arm == POINTER_ARM:
+    if arm in BUDGETED_ARMS:
         from isalhg.core.instructions import parse
 
         return len(tuple(parse(word[0])))
     return len(word)
 
 
+def instruction_symbols(arm: str, word: Any, *, augment: bool) -> tuple[Any, ...] | None:
+    """The word at **instruction** granularity -- the tokenisation ``d_instr`` uses.
+
+    One symbol per unit of the arm's own language, so the response of two arms
+    is read on the same scale: one ``Sigma_HG`` token for the Isal words
+    (budgeted engines are parsed out of their string form and carry the
+    ``("seed", label)`` prefix; the ordered-walk and ``wstar_rank`` arms already
+    hand back exactly that sequence), one row per Levi node for
+    ``nauty_cert_rows``, one fact token for the fact arms.
+
+    ``nauty_cert`` is the one arm whose own word is finer than an instruction --
+    it is a byte string -- and it keeps that granularity here, because its
+    instruction-granular reading is a *different arm* (``nauty_cert_rows``),
+    which the design puts on the table beside it precisely so the comparison is
+    at matched tokenisation.
+
+    Parameters
+    ----------
+    arm : str
+        Registered arm name.
+    word : Any
+        What :func:`member_word` returned, or ``None``.
+    augment : bool
+        Whether the seed label is part of the compared sequence (true when
+        either member of the comparison has more than one vertex label).
+
+    Returns
+    -------
+    tuple or None
+        The symbol sequence, or ``None`` when the word is missing.
+    """
+    if word is None:
+        return None
+    if arm in BUDGETED_ARMS:
+        return pointer_symbols(word[0], word[1], augment=augment)
+    return tuple(word)
+
+
 def arm_distance(arm: str, wa: Any, wb: Any, *, augment: bool) -> int | None:
     """Distance between two arm words, or ``None`` when either is missing."""
     if wa is None or wb is None:
         return None
-    if arm == POINTER_ARM:
+    if arm in BUDGETED_ARMS:
         left = pointer_symbols(wa[0], wa[1], augment=augment)
         right = pointer_symbols(wb[0], wb[1], augment=augment)
         return symbol_distance(left, right)
@@ -396,6 +564,48 @@ def _nauty_hash(H: Any) -> str:
     from isalhg.iso_backends.canonical_order import nauty_certificate_bytes
 
     return hashlib.sha1(nauty_certificate_bytes(H), usedforsecurity=False).hexdigest()[:16]
+
+
+def aut_order(H: Any) -> float:
+    """``|Aut(H)|`` as the automorphism-group order of the coloured Levi graph.
+
+    pynauty returns the order factored as ``grpsize1 * 10 ** grpsize2`` because
+    it can overflow a C double; the product is taken as a float, which is exact
+    up to the bucket boundaries this is used for.
+    """
+    import pynauty
+
+    from isalhg.core.levi_reduction import to_levi
+    from isalhg.iso_backends.canonical_order import _to_pynauty
+
+    _gens, size1, size2, _orbits, _n_orbits = pynauty.autgrp(_to_pynauty(to_levi(H)))
+    return float(size1) * (10.0**size2)
+
+
+def aut_bucket(H: Any) -> str:
+    """The ``|Aut|`` stratum of one member, or ``""`` when pynauty is unavailable.
+
+    Symmetry, not size, is what censors the tie-complete engines (the 2026-09-05
+    time-out probe), so every censoring figure is reported inside a stratum of
+    this rather than pooled.
+    """
+    try:
+        order = aut_order(H)
+    except Exception as exc:  # noqa: BLE001 - a missing stratum is data, not a crash
+        logger.debug("aut_order failed: %s", exc)
+        return ""
+    for bound, label in AUT_BUCKETS:
+        if order < bound:
+            return label
+    return AUT_BUCKET_TOP
+
+
+def _cached_aut_bucket(ctx: Mapping[str, Any], index: int, H: Any) -> str:
+    """``aut_bucket(H)`` computed at most once per member and run."""
+    cache: dict[int, str] = ctx["aut_cache"]
+    if index not in cache:
+        cache[index] = aut_bucket(H)
+    return cache[index]
 
 
 def _pair_k(H1: Any, H2: Any) -> int:
@@ -459,6 +669,7 @@ def run_m3(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         H = graphs[index]
         k = required_k(H)
         nauty = _nauty_hash(H)
+        bucket = _cached_aut_bucket(ctx, index, H)
         rng = random.Random(master + index)
         order = list(range(record.n))
         rng.shuffle(order)
@@ -466,6 +677,7 @@ def run_m3(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         H_permuted = permute(H, sigma)
         roles_permuted = _permute_roles(roles[index], sigma)
 
+        augment = H.n_vertex_labels > 1
         for arm in arms:
             word, secs, censored = member_word(arm, H, roles[index], k=k, budget=budget)
             other, _, censored_other = member_word(
@@ -474,6 +686,7 @@ def run_m3(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
             invariance_ok = ""
             if not censored and not censored_other and word is not None:
                 invariance_ok = int(_word_hash(arm, word) == _word_hash(arm, other))
+            instructions = instruction_symbols(arm, word, augment=augment)
             m3_rows.append(
                 {
                     **ctx["stamp"],
@@ -483,8 +696,10 @@ def run_m3(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
                     "n": record.n,
                     "m": record.m,
                     "k": k,
+                    "aut_bucket": bucket,
                     "arm": arm,
                     "tokens": word_tokens(arm, word),
+                    "n_instr": 0 if instructions is None else len(instructions),
                     "secs": round(secs, 6),
                     "censored": int(censored),
                 }
@@ -536,6 +751,7 @@ def run_m1(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
         H_base = graphs[index]
         base_words: dict[tuple[str, int], tuple[Any, float, bool]] = {}
         base_ranks = _safe_ranks(H_base)
+        bucket = _cached_aut_bucket(ctx, index, H_base)
 
         for kind in kinds:
             edited = single_edits(base, kind, per_kind, master + index, require_connected=True)
@@ -556,6 +772,13 @@ def run_m1(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
                     )
                     censored = censored_base or censored_edit
                     distance = arm_distance(arm, word_base, word_edit, augment=augment)
+                    instr_base = instruction_symbols(arm, word_base, augment=augment)
+                    instr_edit = instruction_symbols(arm, word_edit, augment=augment)
+                    d_instr = (
+                        ""
+                        if instr_base is None or instr_edit is None
+                        else symbol_distance(instr_base, instr_edit)
+                    )
                     rows.append(
                         {
                             **ctx["stamp"],
@@ -566,8 +789,11 @@ def run_m1(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
                             "edit_idx": edit_idx,
                             "regime": regime,
                             "zero_shift": shift,
+                            "aut_bucket": bucket,
                             "arm": arm,
                             "d_abs": "" if distance is None else distance,
+                            "d_instr": d_instr,
+                            "n_instr": 0 if instr_base is None else len(instr_base),
                             "len_base": word_tokens(arm, word_base),
                             "len_edit": word_tokens(arm, word_edit),
                             "secs_canon": round(secs_base + secs_edit, 6),
@@ -873,9 +1099,14 @@ def _unit_context(
         "roles": roles,
         "arms": arms_for(unit.collection, config.get("arms") or DEFAULT_ARMS, has_roles),
         "budget": float(config.get("pointer_budget_s", 60.0)),
-        "seed": seeds(RQ_INDEX)[0],
+        # G7's schedule, indexed: the campaign runs replication 0, and a local
+        # or exploratory run selects another of the 27 without inventing a seed
+        # outside the schedule. The index is part of the run tag, so two
+        # replications never share a row file.
+        "seed": seeds(RQ_INDEX)[int(config.get("seed_index", 0))],
         "config": config,
         "stamp": _stamp(),
+        "aut_cache": {},
     }
 
 

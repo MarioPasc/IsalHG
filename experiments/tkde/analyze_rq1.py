@@ -46,6 +46,15 @@ SMOKE_DIR = "_smoke"
 OURS = "fact_rank"
 POINTER_ARM = "isalhg_levenshtein"
 CERT_ARM = "nauty_cert"
+#: The reference of the instruction-granular comparison: the certificate read
+#: one symbol per Levi node, which is what puts it on the same scale as an Isal
+#: instruction (the "matched tokenisation" of H-M1c).
+CERT_ROWS_ARM = "nauty_cert_rows"
+#: The pre-registered selection statistic's threshold, in instructions.
+WITHIN_INSTRUCTIONS = 2
+#: The regime the selection statistic is read in: the edit preserved the
+#: constant set, so the two words describe the same universe of constants.
+PRESERVED_REGIME = 1
 
 # DESIGN.md section 2, "Gate and fallback": the pooled normalized median of
 # fact_rank must land within +-0.05 of these probe values, in the order the
@@ -300,6 +309,23 @@ def m1_response(m1: Any, root: Path | None = None) -> Any:
     frame["normalized"] = np.where(
         frame["len_base"] > 0, frame["d_abs"] / (frame["len_base"] + offset), np.nan
     )
+    # The instruction-granular columns are new (the Isal-arm wave); rows written
+    # before them carry neither, and are simply absent from the instruction
+    # tables rather than being imputed from d_abs, whose tokenisation differs
+    # for the certificate arms.
+    if "d_instr" in frame.columns:
+        frame["d_instr"] = pd.to_numeric(frame["d_instr"], errors="coerce")
+    else:
+        frame["d_instr"] = np.nan
+    if "n_instr" in frame.columns:
+        frame["n_instr"] = pd.to_numeric(frame["n_instr"], errors="coerce")
+    else:
+        frame["n_instr"] = np.nan
+    frame["normalized_instr"] = np.where(
+        frame["n_instr"] > 0, frame["d_instr"] / frame["n_instr"], np.nan
+    )
+    if "aut_bucket" not in frame.columns:
+        frame["aut_bucket"] = ""
     return frame
 
 
@@ -378,6 +404,113 @@ def m1_paired(frame: Any) -> list[dict[str, Any]]:
     if not results:
         return []
     return pd.DataFrame(results).to_dict("records")
+
+
+def m1_selection(frame: Any) -> list[dict[str, Any]]:
+    """The pre-registered arm-selection statistic, per corpus and pooled.
+
+    Restricted to the constant-set-preserved regime, per arm: the fraction of
+    single edits whose response is at most ``WITHIN_INSTRUCTIONS`` instructions,
+    with its Wilson interval, beside the median absolute response and its BCa
+    interval (clustered on the base member, which is the natural cluster: four
+    edits per kind share one). The selection rule is "highest within-fraction
+    pooled over the corpora, ties broken by the lower median" -- so the pooled
+    row is emitted as its own ``collection = "(pooled)"`` row rather than being
+    left for a reader to recombine from the per-corpus ones.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        The output of :func:`m1_response`.
+
+    Returns
+    -------
+    list[dict]
+        One row per ``(collection, arm)`` plus one per arm at ``"(pooled)"``.
+        Empty when no row carries the instruction columns.
+    """
+    rows: list[dict[str, Any]] = []
+    if frame.empty:
+        return rows
+    preserved = frame[(frame["regime"] == PRESERVED_REGIME) & frame["d_instr"].notna()]
+    if preserved.empty:
+        return rows
+
+    def one(collection: str, group: Any) -> dict[str, Any]:
+        values = group["d_instr"].to_numpy(dtype=float)
+        within = int((values <= WITHIN_INSTRUCTIONS).sum())
+        return {
+            "collection": collection,
+            "arm": str(group["arm"].iloc[0]),
+            "n": int(len(group)),
+            "n_base_members": int(group["base_id"].nunique()),
+            "median_d_instr": float(group["d_instr"].median()),
+            "iqr_d_instr": iqr(values),
+            "median_d_instr_ci": cluster_median_ci(values, group["base_id"]),
+            "median_normalized_instr": float(group["normalized_instr"].median()),
+            f"within_{WITHIN_INSTRUCTIONS}": within,
+            f"within_{WITHIN_INSTRUCTIONS}_rate": as_dict(wilson_ci(within, int(len(group)))),
+        }
+
+    for (collection, _arm), group in preserved.groupby(["collection", "arm"], sort=True):
+        rows.append(one(str(collection), group))
+    for _arm, group in preserved.groupby("arm", sort=True):
+        rows.append(one("(pooled)", group))
+    return rows
+
+
+def m1_paired_vs_cert_rows(frame: Any) -> list[dict[str, Any]]:
+    """Every arm against ``nauty_cert_rows`` on ``d_instr``, Holm over the family.
+
+    The reference is the certificate at instruction granularity, not the byte
+    certificate: comparing an Isal instruction against a certificate *byte*
+    measures the tokenisation, not the addressing. One Holm family per
+    ``(collection, regime)``, over all arms of that table, as G5 requires.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        The output of :func:`m1_response`.
+
+    Returns
+    -------
+    list[dict]
+        ``paired_family`` rows with the collection and regime attached; the
+        ``mean_ours`` column is the *reference* arm's mean, ``mean_other`` the
+        arm named in ``name``.
+    """
+    if frame.empty or frame["d_instr"].isna().all():
+        return []
+
+    results: list[dict[str, Any]] = []
+    for (collection, regime), group in frame.groupby(["collection", "regime"], sort=True):
+        wide = group.pivot_table(
+            index=["base_id", "edit_kind", "edit_idx"],
+            columns="arm",
+            values="d_instr",
+            aggfunc="first",
+        )
+        if CERT_ROWS_ARM not in wide.columns:
+            continue
+        others = [arm for arm in wide.columns if arm != CERT_ROWS_ARM]
+        complete = wide[[CERT_ROWS_ARM, *others]].dropna()
+        if complete.empty or not others:
+            continue
+        table = paired_family(
+            complete[CERT_ROWS_ARM].to_numpy(dtype=float),
+            {arm: complete[arm].to_numpy(dtype=float) for arm in others},
+        )
+        for row in table:
+            results.append(
+                {
+                    "collection": collection,
+                    "regime": int(regime),
+                    "reference": CERT_ROWS_ARM,
+                    "n_instances": int(len(complete)),
+                    **row,
+                }
+            )
+    return results
 
 
 def gate_check(frame: Any) -> list[dict[str, Any]]:
@@ -502,6 +635,61 @@ def m3_cost(m3: Any) -> list[dict[str, Any]]:
     return rows
 
 
+M_BUCKET_EDGES: tuple[int, ...] = (0, 8, 12, 16, 20, 10**9)
+M_BUCKET_LABELS: tuple[str, ...] = ("<=8", "9-12", "13-16", "17-20", ">20")
+
+
+def m3_censoring(m3: Any) -> list[dict[str, Any]]:
+    """Censoring per ``(arm, m bucket, |Aut| bucket)`` -- the L15 report.
+
+    Size and symmetry are separated because they are different failure modes:
+    the 2026-09-05 probe measured the tie-complete engines' time-outs tracking
+    ``|Aut|`` rather than ``m``, and a pooled censored fraction hides that. A
+    censored member contributes to the denominator and to the count, never to a
+    median (L15).
+
+    Parameters
+    ----------
+    m3 : pandas.DataFrame
+        The raw ``rows_m3`` table.
+
+    Returns
+    -------
+    list[dict]
+        One row per stratum, with the Wilson interval of the censored fraction.
+        Empty when the rows predate the ``aut_bucket`` column.
+    """
+    import pandas as pd
+
+    if m3.empty or "aut_bucket" not in m3.columns:
+        return []
+    frame = m3.copy()
+    frame["secs"] = pd.to_numeric(frame["secs"], errors="coerce")
+    frame["m"] = pd.to_numeric(frame["m"], errors="coerce")
+    frame["aut_bucket"] = frame["aut_bucket"].fillna("").astype(str)
+    frame["m_bucket"] = pd.cut(frame["m"], bins=list(M_BUCKET_EDGES), labels=list(M_BUCKET_LABELS))
+
+    rows: list[dict[str, Any]] = []
+    for (collection, arm, m_bucket, symmetry), group in frame.groupby(
+        ["collection", "arm", "m_bucket", "aut_bucket"], observed=True, sort=True
+    ):
+        censored = int((group["censored"] != 0).sum())
+        finished = group[group["censored"] == 0]
+        rows.append(
+            {
+                "collection": collection,
+                "arm": arm,
+                "m_bucket": str(m_bucket),
+                "aut_bucket": symmetry,
+                "n_members": int(len(group)),
+                "n_censored": censored,
+                "censored_fraction": as_dict(wilson_ci(censored, int(len(group)))),
+                "median_secs": float(finished["secs"].median()) if not finished.empty else None,
+            }
+        )
+    return rows
+
+
 def m4_against_certificate(m4: Any, m1: Any) -> list[dict[str, Any]]:
     """Spearman of each arm against ``nauty_cert``, on random pairs and on M1 pairs."""
     import pandas as pd
@@ -581,6 +769,16 @@ def _point(value: Any) -> Any:
     return None if not isinstance(value, Mapping) else value.get("point")
 
 
+def _interval(value: Any) -> Any:
+    """Render a confidence interval as ``[lo, hi]`` for a markdown cell."""
+    if not isinstance(value, Mapping):
+        return None
+    low, high = value.get("low"), value.get("high")
+    if low is None or high is None:
+        return None
+    return f"[{float(low):.3g}, {float(high):.3g}]"
+
+
 def build_tables(summary: Mapping[str, Any]) -> dict[str, Any]:
     """The human-readable tables written to ``tables.md``."""
     import pandas as pd
@@ -616,6 +814,41 @@ def build_tables(summary: Mapping[str, Any]) -> dict[str, Any]:
             ],
         ),
         "M1 -- single-edit response": pd.DataFrame(m1_rows),
+        (
+            f"M1 -- SELECTION: constant-set-preserved response in instructions "
+            f"(within <= {WITHIN_INSTRUCTIONS})"
+        ): pd.DataFrame(
+            [
+                {
+                    "collection": row["collection"],
+                    "arm": row["arm"],
+                    "n": row["n"],
+                    "median_d_instr": row["median_d_instr"],
+                    "median_ci": _interval(row["median_d_instr_ci"]),
+                    f"within<={WITHIN_INSTRUCTIONS}": (
+                        row[f"within_{WITHIN_INSTRUCTIONS}_rate"]
+                        and row[f"within_{WITHIN_INSTRUCTIONS}_rate"]["point"]
+                    ),
+                    "within_ci": _interval(row[f"within_{WITHIN_INSTRUCTIONS}_rate"]),
+                }
+                for row in summary["m1_selection"]
+            ]
+        ),
+        f"M1 -- every arm vs {CERT_ROWS_ARM} on d_instr (Wilcoxon, Holm)": _frame(
+            summary["m1_paired_instr"],
+            [
+                "collection",
+                "regime",
+                "name",
+                "n",
+                "mean_ours",
+                "mean_other",
+                "p_raw",
+                "p_holm",
+                "reject",
+                "rank_biserial",
+            ],
+        ),
         "M1 -- ours vs each arm (Wilcoxon, Holm)": _frame(
             summary["m1_paired"],
             [
@@ -664,6 +897,21 @@ def build_tables(summary: Mapping[str, Any]) -> dict[str, Any]:
                 for row in summary["m3_cost"]
             ]
         ),
+        "M3 -- censoring per (arm, m bucket, |Aut| bucket)": pd.DataFrame(
+            [
+                {
+                    "collection": row["collection"],
+                    "arm": row["arm"],
+                    "m_bucket": row["m_bucket"],
+                    "aut_bucket": row["aut_bucket"],
+                    "n_members": row["n_members"],
+                    "censored": row["n_censored"],
+                    "censored_frac": _point(row["censored_fraction"]),
+                    "median_secs": row["median_secs"],
+                }
+                for row in summary["m3_censoring"]
+            ]
+        ),
         "M4 -- rho against nauty_cert": pd.DataFrame(
             [
                 {
@@ -709,15 +957,21 @@ def analyze(root: Path) -> dict[str, Any]:
         },
         "m0": m0.to_dict("records") if not m0.empty else [],
         "m1_response": response_rows,
+        "m1_selection": m1_selection(response),
         "m1_paired": m1_paired(response),
+        "m1_paired_instr": m1_paired_vs_cert_rows(response),
         "gate": gate_check(response),
         "m2_correlation": m2_correlation(m2),
         "m3_cost": m3_cost(m3),
+        "m3_censoring": m3_censoring(m3),
         "m4": m4_against_certificate(m4, m1),
     }
     stats = {
         "confidence": 0.95,
         "wilcoxon_holm": summary["m1_paired"],
+        "wilcoxon_holm_instr": summary["m1_paired_instr"],
+        "selection": summary["m1_selection"],
+        "censoring": summary["m3_censoring"],
         "gate": summary["gate"],
         "spearman_m2": summary["m2_correlation"],
         "spearman_m4": summary["m4"],

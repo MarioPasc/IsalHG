@@ -15,6 +15,8 @@ seed_count: 27
 
 medoid_arms:
   - fact_rank
+  - isal_ow_struct
+  - wstar_rank
   - nauty_cert
   - wl_l1
   - netlsd

@@ -62,7 +62,12 @@ RQ_FOLDER = "RQ2_wellposedness"
 EXPERIMENT = "wellposedness"
 CERTIFICATE_EXPERIMENT = "certificate_validity"
 
-POINTER_ARM = "isalhg_levenshtein"
+#: The arms whose canonical search does not return to the interpreter on
+#: time-out and is therefore priced at the pointer budget: the C++ ``w*_c``
+#: engine and the orbit-pruned Python one, which computes the same value.
+#: ``wstar_rank`` and the ordered-walk arms are not here -- they terminate in
+#: milliseconds and go through ``get_distance`` at the default arm budget.
+POINTER_ARMS: frozenset[str] = frozenset({"isalhg_levenshtein", "wstar_orbit"})
 ORACLE_ARMS: frozenset[str] = frozenset({"exact_ged", "exact_hged", "qin_hged"})
 ZERO_TOLERANCE = 1e-9
 
@@ -241,7 +246,7 @@ def enumerate_units(config: Mapping[str, Any], kinds: Sequence[str] | None = Non
 
 def arm_budget(arm: str, config: Mapping[str, Any]) -> float:
     """Budget of one arm: 60 s for the pointer, 600 s for an oracle, else the default."""
-    if arm == POINTER_ARM:
+    if arm in POINTER_ARMS:
         return float(config.get("pointer_budget_s", 60.0))
     if arm in ORACLE_ARMS or arm == "hypercot":
         return float(config.get("oracle_budget_s", 600.0))

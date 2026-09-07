@@ -25,7 +25,9 @@ n_seeds: 27
 n_jobs: null # null -> SLURM_CPUS_PER_TASK, else 1
 
 arms:
-  - fact_rank # exact (ours)
+  - fact_rank # exact (the record, D-ART4 (1))
+  - isal_ow_struct # exact (the Isal instruction word, Theorem C)
+  - wstar_rank # exact (the family's walk keyed by nauty's rank)
   - nauty_cert # exact (certificate member)
   - wl_l1
   - netlsd

@@ -1,7 +1,13 @@
 # T-KBb — C++ port of stabiliser-orbit pruning
 
 **Status:** OPEN · declared 2026-09-06 21:11 CEST by the Isal-refinement
-orchestrator.
+orchestrator. **Promoted to required on 2026-09-07** by the author's rule
+that everything in the final article runs on the C++ engine: the
+orbit-pruned `w*_c` row (the "oracle only" cell of the nauty ablation and
+the article's R2 number) cannot come from the Python hook. Design fixed as a
+nanobind callback into the `OrbitOracle` protocol object at every residual
+tie, single-threaded seed loop for this variant; spawn prompt draft in
+`.claude/notes/2026-09-06-isal-kb-w1/wave4_cpp_ports_prompts_draft.md` §A.
 
 ## What
 

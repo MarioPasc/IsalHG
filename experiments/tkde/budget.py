@@ -226,13 +226,11 @@ ENGINES: tuple[str, ...] = ("cpp", "rank", "orbit")
 def _runs_in_python(engine: str) -> bool:
     """Whether ``engine`` executes the pure-Python search in the forked child.
 
-    The orbit engine is Python only. The rank engine runs in the C++ extension
-    when it is importable (its entry point defaults to that backend) and in
-    Python otherwise; only the Python case needs the memory guard.
+    Both nauty-assisted engines run in the C++ extension when it is importable
+    (their entry points default to that backend) and in Python otherwise; only
+    the Python case needs the memory guard.
     """
-    if engine == "orbit":
-        return True
-    if engine == "rank":
+    if engine in ("rank", "orbit"):
         try:
             import isalhg.core._core  # noqa: F401
         except ImportError:
@@ -361,8 +359,9 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
     if engine not in ENGINES:
         raise TkdeBudgetError(f"unknown engine {engine!r}; expected one of {ENGINES}")
     if engine != "cpp" and not _runs_in_python(engine):
-        # The rank engine defaults to the C++ extension (wave 3): it needs the
-        # fork-health check of the cpp path, not the Python memory guard.
+        # The rank (wave 3) and orbit (wave 4) engines default to the C++
+        # extension: they need the fork-health check of the cpp path, not the
+        # Python memory guard.
         if not cpp_fork_is_healthy():
             raise TkdeBudgetError(_POISONED)
         result = run_with_budget_detail(_engine_payload, (H, k, engine), seconds)

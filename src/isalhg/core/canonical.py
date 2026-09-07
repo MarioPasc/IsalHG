@@ -91,8 +91,8 @@ CANONICAL_ALGORITHM: str = "canonical"
 # Same canonical form as CANONICAL_ALGORITHM, computed by the orbit-pruned
 # search: at every residual tie the branch set is reduced to one representative
 # per stabiliser orbit. Value-preserving (the pruning proposition), so the
-# string is ``w*_c`` bit for bit; Python backend only, and requires an
-# ``orbit_oracle``.
+# string is ``w*_c`` bit for bit. Requires an ``orbit_oracle``; available on
+# both backends (C++ variant 9), which return the identical string.
 CANONICAL_ORBIT_ALGORITHM: str = "canonical_orbit"
 
 # A *different* canonical program: the family's greedy walk (no tie branching)
@@ -128,6 +128,12 @@ _CPP_VARIANT_IDS: dict[str, int] = {
     # Dispatched through its own branch in :func:`canonical_string` because it
     # needs the extra ``ranks`` argument at the FFI boundary.
     CANONICAL_RANK_ALGORITHM: 8,
+    # T-KB (wave 4) — variant 7 with the branch sets and the seed loop reduced
+    # to one representative per stabiliser orbit. Value-preserving, so the
+    # string is ``w*_c`` bit for bit. Dispatched through its own branch in
+    # :func:`canonical_string` because it needs the extra ``orbit_oracle``
+    # argument at the FFI boundary.
+    CANONICAL_ORBIT_ALGORITHM: 9,
 }
 
 
@@ -266,6 +272,63 @@ _CANONICAL_RANK_STRING_BACKENDS: dict[str, Callable[..., str]] = {
 }
 
 
+def _python_canonical_string_orbit(
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    orbit_oracle: OrbitOracle,
+    max_expansions: int | None = None,
+) -> str:
+    """Orbit-pruned tie-complete search on the Python engine.
+
+    The pruning is value-preserving, so this is the ``CANONICAL_ALGORITHM``
+    search with a smaller branch set -- not a different program.
+    """
+    return _python_canonical_string(
+        H,
+        k,
+        structural_depth,
+        CANONICAL_ALGORITHM,
+        max_expansions,
+        orbit_oracle=orbit_oracle,
+    )
+
+
+def _cpp_canonical_string_orbit(
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    orbit_oracle: OrbitOracle,
+    max_expansions: int | None = None,
+) -> str:
+    """C++-backed twin of :func:`_python_canonical_string_orbit`.
+
+    Emits the identical string. The oracle stays in Python: the extension
+    re-acquires the GIL for every callback and runs the seed loop on one
+    thread, so the persistent worker pool never calls into Python
+    concurrently.
+    """
+    if not H.is_connected():
+        raise DisconnectedHypergraphError(
+            f"{CANONICAL_ORBIT_ALGORITHM} requires a connected hypergraph (decision B11)"
+        )
+    return _core_canonical_string(
+        H,
+        k,
+        structural_depth,
+        _CPP_VARIANT_IDS[CANONICAL_ORBIT_ALGORITHM],
+        max_expansions or 0,
+        None,
+        orbit_oracle,
+    )
+
+
+_CANONICAL_ORBIT_STRING_BACKENDS: dict[str, Callable[..., str]] = {
+    "python": _python_canonical_string_orbit,
+    "cpp": _cpp_canonical_string_orbit,
+}
+
+
 def _cpp_canonical_string(
     H: SparseHypergraph,
     k: int,
@@ -334,7 +397,10 @@ def canonical_string(
     orbit_oracle : OrbitOracle or None, optional
         Required by, and accepted only for, ``algorithm="canonical_orbit"``:
         the stabiliser-orbit oracle that prunes the tie-complete search. The
-        returned string is ``w*_c``, bit for bit.
+        returned string is ``w*_c``, bit for bit. Both backends implement the
+        variant and return the identical string; the C++ one re-acquires the
+        GIL per callback and runs its (orbit-reduced) seed loop on a single
+        thread.
     ranks : Sequence[int] or None, optional
         Required by, and accepted only for, ``algorithm="canonical_rank"``:
         a canonical rank per vertex, a permutation of ``range(H.n_nodes)``.
@@ -381,19 +447,8 @@ def canonical_string(
                 "pass isalhg.iso_backends.orbit_oracle.PynautyOrbitOracle(), or use "
                 f"algorithm={CANONICAL_ALGORITHM!r} for the unpruned search"
             )
-        if backend not in (None, "python"):
-            raise ValueError(
-                f"algorithm={CANONICAL_ORBIT_ALGORITHM!r} is implemented on the Python "
-                f"backend only; got backend={backend!r}"
-            )
-        return _python_canonical_string(
-            H,
-            effective_k,
-            structural_depth,
-            CANONICAL_ALGORITHM,
-            max_expansions,
-            orbit_oracle=orbit_oracle,
-        )
+        orbit_impl = resolve(backend, _CANONICAL_ORBIT_STRING_BACKENDS)
+        return orbit_impl(H, effective_k, structural_depth, orbit_oracle, max_expansions)
     if algorithm == CANONICAL_RANK_ALGORITHM:
         if ranks is None:
             raise ValueError(f"algorithm={CANONICAL_RANK_ALGORITHM!r} requires ranks")

@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "isalhg/orbit_oracle.hpp"
 #include "isalhg/sparse_hypergraph.hpp"
 
 namespace isalhg {
@@ -40,6 +41,15 @@ enum class AlgorithmVariant : std::uint8_t {
     // and iso-invariant because the ranks are, but its string is NOT w*_c.
     // Requires a rank vector; ``canonical_string_compute`` throws without one.
     GreedyMinRank            = 8,
+    // T-KB (wave 4) — GreedyMinComplete with the branch sets reduced to one
+    // representative per stabiliser orbit at every residual tie, and the seed
+    // loop reduced to one seed per Aut(H)-orbit. Value-preserving
+    // (Proposition 7.3): the string is ``w*_c`` bit for bit, which is what
+    // separates orbit *pruning* from a tie-set *refinement* (forbidden by
+    // D-TA2). Requires an ``OrbitOracleIface``; ``canonical_string_compute``
+    // throws without one. The oracle calls back into Python, so this variant's
+    // seed loop is single-threaded by construction.
+    GreedyMinCompleteOrbit   = 9,
 };
 
 // Compute the canonical Sigma_HG* string for ``H``.
@@ -52,15 +62,24 @@ enum class AlgorithmVariant : std::uint8_t {
 // variant : which algorithm flavour to run.
 // ranks : per-vertex canonical ranks, a permutation of 0..n-1. Required by
 //   ``GreedyMinRank`` and rejected by every other variant.
+// orbit_oracle : stabiliser-orbit oracle. Required by
+//   ``GreedyMinCompleteOrbit`` and rejected by every other variant. Because
+//   the production oracle calls back into Python, this variant runs its seed
+//   loop sequentially -- the persistent worker pool must never call into
+//   Python concurrently.
+// counters : optional diagnostic block accumulated across the whole seed loop.
 //
 // Throws ``DisconnectedHypergraphError`` if H is disconnected.
 // Throws ``CanonicalizationTimeoutError`` when ``max_expansions > 0`` and any
 // per-seed greedy run exceeds that many V-branch (tie-branch) recursions.
-// Throws ``IsalHGError`` on a ranks/variant mismatch or a malformed rank vector.
+// Throws ``IsalHGError`` on a ranks/variant or oracle/variant mismatch, or a
+// malformed rank vector.
 [[nodiscard]] std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                                                    AlgorithmVariant variant,
                                                    int max_expansions = 0,
-                                                   const std::vector<std::int32_t>* ranks = nullptr);
+                                                   const std::vector<std::int32_t>* ranks = nullptr,
+                                                   OrbitOracleIface* orbit_oracle = nullptr,
+                                                   SearchCounters* counters = nullptr);
 
 // Return required_k(H) = max(2, max arity).
 [[nodiscard]] int required_k_compute(const SHG& H);

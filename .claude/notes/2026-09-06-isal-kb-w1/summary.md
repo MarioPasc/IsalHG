@@ -296,6 +296,27 @@ arms only.
   the full rank array (`addressing_rank`, 24 shards) follows its completion.
   Main array 2247394: 218 row files at 13:22.
 
+## 2026-09-07 13:40 — rank smoke stuck; cause and fix
+
+Smoke 2248491 (config `rq1_rank.yaml`) logged nothing for 12 min after the
+first three units; cancelled. Cause read from the code, not guessed:
+`rq1.py::BUDGETED_ARMS` did not list `wstar_rank`, so `member_word` ran
+the C++ rank engine **in-process and unbudgeted** for M1; an arity-10
+`ndc_classes` member (the `k_disp` tail wave 3 measured: 16/41 censored
+at arity 10 under a 10 s budget) blocked the process. The smoke's M3 unit
+had passed in 0.2 s only because its five base members are fast. Fix: the
+rank engine is now a budgeted arm (`"wstar_rank": "rank"`), so every call
+forks under the 60 s budget with the fork-health check. A local
+reproduction was declined by the user (no local runs); the diagnosis is
+from `rq1.py:67/481/492`. Not a fork-poisoning event: nothing forked after
+the in-process call in that configuration. Note for the RQ2–RQ7 swap: the
+other runners must route `wstar_rank` through the budgeted path too
+wherever they special-case the pointer arm. Checked: RQ2's `POINTER_ARMS`
+(budget seconds) now lists `wstar_rank`; RQ7's N-scaling timing forks under
+`run_with_budget_detail` (in-process engine calls inside the child are
+fine); the RQ7 *sweep* per-instance path still needs an audit before the
+RQ7 re-run (no `engine_word` call found by grep).
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

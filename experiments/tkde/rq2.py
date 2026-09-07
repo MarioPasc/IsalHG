@@ -67,7 +67,10 @@ CERTIFICATE_EXPERIMENT = "certificate_validity"
 #: engine and the orbit-pruned Python one, which computes the same value.
 #: ``wstar_rank`` and the ordered-walk arms are not here -- they terminate in
 #: milliseconds and go through ``get_distance`` at the default arm budget.
-POINTER_ARMS: frozenset[str] = frozenset({"isalhg_levenshtein", "wstar_orbit"})
+#: Every Isal engine with a search goes through the budgeted forked child
+#: (the rank engine is the C++ engine since wave 3 and blocks in-process on
+#: arity-10 members: RQ1 smoke 2248491, 2026-09-07).
+POINTER_ARMS: frozenset[str] = frozenset({"isalhg_levenshtein", "wstar_orbit", "wstar_rank"})
 ORACLE_ARMS: frozenset[str] = frozenset({"exact_ged", "exact_hged", "qin_hged"})
 ZERO_TOLERANCE = 1e-9
 

@@ -1067,12 +1067,17 @@ def corpora_root(
     return None
 
 
-def _stamp() -> dict[str, Any]:
+def experiment_name(config: Mapping[str, Any]) -> str:
+    """The experiment this run belongs to: the config's ``experiment`` key, else the default."""
+    return str(config.get("experiment") or EXPERIMENT)
+
+
+def _stamp(experiment: str = EXPERIMENT) -> dict[str, Any]:
     from experiments.tkde.io import _cpu_model, _repo_provenance
 
     return {
         "rq": RQ_INDEX,
-        "experiment": EXPERIMENT,
+        "experiment": experiment,
         "git_sha": _repo_provenance()["git_sha"],
         "host_cpu": _cpu_model(),
     }
@@ -1113,7 +1118,7 @@ def _unit_context(
         # replications never share a row file.
         "seed": seeds(RQ_INDEX)[int(config.get("seed_index", 0))],
         "config": config,
-        "stamp": _stamp(),
+        "stamp": _stamp(experiment_name(config)),
         "aut_cache": {},
     }
 
@@ -1225,7 +1230,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
 
     results_root = Path(args.out) if args.out else corpora_io.results_root()
-    paths = RunPaths(root=results_root, rq=RQ_FOLDER, experiment=EXPERIMENT)
+    # The experiment name is the config's: a second RQ1 experiment on the same
+    # units (e.g. configs/rq1_rank.yaml, "addressing_rank") must land in its
+    # own <RQ>/<experiment> directory — the one the SLURM worker stages and
+    # copies back. With the constant, the 2026-09-07 rank run wrote its rows to
+    # an unlinked "addressing" directory on node scratch and lost them.
+    experiment = experiment_name(config)
+    paths = RunPaths(root=results_root, rq=RQ_FOLDER, experiment=experiment)
     paths.ensure()
 
     shard, n_shards = parse_shard(args.shard, len(units))
@@ -1262,7 +1273,7 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     record = {
         "rq": RQ_INDEX,
-        "experiment": EXPERIMENT,
+        "experiment": experiment,
         "config_path": str(args.config),
         "config": dict(config),
         "run_tag": tag,
@@ -1287,7 +1298,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     write_config(paths, record)
     write_manifest(paths, extra=extra)
     shard_paths = RunPaths(
-        root=results_root, rq=RQ_FOLDER, experiment=f"{EXPERIMENT}/_shards/{shard:03d}"
+        root=results_root, rq=RQ_FOLDER, experiment=f"{experiment}/_shards/{shard:03d}"
     )
     write_config(shard_paths, record)
     write_manifest(shard_paths, extra=extra)

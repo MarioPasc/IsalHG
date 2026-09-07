@@ -372,15 +372,60 @@ def _m2_series(config: Mapping[str, Any], collection: str) -> str:
 # ---------------------------------------------------------------------------
 
 
+def arm_is_available(arm: str) -> tuple[bool, str]:
+    """Whether an arm can be computed in this tree, and why not when it cannot.
+
+    Asked once per run rather than once per call: an arm whose engine has not
+    landed would otherwise fork, raise and be recorded for every one of the
+    thousands of words a unit computes, filling the rows with empty distances
+    and the log with the same traceback.
+
+    Parameters
+    ----------
+    arm : str
+        Registered arm name.
+
+    Returns
+    -------
+    tuple
+        ``(available, reason)``; ``reason`` is ``""`` when available.
+    """
+    if arm == ROLES_ARM:
+        return True, ""
+    try:
+        from isalhg.metric_space.registry import get_distance
+
+        distance = get_distance(arm)
+    except Exception as exc:  # noqa: BLE001 - an absent arm is data, not a crash
+        return False, f"{type(exc).__name__}: {exc}"
+    entry_point = getattr(distance, "_entry_point", None)
+    if entry_point is None:
+        return True, ""
+    try:
+        entry_point()
+    except Exception as exc:  # noqa: BLE001 - same
+        return False, f"{type(exc).__name__}: {exc}"
+    return True, ""
+
+
 def arms_for(collection: str, arms: Sequence[str], k_max_roles: bool) -> list[str]:
     """The arms that apply to one collection.
 
     ``fact_rank_roles`` exists only where the corpus carries roles (WD50K); it
     is dropped elsewhere rather than silently degenerating into the primary arm.
+    An arm whose engine is absent from this tree is dropped with a warning
+    naming it, so a partial deployment produces a smaller table rather than a
+    table of blanks.
     """
-    if k_max_roles:
-        return list(arms)
-    return [arm for arm in arms if arm != ROLES_ARM]
+    wanted = list(arms) if k_max_roles else [arm for arm in arms if arm != ROLES_ARM]
+    kept: list[str] = []
+    for arm in wanted:
+        available, reason = arm_is_available(arm)
+        if available:
+            kept.append(arm)
+        else:
+            logger.warning("collection %s: dropping arm %s (%s)", collection, arm, reason)
+    return kept
 
 
 def member_word(
@@ -1036,7 +1081,11 @@ def _unit_context(
         "roles": roles,
         "arms": arms_for(unit.collection, config.get("arms") or DEFAULT_ARMS, has_roles),
         "budget": float(config.get("pointer_budget_s", 60.0)),
-        "seed": seeds(RQ_INDEX)[0],
+        # G7's schedule, indexed: the campaign runs replication 0, and a local
+        # or exploratory run selects another of the 27 without inventing a seed
+        # outside the schedule. The index is part of the run tag, so two
+        # replications never share a row file.
+        "seed": seeds(RQ_INDEX)[int(config.get("seed_index", 0))],
         "config": config,
         "stamp": _stamp(),
         "aut_cache": {},

@@ -119,6 +119,112 @@ class TestBuildMatrixValidation:
             build_matrix(items, "size_l1", member_ids=ids, params={"depth": 3})
 
 
+class TestFingerprintRouting:
+    """An amortizing arm must not go round the pairwise loop.
+
+    The loop asks each member's representation ``N - 1`` times, which for the
+    Isal instruction words is the whole cost of the build. The router decides on
+    ``fingerprint(H) is not None``, so a stub that answers must never see
+    ``pairwise``.
+    """
+
+    def test_a_distance_with_a_fingerprint_never_hits_pairwise(
+        self, corpus: tuple[list[SparseHypergraph], list[str]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import isalhg.metric_space.toolkit.matrix as matrix_module
+
+        calls: list[str] = []
+
+        class Amortizing:
+            labels_used = frozenset()
+            name = "stub_amortizing"
+
+            def fingerprint(self, H: SparseHypergraph) -> tuple[int, ...]:
+                return (H.n_nodes, H.n_edges)
+
+            def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
+                calls.append("pairwise")
+                raise AssertionError("the pairwise loop must not be reached")
+
+            def matrix(self, items: list[SparseHypergraph]) -> np.ndarray:
+                calls.append("matrix")
+                sizes = np.array([H.n_nodes for H in items], dtype=np.float64)
+                return np.abs(sizes[:, None] - sizes[None, :])
+
+        monkeypatch.setattr(matrix_module, "_make_distance", lambda arm, params: Amortizing())
+        items, ids = corpus
+        D = build_matrix(items, "stub_amortizing", member_ids=ids)
+
+        assert "pairwise" not in calls
+        assert calls.count("matrix") == 1
+        assert D.dtype == np.float32
+        assert D[0, 2] == pytest.approx(1.0)
+
+    def test_a_distance_without_a_fingerprint_uses_pairwise(
+        self, corpus: tuple[list[SparseHypergraph], list[str]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import isalhg.metric_space.toolkit.matrix as matrix_module
+
+        calls: list[str] = []
+
+        class NotAmortizing:
+            labels_used = frozenset()
+            name = "stub_pairwise"
+
+            def fingerprint(self, H: SparseHypergraph) -> None:
+                return None
+
+            def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
+                calls.append("pairwise")
+                return float(abs(H1.n_nodes - H2.n_nodes))
+
+        monkeypatch.setattr(matrix_module, "_make_distance", lambda arm, params: NotAmortizing())
+        items, ids = corpus
+        D = build_matrix(items, "stub_pairwise", member_ids=ids)
+
+        assert calls, "the pairwise loop was skipped for a distance that does not amortize"
+        assert D[0, 2] == pytest.approx(1.0)
+
+    def test_a_raising_fingerprint_falls_back_to_pairwise(
+        self, corpus: tuple[list[SparseHypergraph], list[str]], monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import isalhg.metric_space.toolkit.matrix as matrix_module
+
+        calls: list[str] = []
+
+        class Raising:
+            labels_used = frozenset()
+            name = "stub_raising"
+
+            def fingerprint(self, H: SparseHypergraph) -> None:
+                raise RuntimeError("no standalone representation here")
+
+            def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
+                calls.append("pairwise")
+                return float(abs(H1.n_nodes - H2.n_nodes))
+
+        monkeypatch.setattr(matrix_module, "_make_distance", lambda arm, params: Raising())
+        items, ids = corpus
+        build_matrix(items, "stub_raising", member_ids=ids)
+        assert calls
+
+    @pytest.mark.parametrize("arm", ["nauty_cert", "isal_ow_struct"])
+    def test_the_routed_matrix_equals_the_pairwise_one(
+        self, arm: str, corpus: tuple[list[SparseHypergraph], list[str]]
+    ) -> None:
+        # The routing changed the path of several arms that were already
+        # measured through the loop; the values must be the same ones.
+        from isalhg.metric_space.registry import get_distance
+        from isalhg.metric_space.toolkit.matrix import _build_from_pairwise
+
+        items, ids = corpus
+        routed = build_matrix(items, arm, member_ids=ids)
+        looped = _build_from_pairwise(items, arm, 1, {})
+        np.fill_diagonal(looped, 0.0)
+        assert get_distance(arm).fingerprint(items[0]) is not None
+        np.testing.assert_allclose(routed, looped, rtol=0, atol=0)
+
+
 class TestCache:
     def test_writes_matrix_and_manifest(
         self, tmp_path: Path, corpus: tuple[list[SparseHypergraph], list[str]]

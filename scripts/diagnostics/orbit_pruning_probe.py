@@ -41,8 +41,8 @@ import statistics
 import sys
 import time
 from collections import defaultdict
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(_REPO_ROOT) not in sys.path:
@@ -125,26 +125,42 @@ def cmd_branch_table(args: argparse.Namespace) -> None:
 
 
 class _TimingOracle:
-    """Wrap an oracle and accumulate the wall-clock it consumes."""
+    """Wrap an oracle and accumulate the wall-clock it consumes.
 
-    def __init__(self, inner: Any) -> None:
+    Delegation is deliberate rather than inherited: the point is to split the
+    pruned engine's wall-clock into "time inside the group oracle" and "time in
+    the search", so every protocol method has to pass through one timer.
+    """
+
+    def __init__(self, inner: PynautyOrbitOracle) -> None:
         self.inner = inner
         self.secs = 0.0
 
-    def _timed(self, name: str, *args: Any) -> Any:
+    def seed_representatives(self, H: SparseHypergraph, seeds: Sequence[int]) -> list[int]:
         start = time.perf_counter()
-        out = getattr(self.inner, name)(*args)
+        out = self.inner.seed_representatives(H, seeds)
         self.secs += time.perf_counter() - start
         return out
 
-    def seed_representatives(self, H: Any, seeds: Any) -> Any:
-        return self._timed("seed_representatives", H, seeds)
+    def edge_representatives(
+        self, H: SparseHypergraph, placed: Sequence[int], tied_edges: Sequence[int]
+    ) -> list[int]:
+        start = time.perf_counter()
+        out = self.inner.edge_representatives(H, placed, tied_edges)
+        self.secs += time.perf_counter() - start
+        return out
 
-    def edge_representatives(self, H: Any, placed: Any, tied: Any) -> Any:
-        return self._timed("edge_representatives", H, placed, tied)
-
-    def ordering_representatives(self, H: Any, placed: Any, edge: Any, orderings: Any) -> Any:
-        return self._timed("ordering_representatives", H, placed, edge, orderings)
+    def ordering_representatives(
+        self,
+        H: SparseHypergraph,
+        placed: Sequence[int],
+        edge: int,
+        orderings: Sequence[tuple[int, ...]],
+    ) -> list[tuple[int, ...]]:
+        start = time.perf_counter()
+        out = self.inner.ordering_representatives(H, placed, edge, orderings)
+        self.secs += time.perf_counter() - start
+        return out
 
 
 def cmd_star20(args: argparse.Namespace) -> None:

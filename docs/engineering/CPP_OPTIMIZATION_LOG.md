@@ -997,3 +997,109 @@ of it; it is a speed question with no effect on the value, and it is not taken
 here. `greedy_h2s` still refuses the oracle on the C++ backend, for the reason
 Round 12 gave for `ranks`: the seed reduction is a property of the canonical
 program, not of a single seed run.
+
+## Round 14 — the ordered-walk emitter in C++ (`_core.ordered_walk`)
+
+*(2026-09-07, wave `2026-09-07-isal-kb-w5`.)*
+
+**Not a search, so not an optimisation round in the usual sense.** Rounds 10–13
+attacked the branch set of `w*_c`. The ordered walk has no branch set: it is one
+linear pass per fact along a canonical order supplied from outside, and its cost
+is already polynomial. This round moves it onto the engine because everything the
+article reports must run there, and because the walk is called once per member
+per policy per arm — 5,369 KB members × 3 policies × every sweep row — where a
+constant factor is worth having.
+
+**The port is a transcription, and that is the whole design.** Definition 3.2 is
+a sequence of Python tuple comparisons: the root key `(deg, type, -rank)`, the
+`K_V` key `(anchor, [by_rank,] predicate, |placed|, |fresh|, placed indices,
+sorted local signatures[, by_rank])`, the C-key `(sorted backward positions,
+predicate)`, and the no-crossing displacement. Each is transcribed into an
+explicit three-way comparison in `ordered_walk.cpp`, including Python's
+"shorter tuple sorts first" rule for the variable-length fields, and the C-phase
+sort is `stable_sort` over `H.edges()` order so even a tie that
+`SparseHypergraph`'s no-duplicate-hyperedge invariant makes unreachable would
+resolve the same way on both engines. The word must be *equal*, not merely
+equivalent — the golden `(len, sha256)` table is the emitter's definitional
+record — so nothing was "improved" in translation.
+
+**Two structural simplifications, neither of which changes a token.** The Python
+emitter carries a `CircularDoublyLinkedList` purely as a slot allocator:
+`_slot_of` is a bijection onto the constants and the authoritative order is the
+explicitly spliced `_order` list. The port drops the CDLL and indexes the order
+vector by constant. And `shg_from_python` grew a `depth` argument so the ordered
+walk builds its `SHG` view with `finalise(0)`: the walk never reads `xi` or
+`eta`, so the per-vertex depth-3 BFS the canonical encoder needs is skipped.
+
+**Agreement, measured.** Token sequence, creation order, root and root type,
+against the Python emitter, all three policies:
+
+| Population | members | comparisons | mismatches |
+|---|---:|---:|---:|
+| Golden pins (`test_ordered_walk.py`) | 12 fixtures × 3 policies | 36 | 0 |
+| Shared `conftest` fixtures | 12 | 36 | 0 |
+| Random connected labelled (n ≤ 10, arity ≤ 5, 3 types/predicates) | 2,000 | 6,000 | 0 |
+| Random binary stars (1–12 leaves) | 400 | 1,200 | 0 |
+| `wd50k66`, every connected member | 3,988 | 11,964 | 0 |
+| `ndc_classes`, every connected member | 1,381 | 4,143 | 0 |
+
+Unlike `w*_c`, the ordered walk has **no Python-side reachability limit**: the
+displacement search's arity-10 tail (Round 12, `k_disp` saturating at `K_MAX`)
+does not exist here, so both corpora are differential-tested whole rather than
+sampled behind a guard. `tests/integration/test_cpp_ordered_walk_corpus.py`
+asserts that the arity-10 members are present and do encode, so the claim cannot
+quietly become vacuous.
+
+**Speed.** 300-member random sample of each collection, 20 repetitions per
+member, per-member wall clock through the public `ordered_walk` entry point —
+so the figures include the `SHG` rebuild at the FFI boundary and the
+re-hydration of every token into its Python dataclass, which is what a caller
+actually pays.
+
+| Collection | policy | median µs (py → cpp) | p90 µs (py → cpp) | speedup |
+|---|---|---|---|---:|
+| wd50k66 | struct | 53.6 → 12.6 | 168.2 → 32.7 | 4.26× |
+| wd50k66 | rank | 53.4 → 12.5 | 164.2 → 33.5 | 4.27× |
+| wd50k66 | rank0 | 49.9 → 12.5 | 151.1 → 34.4 | 4.00× |
+| ndc_classes | struct | 53.0 → 15.0 | 78.1 → 27.5 | 3.54× |
+| ndc_classes | rank | 48.7 → 16.3 | 68.0 → 28.3 | 2.99× |
+| ndc_classes | rank0 | 49.2 → 15.4 | 72.8 → 27.6 | 3.19× |
+
+The p90 column is the more informative one: the Python emitter's tail is 3.2×
+its own median on wd50k66 (the wide, many-fact members), the C++ one's is 2.6×,
+so the gap widens exactly where the corpus is expensive. **3–4× is the honest
+end-to-end number, not a kernel ratio** — the FFI boundary is a fixed cost the
+port does not remove, and on the smallest members it dominates.
+
+**Build.** `pip install -e ".[dev]"` after the two changed translation units
+(`ordered_walk.cpp`, `bindings.cpp`) plus the LTO relink: 4 s. From a deleted
+`build/` tree — full CMake reconfigure and all eleven translation units: 3 s.
+Both on the 24-core dev workstation with ninja; the port adds one TU and does
+not move the build cost.
+
+**Backend resolution.** `ordered_walk(..., backend=)` mirrors
+`canonical_string`'s: a `_ORDERED_WALK_BACKENDS` dict, `resolve()` from
+`isalhg.core.backends`, default `"cpp"`. It differs in one respect — the `_core`
+import is guarded, so the module stays importable without a built extension and
+the default falls back to `"python"` rather than failing at import. The emitter
+is the language's front door for the KB campaign; it should not require a
+compiler to read. `ordered_word` / `ordered_fingerprint` / `ordered_symbols` and
+the `d_o` distance arms thread the keyword through unchanged in meaning.
+
+**Full suite after the round.** `tests/unit tests/property -m "not slow"
+--hypothesis-seed=0`: **2,336 passed, 7 skipped, 41 deselected** (225 s). The
+114 pre-existing ordered-walk tests pass on the new default *and* pass with the
+extension unregistered, so the Python reference is still exercised end to end.
+`ruff` 3 findings, `ruff format` 2 files, `mypy` 20 errors in 6 files — byte
+identical to the base commit's, verified by diffing both `mypy` runs against a
+`git archive` of the base tree.
+
+**Not done.** The token list crosses the boundary as `(kind, *fields)` tuples
+and is re-hydrated into frozen dataclasses on the Python side, which is now the
+dominant cost on small members; a native token type exposed through nanobind
+would remove it, at the price of a second `Token` representation the rest of the
+package would have to accept. The emitter is single-threaded per call — the
+parallelism that matters for a corpus is across members, and that belongs to the
+harness. And `ordered_walk` builds a fresh `SHG` per call, so a caller running
+all three policies over one member pays the boundary three times; a
+policy-vector entry point would amortise it.

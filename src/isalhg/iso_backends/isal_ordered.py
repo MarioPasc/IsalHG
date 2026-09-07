@@ -46,7 +46,10 @@ POLICIES: dict[str, OrderedWalkPolicy] = {
 
 
 def ordered_word(
-    H: SparseHypergraph, *, policy: OrderedWalkPolicy = DEFAULT_POLICY
+    H: SparseHypergraph,
+    *,
+    policy: OrderedWalkPolicy = DEFAULT_POLICY,
+    backend: str | None = None,
 ) -> OrderedWalkResult:
     """Return the ordered walk of ``H`` under nauty's canonical order.
 
@@ -56,6 +59,9 @@ def ordered_word(
         A connected labelled hypergraph.
     policy : OrderedWalkPolicy, optional
         Root rule and ``K_V`` field order. Defaults to ``ow-struct``.
+    backend : {"cpp", "python"} or None, optional
+        Emitter implementation. ``None`` takes the C++ extension when it is
+        importable; both return the same word.
 
     Returns
     -------
@@ -71,11 +77,14 @@ def ordered_word(
     isalhg.errors.DisconnectedHypergraphError
         If ``H`` is not connected.
     """
-    return ordered_walk(H, canonical_ranks(H), policy=policy)
+    return ordered_walk(H, canonical_ranks(H), policy=policy, backend=backend)
 
 
 def ordered_fingerprint(
-    H: SparseHypergraph, *, policy: OrderedWalkPolicy = DEFAULT_POLICY
+    H: SparseHypergraph,
+    *,
+    policy: OrderedWalkPolicy = DEFAULT_POLICY,
+    backend: str | None = None,
 ) -> tuple[VertexLabel, str]:
     """Return ``(root type, serialised word)`` -- the complete invariant of Theorem C.
 
@@ -90,18 +99,23 @@ def ordered_fingerprint(
         A connected labelled hypergraph.
     policy : OrderedWalkPolicy, optional
         Root rule and ``K_V`` field order.
+    backend : {"cpp", "python"} or None, optional
+        Emitter implementation; ``None`` takes the C++ extension when importable.
 
     Returns
     -------
     tuple[VertexLabel, str]
         The root's type and the ``";"``-joined program.
     """
-    result = ordered_word(H, policy=policy)
+    result = ordered_word(H, policy=policy, backend=backend)
     return result.root_label, serialize(result.tokens)
 
 
 def ordered_symbols(
-    H: SparseHypergraph, *, policy: OrderedWalkPolicy = DEFAULT_POLICY
+    H: SparseHypergraph,
+    *,
+    policy: OrderedWalkPolicy = DEFAULT_POLICY,
+    backend: str | None = None,
 ) -> tuple[Hashable, ...]:
     """Return the fingerprint as one symbol per instruction, for edit distance.
 
@@ -118,6 +132,8 @@ def ordered_symbols(
         A connected labelled hypergraph.
     policy : OrderedWalkPolicy, optional
         Root rule and ``K_V`` field order.
+    backend : {"cpp", "python"} or None, optional
+        Emitter implementation; ``None`` takes the C++ extension when importable.
 
     Returns
     -------
@@ -125,7 +141,7 @@ def ordered_symbols(
         The symbol sequence; hashable, and comparable by equality across knowledge
         bases encoded over the same vocabularies.
     """
-    result = ordered_word(H, policy=policy)
+    result = ordered_word(H, policy=policy, backend=backend)
     if H.n_vertex_labels > 1:
         return (("seed", result.root_label), *result.tokens)
     return result.tokens

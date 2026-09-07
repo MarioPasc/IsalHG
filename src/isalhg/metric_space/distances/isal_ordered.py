@@ -86,6 +86,9 @@ class IsalOrderedLevenshtein(HypergraphDistance):
     policy : str, optional
         One of :data:`isalhg.iso_backends.isal_ordered.POLICIES` --
         ``"struct"`` (default), ``"rank"`` or ``"rank0"``.
+    backend : {"cpp", "python"} or None, optional
+        Emitter implementation. ``None`` takes the C++ extension when it is
+        importable; the word, and therefore every distance, is the same either way.
 
     Raises
     ------
@@ -100,13 +103,14 @@ class IsalOrderedLevenshtein(HypergraphDistance):
     # vocabulary is non-trivial). Between them every label of a connected input is read.
     labels_used = frozenset({"vertex", "edge"})
 
-    def __init__(self, policy: str = "struct") -> None:
+    def __init__(self, policy: str = "struct", backend: str | None = None) -> None:
         if policy not in POLICIES:
             raise DistanceComputationError(
                 f"unknown ordered-walk policy {policy!r}; expected one of {sorted(POLICIES)}"
             )
         self._policy_name = policy
         self._policy = POLICIES[policy]
+        self._backend = backend
 
     @property
     def name(self) -> DistanceName:
@@ -114,7 +118,7 @@ class IsalOrderedLevenshtein(HypergraphDistance):
 
     def fingerprint(self, H: SparseHypergraph) -> tuple[Hashable, ...]:
         """Return the instruction sequence of ``H``, one symbol per instruction."""
-        return ordered_symbols(H, policy=self._policy)
+        return ordered_symbols(H, policy=self._policy, backend=self._backend)
 
     def pairwise(self, H1: SparseHypergraph, H2: SparseHypergraph) -> float:
         levenshtein, _ = _import_rapidfuzz()

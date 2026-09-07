@@ -16,12 +16,11 @@ Three claims are separated deliberately, because they can fail independently:
    ``w*_c``, so nothing pins its value; what is tested is that its fingerprint
    is invariant under relabelling and separates isomorphism classes.
 
-Marker policy. The unpruned Python tie-complete search is the reference for
-every differential, and it is expensive on exactly the inputs pruning exists
-for: measured 3.4 s on the Fano plane and past 120 s on STS(9), GQ(2, 2) and
-``C_13``. Anything that runs it at scale, and every fixture whose pruned search
-still costs seconds, carries the ``slow`` marker. The unmarked tier stays under
-half a minute so it can be run on every edit.
+Marker policy. Only the two true-STS(13) pins carry ``slow``; they are the one
+fixture whose pruned search costs minutes rather than seconds on the Python
+engine. Everything else -- including the full 500-instance and 200-star
+differentials against the unpruned search -- runs unmarked, in well under a
+minute in total.
 """
 
 from __future__ import annotations
@@ -203,12 +202,6 @@ class TestTrivialOracleIsValueNeutral:
     def test_matches_hook_off_on_the_n4_counterexample(self) -> None:
         _assert_hook_is_neutral(_ce_n4())
 
-    def test_matches_hook_off_on_40_random_instances(self) -> None:
-        rng = random.Random(20260906)
-        for _ in range(40):
-            _assert_hook_is_neutral(_random_connected(rng))
-
-    @pytest.mark.slow
     def test_matches_hook_off_on_200_random_instances(self) -> None:
         rng = random.Random(20260906)
         for _ in range(200):
@@ -232,11 +225,9 @@ class TestFrozenPins:
     def test_n4_counterexample(self) -> None:
         assert _pin(canonical_string_orbit(_ce_n4(), k=3)) == _PIN_CE_N4
 
-    @pytest.mark.slow
     def test_cyclic_triple_orbit_13(self) -> None:
         assert _pin(canonical_string_orbit(_c13_013(), k=3)) == _PIN_C13_013
 
-    @pytest.mark.slow
     def test_gq_2_2_matches_the_cpp_engine(self, gq_2_2_doily: SparseHypergraph) -> None:
         # No frozen pin exists for the doily; the C++ w*_c is the reference.
         expected = canonical_string(gq_2_2_doily, k=3, algorithm="canonical", backend="cpp")
@@ -254,20 +245,12 @@ class TestFrozenPins:
 class TestDifferentialAgainstUnprunedSearch:
     """Pruned and unpruned Python searches agree on every sampled instance."""
 
-    def test_40_random_connected_labelled_instances(self) -> None:
-        rng = random.Random(4242)
-        for i in range(40):
-            H = _random_connected(rng)
-            assert _pruned(H) == _unpruned(H), f"instance {i} diverged"
-
-    @pytest.mark.slow
     def test_500_random_connected_labelled_instances(self) -> None:
         rng = random.Random(4242)
         for i in range(500):
             H = _random_connected(rng)
             assert _pruned(H) == _unpruned(H), f"instance {i} diverged"
 
-    @pytest.mark.slow
     def test_200_random_stars(self) -> None:
         rng = random.Random(99)
         for i in range(200):
@@ -391,17 +374,6 @@ class TestOrbitFingerprint:
 class TestCanonicalRankInvariance:
     """``F_rank`` is constant on isomorphism classes."""
 
-    def test_invariant_under_30_relabellings_of_the_fano_plane(
-        self, fano_plane: SparseHypergraph
-    ) -> None:
-        expected = canonical_fingerprint_rank(fano_plane, k=3)
-        rng = random.Random(7)
-        order = list(range(fano_plane.n_nodes))
-        for _ in range(30):
-            rng.shuffle(order)
-            assert canonical_fingerprint_rank(permute(fano_plane, list(order)), k=3) == expected
-
-    @pytest.mark.slow
     @pytest.mark.parametrize("fixture_name", ["fano_plane", "sts_9"])
     def test_invariant_under_100_relabellings(
         self, fixture_name: str, request: pytest.FixtureRequest
@@ -414,17 +386,6 @@ class TestCanonicalRankInvariance:
             rng.shuffle(order)
             assert canonical_fingerprint_rank(permute(H, list(order)), k=3) == expected
 
-    def test_invariant_on_40_random_instances(self) -> None:
-        rng = random.Random(1234)
-        for i in range(40):
-            H = _random_connected(rng)
-            order = list(range(H.n_nodes))
-            rng.shuffle(order)
-            assert canonical_fingerprint_rank(H) == canonical_fingerprint_rank(permute(H, order)), (
-                f"instance {i} not invariant"
-            )
-
-    @pytest.mark.slow
     def test_invariant_on_200_random_instances(self) -> None:
         rng = random.Random(1234)
         for i in range(200):
@@ -473,12 +434,6 @@ def _rank_pair_census(n_pairs: int, seed: int) -> tuple[int, int]:
 class TestCanonicalRankCompleteness:
     """Fingerprint equality agrees with pynauty on isomorphism."""
 
-    def test_agrees_with_pynauty_on_50_pairs(self) -> None:
-        compared, iso_pairs = _rank_pair_census(50, 31337)
-        assert compared == 50
-        assert iso_pairs > 10
-
-    @pytest.mark.slow
     def test_agrees_with_pynauty_on_500_pairs(self) -> None:
         compared, iso_pairs = _rank_pair_census(500, 31337)
         assert compared == 500

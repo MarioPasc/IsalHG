@@ -89,7 +89,7 @@ class H2SStuckError(IsalHGError):
 # ---------------------------------------------------------------------------
 
 
-@lru_cache(maxsize=128)
+@lru_cache(maxsize=32)
 def _enum_displacements(k: int, radius: int) -> tuple[tuple[int, ...], ...]:
     """All ``k``-tuples in ``[-radius, radius]^k`` sorted by ``(sum|d|, |d|, d)``.
 
@@ -97,6 +97,11 @@ def _enum_displacements(k: int, radius: int) -> tuple[tuple[int, ...], ...]:
     frame, so it is memoised. The result is shared across callers and must be
     treated as read-only; it is only ever iterated. Returning a tuple rather
     than a list makes that immutability structural.
+
+    ``radius`` only ever ranges over ``0..n``, so a cache of 32 covers a whole
+    encoding of any hypergraph these corpora contain without thrashing, and
+    bounds what is retained to roughly twice the largest table -- the table the
+    uncached code would have rebuilt at every frame anyway.
     """
     if radius <= 0:
         return ((0,) * k,)

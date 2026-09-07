@@ -203,6 +203,26 @@ ordered walk stays as the order-only ablation with its named mechanism. The
 Python engines need the C++ engine for arity ≥ 5 (NDC), so the rank tie
 key must be ported to `h2s.cpp` (wave 3) before the Picasso RQ1.
 
+## 2026-09-07 morning — after the merges
+
+- HEAD `2ccc9fa` on `feature/isal-kb-word`: merges of `orbit-prune` (`02e42c5`
+  lineage) and `harness-isal`, plus two guard commits in
+  `experiments/tkde/budget.py`: the Python engines (`wstar_rank`,
+  `wstar_orbit`) are refused above `min(k, arity) = 4` or above 2e6
+  displacement tuples, censored with the reason (the workstation went out of
+  memory on the six-arm local preview; the user stopped it).
+- **User instruction (2026-09-07):** run on Picasso, not locally; spawn a
+  cheap agent for the upload. → `picasso-rq1` (sonnet5-high) is syncing the
+  branch, rebuilding the cluster env, running the smoke and submitting the
+  full RQ1 array (`configs/rq1.yaml`, all arms, ≥ 8 GB per task).
+- **Wave 3 spawned:** `cpp-rank` (opus xhigh, worktree from `2091ac6`) ports
+  the rank tie key to the C++ engine so `wstar_rank` covers arity ≥ 5
+  (`ndc_classes`); acceptance = bit-identical to the Python engine wherever
+  it runs, frozen pins untouched, timing vs C++ `w*_c`.
+- The six-arm local preview produced no rows before the stop; the decisive
+  `wstar_rank` locality numbers will come from the Picasso RQ1 (Python engine
+  on guard-satisfying members) and, with full coverage, after the C++ port.
+
 ## Merge record
 
 - 2026-09-06 `4037e67` merge(ow-emitter) into `feature/isal-kb-word`

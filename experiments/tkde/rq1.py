@@ -64,7 +64,15 @@ OW_ARMS: tuple[str, ...] = ("isal_ow_struct", "isal_ow_rank", "isal_ow_rank0")
 #: bounded by a forked child. ``wstar_rank`` is deliberately absent: its greedy
 #: walk terminates in milliseconds, so it goes through ``get_distance`` like the
 #: ordered-walk arms and pays no fork.
-BUDGETED_ARMS: dict[str, str] = {POINTER_ARM: "cpp", "wstar_orbit": "orbit"}
+#: Every Isal engine with a search runs in a forked child under the budget —
+#: the rank engine included: since wave 3 it is the C++ engine, and an
+#: unbudgeted in-process call on an arity-10 member ran for more than twelve
+#: minutes in the 2026-09-07 rank smoke (job 2248491).
+BUDGETED_ARMS: dict[str, str] = {
+    POINTER_ARM: "cpp",
+    "wstar_orbit": "orbit",
+    "wstar_rank": "rank",
+}
 
 #: ``|Aut|`` strata of the coloured Levi graph. The labels are decade
 #: groupings, so the middle bucket is ``[1e3, 1e7)`` and the three are

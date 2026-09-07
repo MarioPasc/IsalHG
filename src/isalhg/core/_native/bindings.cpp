@@ -207,27 +207,35 @@ NB_MODULE(_core, m) {
     m.def(
         "canonical_string",
         [](nb::object py_H, int k, int structural_depth, int algorithm_id,
-           int max_expansions) -> std::string {
+           int max_expansions,
+           std::optional<std::vector<std::int32_t>> ranks) -> std::string {
             // Build the SHG view under the GIL (touches Python objects).
             const isalhg::SHG H = shg_from_python(py_H);
             const auto variant = static_cast<isalhg::AlgorithmVariant>(algorithm_id);
+            // ``ranks`` is materialised here so the borrowed pointer handed to
+            // the compute phase stays valid while the GIL is released.
+            const std::vector<std::int32_t>* ranks_ptr = ranks ? &*ranks : nullptr;
             // The compute phase is GIL-free so the seed loop can fan
             // out across hardware threads without contending with Python.
             std::string result;
             {
                 nb::gil_scoped_release release;
                 result = isalhg::canonical_string_compute(
-                    H, k, structural_depth, variant, max_expansions);
+                    H, k, structural_depth, variant, max_expansions, ranks_ptr);
             }
             return result;
         },
         "H"_a, "k"_a, "structural_depth"_a, "algorithm_id"_a, "max_expansions"_a = 0,
+        "ranks"_a = nb::none(),
         "Compute the canonical Sigma_HG* string. algorithm_id matches AlgorithmVariant:\n"
         "  0 = greedy_min, 1 = greedy_single, 2 = greedy_min_inplace,\n"
         "  3 = greedy_min_wl_pruned, 4 = greedy_min_inplace_wl_pruned,\n"
-        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = canonical.\n"
+        "  5 = greedy_min_nbrdeg, 6 = greedy_single_nbrdeg, 7 = canonical,\n"
+        "  8 = canonical_rank.\n"
         "max_expansions: V-branch (tie-branch) budget per seed; 0 = unlimited.\n"
-        "  Raises CanonicalizationTimeoutError when any seed exceeds the limit.");
+        "  Raises CanonicalizationTimeoutError when any seed exceeds the limit.\n"
+        "ranks: per-vertex canonical ranks, a permutation of 0..n-1. Required by\n"
+        "  algorithm_id 8 and rejected by every other variant.");
 
     // For Phase 1 differential tests: return tokens as raw tuples to avoid
     // re-parsing the string. Each tuple is (kind:str, *fields).

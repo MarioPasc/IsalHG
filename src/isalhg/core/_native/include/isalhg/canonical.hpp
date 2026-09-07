@@ -8,6 +8,7 @@
 
 #include <cstdint>
 #include <string>
+#include <vector>
 
 #include "isalhg/sparse_hypergraph.hpp"
 
@@ -31,6 +32,14 @@ enum class AlgorithmVariant : std::uint8_t {
     // others resolve the residual V tie by raw edge id and are therefore
     // functions of the presentation (edge insertion order).
     GreedyMinComplete        = 7,
+    // T-KB — the family's greedy walk (no tie branching) with the residual V
+    // tie and the new-vertex order resolved by a caller-supplied canonical
+    // rank vector instead of by raw ids, and the seed loop collapsed to the
+    // minimum-rank member of the neighbour-degree seed set. Both branch sets
+    // become singletons, so the walk is a single deterministic path. Complete
+    // and iso-invariant because the ranks are, but its string is NOT w*_c.
+    // Requires a rank vector; ``canonical_string_compute`` throws without one.
+    GreedyMinRank            = 8,
 };
 
 // Compute the canonical Sigma_HG* string for ``H``.
@@ -41,13 +50,17 @@ enum class AlgorithmVariant : std::uint8_t {
 // k : VM pointer count; must be >= max arity.
 // structural_depth : depth for xi/eta seed-selection.
 // variant : which algorithm flavour to run.
+// ranks : per-vertex canonical ranks, a permutation of 0..n-1. Required by
+//   ``GreedyMinRank`` and rejected by every other variant.
 //
 // Throws ``DisconnectedHypergraphError`` if H is disconnected.
 // Throws ``CanonicalizationTimeoutError`` when ``max_expansions > 0`` and any
 // per-seed greedy run exceeds that many V-branch (tie-branch) recursions.
+// Throws ``IsalHGError`` on a ranks/variant mismatch or a malformed rank vector.
 [[nodiscard]] std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                                                    AlgorithmVariant variant,
-                                                   int max_expansions = 0);
+                                                   int max_expansions = 0,
+                                                   const std::vector<std::int32_t>* ranks = nullptr);
 
 // Return required_k(H) = max(2, max arity).
 [[nodiscard]] int required_k_compute(const SHG& H);

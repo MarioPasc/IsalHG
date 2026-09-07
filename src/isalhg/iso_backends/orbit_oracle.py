@@ -33,6 +33,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, TypeVar
 
+from isalhg.core.backends import Backend
 from isalhg.core.canonical import (
     CANONICAL_ORBIT_ALGORITHM,
     CANONICAL_RANK_ALGORITHM,
@@ -399,6 +400,7 @@ def canonical_string_rank(
     *,
     k: int | None = None,
     structural_depth: int = 3,
+    backend: Backend | None = None,
 ) -> str:
     """Compute the rank-tie-broken canonical string of ``H``.
 
@@ -415,6 +417,11 @@ def canonical_string_rank(
         Pointer count; ``None`` uses ``required_k(H)``.
     structural_depth : int, optional
         Structural-tuple depth. Defaults to 3.
+    backend : {"cpp", "python"} or None, optional
+        Implementation to use. ``None`` (default) takes
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`, i.e. ``"cpp"`` when the
+        extension is importable. The two backends return the identical string;
+        only ``"cpp"`` is feasible above arity 4.
 
     Returns
     -------
@@ -433,7 +440,7 @@ def canonical_string_rank(
         k=k,
         structural_depth=structural_depth,
         algorithm=CANONICAL_RANK_ALGORITHM,
-        backend="python",
+        backend=backend,
         ranks=canonical_ranks(H),
     )
 
@@ -443,6 +450,7 @@ def canonical_fingerprint_rank(
     *,
     k: int | None = None,
     structural_depth: int = 3,
+    backend: Backend | None = None,
 ) -> tuple[VertexLabel, str]:
     """Compute ``(seed label, canonical_rank string)`` of ``H``.
 
@@ -454,6 +462,9 @@ def canonical_fingerprint_rank(
         Pointer count; ``None`` uses ``required_k(H)``.
     structural_depth : int, optional
         Structural-tuple depth. Defaults to 3.
+    backend : {"cpp", "python"} or None, optional
+        Implementation to use; ``None`` (default) takes
+        :data:`isalhg.core.backends.DEFAULT_BACKEND`.
 
     Returns
     -------
@@ -472,6 +483,6 @@ def canonical_fingerprint_rank(
         k=k,
         structural_depth=structural_depth,
         algorithm=CANONICAL_RANK_ALGORITHM,
-        backend="python",
+        backend=backend,
         ranks=canonical_ranks(H),
     )

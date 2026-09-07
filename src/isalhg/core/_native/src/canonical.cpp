@@ -51,7 +51,28 @@ namespace {
 }  // namespace
 
 std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
-                                     AlgorithmVariant variant, int max_expansions) {
+                                     AlgorithmVariant variant, int max_expansions,
+                                     const std::vector<std::int32_t>* ranks) {
+    const bool use_ranks = (variant == AlgorithmVariant::GreedyMinRank);
+    if (use_ranks && ranks == nullptr) {
+        throw IsalHGError("algorithm 'canonical_rank' requires a rank vector");
+    }
+    if (!use_ranks && ranks != nullptr) {
+        throw IsalHGError("ranks is only honoured by algorithm 'canonical_rank'");
+    }
+    if (use_ranks) {
+        if (static_cast<std::int32_t>(ranks->size()) != H.n_nodes) {
+            throw IsalHGError("ranks has length " + std::to_string(ranks->size())
+                              + ", expected " + std::to_string(H.n_nodes));
+        }
+        std::vector<std::uint8_t> seen(static_cast<std::size_t>(H.n_nodes), 0);
+        for (const std::int32_t r : *ranks) {
+            if (r < 0 || r >= H.n_nodes || seen[static_cast<std::size_t>(r)]) {
+                throw IsalHGError("ranks must be a permutation of 0.." + std::to_string(H.n_nodes - 1));
+            }
+            seen[static_cast<std::size_t>(r)] = 1;
+        }
+    }
     if (H.n_nodes == 0) return "";
     if (!is_connected(H)) {
         throw DisconnectedHypergraphError(
@@ -63,7 +84,8 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
     // reuse greedy_min / greedy_single semantics.
     const bool use_nbr_deg = (variant == AlgorithmVariant::GreedyMinNbrDeg)
                           || (variant == AlgorithmVariant::GreedySingleNbrDeg)
-                          || (variant == AlgorithmVariant::GreedyMinComplete);
+                          || (variant == AlgorithmVariant::GreedyMinComplete)
+                          || use_ranks;
     std::vector<NodeId> seeds = use_nbr_deg
         ? max_neighbor_degree_nodes_compute(H)
         : max_xi_nodes_compute(H, structural_depth);
@@ -90,6 +112,17 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
             if (wl[static_cast<std::size_t>(s)] == min_col) filtered.push_back(s);
         }
         seeds.swap(filtered);
+    } else if (use_ranks) {
+        // The seed loop collapses: S(H) is iso-invariant and the ranks are a
+        // canonical total order on it, so the minimum-rank member is itself a
+        // canonical choice. Mirrors Python ``min(seeds, key=lambda v: ranks[v])``.
+        NodeId best = seeds.front();
+        for (NodeId s : seeds) {
+            if ((*ranks)[static_cast<std::size_t>(s)] < (*ranks)[static_cast<std::size_t>(best)]) {
+                best = s;
+            }
+        }
+        seeds.assign(1, best);
     }
     // GreedyMin / GreedyMinInplace / GreedyMinNbrDeg / GreedyMinComplete keep
     // all seeds returned by their selector.
@@ -121,8 +154,8 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
                     const std::size_t i =
                         next_idx.fetch_add(1, std::memory_order_relaxed);
                     if (i >= n_seeds) return;
-                    per_seed[i] =
-                        greedy_h2s_tokens(H, seeds[i], k, tie_branch, max_expansions);
+                    per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, tie_branch,
+                                                    max_expansions, ranks);
                 }
             }));
         }
@@ -140,7 +173,8 @@ std::string canonical_string_compute(const SHG& H, int k, int structural_depth,
         if (first_exc) std::rethrow_exception(first_exc);
     } else {
         for (std::size_t i = 0; i < n_seeds; ++i) {
-            per_seed[i] = greedy_h2s_tokens(H, seeds[i], k, tie_branch, max_expansions);
+            per_seed[i] =
+                greedy_h2s_tokens(H, seeds[i], k, tie_branch, max_expansions, ranks);
         }
     }
 

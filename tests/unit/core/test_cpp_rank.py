@@ -266,8 +266,8 @@ class TestBackendsAgreeOnRandomInstances:
             order = list(range(H.n_nodes))
             rng.shuffle(order)
             G = permute(H, order)
-            k = max(required_k(H), required_k(G))
-            assert _both_engines(G, k=k)[0] == _both_engines(G, k=k)[1]
+            py, cpp = _both_engines(G, k=max(required_k(H), required_k(G)))
+            assert py == cpp
 
 
 # ---------------------------------------------------------------------------

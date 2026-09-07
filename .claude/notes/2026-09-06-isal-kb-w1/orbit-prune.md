@@ -199,11 +199,124 @@ meaningful only for the real oracle.
 
 ## 5. Test results
 
-Filled in at close.
+### Fast tier (run on every edit)
+
+**Command:** `python -m pytest tests/unit/core/test_orbit_pruning.py -q -m "not slow" --durations=6`
+
+```
+collected 33 items / 2 deselected / 31 selected
+tests/unit/core/test_orbit_pruning.py ...............................    [100%]
+============================= slowest 6 durations ==============================
+17.80s call  TestDifferentialAgainstUnprunedSearch::test_200_random_stars
+12.11s call  TestDifferentialAgainstUnprunedSearch::test_500_random_connected_labelled_instances
+6.98s call   TestCanonicalRankInvariance::test_invariant_under_100_relabellings[sts_9]
+5.80s call   TestFrozenPins::test_cyclic_triple_orbit_13
+4.47s call   TestCanonicalRankCompleteness::test_agrees_with_pynauty_on_500_pairs
+2.04s call   TestCanonicalRankInvariance::test_invariant_on_200_random_instances
+====================== 31 passed, 2 deselected in 55.53s =======================
+```
+
+**Result:** 31 passed, 0 failed, 2 deselected (the two STS(13) pins).
+· **Duration:** 55.53 s · **Run at:** the re-tiering commit.
+
+### Frozen pins alongside the definitional file
+
+**Command:** `python -m pytest tests/unit/core/test_wstar_c_frozen.py tests/unit/core/test_orbit_pruning.py -q -m "not slow"`
+
+```
+====================== 35 passed, 4 deselected in 57.67s =======================
+```
+
+### Whole unit + property suite (pre-final-commit gate)
+
+**Command:** `python -m pytest tests/unit tests/property -q -m "not slow" --hypothesis-seed=0`
+
+```
+=== 2068 passed, 7 skipped, 36 deselected, 21 warnings in 274.36s (0:04:34) ====
+```
+
+**Result:** 2,068 passed, 0 failed, 7 skipped. · **Duration:** 274.36 s.
+
+The prompt's form of this command included `--hypothesis-deadline=none`, which
+this environment's pytest rejects (`error: unrecognized arguments:
+--hypothesis-deadline=none`; hypothesis 6.155.2 exposes `--hypothesis-seed`
+but not a deadline flag). The command was run without it.
+
+### Lint and types
+
+**Command:** `python -m ruff check src/ tests/ scripts/diagnostics/orbit_pruning_probe.py`
+
+```
+src/isalhg/iso_backends/isalhg_backend.py:53:5: ANN001 Missing type annotation for function argument `queue`
+src/isalhg/viz/instruction_view.py:135:9: SIM108 Use ternary operator ...
+tests/unit/core/algorithms/test_registry.py:48:5: E731 Do not assign a `lambda` expression, use a `def`
+Found 3 errors.
+```
+
+**Command:** `python -m mypy src/isalhg/` → `Found 20 errors in 6 files (checked 146 source files)`
+
+**All pre-existing.** Verified against the base commit by extracting
+`99b8574` into a scratch tree and re-running both: ruff `Found 2 errors` on
+`src/` (the same two) plus the one in `tests/`, mypy `Found 20 errors in 6
+files (checked 144 source files)`. My files contribute **zero** ruff and
+**zero** mypy errors; `ruff format --check` reports my seven touched files
+already formatted.
+
+**Failures and their resolution.** Two during development, both real and both
+fixed rather than worked around:
+
+1. The `canonical_rank` pair census failed at pair 30 against `pynauty_levi`.
+   Diagnosed as a cross-vocabulary comparison, not an engine defect — the
+   frozen `w*_c` fingerprint merges the same pair. Generator fixed to pin the
+   vocabulary across a pair; finding recorded in §7 F1.
+2. `ruff` reported `F821 Undefined name OrbitOracle` after the formatter hook
+   removed the import I had added one edit before I used it. Re-added.
 
 ## 6. Verification beyond unit tests
 
-Filled in at close.
+### Where the pruned engine spends its time (measured 2026-09-06)
+
+Reproduction: `/tmp/claude-1000/profile_split.py` (scratch), or
+`scripts/diagnostics/orbit_pruning_probe.py star20` for the star case. Every
+row was checked against the C++ `w*_c` (`equal=True`).
+
+| fixture | seeds `S(H)` → orbits | frames | V-branches | oracle calls | `autgrp` calls | oracle s | search s | C++ `w*_c` s |
+|---|---|---|---|---|---|---|---|---|
+| Fano | 7 → 1 | 13 | 4 | 5 | 6 | 0.00 (5%) | 0.01 | 0.003 |
+| STS(9) | 9 → 1 | 79 | 14 | 11 | 10 | 0.00 (0%) | 0.06 | 0.073 |
+| GQ(2,2) | 15 → 1 | 625 | 112 | 69 | 55 | 0.00 (0%) | 0.46 | 0.474 |
+| `C_13(0,1,3)` | 13 → 1 | 3,417 | 880 | 375 | 313 | 0.01 (0%) | 4.81 | 0.129 |
+
+Two things this settles. First, **the oracle is not the cost** — nauty accounts
+for 0–5 % of wall-clock on every fixture, so the "is the group computation
+worth it?" question does not arise: at these sizes it is free. Second, the
+seed loop collapses to a *single* seed on all four designs, because they are
+vertex-transitive and `S(H)` is one `Aut(H)`-orbit; that alone is a 7×–15×
+reduction before any tie is reached.
+
+The residual gap to C++ is the Python interpreter, not the algorithm. Two
+value-preserving fixes were made after this profile: one `autgrp` call per
+state instead of two, and memoising `_enum_displacements` (a pure function of
+`(k, radius)` that the encoder rebuilt every frame). The table above is
+*post*-fix; pre-fix the same rows read C_13 34.93 s, GQ(2,2) 9.28 s, STS(9)
+0.30 s.
+
+### Pruned vs unpruned Python (measured 2026-09-06, pre-memoisation)
+
+Both engines under `run_with_budget` at 120 s, so "CENSORED" means the
+unpruned search did not finish inside two minutes.
+
+| fixture | pruned Python | unpruned Python | pruned == unpruned | pruned == C++ `w*_c` |
+|---|---|---|---|---|
+| n=4 counterexample | 0.01 s | 0.01 s | yes | yes |
+| Fano | 0.02 s | 3.40 s | yes | yes |
+| STS(9) | 0.31 s | CENSORED (>120 s) | — | yes |
+| GQ(2,2) | 9.50 s | CENSORED (>120 s) | — | yes |
+| `C_13(0,1,3)` | 35.40 s | CENSORED (>120 s) | — | yes |
+
+The unpruned reference is measurable only on the two smallest fixtures, which
+is why the differentials against it run on small random instances and the hard
+fixtures are pinned against the frozen `w*_c` / the C++ engine instead.
 
 ### Branch-count collapse (measured 2026-09-06)
 
@@ -211,18 +324,37 @@ Star: hub `0`, `q` leaves each in its own binary fact with the hub; `k=2`,
 seed = hub, `tie_branch=True`, in-place. `frames` = calls to `_encode_from`,
 `vbr` = V-branch expansions, `autgrp` = `pynauty.autgrp` invocations.
 
+Command: `python scripts/diagnostics/orbit_pruning_probe.py branch-table`
+
 | q | unpruned frames | unpruned V-branches | unpruned s | pruned frames | pruned V-branches | oracle calls | autgrp calls | pruned s | equal |
 |---|---|---|---|---|---|---|---|---|---|
-| 5 | 326 | 325 | 0.018 | 6 | 5 | 4 | 4 | 0.001 | yes |
-| 6 | 1,957 | 1,956 | 0.129 | 7 | 6 | 5 | 5 | 0.001 | yes |
-| 7 | 13,700 | 13,699 | 1.087 | 8 | 7 | 6 | 6 | 0.001 | yes |
-| 8 | 109,601 | 109,600 | 10.377 | 9 | 8 | 7 | 7 | 0.002 | yes |
+| 5 | 326 | 325 | 0.009 | 6 | 5 | 4 | 4 | 0.001 | yes |
+| 6 | 1,957 | 1,956 | 0.058 | 7 | 6 | 5 | 5 | 0.001 | yes |
+| 7 | 13,700 | 13,699 | 0.422 | 8 | 7 | 6 | 6 | 0.001 | yes |
+| 8 | 109,601 | 109,600 | 3.491 | 9 | 8 | 7 | 7 | 0.001 | yes |
 
-The unpruned counts are exactly `Σ_{d=0..q} q!/(q-d)!` (109,601 for q=8), i.e.
-the number of injective placement sequences — factorial growth. The pruned
-search visits `q+1` frames and makes `q-1` oracle calls, matching the
-`rem:oracle` prediction ("one branch per state, `q` states, `O(q)` oracle
-calls") exactly.
+The unpruned counts are exactly `Σ_{d=0..q} q!/(q-d)!` — the number of
+injective placement sequences, 109,601 for q=8 — so the growth is factorial,
+not merely exponential. The pruned search visits `q+1` frames and makes `q-1`
+oracle calls, matching the proof's cost remark ("one branch per state, `q`
+states, `O(q)` oracle calls") exactly, and the two engines emit the same
+string at every `q`.
+
+### Absolute cost on large symmetric stars (measured 2026-09-06)
+
+Command: `python scripts/diagnostics/orbit_pruning_probe.py star20 --q 10 20 30`
+
+| q | `\|Aut(B(H))\|` | total s | oracle s | search s | frames | autgrp calls |
+|---|---|---|---|---|---|---|
+| 10 | 3.63e6 | 0.003 | 0.001 (19%) | 0.002 | 11 | 9 |
+| 20 | 2.43e18 | **0.024** | 0.001 (5%) | 0.022 | 21 | 19 |
+| 30 | 2.65e32 | 0.040 | 0.003 (8%) | 0.037 | 31 | 29 |
+
+The definition of done asked for the 20-leaf star under 10 s; it takes
+**0.024 s**. The unpruned search on the same input would visit
+`Σ_d 20!/(20-d)!` ≈ 6.6e18 states, so it is not merely slower — it is
+unreachable. No profile split is needed to explain the 0.024 s: the oracle is
+5 % of it.
 
 ## 7. Decisions, assumptions, open questions
 
@@ -246,6 +378,21 @@ calls") exactly.
   500, 50 pairs instead of 500, 30 relabellings instead of 100) and stays near
   60 s; the full counts and the expensive fixtures carry `slow`. Every number
   the definition of done names is measured — in the `slow` tier.
+- **A5 (deliberate step beyond the minimal hook).** Profiling showed the
+  oracle costs 0–5 % of the pruned engine's wall-clock and the search costs the
+  rest, with the hot spot in `_enum_displacements` — a pure function of
+  `(k, radius)` that the encoder rebuilt and re-sorted at every search frame
+  (27³ tuples per frame at k=3, radius=13). I memoised it. This is wider than
+  "add an oracle hook": it speeds up *every* Python-backend encoding, the
+  greedy variants included. I did it because without it the censored-tail
+  measurement (item 7) would have measured Python list-building rather than
+  orbit pruning, and because it is provably value-preserving — the function is
+  pure, its result is only ever iterated, and it now returns a tuple so the
+  sharing is structurally read-only. Verified: identical strings on all four
+  design fixtures against the C++ `w*_c`, all frozen pins green, and the whole
+  2,075-test unit + property suite green. Measured effect on the pruned
+  engine: `C_13` 34.93 s → 4.82 s, GQ(2,2) 9.28 s → 0.46 s, STS(9) 0.30 s →
+  0.06 s; on the differentials, 500 random instances 260 s → 13.4 s.
 - **F1 (finding, out of scope).** Fingerprint comparison is only defined
   *within a shared vocabulary*, and the first version of my random-pair
   generator drew `n_vertex_labels` / `n_edge_labels` independently per member.
@@ -270,13 +417,33 @@ calls") exactly.
 
 ## 9. Deliberately not done
 
-- No C++ implementation of the hook (explicitly out of scope).
+- **No C++ implementation of the hook** (explicitly out of scope). What a C++
+  port would need, for whoever picks it up: (i) an oracle interface at the
+  `canonical.cpp` level — `nauty` is already a C library, so the natural
+  shape is a direct `densenauty`/`sparsenauty` call rather than a callback
+  into Python, and the Levi graph is already built there; (ii) the placed
+  prefix in *input* node ids, which the C++ state carries as its own
+  `i2o`/`o2i` maps; (iii) the individualised colouring as a `lab`/`ptn` pair
+  with the placed vertices as singleton cells before the rest — this is
+  nauty's native colouring format, so it is cheaper there than through
+  `pynauty.Graph`; (iv) the orbit read-off from `orbits[]`, and union–find on
+  the generators for the ordering orbits. The measured Python-vs-C++ constant
+  factor on the *same* algorithm is 4×–260× depending on the fixture (see the
+  timing table in §6), so a C++ port is where this becomes usable on the
+  corpus tail rather than merely feasible.
 - No edits to `test_wstar_c_frozen.py` (frozen), to `experiments/`, to
   `core/_native/`, or to any file owned by `ow-emitter`.
+- I did **not** change how `w*_c` or `pynauty_levi` treat the declared
+  vocabulary size, despite finding they disagree on cross-vocabulary
+  comparisons (§7 F1). That is a definitional question for the PI.
 
 ## 10. Risks and follow-ups
 
-Filled in at close.
+| Item | Severity | Detail | Suggested owner |
+|---|---|---|---|
+| Cross-vocabulary fingerprint disagreement | medium | `pynauty_levi` separates structurally identical hypergraphs that declare different `n_vertex_labels`; every canonical string, `w*_c` included, merges them. Any harness that compares members drawn with independently sampled vocabulary sizes will see phantom false merges. Reproduction in §7 F1. | PI / whoever owns the fingerprint contract |
+| Python-only pruning | medium | The pruned engine is value-exact but carries the Python interpreter's constant factor, so it does not overtake the C++ unpruned engine on rigid inputs. It wins where the *search* is the bottleneck (symmetry), loses where the *constant* is. §6 has both regimes measured. | follow-up C++ task |
+| Oracle cost on rigid inputs | low | On an input with trivial `Aut`, every tie still costs one `autgrp` call that prunes nothing. A cheap pre-check (root `|Aut| == 1` ⇒ skip the oracle entirely) would remove that overhead; not implemented because it is an optimisation, not a correctness question. | follow-up |
 
 ## 11. Self-assessment against the definition of done
 

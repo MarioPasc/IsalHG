@@ -219,6 +219,21 @@ key must be ported to `h2s.cpp` (wave 3) before the Picasso RQ1.
   the rank tie key to the C++ engine so `wstar_rank` covers arity ≥ 5
   (`ndc_classes`); acceptance = bit-identical to the Python engine wherever
   it runs, frozen pins untouched, timing vs C++ `w*_c`.
+- **Defect found by `cpp-rank` (2026-09-07):** the orbit-prune deliverable
+  `canonical_rank` applies `ranks` only in the root frame of `_encode_from`
+  (not forwarded to the four recursive calls), so below depth 0 it falls
+  back to min-edge-id ties and full permutation branching — edge-order
+  dependent (3/400 random instances change under an edge-order shuffle;
+  vertex relabelling 0/400, which is why the existing test passed) and
+  exponential. **Ruling:** the described semantics (ranks threaded through
+  every frame; singleton ties; one deterministic path) are the definition;
+  `cpp-rank`'s ownership extended to the `ranks` path of
+  `hypergraph_to_string.py` and the `TestCanonicalRank*` classes (edge-order
+  invariance test added). Every `wstar_rank` row computed before the fix is
+  void; `wstar_rank` removed from today's Picasso RQ1 submission (message to
+  `picasso-rq1`) and re-run after the C++ port. `wstar_orbit` is unaffected
+  (tie-branch path; its pruning is verified at depth by the branch-count
+  table and the 267/267 differential).
 - The six-arm local preview produced no rows before the stop; the decisive
   `wstar_rank` locality numbers will come from the Picasso RQ1 (Python engine
   on guard-satisfying members) and, with full coverage, after the C++ port.

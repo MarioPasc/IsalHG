@@ -153,3 +153,41 @@ rewriting. That is the refutable form.
 
 Run it inside the RQ7 sweep (the only place it changes a figure), never as a
 row: under the adopted budget rule the published row is 60 s.
+
+## Correction to the pre-registration's reading: H-M2 was not falsified (2026-09-08)
+
+Recorded against `ISAL_VARIANT_DESIGN.md` §9.
+
+The first reading of the final tree reported that no `ow_*` arm reaches
+`w*_c`'s pre-registered monotonicity targets (0.961 NDC natural / 0.553 WD50K
+ladder) and marked **H-M2 falsified for the ordered walk**. That verdict is an
+**artefact of scoring arms on different pair sets**: the analyzer's M2 table
+scores each arm on its own uncensored pairs, so the search-based engines were
+measured on 96 / 351 / 4,727 pairs and the ordered walk on 128 / 400 / 5,000 —
+and the pairs the search censors are the hard ones, whose absence inflates its
+ρ.
+
+Restricted to the intersection of the published arms (5,428 pairs), the
+ordering reverses on both NDC series:
+
+| series / regime | n | `wstar_orbit` | `wstar_rank` | `isal_ow_struct` | `isal_ow_rank` | `nauty_cert_rows` | `nauty_cert` |
+|---|---|---|---|---|---|---|---|
+| NDC natural, pendant | 372 | 0.4322 | 0.3984 | **0.5564** | 0.4577 | 0.2752 | 0.1836 |
+| NDC natural, interior | 105 | 0.9485 | 0.9526 | 0.9501 | **0.9665** | 0.9354 | 0.9338 |
+| WD50K ladder | 4,951 | **0.5372** | 0.5290 | 0.4726 | 0.5046 | 0.4936 | 0.6774 |
+
+So on the natural NDC series the **order-only** program is the most monotone
+Isal program; the search-based engine wins only the constant-preserving WD50K
+ladder. H-M2 stands for the ordered walk on two of three series.
+
+This does not reopen the representation decision — locality is the
+pre-registered primary axis and the search leads it in every regime bar one —
+but it changes what the RQ1 reading must say: **the search buys insertion
+locality and pays for it in monotonicity on natural data and in cost.** The
+four-cell ablation is sharper for it: order alone gives monotonicity and cost,
+the search adds locality, the oracle adds nothing but time.
+
+**Methodological rule this establishes:** no cross-arm comparison in RQ1 is
+sound on the analyzer's per-arm sets. Every published comparison restricts to
+the intersection over the published arms, and the table header carries that n
+and the fact that it is the Isal engine's completed set at 60 s.

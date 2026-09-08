@@ -245,3 +245,35 @@ BCa degenerate on all 48 cells, because per-cluster medians of a small-integer
 response are heavily tied. The per-cluster convention is retained beside it for
 continuity with `tables.md`, and an unweighted mean-of-cluster-fractions column
 is the sensitivity check.
+
+### The interval and the p-value answer different questions — say so in the caption
+
+Several rows show a paired-difference interval that excludes zero beside a Holm
+p above 0.05. On NDC pendant monotonicity, `nauty_cert_rows` is
+Δρ = +0.157 [0.011, 0.327] with p_Holm = 0.168, and `wstar_rank` is
++0.034 [0.0007, 0.066] with p_Holm = 0.168.
+
+That is not a contradiction and must not be left to look like one: **the
+interval is per-comparison at 95 %, the p-value is corrected across the six
+arms of its family.** One clause in the caption fixes it. The alternative —
+printing simultaneous intervals — would be defensible but changes every
+interval in the paper for the sake of a handful of rows.
+
+### M2, what is and is not established (60 s budget, published-arm intersection)
+
+| series | clusters | `w*_c` (orbit) vs row certificate | verdict |
+|---|---|---|---|
+| NDC natural, pendant | 50 | Δρ = +0.157 [0.011, 0.327] | p_Holm 0.168 — **within noise** |
+| NDC natural, interior | 34 | Δρ = +0.013 [·] | p_Holm 0.156 — **within noise** |
+| WD50K ladder | 997 | Δρ = **+0.044 [0.025, 0.063]** | p_Holm 0.006 — **established** |
+
+So the Isal word leads the row certificate in point estimate on all three
+series and significantly on one. The earlier phrasing "leads monotonicity on
+every series measured" overstated it and is withdrawn.
+
+Two results that do clear on the small NDC series: the **ordered walk beats the
+search** on pendant pairs (Δρ = −0.124 [−0.228, −0.037], p_Holm 0.025) and the
+search beats the **byte** certificate (+0.249, p_Holm 0.024). On the ladder the
+byte certificate beats the search (−0.140 [−0.159, −0.120], p_Holm 0.006) by
+responding about five times larger per edit. `wstar_rank` is indistinguishable
+from `wstar_orbit` on every series — the tie key costs no monotonicity.

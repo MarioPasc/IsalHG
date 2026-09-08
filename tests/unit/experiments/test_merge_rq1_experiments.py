@@ -151,3 +151,26 @@ class TestDuplicateAudit:
         assert report["m1"]["rows"] == 4
         assert report["m1"]["unique_observations"] == 2
         assert report["m1"]["duplicate_rows"] == 2
+
+
+class TestDropArms:
+    def test_a_dropped_arm_never_reaches_the_merge(self, two_launch_root: Path) -> None:
+        """An arm that failed its acceptance gate is left out entirely."""
+        out_root = two_launch_root / "out"
+        merge(
+            two_launch_root,
+            ["addressing", "addressing_cpp"],
+            "merged",
+            out_root=out_root,
+            tags={"addressing": ["new11111"]},
+            drop_arms=["fact_rank"],
+        )
+        out_dir = out_root / RQ_FOLDER / "merged"
+        frame = pd.concat(
+            [pd.read_csv(p) for p in out_dir.glob("rows_m1__*.csv")],
+            ignore_index=True,
+        )
+        assert set(frame["arm"]) == {"isal_ow_struct"}
+        manifest = json.loads((out_dir / "merge_manifest.json").read_text())
+        assert manifest["arms_dropped"] == ["fact_rank"]
+        assert "fact_rank" not in manifest["arm_sources"]

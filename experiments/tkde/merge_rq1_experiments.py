@@ -198,6 +198,7 @@ def merge(
     out_root: Path | None = None,
     tags: dict[str, Sequence[str]] | None = None,
     allow_duplicates: bool = False,
+    drop_arms: Sequence[str] | None = None,
 ) -> dict[str, str]:
     """Write the merged experiment and return the arm -> source assignment.
 
@@ -209,7 +210,9 @@ def merge(
     """
     prefer = dict(prefer or {})
     tags = dict(tags or {})
+    dropped = set(drop_arms or ())
     assignment = assign_sources(root, experiments, prefer, tags)
+    assignment = {a: s for a, s in assignment.items() if a not in dropped}
     out_dir = (out_root or root) / RQ_FOLDER / out_experiment
     if out_dir.exists():
         if not overwrite:
@@ -250,6 +253,7 @@ def merge(
         "source_tags_available": {name: tags_of(root / RQ_FOLDER / name) for name in experiments},
         "source_tags_used": {name: list(sel) for name, sel in tags.items()},
         "arm_sources": assignment,
+        "arms_dropped": sorted(dropped),
         "row_files_written": written,
         "rows_kept_per_table": kept_rows,
         "duplicate_audit": duplicates,
@@ -327,6 +331,15 @@ def main(argv: Sequence[str] | None = None) -> int:
         help="write the merge even though it carries duplicated observations",
     )
     parser.add_argument(
+        "--drop-arms",
+        nargs="*",
+        default=(),
+        help=(
+            "arms to leave out of the merged experiment entirely -- an arm that "
+            "failed its acceptance gate must not reach a published table"
+        ),
+    )
+    parser.add_argument(
         "--out-root", type=Path, default=None, help="results root for the merged experiment"
     )
     args = parser.parse_args(argv)
@@ -345,6 +358,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         out_root=args.out_root,
         tags=_parse_tags(args.only_tags),
         allow_duplicates=args.allow_duplicates,
+        drop_arms=args.drop_arms,
     )
     for arm, name in sorted(assignment.items()):
         print(f"{arm:24s} <- {name}")

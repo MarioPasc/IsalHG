@@ -200,9 +200,78 @@ def common_set(
             print(f"  {label:<45} n={len(sub):>5} rho={rho:.4f}")
 
 
+#: The arms that get a row in the published RQ1 tables. The *unpruned* engine
+#: (`isalhg_levenshtein`) is deliberately absent: under D-ART5 it appears only
+#: in M3, as the no-nauty cost cell, and its censored tail must not shrink the
+#: comparison set for arms that would otherwise be scored on more units.
+PUBLISHED_ARMS: tuple[str, ...] = (
+    "wstar_orbit",
+    "wstar_rank",
+    "isal_ow_struct",
+    "isal_ow_rank",
+    "isal_ow_rank0",
+    "nauty_cert",
+    "nauty_cert_rows",
+)
+
+
+def published_table(exp_dir: Path, table: str, arms: Sequence[str]) -> None:
+    """One RQ1 table with every arm scored on the *same* units.
+
+    An arm with a censored tail is otherwise scored on a smaller and easier set
+    than an arm that completes everything, so the published table restricts to
+    the intersection of the units every published arm completed. The
+    restriction is ours to carry: the certificate arms complete every member,
+    and it is the Isal engine's 60 s budget that sets the set.
+    """
+    spec = COMMON_SET_SPECS[table]
+    keys, value = list(spec["keys"]), str(spec["value"])
+    frame = _load(exp_dir, table)
+    frame[value] = pd.to_numeric(frame[value], errors="coerce")
+    present = [a for a in arms if a in set(frame["arm"].astype(str))]
+    missing = [a for a in arms if a not in present]
+    wide = frame.pivot_table(index=keys, columns="arm", values=value, aggfunc="first")
+    common = wide[present].dropna()
+
+    print(f"{table} -- published table, arms restricted to their common units")
+    if missing:
+        print(f"  (absent from this tree: {', '.join(missing)})")
+    print("  units completed per arm, unrestricted:")
+    for arm in present:
+        print(f"    {arm:<22} {int(wide[arm].notna().sum()):>7}")
+    print(f"  intersection over the published arms: {len(common)}")
+
+    merged = frame[frame["arm"].isin(present)].merge(
+        common.reset_index()[keys], on=keys, how="inner"
+    )
+    aggs: dict[str, Any] = {"n": "size", "median": "median"}
+    if table == "m1":
+        aggs["within_2"] = lambda s: float((s <= 2).mean())
+    summary = merged.groupby([*spec["group"], "arm"])[value].agg(**aggs).reset_index()
+    print()
+    print(summary.to_string(index=False))
+
+    if table == "m2":
+        merged["delta"] = pd.to_numeric(merged["delta"], errors="coerce")
+        print("\nrho(delta, d) on the restricted set:")
+        for gkeys, group in merged.groupby([*spec["group"], "arm"], sort=True):
+            sub = group[["delta", value]].dropna()
+            if len(sub) < 10 or sub["delta"].nunique() < 2:
+                continue
+            rho = spearmanr(sub["delta"], sub[value]).statistic
+            label = " / ".join(str(g) for g in gkeys)
+            print(f"  {label:<48} n={len(sub):>5} rho={rho:.4f}")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("check", choices=("agreement", "m4-rho", "common-set", "both"))
+    parser.add_argument("check", choices=("agreement", "m4-rho", "common-set", "published", "both"))
+    parser.add_argument(
+        "--arms",
+        nargs="*",
+        default=PUBLISHED_ARMS,
+        help="arms of the published table (default: the D-ART5 set)",
+    )
     parser.add_argument("--a", default="isalhg_levenshtein")
     parser.add_argument("--b", default="wstar_orbit")
     parser.add_argument("--table", default="m1", choices=sorted(COMMON_SET_SPECS))
@@ -221,6 +290,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         agreement(exp_dir)
     if args.check in ("m4-rho", "both"):
         m4_rho(exp_dir)
+    if args.check == "published":
+        published_table(exp_dir, args.table, args.arms)
     if args.check == "common-set":
         common_set(exp_dir, args.a, args.b, args.table, not args.no_expect_identical)
     return 0

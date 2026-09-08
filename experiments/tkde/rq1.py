@@ -80,13 +80,17 @@ BUDGETED_ARMS: dict[str, str] = {
 AUT_BUCKETS: tuple[tuple[float, str], ...] = ((1e3, "<1e3"), (1e7, "1e3-1e6"))
 AUT_BUCKET_TOP = ">=1e7"
 
+#: ``ROLES_ARM`` is deliberately absent: it fails the M0 relabelling-invariance
+#: gate on wd50k66 (247 false splits, 2,104 violations of 3,988 members), so it
+#: is not a measurable arm and must not reach a table (T-KBf). ``member_word``
+#: still knows how to compute it, so a config that names it explicitly can, but
+#: nothing selects it by default.
 DEFAULT_ARMS: tuple[str, ...] = (
     POINTER_ARM,
     "wstar_rank",
     "wstar_orbit",
     *OW_ARMS,
     "fact_rank",
-    ROLES_ARM,
     "fact_local_colour",
     "fact_local_key",
     "fact_degree_key",

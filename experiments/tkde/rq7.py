@@ -23,6 +23,24 @@ Two notes on what is persisted:
 
 Timing is a reported quantity here, so every job that runs this module pins
 ``--constraint=sd`` and exports ``TKDE_THREADS=1``.
+
+Where the engine is bounded (the T-KBf audit, 2026-09-08). Three paths reach a
+canonicalization and each is bounded differently:
+
+* ``run_sweep`` and ``run_yield`` encode through
+  :func:`experiments.tkde.rq1.member_word`, which routes every arm of
+  ``BUDGETED_ARMS`` -- the pointer engine and both nauty-assisted engines --
+  through a forked child under ``pointer_budget_s``. A grep for ``engine_word``
+  in this file finds nothing because the call is one level down, not because
+  the path is unbudgeted.
+* the remaining arms of those two paths (``isal_ow_*``, ``fact_rank``,
+  ``nauty_cert``) run in-process. Their cost is one nauty call plus a linear
+  emission, the same call ``aut_bucket`` makes once per swept instance and the
+  same discipline RQ1 already runs its per-member ``aut_bucket`` under.
+* ``run_nscaling`` builds a whole matrix in a forked child under
+  ``nscaling_budget_s``, through :func:`experiments.tkde.budget.guarded_budget_call`
+  so that a poisoned fork is refused rather than recorded as an hour-long
+  censoring that never ran.
 """
 
 from __future__ import annotations
@@ -37,7 +55,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.tkde import corpora as corpora_io
-from experiments.tkde.budget import run_with_budget_detail
+from experiments.tkde.budget import guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.rq1 import (
@@ -317,10 +335,10 @@ def run_yield(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]
 def _matrix_timing(items: Sequence[Any], ids: Sequence[str], arm: str) -> tuple[float, float]:
     """``(canonicalization seconds, whole-matrix seconds)`` for one arm at one ``N``."""
     from isalhg.metric_space.registry import get_distance
-    from isalhg.metric_space.toolkit.matrix import build_matrix
+    from isalhg.metric_space.toolkit.matrix import WORD_ARMS, build_matrix
 
     canon = 0.0
-    if arm in ("fact_rank", "fact_rank_roles"):
+    if arm in WORD_ARMS:
         from isalhg.metric_space.distances.fact_levenshtein import fact_word
 
         start = time.perf_counter()
@@ -367,7 +385,7 @@ def run_nscaling(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, An
             # known overrun buys nothing but queue time.
             rows.append(_nscaling_row(ctx, collection.name, master, size, arm, rep, skipped=True))
             continue
-        result = run_with_budget_detail(_matrix_timing, (items, ids, arm), budget)
+        result = guarded_budget_call(_matrix_timing, (items, ids, arm), budget)
         if result.censored:
             censored_once = True
             rows.append(

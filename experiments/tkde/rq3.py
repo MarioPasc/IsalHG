@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import multiprocessing as mp
 import random
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -34,6 +33,7 @@ from typing import Any
 import numpy as np
 
 from experiments.tkde import corpora, io
+from experiments.tkde.budget import guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root, seeds
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.datasets.kb.base import KBCollection, KBRecord
@@ -289,22 +289,20 @@ def fact_distance(a: IdentityFacts, b: IdentityFacts) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _guard_target(pipe: Any, fn: Callable[[], Any]) -> None:
-    """Run ``fn`` in the forked child and send its value (or its failure) back."""
-    try:
-        pipe.send(("ok", fn()))
-    except BaseException as exc:  # noqa: BLE001 - the parent decides what to do
-        pipe.send(("error", f"{type(exc).__name__}: {exc}"))
-    finally:
-        pipe.close()
-
-
 def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
-    """Run ``fn`` in a forked child and kill it after ``budget_s`` seconds.
+    """Run ``fn`` in a forked child, killed after ``budget_s`` seconds.
 
     A wall-clock guard has to be at the process level: a long computation inside
     a C extension does not return to the interpreter, so a signal-based alarm
     never fires (measured; DESIGN.md section 3 step 1).
+
+    Delegates to :func:`experiments.tkde.budget.guarded_budget_call`, which adds
+    the fork-health canary this function lacked: a process that has already
+    canonicalized in-process forks children that deadlock on the C++ engine, so
+    every call here would return ``("timeout", None)`` without having computed
+    anything -- a censoring indistinguishable, in the rows, from a real one.
+    RQ3 canonicalizes hundreds of consensus candidates per cell, so it refuses
+    instead of writing that fiction.
 
     Parameters
     ----------
@@ -317,24 +315,18 @@ def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
     -------
     tuple
         ``("ok", value)``, ``("timeout", None)`` or ``("error", message)``.
+
+    Raises
+    ------
+    experiments.tkde.budget.TkdeBudgetError
+        If the C++ engine has already run in this process.
     """
-    context = mp.get_context("fork")
-    parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=_guard_target, args=(child, fn))
-    process.start()
-    child.close()
-    payload: tuple[str, Any] = ("timeout", None)
-    if parent.poll(budget_s):
-        try:
-            payload = parent.recv()
-        except EOFError:
-            payload = ("error", "child died without sending a result")
-    parent.close()
-    process.join(timeout=5)
-    if process.is_alive():
-        process.kill()
-        process.join(timeout=5)
-    return payload
+    result = guarded_budget_call(fn, (), budget_s)
+    if result.censored:
+        return ("timeout", None)
+    if result.error is not None:
+        return ("error", result.error)
+    return ("ok", result.value)
 
 
 # ---------------------------------------------------------------------------

@@ -444,3 +444,46 @@ class TestRendering:
         assert text.count(rq1.UNIT_SENTENCE) >= 2
         assert "n_clusters" in text
         assert "seed 0" in text
+
+
+class TestPooledMedianClusterBootstrap:
+    """The printed interval must be for the estimand the table prints."""
+
+    def test_weighted_median_matches_numpy_including_even_length(self) -> None:
+        import numpy as np
+
+        from scripts.tkde.rq1_statistics import _weighted_median
+
+        for sample in ([0, 1], [0, 1, 2], [3, 3, 3, 3], [0, 0, 1, 5, 9]):
+            values = np.asarray(sample, dtype=float)
+            bins, inverse = np.unique(values, return_inverse=True)
+            counts = np.zeros((1, bins.size))
+            np.add.at(counts, (np.zeros_like(inverse), inverse), 1.0)
+            assert _weighted_median(counts, bins)[0] == np.median(values)
+
+    def test_point_is_the_pooled_median_not_the_median_of_medians(self) -> None:
+        """One big cluster of 0s and many small ones of 10s pull them apart."""
+        import numpy as np
+
+        from scripts.tkde.rq1_statistics import cluster_median_ci_pooled
+
+        values = [0.0] * 100 + [10.0] * 5
+        clusters = ["big"] * 100 + [f"small{i}" for i in range(5)]
+        out = cluster_median_ci_pooled(values, clusters, n_resamples=200, seed=0)
+        assert out is not None
+        assert out["point"] == np.median(values) == 0.0
+        assert out["n_clusters"] == 6
+        assert out["low"] <= out["point"] <= out["high"]
+
+    def test_single_cluster_is_degenerate_not_an_error(self) -> None:
+        from scripts.tkde.rq1_statistics import cluster_median_ci_pooled
+
+        out = cluster_median_ci_pooled([1.0, 2.0, 3.0], ["a"] * 3, n_resamples=50)
+        assert out is not None
+        assert out["method"] == "degenerate_single_cluster"
+        assert out["low"] == out["high"] == out["point"]
+
+    def test_empty_input_returns_none(self) -> None:
+        from scripts.tkde.rq1_statistics import cluster_median_ci_pooled
+
+        assert cluster_median_ci_pooled([], [], n_resamples=10) is None

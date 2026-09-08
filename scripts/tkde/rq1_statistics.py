@@ -674,6 +674,135 @@ def _chunk_sizes(total: int, width: int) -> Iterator[int]:
         remaining -= size
 
 
+def _weighted_median(counts: np.ndarray, bins: np.ndarray) -> np.ndarray:
+    """Median of the distributions in each row of ``counts`` over ``bins``.
+
+    Matches :func:`numpy.median`: when the cumulative count lands exactly on
+    half the total the two neighbouring bins are averaged, otherwise the bin
+    that crosses the half is taken.
+    """
+    total = counts.sum(axis=1)
+    cumulative = np.cumsum(counts, axis=1)
+    half = total[:, None] / 2.0
+    last = bins.size - 1
+    low = np.clip((cumulative < half).sum(axis=1), 0, last)
+    high = np.clip((cumulative <= half).sum(axis=1), 0, last)
+    return 0.5 * (bins[low] + bins[high])
+
+
+def cluster_median_ci_pooled(
+    values: Sequence[float],
+    clusters: Sequence[Any],
+    *,
+    n_resamples: int = DEFAULT_RESAMPLES,
+    seed: int = DEFAULT_SEED,
+) -> dict[str, Any] | None:
+    """Cluster bootstrap of the POOLED median, resampling whole clusters.
+
+    The estimand is the number the table prints -- the median over rows -- so
+    each replicate draws clusters with replacement and recomputes the median of
+    the rows they carry, exactly as :func:`cluster_fraction_ci` does for the
+    proportion. Bounding the median of per-cluster medians instead answers a
+    different question whenever cluster sizes differ, which on ``ndc_classes``
+    they do by a factor of 47.
+
+    The response is a small non-negative integer (instruction counts), so the
+    value support is tiny and each replicate is a weighted median over
+    per-cluster histograms rather than a re-sort of the drawn rows: one matrix
+    product per batch instead of a gather.
+
+    Parameters
+    ----------
+    values : Sequence[float]
+        The per-row response.
+    clusters : Sequence
+        Cluster id per row.
+    n_resamples : int, optional
+        Bootstrap replicates.
+    seed : int, optional
+        Bootstrap RNG seed.
+
+    Returns
+    -------
+    dict or None
+        ``point``, ``low``, ``high``, ``method``, ``n``, ``n_clusters``, or
+        ``None`` when there is nothing to bound.
+    """
+    frame = pd.DataFrame(
+        {"value": list(values), "cluster": pd.Series(list(clusters)).astype(str)}
+    ).dropna()
+    if frame.empty:
+        return None
+    observed = frame["value"].to_numpy(dtype=float)
+    codes = pd.factorize(frame["cluster"], sort=True)[0]
+    n_clusters = int(codes.max()) + 1
+    bins, inverse = np.unique(observed, return_inverse=True)
+
+    histogram = np.zeros((n_clusters, bins.size), dtype=float)
+    np.add.at(histogram, (codes, inverse), 1.0)
+    point = float(np.median(observed))
+
+    if n_clusters == 1:
+        return {
+            "point": point,
+            "low": point,
+            "high": point,
+            "method": "degenerate_single_cluster",
+            "n": int(observed.size),
+            "n_clusters": n_clusters,
+        }
+
+    rng = np.random.default_rng(seed)
+    replicates = np.empty(n_resamples, dtype=float)
+    written = 0
+    for draws in _chunk_sizes(n_resamples, n_clusters):
+        drawn = rng.integers(0, n_clusters, size=(draws, n_clusters))
+        multiplicity = np.zeros((draws, n_clusters), dtype=float)
+        rows = np.repeat(np.arange(draws), n_clusters)
+        np.add.at(multiplicity, (rows, drawn.ravel()), 1.0)
+        replicates[written : written + draws] = _weighted_median(multiplicity @ histogram, bins)
+        written += draws
+
+    leave_one_out = histogram.sum(axis=0)[None, :] - histogram
+    jackknife = _weighted_median(leave_one_out, bins)
+    low, high, method = _bca_bounds(point, replicates, jackknife)
+    return {
+        "point": point,
+        "low": low,
+        "high": high,
+        "method": f"{method}_pooled_median",
+        "n": int(observed.size),
+        "n_clusters": n_clusters,
+    }
+
+
+def _unweighted_cluster_mean_ci(
+    rows: pd.DataFrame,
+    *,
+    n_resamples: int = DEFAULT_RESAMPLES,
+    seed: int = DEFAULT_SEED,
+) -> dict[str, Any] | None:
+    """The within-two fraction with every cluster counted equally.
+
+    The sensitivity column for :func:`cluster_fraction_ci`. The pooled fraction
+    weights a drug class by the quarters it contributed; this one weights every
+    class alike. Agreement closes the question; disagreement is a corpus
+    property worth naming, since it means the large classes behave differently
+    from the small ones.
+    """
+    if rows.empty:
+        return None
+    per_cluster = rows.groupby("_cluster")["_within"].mean().to_numpy(dtype=float)
+    if per_cluster.size == 0:
+        return None
+    interval = bca_ci(per_cluster, stat="mean", n_resamples=n_resamples, seed=seed)
+    payload = interval.as_dict()
+    payload["point"] = float(per_cluster.mean())
+    payload["method"] = "bca_mean_of_cluster_fractions"
+    payload["n_clusters"] = int(per_cluster.size)
+    return payload
+
+
 def cluster_median_ci(
     pooled_values: Sequence[float],
     cluster_values: Sequence[float],
@@ -924,9 +1053,24 @@ def _m1_cell(
                 "n": int(len(rows)),
                 "n_members": int(rows["_member"].nunique()),
                 "n_clusters": int(rows["_cluster"].nunique()),
-                "median_d_instr": cluster_median_ci(
+                # The printed interval is for the estimand the table prints --
+                # the pooled median. The per-cluster-median convention of
+                # `analyze_rq1` is kept beside it so the supplement can show the
+                # two agree (and name the classes that drive them apart if not).
+                "median_d_instr": cluster_median_ci_pooled(
+                    rows["d_instr"].to_numpy(dtype=float),
+                    rows["_cluster"].tolist(),
+                    n_resamples=n_resamples,
+                    seed=seed,
+                ),
+                "median_d_instr_per_cluster": cluster_median_ci(
                     rows["d_instr"].to_numpy(dtype=float),
                     entities["response"].to_numpy(dtype=float),
+                    n_resamples=n_resamples,
+                    seed=seed,
+                ),
+                "within_two_unweighted": _unweighted_cluster_mean_ci(
+                    rows,
                     n_resamples=n_resamples,
                     seed=seed,
                 ),

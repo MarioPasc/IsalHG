@@ -78,3 +78,50 @@ It runs on the Picasso login node; no heavy local compute (handoff §2.2).
 from `experiments/tkde/configs/rq1.yaml`; there is no 600 s re-run of the 60 s
 censored tail in this campaign. The wave logs are silent on it. The `w*_c` row
 is `isalhg_levenshtein` at the 60 s budget, with its censoring reported in M3.
+
+---
+
+## The per-arm merge source is load-bearing — a defect avoided (2026-09-08)
+
+`--prefer wstar_orbit=addressing_cpp` is not bookkeeping. The same arm, over
+the same 7,369 members at the same 60 s budget, reads:
+
+| source experiment | engine | `wstar_orbit` censored |
+|---|---|---|
+| `addressing` (`configs/rq1.yaml`) | the **Python** orbit engine, guarded to small members | **406** |
+| `addressing_cpp` (`configs/rq1_cpp.yaml`) | the **C++** orbit engine | **77** |
+
+Had the merge taken the arm from the first source that carries it, the R2
+headline would have been 406 rather than 77 — the paper understating its own
+result more than fivefold — and it would have violated the author's rule that
+every arm in a final table runs on the C++ engine. This is exactly the case
+`configs/rq1_cpp.yaml` was written for, and it is why the merge pins the source
+per arm and records the assignment in `merge_manifest.json` rather than
+resolving it by first-come.
+
+## Censoring at a wall-clock budget is not exactly reproducible
+
+Reading the same members, same tag, same budget, at two times while the
+recovery sweep re-ran shards: the unpruned engine's censoring moved from
+**357 to 354** of 7,369. Nothing is wrong — the budget is wall clock, so a
+member whose true cost sits near it is decided by node load. Two consequences.
+
+**A censored member never changes a value, only its presence.** Identical seeds
+give identical words, so censoring decides which units enter a table, never
+what a unit says.
+
+**The near-boundary mass says which counts can drift.** Completed members by
+time-to-budget:
+
+| arm | completed | ≥ 30 s | ≥ 45 s | ≥ 55 s | censored |
+|---|---|---|---|---|---|
+| `wstar_orbit` (C++) | 7,292 | 32 | 7 | 6 | 77 |
+| `wstar_rank` | 7,316 | **0** | 0 | 0 | 53 |
+| `isal_ow_struct` | 7,369 | **0** | 0 | 0 | **0** |
+| `w*_c` unpruned | 7,015 | 67 | 20 | 6 | 354 |
+
+The arm that drifted is the one with twice the near-boundary mass. `wstar_rank`
+is bimodal — not one member within 30 s of the budget, yet 53 censored — so its
+count cannot drift; the ordered walk has nothing to drift. Whether the pruned
+engine's 77 are far *above* the budget is the question the 600 s re-run
+answers, and it is deferred into the RQ7 envelope sweep.

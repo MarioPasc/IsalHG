@@ -124,6 +124,20 @@ class TestGuardedBudgetCall:
         with pytest.raises(TkdeBudgetError, match="deadlocks"):
             budget_mod.guarded_budget_call(int, ("17",), 30.0)
 
+    def test_a_child_that_cannot_reach_the_engine_is_not_refused(self, monkeypatch: Any) -> None:
+        # Poisoning hangs the C++ path and nothing else, so guarding a fact-word
+        # or vector child would refuse work that would have succeeded.
+        monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: False)
+        result = budget_mod.guarded_budget_call(int, ("17",), 30.0, cpp_engine=False)
+        assert result.value == 17
+
+    def test_the_engine_arms_are_the_three_that_canonicalize(self) -> None:
+        assert set(budget_mod.CPP_ENGINE_ARMS) == {
+            "isalhg_levenshtein",
+            "wstar_rank",
+            "wstar_orbit",
+        }
+
 
 class TestRq3RunGuarded:
     """T-KBf (C): ``run_guarded`` gained the fork-health canary."""
@@ -143,7 +157,14 @@ class TestRq3RunGuarded:
     ) -> None:
         monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: False)
         with pytest.raises(TkdeBudgetError, match="deadlocks"):
-            rq3.run_guarded(lambda: 1, 30.0)
+            rq3.run_guarded(lambda: 1, 30.0, cpp_engine=True)
+
+    def test_the_consensus_default_is_unguarded_because_it_is_pure_python(
+        self, monkeypatch: Any
+    ) -> None:
+        # coverage_consensus keys candidates with fact_key_of, not the engine.
+        monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: False)
+        assert rq3.run_guarded(lambda: 1, 30.0) == ("ok", 1)
 
 
 def _raise() -> None:
@@ -174,10 +195,17 @@ class TestRq7NScalingGuard:
         }
 
     def test_refuses_on_a_poisoned_fork(self, monkeypatch: Any) -> None:
+        # The canary fires before the fork, so no canonicalization is attempted.
         monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: False)
-        unit = rq7.Unit("nscaling", "size_l1-N3", extra={"arm": "size_l1", "N": 3})
+        unit = rq7.Unit("nscaling", "wstar_rank-N3", extra={"arm": "wstar_rank", "N": 3})
         with pytest.raises(TkdeBudgetError, match="deadlocks"):
             rq7.run_nscaling(unit, self._ctx())
+
+    def test_a_non_engine_arm_is_not_refused(self, monkeypatch: Any) -> None:
+        monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: False)
+        unit = rq7.Unit("nscaling", "size_l1-N3", extra={"arm": "size_l1", "N": 3})
+        rows = rq7.run_nscaling(unit, self._ctx())["nscaling"]
+        assert rows[0]["censored"] == 0
 
     def test_measures_on_a_healthy_fork(self, monkeypatch: Any) -> None:
         monkeypatch.setattr(budget_mod, "cpp_fork_is_healthy", lambda **_: True)

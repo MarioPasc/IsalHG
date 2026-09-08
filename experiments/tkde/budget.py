@@ -319,10 +319,19 @@ def cpp_fork_is_healthy(*, recheck: bool = False) -> bool:
     return _CPP_FORK_HEALTH
 
 
+#: Arms whose representation is computed by the C++ engine, and which a forked
+#: child therefore cannot compute in a poisoned process. The predicate a caller
+#: needs for ``cpp_engine`` below; every other arm's child is unaffected by
+#: poisoning (measured -- only the C++ path hangs).
+CPP_ENGINE_ARMS: tuple[str, ...] = ("isalhg_levenshtein", "wstar_rank", "wstar_orbit")
+
+
 def guarded_budget_call(
     fn: Callable[..., Any],
     args: Sequence[Any] = (),
     seconds: float = 60.0,
+    *,
+    cpp_engine: bool = True,
 ) -> BudgetResult:
     """:func:`run_with_budget_detail` under the fork-health canary.
 
@@ -333,6 +342,13 @@ def guarded_budget_call(
     censored result and refuse rather than report a censoring that never
     happened.
 
+    The discipline applies only to a child that reaches the engine. Poisoning
+    hangs the C++ path and nothing else, so a child computing a fact word, a
+    nauty certificate or a vector fingerprint runs correctly in a poisoned
+    process and its censoring is genuine; guarding those would refuse work that
+    would have succeeded. ``cpp_engine`` is therefore the caller's declaration
+    of what the child does, not a switch to be turned off for convenience.
+
     Parameters
     ----------
     fn : callable
@@ -341,6 +357,8 @@ def guarded_budget_call(
         Positional arguments.
     seconds : float, optional
         Wall-clock budget.
+    cpp_engine : bool, optional
+        Whether the child may reach the C++ engine. Default True.
 
     Returns
     -------
@@ -350,9 +368,11 @@ def guarded_budget_call(
     Raises
     ------
     TkdeBudgetError
-        If the C++ engine has already run in this process, in which case a
-        censored result here would be a fiction.
+        If ``cpp_engine`` and the engine has already run in this process, in
+        which case a censored result here would be a fiction.
     """
+    if not cpp_engine:
+        return run_with_budget_detail(fn, args, seconds)
     if not cpp_fork_is_healthy():
         raise TkdeBudgetError(_POISONED)
     result = run_with_budget_detail(fn, args, seconds)
@@ -397,8 +417,10 @@ def arm_fingerprint_screen(arm: str, seconds: float = 60.0) -> Callable[[Any], b
         ``(H) -> bool``: True when this member's fingerprint completed.
     """
 
+    engine = arm in CPP_ENGINE_ARMS
+
     def screen(H: Any) -> bool:
-        return guarded_budget_call(_arm_fingerprint, (arm, H), seconds).ok
+        return guarded_budget_call(_arm_fingerprint, (arm, H), seconds, cpp_engine=engine).ok
 
     return screen
 

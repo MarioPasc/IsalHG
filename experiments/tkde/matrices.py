@@ -39,7 +39,11 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from experiments.tkde import corpora
-from experiments.tkde.budget import arm_fingerprint_screen, guarded_budget_call
+from experiments.tkde.budget import (
+    CPP_ENGINE_ARMS,
+    arm_fingerprint_screen,
+    guarded_budget_call,
+)
 from experiments.tkde.config import TkdeConfigError, load_yaml, results_root
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from isalhg.metric_space.toolkit.matrix import cache_paths, member_order_sha1
@@ -80,7 +84,7 @@ ROWS_MATRICES_COLUMNS: tuple[str, ...] = (
 #: the two ``w*_c`` arms were kept out of the matrices entirely for want of this
 #: mechanism and become buildable with it. The ordered-walk arms are absent
 #: because their emitter terminates.
-BUDGETED_MATRIX_ARMS: tuple[str, ...] = ("wstar_rank", "wstar_orbit", "isalhg_levenshtein")
+BUDGETED_MATRIX_ARMS: tuple[str, ...] = CPP_ENGINE_ARMS
 
 #: Wall-clock ceiling of one budgeted unit. This is process isolation, not a
 #: deadline: the unit runs in a forked child so that the in-process

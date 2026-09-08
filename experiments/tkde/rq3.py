@@ -289,7 +289,9 @@ def fact_distance(a: IdentityFacts, b: IdentityFacts) -> int:
 # ---------------------------------------------------------------------------
 
 
-def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
+def run_guarded(
+    fn: Callable[[], Any], budget_s: float, *, cpp_engine: bool = False
+) -> tuple[str, Any]:
     """Run ``fn`` in a forked child, killed after ``budget_s`` seconds.
 
     A wall-clock guard has to be at the process level: a long computation inside
@@ -298,11 +300,18 @@ def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
 
     Delegates to :func:`experiments.tkde.budget.guarded_budget_call`, which adds
     the fork-health canary this function lacked: a process that has already
-    canonicalized in-process forks children that deadlock on the C++ engine, so
-    every call here would return ``("timeout", None)`` without having computed
-    anything -- a censoring indistinguishable, in the rows, from a real one.
-    RQ3 canonicalizes hundreds of consensus candidates per cell, so it refuses
-    instead of writing that fiction.
+    canonicalized *in the C++ engine* forks children that deadlock on it, so
+    such a call returns ``("timeout", None)`` without having computed anything
+    -- a censoring indistinguishable, in the rows, from a real one.
+
+    ``cpp_engine`` defaults to False because the consensus this guards
+    canonicalizes hundreds of candidates per cell with
+    :func:`isalhg.core.fact_word.fact_key_of`, which is pure Python: a forked
+    child computes it correctly in a poisoned process, and guarding it would
+    refuse work that would have succeeded. The medoid loop above, which does
+    reach the engine through ``wstar_rank``, poisons this process before these
+    calls -- so the flag must be set the day a consensus key becomes an Isal
+    word, and is a lie any other day.
 
     Parameters
     ----------
@@ -310,6 +319,8 @@ def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
         A no-argument callable whose return value is picklable.
     budget_s : float
         Wall-clock budget in seconds.
+    cpp_engine : bool, optional
+        Whether ``fn`` may reach the C++ canonicalizer. Default False.
 
     Returns
     -------
@@ -319,9 +330,9 @@ def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
     Raises
     ------
     experiments.tkde.budget.TkdeBudgetError
-        If the C++ engine has already run in this process.
+        If ``cpp_engine`` and the engine has already run in this process.
     """
-    result = guarded_budget_call(fn, (), budget_s)
+    result = guarded_budget_call(fn, (), budget_s, cpp_engine=cpp_engine)
     if result.censored:
         return ("timeout", None)
     if result.error is not None:

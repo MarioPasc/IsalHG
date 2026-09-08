@@ -55,7 +55,7 @@ from pathlib import Path
 from typing import Any
 
 from experiments.tkde import corpora as corpora_io
-from experiments.tkde.budget import guarded_budget_call
+from experiments.tkde.budget import CPP_ENGINE_ARMS, guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.rq1 import (
@@ -385,7 +385,9 @@ def run_nscaling(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, An
             # known overrun buys nothing but queue time.
             rows.append(_nscaling_row(ctx, collection.name, master, size, arm, rep, skipped=True))
             continue
-        result = guarded_budget_call(_matrix_timing, (items, ids, arm), budget)
+        result = guarded_budget_call(
+            _matrix_timing, (items, ids, arm), budget, cpp_engine=arm in CPP_ENGINE_ARMS
+        )
         if result.censored:
             censored_once = True
             rows.append(

@@ -191,3 +191,57 @@ the search adds locality, the oracle adds nothing but time.
 sound on the analyzer's per-arm sets. Every published comparison restricts to
 the intersection over the published arms, and the table header carries that n
 and the fact that it is the Isal engine's completed set at 60 s.
+
+## Intervals: the per-corpus split reverses two headline comparisons (2026-09-08)
+
+`scripts/tkde/rq1_statistics.py` puts cluster-bootstrap intervals and
+Holm-corrected paired tests on every RQ1 table, restricted to the intersection
+of the units all published arms completed. Clusters are entities, not members:
+ndc's 1,381 members are 171 drug classes, its 528 M2 pairs are 61 entities, and
+the WD50K ladders are 1,000 clusters of exactly 5 rungs — all asserted, raising
+rather than warning.
+
+**The pooled figures hide corpus disagreement.** Within ≤ 2 per corpus, on the
+restricted set:
+
+| cell | corpus | `wstar_orbit` | `isal_ow_struct` | `nauty_cert_rows` |
+|---|---|---|---|---|
+| pendant delete_fact | ndc | 0.5758 | **0.5940** | 0.0000 |
+| | synthetic | **0.0901** | 0.0414 | 0.0000 |
+| | wd50k66 | **0.8449** | 0.7938 | 0.0000 |
+| pendant remove_constant | ndc | 0.8595 | **0.8767** | 0.0000 |
+| | wd50k66 | 0.8137 | **0.8306** | 0.0000 |
+| pendant insert_fact_new_constant | ndc / syn / wd50k | **0.117 / 0.068 / 0.334** | 0.042 / 0.020 / 0.152 | 0.0000 |
+
+Three consequences for what may be claimed.
+
+1. The pooled pendant-deletion figure (0.7705) **is WD50K's 0.8449**: WD50K
+   supplies 12,293 of 15,604 rows and 3,946 of 4,535 clusters. NDC gives 0.576
+   and synthetic 0.090. The number must be quoted with its corpus.
+2. On pendant **narrowing** the ordered walk beats the orbit engine on *both
+   real corpora*, and on pendant **deletion** it beats it on ndc. So "the orbit
+   engine leads every regime except pendant narrowing" is false per corpus.
+3. `insert_fact_new_constant` is the cell that survives unconditionally — the
+   orbit engine leads the ordered walk on all three corpora and the certificate
+   is 0.0000 everywhere. **It, not pendant deletion, is the cell that carries
+   the locality argument.**
+
+The certificate is exactly 0.0000 on all three corpora for pendant deletion,
+pendant narrowing, constant-bringing insertion, interior deletion and interior
+insertion; on `add_constant` and interior `remove_constant` it *leads* on ndc
+and synthetic. The clean "certificate never lands within two" statement is
+therefore true of the five fact-edit kinds, not of all seven.
+
+**Paired tests separate the arms.** On pendant deletion (4,535 clusters) every
+arm differs from `wstar_orbit` after Holm, `isal_ow_struct` included
+(+0.0452 [0.0356, 0.0539], rank-biserial 0.302). Note the marginal intervals
+overlap while the paired difference excludes zero — the paired test is the
+correct one, and the tables print the difference column for that reason.
+
+**Estimand note.** The printed interval bounds the statistic the table prints:
+the pooled fraction and the pooled median, by cluster bootstrap. The first run
+exposed why this matters — bounding the median of *per-cluster* medians made
+BCa degenerate on all 48 cells, because per-cluster medians of a small-integer
+response are heavily tied. The per-cluster convention is retained beside it for
+continuity with `tables.md`, and an unweighted mean-of-cluster-fractions column
+is the sensitivity check.

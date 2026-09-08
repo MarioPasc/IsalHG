@@ -323,3 +323,35 @@ per-comparison interval beside the Holm p.
 `synthetic_rq1` has no M2 rows at all (`m2_natural: [ndc_classes]`,
 `m2_ladders: [wd50k66]`), so a per-corpus M2 run on it raises rather than emit
 an empty table. Correct behaviour; run it with `--measures m1 m4`.
+
+## Closing state — all RQ1 jobs terminal (2026-09-08)
+
+Job **2247395 cancelled by the author's instruction** after the data was
+complete and verified: 31 tasks completed, 17 cancelled. Every shard of the
+Isal campaign tag survives (`m0items` 12, `m1` 118, `m2` 6, `m3` 12, `m4` 7 —
+143 units), the join is exact, and the deliverable was already frozen. The
+remaining tasks were re-runs of shards on disk and could only make the cluster
+tree disagree with it.
+
+Final job states: 2247394 38 completed / 9 OOM / 1 timeout · 2247395 31
+completed / 17 cancelled · 2248782 8/8 · 2248907 16/16 · 2248908 16/16.
+
+### The drift, one last time — and why it does not touch the published arms
+
+Immediately after the cancellation the cluster tree reads the unpruned engine at
+**353** censored. Across four reads of the same members, same code, same 60 s
+budget, it has given **357, 354, 356, 353**. The frozen deliverable records 356.
+
+In the same four reads the published arms never moved: `wstar_orbit` **77**,
+`wstar_rank` **53**, `isal_ow_struct` **0**.
+
+That is the near-boundary-mass model confirmed a fourth time — the only arm that
+drifts is the one with members near the budget (67 completions within 30 s of
+it, against the orbit engine's 32 and the other two arms' none). It is also the
+reason the deliverable is frozen on the drive rather than regenerated on demand:
+under a wall-clock budget the censoring census is a property of a run, and only
+of the arm whose cost distribution touches the boundary.
+
+**Nothing in the paper depends on the drifting number.** Under A′ the unpruned
+engine appears only as the M3 no-nauty cost cell; every published row is
+`wstar_orbit`'s, whose count is stable.

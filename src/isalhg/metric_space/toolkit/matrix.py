@@ -1,6 +1,11 @@
 """``N x N`` distance-matrix builder with an on-disk cache.
 
-One entry point, :func:`build_matrix`, serves every arm of the TKDE design.
+One entry point, :func:`build_matrix`, serves every arm of the TKDE design;
+:func:`build_matrix_censored` wraps it in a per-member budget for the arms whose
+canonicalization is unbounded, dropping the members that do not finish and
+returning them as a :class:`MatrixCensoring` record instead of hanging the
+build. The budget itself is injected as a callable, because it is a process-level
+device that belongs to the experiment harness and this package sits below it.
 
 Two computation paths, chosen by the arm name:
 
@@ -39,10 +44,11 @@ import os
 import platform
 import socket
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, TypeAlias
 
 from isalhg.core.fact_word import RolesMap
 from isalhg.core.sparse_hypergraph import SparseHypergraph
@@ -59,6 +65,51 @@ ROLES_ARM_SUFFIX = "roles"
 MATRIX_DTYPE = "float32"
 
 _WORKER_STATE: dict[str, Any] = {}
+
+#: A per-member censoring screen: ``(H) -> True`` when this member's
+#: representation completed inside whatever budget the caller imposes. The
+#: budget primitive itself lives in the experiment harness (a forked child
+#: killed at the budget); this package only takes the verdict, so that
+#: ``isalhg`` keeps its one-way dependency on nothing above it.
+FingerprintScreen: TypeAlias = Callable[[SparseHypergraph], bool]
+
+
+@dataclass(frozen=True)
+class MatrixCensoring:
+    """Which members a budgeted screen kept, and which it dropped.
+
+    A whole-matrix build is a corpus-level operation with nowhere to record a
+    per-member time-out, which is why the expensive canonical forms were kept
+    out of the matrices entirely. This record is that missing place: the
+    surviving member order (the matrix's rows) and the ids that did not finish,
+    reported rather than silently absent (L15 -- a censored member counts in the
+    denominator and never in a statistic).
+
+    Attributes
+    ----------
+    member_ids : tuple[str, ...]
+        Ids of the members the matrix is indexed by, in row order.
+    censored_ids : tuple[str, ...]
+        Ids dropped by the screen, in the order they were requested.
+    n_requested : int
+        Members the caller asked for; ``n_censored + len(member_ids)``.
+    """
+
+    member_ids: tuple[str, ...]
+    censored_ids: tuple[str, ...]
+    n_requested: int
+
+    @property
+    def n_censored(self) -> int:
+        """How many members the screen dropped."""
+        return len(self.censored_ids)
+
+    @property
+    def censored_fraction(self) -> float:
+        """Dropped members over requested members; ``0.0`` on an empty request."""
+        if self.n_requested == 0:
+            return 0.0
+        return self.n_censored / self.n_requested
 
 
 def member_order_sha1(member_ids: Sequence[str]) -> str:
@@ -192,6 +243,110 @@ def build_matrix(
         _arm_metadata(arm, normalized_params),
     )
     return matrix
+
+
+def build_matrix_censored(
+    items: Sequence[SparseHypergraph],
+    arm: str,
+    *,
+    member_ids: Sequence[str],
+    fingerprint_screen: FingerprintScreen | None = None,
+    roles: Sequence[RolesMap | None] | None = None,
+    cache_dir: Path | str | None = None,
+    n_jobs: int = 1,
+    params: Mapping[str, Any] | None = None,
+) -> tuple[NDArray[np.float32], MatrixCensoring]:
+    """:func:`build_matrix` over the members that survive a per-member budget.
+
+    Every member is put to ``fingerprint_screen`` first; the ones it rejects are
+    dropped from the corpus and named in the returned :class:`MatrixCensoring`,
+    and the matrix is then built from the survivors by :func:`build_matrix`
+    itself -- so the values, the path selection and the cache entry are exactly
+    what an unscreened build of that same sub-corpus produces. With no screen
+    the call is :func:`build_matrix` with an empty censoring record.
+
+    Two properties of the screen the caller owns:
+
+    * **It costs the survivors' representations twice.** The screen computes a
+      member's fingerprint to find out whether it terminates, and the build
+      recomputes it. Threading the screened values into the build instead would
+      change what is measured -- an arm's ``matrix`` resolves ``k`` and the
+      seed-prefix decision over the *corpus*, while ``fingerprint`` resolves
+      them per member -- so the matrix is rebuilt rather than assembled, and the
+      duplicated work is the price of leaving the reported numbers untouched.
+    * **The build runs in this process.** A survivor is bounded by the screen's
+      budget, so nothing can hang here; but an in-process C++ canonicalization
+      leaves a process whose forked children deadlock, which is the very hazard
+      the screen's budget depends on. Call this from a process that is finished
+      with budgeted forks -- in practice, a forked child of the runner.
+
+    Parameters
+    ----------
+    items : Sequence[SparseHypergraph]
+        The corpus, in member order.
+    arm : str
+        Registered distance name, as in :func:`build_matrix`.
+    member_ids : Sequence[str]
+        Member id per row of ``items``.
+    fingerprint_screen : callable or None, optional
+        ``(H) -> bool``; ``False`` censors the member. ``None`` screens nothing.
+    roles, cache_dir, n_jobs, params
+        As in :func:`build_matrix`; ``roles`` is subset alongside ``items``.
+
+    Returns
+    -------
+    tuple
+        The ``(M, M)`` matrix over the ``M`` survivors and the censoring record.
+
+    Raises
+    ------
+    isalhg.errors.MetricSpaceError
+        As in :func:`build_matrix`.
+    """
+    if len(member_ids) != len(items):
+        raise MetricSpaceError(
+            f"member_ids has {len(member_ids)} entries for {len(items)} items; they must correspond"
+        )
+    if roles is not None and len(roles) != len(items):
+        raise MetricSpaceError(
+            f"roles has {len(roles)} entries for {len(items)} items; they must correspond"
+        )
+
+    if fingerprint_screen is None:
+        kept = list(range(len(items)))
+        censored_ids: tuple[str, ...] = ()
+    else:
+        kept = []
+        dropped: list[str] = []
+        for index, H in enumerate(items):
+            if fingerprint_screen(H):
+                kept.append(index)
+            else:
+                dropped.append(str(member_ids[index]))
+        censored_ids = tuple(dropped)
+        if censored_ids:
+            logger.warning(
+                "arm %s: %d of %d members censored by the fingerprint budget: %s",
+                arm,
+                len(censored_ids),
+                len(items),
+                ", ".join(censored_ids[:10]) + (", ..." if len(censored_ids) > 10 else ""),
+            )
+
+    kept_ids = tuple(str(member_ids[i]) for i in kept)
+    censoring = MatrixCensoring(
+        member_ids=kept_ids, censored_ids=censored_ids, n_requested=len(items)
+    )
+    matrix = build_matrix(
+        [items[i] for i in kept],
+        arm,
+        member_ids=list(kept_ids),
+        roles=None if roles is None else [roles[i] for i in kept],
+        cache_dir=cache_dir,
+        n_jobs=n_jobs,
+        params=params,
+    )
+    return matrix, censoring
 
 
 # ---------------------------------------------------------------------------
@@ -493,4 +648,12 @@ def _import_rapidfuzz() -> tuple[Any, Any]:
     return Levenshtein, process
 
 
-__all__ = ["WORD_ARMS", "build_matrix", "cache_paths", "member_order_sha1"]
+__all__ = [
+    "WORD_ARMS",
+    "FingerprintScreen",
+    "MatrixCensoring",
+    "build_matrix",
+    "build_matrix_censored",
+    "cache_paths",
+    "member_order_sha1",
+]

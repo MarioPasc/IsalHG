@@ -39,6 +39,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from experiments.tkde import corpora
+from experiments.tkde.budget import arm_fingerprint_screen, guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, load_yaml, results_root
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from isalhg.metric_space.toolkit.matrix import cache_paths, member_order_sha1
@@ -60,6 +61,9 @@ ROWS_MATRICES_COLUMNS: tuple[str, ...] = (
     "arm",
     "secs",
     "censored",
+    "n_requested",
+    "n_censored",
+    "censored_ids",
     "n_members",
     "n_pairs",
     "peak_rss_mb",
@@ -68,6 +72,22 @@ ROWS_MATRICES_COLUMNS: tuple[str, ...] = (
     "matrix_path",
     "n_jobs",
 )
+
+#: Arms whose per-member representation is unbounded, so a whole-matrix build
+#: over them needs the per-member budget of
+#: :func:`experiments.tkde.budget.arm_fingerprint_screen`. ``wstar_rank`` is one
+#: since wave 3 (an arity-10 member ran twelve minutes in-process, job 2248491);
+#: the two ``w*_c`` arms were kept out of the matrices entirely for want of this
+#: mechanism and become buildable with it. The ordered-walk arms are absent
+#: because their emitter terminates.
+BUDGETED_MATRIX_ARMS: tuple[str, ...] = ("wstar_rank", "wstar_orbit", "isalhg_levenshtein")
+
+#: Wall-clock ceiling of one budgeted unit. This is process isolation, not a
+#: deadline: the unit runs in a forked child so that the in-process
+#: canonicalizations of the build cannot poison the parent's later screens
+#: (measured 2026-09-08 -- ``wstar_rank``'s C++ entry point poisons forks
+#: exactly as ``canonical_string(backend="cpp")`` does).
+DEFAULT_UNIT_BUDGET_S = 86_400.0
 
 #: The Isal instruction words that get an ``N x N`` matrix. ``wstar_orbit`` and
 #: ``isalhg_levenshtein`` are deliberately absent: both compute ``w*_c``, whose
@@ -81,13 +101,13 @@ ISAL_MATRIX_ARMS: tuple[str, ...] = (
     "wstar_rank",
 )
 
-#: Arms per collection, frozen by the wave-3 brief. ``fact_rank_roles`` runs
-#: only where roles exist (WD50K); ``wd50k100`` is RQ5's purity control and
-#: needs only the arms its supplementary table reports.
+#: Arms per collection, frozen by the wave-3 brief. ``fact_rank_roles`` is not
+#: among them: it fails the M0 relabelling-invariance check (43/60), so it is
+#: not a measurable arm and may not reach a table (T-KBf). ``wd50k100`` is RQ5's
+#: purity control and needs only the arms its supplementary table reports.
 DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
     "wd50k66": (
         "fact_rank",
-        "fact_rank_roles",
         *ISAL_MATRIX_ARMS,
         "nauty_cert",
         "nauty_cert_rows",
@@ -127,7 +147,6 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
 SMOKE_SPECS: dict[str, tuple[str, ...]] = {
     "wd50k66": (
         "fact_rank",
-        "fact_rank_roles",
         "isal_ow_struct",
         "nauty_cert",
         "wl_l1",
@@ -173,6 +192,30 @@ def collection_cache_dir(root: Path | str, collection: str, *, smoke: bool = Fal
     if smoke:
         base = base / SMOKE_COMPONENT
     return base / collection
+
+
+def censoring_path(cache_dir: Path | str, arm: str) -> Path:
+    """Return the sidecar recording which members a budgeted build dropped.
+
+    The ``.npy`` and its manifest describe the matrix that was built, i.e. the
+    surviving sub-corpus; this file is what tells a consumer which members those
+    are, so that a censored arm can be read against the frozen order instead of
+    looking like a cache miss.
+    """
+    return Path(cache_dir) / f"{arm}.censored.json"
+
+
+def read_censoring(cache_dir: Path | str, arm: str) -> dict[str, Any] | None:
+    """Return the censoring sidecar of one arm, or ``None`` when unscreened."""
+    path = censoring_path(cache_dir, arm)
+    if not path.is_file():
+        return None
+    try:
+        payload: dict[str, Any] = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        logger.warning("unreadable censoring sidecar %s; treating the arm as unscreened", path)
+        return None
+    return payload
 
 
 def _read_matrix_at(cache_dir: Path, arm: str, member_ids: Sequence[str]) -> Any:
@@ -543,6 +586,36 @@ def _load(
     return loaded
 
 
+def _build_censored_child(
+    items: Sequence[Any],
+    ids: Sequence[str],
+    roles: Sequence[Any] | None,
+    arm: str,
+    cache_dir: Path,
+    n_jobs: int,
+    budget_s: float,
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Screen, build and cache one arm's matrix; return ``(kept ids, censored ids)``.
+
+    Runs as the body of a forked child: the screen forks a grandchild per member
+    under ``budget_s``, and the build that follows canonicalizes in *this*
+    process, which is why it must not be the runner's. Only the two id tuples
+    cross the pipe; the matrix itself is persisted to ``cache_dir``.
+    """
+    from isalhg.metric_space.toolkit.matrix import build_matrix_censored
+
+    _matrix, censoring = build_matrix_censored(
+        items,
+        arm,
+        member_ids=list(ids),
+        fingerprint_screen=arm_fingerprint_screen(arm, budget_s),
+        roles=None if roles is None else list(roles),
+        cache_dir=cache_dir,
+        n_jobs=n_jobs,
+    )
+    return censoring.member_ids, censoring.censored_ids
+
+
 def run_unit(
     collection_obj: Any,
     collection: str,
@@ -551,6 +624,8 @@ def run_unit(
     out_root: Path,
     n_jobs: int,
     smoke: bool = False,
+    fingerprint_budget_s: float | None = None,
+    unit_budget_s: float = DEFAULT_UNIT_BUDGET_S,
 ) -> dict[str, Any]:
     """Build (or confirm) one ``(collection, arm)`` matrix and return its row.
 
@@ -566,11 +641,20 @@ def run_unit(
         Results root.
     n_jobs : int
         Worker processes for the pairwise path.
+    smoke : bool, optional
+        Route the cache under the smoke component.
+    fingerprint_budget_s : float or None, optional
+        Per-member wall-clock budget for the arms of
+        :data:`BUDGETED_MATRIX_ARMS`. ``None`` (the default) builds every arm
+        unscreened, which is what the campaign's cheap arms want and what an
+        unbounded arm must not be given.
+    unit_budget_s : float, optional
+        Ceiling on the forked child a budgeted unit runs in.
 
     Returns
     -------
     dict[str, Any]
-        One ``rows_matrices`` row.
+        One ``rows_matrices`` row, carrying the censored count and ids.
     """
     from isalhg.metric_space.toolkit.matrix import build_matrix
 
@@ -583,26 +667,50 @@ def run_unit(
     )
     cache_dir = collection_cache_dir(out_root, collection, smoke=smoke)
     cache_dir.mkdir(parents=True, exist_ok=True)
+    screened = fingerprint_budget_s is not None and arm in BUDGETED_MATRIX_ARMS
+
+    sidecar = read_censoring(cache_dir, arm)
+    kept_ids: Sequence[str] = list(sidecar["member_ids"]) if sidecar else ids
+    censored_ids: tuple[str, ...] = tuple(sidecar["censored_ids"]) if sidecar else ()
 
     try:
-        _read_matrix_at(cache_dir, arm, ids)
+        _read_matrix_at(cache_dir, arm, kept_ids)
         cache_hit = True
         secs = 0.0
     except MatrixCacheMissingError:
         cache_hit = False
         started = time.perf_counter()
-        build_matrix(
-            items,
-            arm,
-            member_ids=ids,
-            roles=roles,
-            cache_dir=cache_dir,
-            n_jobs=n_jobs,
-        )
+        if screened:
+            # The build canonicalizes in-process and would poison this process
+            # for every later screen, so it is run in a child that then dies.
+            result = guarded_budget_call(
+                _build_censored_child,
+                (items, ids, roles, arm, cache_dir, n_jobs, float(fingerprint_budget_s or 0.0)),
+                unit_budget_s,
+            )
+            if not result.ok:
+                raise TkdeConfigError(
+                    f"budgeted matrix unit {collection}/{arm} did not produce a matrix: "
+                    f"{'censored at the unit budget' if result.censored else result.error}"
+                ) from None
+            kept_ids, censored_ids = result.value
+            _write_censoring(cache_dir, arm, kept_ids, censored_ids, len(ids))
+        else:
+            build_matrix(
+                items,
+                arm,
+                member_ids=ids,
+                roles=roles,
+                cache_dir=cache_dir,
+                n_jobs=n_jobs,
+            )
+            # A rebuild without a screen supersedes whatever a previous
+            # budgeted build recorded, so a stale sidecar must not be reported.
+            kept_ids, censored_ids = ids, ()
         secs = time.perf_counter() - started
 
     matrix_path, _ = cache_paths(cache_dir, arm)
-    n = len(ids)
+    n = len(kept_ids)
     return {
         "rq": "matrices",
         "experiment": BUILD_EXPERIMENT,
@@ -610,15 +718,40 @@ def run_unit(
         "seed": 0,
         "arm": arm,
         "secs": round(secs, 4),
-        "censored": 0,
+        "censored": int(bool(censored_ids)),
+        "n_requested": len(ids),
+        "n_censored": len(censored_ids),
+        "censored_ids": " ".join(censored_ids),
         "n_members": n,
         "n_pairs": n * (n - 1) // 2,
         "peak_rss_mb": round(_peak_rss_mb(), 1),
         "cache_hit": int(cache_hit),
-        "order_sha1": member_order_sha1(ids),
+        "order_sha1": member_order_sha1(kept_ids),
         "matrix_path": str(matrix_path),
         "n_jobs": n_jobs,
     }
+
+
+def _write_censoring(
+    cache_dir: Path,
+    arm: str,
+    kept_ids: Sequence[str],
+    censored_ids: Sequence[str],
+    n_requested: int,
+) -> None:
+    """Persist the sidecar beside the matrix (atomic rename)."""
+    payload = {
+        "arm": arm,
+        "n_requested": int(n_requested),
+        "n_censored": len(censored_ids),
+        "member_ids": list(kept_ids),
+        "censored_ids": list(censored_ids),
+        "member_order_sha1": member_order_sha1(kept_ids),
+    }
+    path = censoring_path(cache_dir, arm)
+    tmp = path.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
+    os.replace(tmp, path)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -642,6 +775,16 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--count", action="store_true", help="print the unit count and exit")
     parser.add_argument("--smoke", action="store_true")
     parser.add_argument("--n-jobs", type=int, default=None)
+    parser.add_argument(
+        "--fingerprint-budget-s",
+        type=float,
+        default=None,
+        help=(
+            "per-member wall-clock budget for the unbounded arms "
+            f"({', '.join(BUDGETED_MATRIX_ARMS)}); members that overrun are dropped "
+            "from the matrix and reported"
+        ),
+    )
     parser.add_argument(
         "--data-root",
         type=Path,
@@ -682,6 +825,14 @@ def main(argv: Sequence[str] | None = None) -> int:
         args.smoke,
     )
 
+    budget_value = (
+        args.fingerprint_budget_s
+        if args.fingerprint_budget_s is not None
+        else config.get("fingerprint_budget_s")
+    )
+    fingerprint_budget_s = None if budget_value is None else float(budget_value)
+    unit_budget_s = float(config.get("unit_budget_s") or DEFAULT_UNIT_BUDGET_S)
+
     loaded: dict[str, Any] = {}
     rows: list[dict[str, Any]] = []
     for unit_index in selected:
@@ -695,6 +846,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             out_root=out_root,
             n_jobs=n_jobs,
             smoke=args.smoke,
+            fingerprint_budget_s=fingerprint_budget_s,
+            unit_budget_s=unit_budget_s,
         )
         row["experiment"] = BUILD_EXPERIMENT
         rows.append(row)

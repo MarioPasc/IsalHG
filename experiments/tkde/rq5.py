@@ -61,9 +61,10 @@ RQ_DIR = "RQ5_patterns"
 ROWS_SUBDIR = "rows"
 RQ_INDEX = 5
 
+#: ``fact_rank_roles`` is absent: it fails the M0 relabelling-invariance check
+#: (43/60), so it is not a measurable arm and may not reach a table (T-KBf).
 DEFAULT_ARMS: tuple[str, ...] = (
     "fact_rank",
-    "fact_rank_roles",
     "isal_ow_struct",
     "isal_ow_rank",
     "isal_ow_rank0",

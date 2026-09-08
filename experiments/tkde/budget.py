@@ -319,6 +319,112 @@ def cpp_fork_is_healthy(*, recheck: bool = False) -> bool:
     return _CPP_FORK_HEALTH
 
 
+#: Arms whose representation is computed by the C++ engine, and which a forked
+#: child therefore cannot compute in a poisoned process. The predicate a caller
+#: needs for ``cpp_engine`` below; every other arm's child is unaffected by
+#: poisoning (measured -- only the C++ path hangs).
+CPP_ENGINE_ARMS: tuple[str, ...] = ("isalhg_levenshtein", "wstar_rank", "wstar_orbit")
+
+
+def guarded_budget_call(
+    fn: Callable[..., Any],
+    args: Sequence[Any] = (),
+    seconds: float = 60.0,
+    *,
+    cpp_engine: bool = True,
+) -> BudgetResult:
+    """:func:`run_with_budget_detail` under the fork-health canary.
+
+    The canary discipline is the same in every runner that forks a child which
+    may reach the C++ engine, so it lives here once rather than in each of them:
+    check before the fork, and -- because a censoring is the only outcome a
+    deadlocked child and a genuinely slow one produce alike -- recheck on a
+    censored result and refuse rather than report a censoring that never
+    happened.
+
+    The discipline applies only to a child that reaches the engine. Poisoning
+    hangs the C++ path and nothing else, so a child computing a fact word, a
+    nauty certificate or a vector fingerprint runs correctly in a poisoned
+    process and its censoring is genuine; guarding those would refuse work that
+    would have succeeded. ``cpp_engine`` is therefore the caller's declaration
+    of what the child does, not a switch to be turned off for convenience.
+
+    Parameters
+    ----------
+    fn : callable
+        The computation, run in a forked child.
+    args : Sequence, optional
+        Positional arguments.
+    seconds : float, optional
+        Wall-clock budget.
+    cpp_engine : bool, optional
+        Whether the child may reach the C++ engine. Default True.
+
+    Returns
+    -------
+    BudgetResult
+        Exactly what :func:`run_with_budget_detail` returned.
+
+    Raises
+    ------
+    TkdeBudgetError
+        If ``cpp_engine`` and the engine has already run in this process, in
+        which case a censored result here would be a fiction.
+    """
+    if not cpp_engine:
+        return run_with_budget_detail(fn, args, seconds)
+    if not cpp_fork_is_healthy():
+        raise TkdeBudgetError(_POISONED)
+    result = run_with_budget_detail(fn, args, seconds)
+    if result.censored and not cpp_fork_is_healthy(recheck=True):
+        raise TkdeBudgetError(_POISONED)
+    return result
+
+
+def _arm_fingerprint(arm: str, H: Any) -> Any:
+    from isalhg.metric_space.registry import get_distance
+
+    return get_distance(arm).fingerprint(H)
+
+
+def arm_fingerprint_screen(arm: str, seconds: float = 60.0) -> Callable[[Any], bool]:
+    """A censoring screen for one arm, in the shape ``build_matrix_censored`` takes.
+
+    The whole-matrix builder is a corpus-level operation and has no budget of
+    its own; this is the per-member budget it is handed, so that a member whose
+    representation does not finish is dropped and counted (L15) instead of
+    hanging the build. The screen answers only *whether* the member finished:
+    the value it computed is discarded, because the builder recomputes the
+    surviving members' representations through the arm's own ``matrix`` and
+    must produce exactly the values it would have produced without a screen.
+
+    Measured 2026-09-08: ``wstar_rank``'s C++ entry point poisons the process
+    for later forks exactly as ``canonical_string(backend="cpp")`` does (the
+    ordered-walk emitter does not), so a caller that screens one arm and then
+    builds in the same process cannot screen a second one. Run the whole build
+    in a child -- which is what :mod:`experiments.tkde.matrices` does.
+
+    Parameters
+    ----------
+    arm : str
+        Registered distance name.
+    seconds : float, optional
+        Per-member wall-clock budget. Default 60, the design's value.
+
+    Returns
+    -------
+    callable
+        ``(H) -> bool``: True when this member's fingerprint completed.
+    """
+
+    engine = arm in CPP_ENGINE_ARMS
+
+    def screen(H: Any) -> bool:
+        return guarded_budget_call(_arm_fingerprint, (arm, H), seconds, cpp_engine=engine).ok
+
+    return screen
+
+
 def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> BudgetResult:
     """A canonical ``Sigma_HG`` word under a process-level budget.
 
@@ -362,12 +468,7 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
         # The rank (wave 3) and orbit (wave 4) engines default to the C++
         # extension: they need the fork-health check of the cpp path, not the
         # Python memory guard.
-        if not cpp_fork_is_healthy():
-            raise TkdeBudgetError(_POISONED)
-        result = run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
-        if result.censored and not cpp_fork_is_healthy(recheck=True):
-            raise TkdeBudgetError(_POISONED)
-        return result
+        return guarded_budget_call(_engine_payload, (H, k, engine), seconds)
 
     if engine != "cpp":
         from isalhg.core.canonical import required_k
@@ -404,14 +505,7 @@ def engine_word(H: Any, k: int, seconds: float = 60.0, engine: str = "cpp") -> B
             )
         return run_with_budget_detail(_engine_payload, (H, k, engine), seconds)
 
-    if not cpp_fork_is_healthy():
-        raise TkdeBudgetError(_POISONED)
-    result = run_with_budget_detail(_pointer_payload, (H, k), seconds)
-    # A censoring is the only outcome a deadlocked child and a genuinely slow
-    # one produce alike, so it is the only one worth paying a second canary for.
-    if result.censored and not cpp_fork_is_healthy(recheck=True):
-        raise TkdeBudgetError(_POISONED)
-    return result
+    return guarded_budget_call(_pointer_payload, (H, k), seconds)
 
 
 def pointer_word(H: Any, k: int, seconds: float = 60.0) -> BudgetResult:

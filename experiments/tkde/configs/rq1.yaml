@@ -37,7 +37,6 @@ arms:
   - isal_ow_rank           # the ordered walk, rank before predicate
   - isal_ow_rank0          # the ordered walk, rank-0 root
   - fact_rank              # arm B, the record (D-ART4 (1))
-  - fact_rank_roles        # arm B', WD50K only (dropped where roles are absent)
   - fact_local_colour      # arm C
   - fact_local_key         # arm D
   - fact_degree_key        # arm D1

@@ -66,10 +66,10 @@ class TestMatrixUnits:
 
     def test_default_specs_cover_the_frozen_arms(self) -> None:
         units = mx.enumerate_units(mx.DEFAULT_SPECS)
-        assert len(units) == 26
-        assert ("wd50k66", "fact_rank_roles") in units
-        # Roles exist only in WD50K, so the roles arm must not be asked of NDC.
-        assert ("ndc_classes", "fact_rank_roles") not in units
+        assert len(units) == sum(len(arms) for arms in mx.DEFAULT_SPECS.values()) == 37
+        assert ("wd50k66", "fact_rank") in units
+        # fact_rank_roles fails M0 invariance and is not a measurable arm.
+        assert all(arm != "fact_rank_roles" for _, arm in units)
         assert units == list(dict.fromkeys(units)), "unit list must be duplicate-free"
 
     def test_build_specs_requires_name_and_arms(self) -> None:

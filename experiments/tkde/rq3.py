@@ -23,7 +23,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import multiprocessing as mp
 import random
 import time
 from collections.abc import Callable, Mapping, Sequence
@@ -34,6 +33,7 @@ from typing import Any
 import numpy as np
 
 from experiments.tkde import corpora, io
+from experiments.tkde.budget import guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root, seeds
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.datasets.kb.base import KBCollection, KBRecord
@@ -289,22 +289,29 @@ def fact_distance(a: IdentityFacts, b: IdentityFacts) -> int:
 # ---------------------------------------------------------------------------
 
 
-def _guard_target(pipe: Any, fn: Callable[[], Any]) -> None:
-    """Run ``fn`` in the forked child and send its value (or its failure) back."""
-    try:
-        pipe.send(("ok", fn()))
-    except BaseException as exc:  # noqa: BLE001 - the parent decides what to do
-        pipe.send(("error", f"{type(exc).__name__}: {exc}"))
-    finally:
-        pipe.close()
-
-
-def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
-    """Run ``fn`` in a forked child and kill it after ``budget_s`` seconds.
+def run_guarded(
+    fn: Callable[[], Any], budget_s: float, *, cpp_engine: bool = False
+) -> tuple[str, Any]:
+    """Run ``fn`` in a forked child, killed after ``budget_s`` seconds.
 
     A wall-clock guard has to be at the process level: a long computation inside
     a C extension does not return to the interpreter, so a signal-based alarm
     never fires (measured; DESIGN.md section 3 step 1).
+
+    Delegates to :func:`experiments.tkde.budget.guarded_budget_call`, which adds
+    the fork-health canary this function lacked: a process that has already
+    canonicalized *in the C++ engine* forks children that deadlock on it, so
+    such a call returns ``("timeout", None)`` without having computed anything
+    -- a censoring indistinguishable, in the rows, from a real one.
+
+    ``cpp_engine`` defaults to False because the consensus this guards
+    canonicalizes hundreds of candidates per cell with
+    :func:`isalhg.core.fact_word.fact_key_of`, which is pure Python: a forked
+    child computes it correctly in a poisoned process, and guarding it would
+    refuse work that would have succeeded. The medoid loop above, which does
+    reach the engine through ``wstar_rank``, poisons this process before these
+    calls -- so the flag must be set the day a consensus key becomes an Isal
+    word, and is a lie any other day.
 
     Parameters
     ----------
@@ -312,29 +319,25 @@ def run_guarded(fn: Callable[[], Any], budget_s: float) -> tuple[str, Any]:
         A no-argument callable whose return value is picklable.
     budget_s : float
         Wall-clock budget in seconds.
+    cpp_engine : bool, optional
+        Whether ``fn`` may reach the C++ canonicalizer. Default False.
 
     Returns
     -------
     tuple
         ``("ok", value)``, ``("timeout", None)`` or ``("error", message)``.
+
+    Raises
+    ------
+    experiments.tkde.budget.TkdeBudgetError
+        If ``cpp_engine`` and the engine has already run in this process.
     """
-    context = mp.get_context("fork")
-    parent, child = context.Pipe(duplex=False)
-    process = context.Process(target=_guard_target, args=(child, fn))
-    process.start()
-    child.close()
-    payload: tuple[str, Any] = ("timeout", None)
-    if parent.poll(budget_s):
-        try:
-            payload = parent.recv()
-        except EOFError:
-            payload = ("error", "child died without sending a result")
-    parent.close()
-    process.join(timeout=5)
-    if process.is_alive():
-        process.kill()
-        process.join(timeout=5)
-    return payload
+    result = guarded_budget_call(fn, (), budget_s, cpp_engine=cpp_engine)
+    if result.censored:
+        return ("timeout", None)
+    if result.error is not None:
+        return ("error", result.error)
+    return ("ok", result.value)
 
 
 # ---------------------------------------------------------------------------

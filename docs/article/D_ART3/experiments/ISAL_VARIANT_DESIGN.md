@@ -330,6 +330,28 @@ record is `.claude/notes/2026-09-06-isal-kb-w1/summary.md` and the handoff
    per arm with `experiments/tkde/merge_rq1_experiments.py`; the campaign
    table and the selection are pending their completion.
 
+8. **Three directional readings were asserted from point estimates and all
+   three were wrong** (2026-09-08, on the final tree with cluster-bootstrap
+   intervals and Holm-corrected paired tests):
+
+   - *H-M2 "falsified for the ordered walk"* — an artefact of the analyzer
+     scoring each arm on its own uncensored pairs (96/351/4,727 against
+     128/400/5,000). On the intersection the ordered walk is the most monotone
+     Isal program on both NDC series.
+   - *"the ordered walk beats the search on NDC pendant deletion"* — a tie:
+     Δ = −0.0003 [−0.0501, 0.0539], p_Holm = 1 on 161 drug classes.
+   - *"the ordered walk beats the search on pendant narrowing on both real
+     corpora"* — a tie on both: NDC p_Holm 0.512, WD50K p_Holm 0.376, with the
+     two programs giving identical answers on 78 % of entities.
+
+   The lesson, which governs every remaining RQ of this campaign: **no
+   direction is asserted from point estimates on these corpora, only from the
+   paired test on the common unit set.** The corpora are unbalanced (WD50K
+   supplies 3,946 of 4,535 pendant-deletion clusters; one NDC class holds 47
+   members), the arms tie on most entities, and a pooled column is a mixture
+   whose weights are member counts — three independent ways for an eyeballed
+   ordering to be an artefact.
+
 ## 8. Points that need the PI (flagged, not decided here)
 
 1. **D-TA2 and the representation.** `w°` is a second canonical form of the

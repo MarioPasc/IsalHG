@@ -41,7 +41,6 @@ yield_blocks:
 nscaling_collection: wd50k66
 nscaling_arms:
   - fact_rank
-  - fact_rank_roles
   - isal_ow_struct
   - isal_ow_rank
   - isal_ow_rank0

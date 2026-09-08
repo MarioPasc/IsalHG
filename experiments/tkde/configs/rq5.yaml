@@ -23,7 +23,6 @@ experiments:
     n_seeds: 27 # = the number of PAM initializations on this design
     arms:
       - fact_rank
-      - fact_rank_roles
       - isal_ow_struct
       - isal_ow_rank
       - isal_ow_rank0
@@ -46,7 +45,6 @@ experiments:
     n_seeds: 27
     arms:
       - fact_rank
-      - fact_rank_roles
       - isal_ow_struct
       - isal_ow_rank
       - isal_ow_rank0

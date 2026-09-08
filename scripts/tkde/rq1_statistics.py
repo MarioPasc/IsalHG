@@ -208,6 +208,24 @@ def load_rows(exp_dir: Path, table: str) -> pd.DataFrame:
     return drop_censored(frame)
 
 
+def keep_collections(frame: pd.DataFrame, collections: Sequence[str] | None) -> pd.DataFrame:
+    """Restrict to named collections, for the per-corpus tables.
+
+    The pooled row of a cell is a mixture whose weights are the corpora's
+    member counts, so a pooled number can be carried by one corpus while the
+    others disagree with it -- measured on the pendant kinds, where WD50K
+    supplies 3,946 of 4,535 clusters. Running the whole harness per corpus is
+    the only way the paired tests and their Holm families are also per corpus.
+
+    Filtering here rather than after the restriction is equivalent: a unit
+    belongs to exactly one collection, so the common-unit intersection commutes
+    with the split.
+    """
+    if not collections:
+        return frame
+    return frame[frame["collection"].astype(str).isin(list(collections))]
+
+
 def drop_censored(frame: pd.DataFrame) -> pd.DataFrame:
     """Drop rows whose ``censored`` flag is set.
 
@@ -1531,6 +1549,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="which measures to compute",
     )
     parser.add_argument("--arms", nargs="*", default=list(PUBLISHED_ARMS))
+    parser.add_argument(
+        "--collections",
+        nargs="*",
+        default=None,
+        help="restrict to these collections; omit to pool them",
+    )
     parser.add_argument("--reference", default=REFERENCE_ARM)
     parser.add_argument("--resamples", type=int, default=DEFAULT_RESAMPLES)
     parser.add_argument("--seed", type=int, default=DEFAULT_SEED)
@@ -1553,6 +1577,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         "run": {
             "exp_dir": str(exp_dir),
             "arms": list(args.arms),
+            "collections": list(args.collections) if args.collections else "pooled",
             "reference": args.reference,
             "n_resamples": int(args.resamples),
             "seed": int(args.seed),
@@ -1562,7 +1587,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     }
     if "m1" in args.measures:
         payload["m1"] = analyze_m1(
-            load_rows(exp_dir, "m1"),
+            keep_collections(load_rows(exp_dir, "m1"), args.collections),
             args.arms,
             args.reference,
             n_resamples=args.resamples,
@@ -1571,7 +1596,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     if "m2" in args.measures:
         payload["m2"] = analyze_m2(
-            load_rows(exp_dir, "m2"),
+            keep_collections(load_rows(exp_dir, "m2"), args.collections),
             args.arms,
             args.reference,
             n_resamples=args.resamples,
@@ -1580,7 +1605,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         )
     if "m4" in args.measures:
         payload["m4"] = analyze_m4(
-            load_rows(exp_dir, "m4"),
+            keep_collections(load_rows(exp_dir, "m4"), args.collections),
             args.arms,
             n_resamples=args.resamples,
             seed=args.seed,

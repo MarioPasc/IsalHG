@@ -125,3 +125,31 @@ is bimodal — not one member within 30 s of the budget, yet 53 censored — so 
 count cannot drift; the ordered walk has nothing to drift. Whether the pruned
 engine's 77 are far *above* the budget is the question the 600 s re-run
 answers, and it is deferred into the RQ7 envelope sweep.
+
+### Pre-stated expectation for the 600 s re-run (written before it is run)
+
+Recorded now so the RQ7 envelope sweep can confirm or refute it rather than
+rationalise whatever it finds.
+
+The `wstar_rank` cost distribution is **bimodal at the 60 s budget**: zero
+completions in [30, 60) s with 53 censored. That is strong evidence of a gap,
+but the censored side is unobserved — a censored member records the budget, not
+its cost — so the gap is inferred, not measured.
+
+The near-boundary mass therefore predicts different outcomes for the two
+engines at 600 s:
+
+- **`wstar_orbit`** has 32 completions in [30, 60) and 6 in [55, 60). A
+  population that dense just below the budget should continue above it, so a
+  material fraction of its 77 is expected to finish by 600 s.
+- **`wstar_rank`** has none. If the gap is real, most of its 53 should still be
+  censored at 600 s — they are arity-10 displacement enumerations, exponential
+  in the arity, not slow instances of an otherwise-feasible search.
+
+If instead most of the 53 complete at 600 s, the bimodality is an artefact of
+the budget rather than of the mechanism, and the claim that the residual tail
+is displacement rather than a slow tail of the same search would need
+rewriting. That is the refutable form.
+
+Run it inside the RQ7 sweep (the only place it changes a figure), never as a
+row: under the adopted budget rule the published row is 60 s.

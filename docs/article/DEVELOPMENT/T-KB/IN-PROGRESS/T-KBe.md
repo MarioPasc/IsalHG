@@ -277,3 +277,49 @@ search beats the **byte** certificate (+0.249, p_Holm 0.024). On the ladder the
 byte certificate beats the search (−0.140 [−0.159, −0.120], p_Holm 0.006) by
 responding about five times larger per edit. `wstar_rank` is indistinguishable
 from `wstar_orbit` on every series — the tie key costs no monotonicity.
+
+## Per-corpus paired tests: the reversal is a tie, not a reversal (2026-09-08)
+
+Running the whole harness per corpus (`--collections`) puts the paired tests
+and their Holm families inside a corpus rather than inside a mixture. On
+pendant `delete_fact`:
+
+| corpus | clusters | `wstar_orbit` | `isal_ow_struct` | Δ vs orbit | p Holm |
+|---|---|---|---|---|---|
+| ndc_classes | 161 | 0.5758 [0.5152, 0.6248] | 0.5940 [0.5292, 0.6483] | **−0.0003 [−0.0501, 0.0539]** | **1 — no** |
+| wd50k66 | 3,946 | 0.8449 [0.8347, 0.8538] | 0.7938 [0.7825, 0.8036] | **+0.0467 [0.0369, 0.0576]** | **1.7e-18 — yes** |
+
+So the apparent NDC reversal read off point estimates **is not a reversal, it
+is a tie**: on 161 drug classes the search and the order-only program are
+indistinguishable, and on WD50K the search leads. That is the sentence to
+write, and it is a better one than either "leads" or "trails".
+
+The certificate is 0.0000 on both corpora with the whole gap significant
+(+0.5789 on ndc, +0.8144 on wd50k), so the claim that carries the paper is
+unaffected by any of this.
+
+### A second reading hazard: the effect column and the test are different functionals
+
+On WD50K pendant deletion the **median** row for `isal_ow_struct` reads
+difference **+0.0047 [−0.0922, 0.1119]** — an interval containing zero —
+beside **p_Holm = 3.2e-10, reject**. Not a bug: the difference column is a
+difference of per-entity *means*, while the p is a Wilcoxon signed-rank on the
+paired differences, which tests the signs. With a skewed paired distribution
+the two legitimately disagree — equal means, yet the ordered walk is the larger
+of the pair on most entities.
+
+On ndc the same pair of statistics disagrees in the other direction: median
+difference −1.1056 [−1.7548, −0.6978], p_Holm 7.1e-05, while the within-≤2
+fractions are tied. The ordered walk has the same mass under two instructions
+and a heavier tail.
+
+**Fix before publication: report the rank-biserial as the effect for the median
+rows and drop the difference-of-means column**, so the effect and the test are
+the same functional. Otherwise the caption must explain it, as it must for the
+per-comparison interval beside the Holm p.
+
+### Note
+
+`synthetic_rq1` has no M2 rows at all (`m2_natural: [ndc_classes]`,
+`m2_ladders: [wd50k66]`), so a per-corpus M2 run on it raises rather than emit
+an empty table. Correct behaviour; run it with `--measures m1 m4`.

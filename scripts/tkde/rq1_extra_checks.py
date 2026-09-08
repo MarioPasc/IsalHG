@@ -263,9 +263,64 @@ def published_table(exp_dir: Path, table: str, arms: Sequence[str]) -> None:
             print(f"  {label:<48} n={len(sub):>5} rho={rho:.4f}")
 
 
+CENSORING_ARMS: tuple[str, ...] = (
+    "isalhg_levenshtein",
+    "wstar_orbit",
+    "wstar_rank",
+    "isal_ow_struct",
+)
+
+
+def _load_all(exp_dir: Path, table: str) -> pd.DataFrame:
+    """Every row of ``table``, censored ones included."""
+    paths = sorted(glob.glob(str(exp_dir / f"rows_{table}__*.csv")))
+    if not paths:
+        raise SystemExit(f"no rows_{table} files under {exp_dir}")
+    return pd.concat([pd.read_csv(p) for p in paths], ignore_index=True)
+
+
+def censoring(exp_dir: Path, arms: Sequence[str] = CENSORING_ARMS) -> None:
+    """The censored tail of each engine by symmetry and by arity.
+
+    R2 was the claim that `w*_c` is uncomputable on symmetric inputs, and
+    stabiliser-orbit pruning was the answer to it. Whether that answer worked
+    is not a count but a *composition*: pruning should remove the censorings
+    driven by ``|Aut|`` and leave whatever is driven by something else. Cross
+    the censored members by ``|Aut|`` bucket and by maximum arity and the two
+    mechanisms separate.
+    """
+    frame = _load_all(exp_dir, "m3")
+    for arm in arms:
+        sub = frame[frame["arm"] == arm]
+        if sub.empty:
+            continue
+        cen = sub[sub["censored"] == True]  # noqa: E712
+        print(f"\n=== {arm}: {len(cen)} censored of {len(sub)} members ===")
+        if cen.empty:
+            print("  none")
+            continue
+        print(f"  by |Aut| bucket : {cen.groupby('aut_bucket').size().to_dict()}")
+        print(f"  by max arity k  : {cen['k'].value_counts().sort_index().to_dict()}")
+        print(f"  by collection   : {cen.groupby('collection').size().to_dict()}")
+        print(
+            f"  n in [{int(cen['n'].min())}, {int(cen['n'].max())}], "
+            f"m in [{int(cen['m'].min())}, {int(cen['m'].max())}]"
+        )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("check", choices=("agreement", "m4-rho", "common-set", "published", "both"))
+    parser.add_argument(
+        "check",
+        choices=(
+            "agreement",
+            "m4-rho",
+            "common-set",
+            "published",
+            "censoring",
+            "both",
+        ),
+    )
     parser.add_argument(
         "--arms",
         nargs="*",
@@ -290,6 +345,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         agreement(exp_dir)
     if args.check in ("m4-rho", "both"):
         m4_rho(exp_dir)
+    if args.check == "censoring":
+        censoring(exp_dir)
     if args.check == "published":
         published_table(exp_dir, args.table, args.arms)
     if args.check == "common-set":

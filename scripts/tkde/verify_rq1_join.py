@@ -48,11 +48,20 @@ class JoinVerificationError(Exception):
     """Raised when the experiments do not share their seeded units."""
 
 
-def _read_keys(exp_dir: Path, table: str) -> pd.DataFrame:
+def _tag_of(path: Path) -> str:
+    """The launch tag of a ``rows_<table>__<tag>-<unit>.csv`` file."""
+    return path.name.split("__", 1)[-1].split("-", 1)[0]
+
+
+def _read_keys(exp_dir: Path, table: str, tags: Sequence[str] | None = None) -> pd.DataFrame:
     """Read the key columns plus ``arm`` from every row file of ``table``."""
     keys = KEYS[table]
     frames: list[pd.DataFrame] = []
-    for path in sorted(exp_dir.glob(f"rows_{table}__*.csv")):
+    paths = sorted(exp_dir.glob(f"rows_{table}__*.csv"))
+    if tags:
+        allowed = set(tags)
+        paths = [p for p in paths if _tag_of(p) in allowed]
+    for path in paths:
         try:
             frames.append(pd.read_csv(path, usecols=[*keys, "arm"]))
         except ValueError as exc:  # a row file without the expected columns
@@ -73,7 +82,11 @@ def _restrict(units: set[tuple], collections: set[str]) -> set[tuple]:
     return {u for u in units if u[0] in collections}
 
 
-def verify_table(exp_dirs: dict[str, Path], table: str) -> tuple[dict[str, object], list[str]]:
+def verify_table(
+    exp_dirs: dict[str, Path],
+    table: str,
+    tags: dict[str, Sequence[str]] | None = None,
+) -> tuple[dict[str, object], list[str]]:
     """Compare one table's unit sets across experiments.
 
     Returns
@@ -85,7 +98,8 @@ def verify_table(exp_dirs: dict[str, Path], table: str) -> tuple[dict[str, objec
         Human-readable violations; empty when the join is sound.
     """
     problems: list[str] = []
-    frames = {name: _read_keys(path, table) for name, path in exp_dirs.items()}
+    tags = dict(tags or {})
+    frames = {name: _read_keys(path, table, tags.get(name)) for name, path in exp_dirs.items()}
     units = {name: _unit_set(frame, table) for name, frame in frames.items()}
     collections = {
         name: set(frame["collection"].astype(str).unique()) if not frame.empty else set()
@@ -163,10 +177,26 @@ def main(argv: Sequence[str] | None = None) -> int:
         default=["m1", "m0items", "m3"],
         choices=sorted(KEYS),
     )
+    parser.add_argument(
+        "--only-tags",
+        nargs="*",
+        default=(),
+        help=(
+            "experiment=tag[,tag] -- restrict to these launch tags. An "
+            "experiment directory can hold more than one campaign."
+        ),
+    )
     parser.add_argument("--out", type=Path, default=None, help="write the report JSON")
     args = parser.parse_args(argv)
 
     logging.basicConfig(level=logging.INFO, format="%(message)s")
+
+    tag_filter: dict[str, Sequence[str]] = {}
+    for item in args.only_tags:
+        name, sep, value = item.partition("=")
+        if not sep or not name or not value:
+            raise JoinVerificationError(f"--only-tags expects experiment=tag[,tag], got {item!r}")
+        tag_filter[name] = [t for t in value.split(",") if t]
 
     exp_dirs = {name: args.root / name for name in args.experiments}
     missing = [n for n, p in exp_dirs.items() if not p.is_dir()]
@@ -176,7 +206,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     reports: list[dict[str, object]] = []
     all_problems: list[str] = []
     for table in args.tables:
-        report, problems = verify_table(exp_dirs, table)
+        report, problems = verify_table(exp_dirs, table, tag_filter)
         reports.append(report)
         all_problems.extend(problems)
         logger.info("--- %s ---", table)

@@ -26,6 +26,7 @@ import logging
 import sys
 from collections.abc import Sequence
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 from scipy.stats import spearmanr
@@ -106,45 +107,97 @@ def m4_rho(exp_dir: Path) -> None:
             print(f"  {collection:<15} {arm:<22} n={len(sub):>5} rho={rho:.3f}{flag}")
 
 
-def common_set(exp_dir: Path, a: str, b: str) -> None:
-    """Compare two arms' M1 response on the units where *both* are uncensored.
+#: Per-table identity of one observation, the column being compared, and the
+#: grouping the summary is reported over.
+COMMON_SET_SPECS: dict[str, dict[str, Any]] = {
+    "m1": {
+        "keys": ["collection", "seed", "base_id", "edit_kind", "edit_idx"],
+        "value": "d_instr",
+        "group": ["edit_kind", "regime"],
+    },
+    "m2": {
+        "keys": ["collection", "seed", "series", "pair_id"],
+        "value": "d",
+        "group": ["collection", "series", "regime"],
+    },
+}
+
+
+def common_set(
+    exp_dir: Path,
+    a: str,
+    b: str,
+    table: str = "m1",
+    expect_identical: bool = True,
+) -> None:
+    """Compare two arms' response on the units where *both* are uncensored.
 
     Two arms that compute the same canonical word must produce the same
-    distance on the same edit. `w*_c` and `wstar_orbit` do (7012/7012 identical
-    words), yet their pooled M1 rows differ -- which can only be composition,
+    distance on the same unit. `w*_c` and `wstar_orbit` do (7012/7012 identical
+    words), yet their pooled rows differ -- which can only be composition,
     because the orbit engine completes members the unpruned search censors and
     those members are harder. Restricting to the common completed set separates
     the two explanations: equal here means composition and one row may be
     printed for both; unequal here means a bug in one of the engines.
+
+    On ``m2`` the summary also reports Spearman rho against the known edit
+    budget per arm on the common set, because rho is what M2 prints and two
+    arms whose distances agree unit by unit must agree on it exactly. A
+    difference there with equal distances would mean the two rho were computed
+    over different pair sets, not over different distances.
     """
-    frame = _load(exp_dir, "m1")
-    frame["d_instr"] = pd.to_numeric(frame["d_instr"], errors="coerce")
-    keys = ["collection", "seed", "base_id", "edit_kind", "edit_idx"]
-    wide = frame.pivot_table(index=keys, columns="arm", values="d_instr", aggfunc="first")
+    spec = COMMON_SET_SPECS[table]
+    keys, value = list(spec["keys"]), str(spec["value"])
+    frame = _load(exp_dir, table)
+    frame[value] = pd.to_numeric(frame[value], errors="coerce")
+    wide = frame.pivot_table(index=keys, columns="arm", values=value, aggfunc="first")
     if a not in wide.columns or b not in wide.columns:
-        raise SystemExit(f"need both {a} and {b} in the rows")
+        raise SystemExit(f"need both {a} and {b} in the {table} rows")
+
+    print(f"{table}: {a} vs {b}")
+    print("  units per arm, before restriction:")
+    for arm in (a, b):
+        print(f"    {arm:<22} {int(wide[arm].notna().sum()):>7}")
+
     common = wide[[a, b]].dropna()
     disagree = int((common[a] != common[b]).sum())
-    print(f"{a} vs {b} on the common uncensored set")
     print(f"  units where both completed : {len(common)}")
-    print(f"  units where d_instr differs: {disagree}")
-    if disagree:
-        rows = common[common[a] != common[b]]
-        print(f"  *** NOT A COMPOSITION EFFECT -- {disagree} disagreements ***")
-        print(rows.head(10).to_string())
-        return
-    print("  identical on every common unit: the pooled gap is composition only")
+    print(f"  units where {value} differs : {disagree}")
+    if expect_identical:
+        if disagree:
+            rows = common[common[a] != common[b]]
+            print(f"  *** NOT A COMPOSITION EFFECT -- {disagree} disagreements ***")
+            print(rows.head(10).to_string())
+            return
+        print("  identical on every common unit: the gap is composition only")
+    else:
+        # Two different representations: the point is not identity but a
+        # like-for-like comparison. An arm with a censored tail is scored on a
+        # smaller, easier set than an uncensored one, so the printed table's
+        # arms are not directly comparable until both are cut to what both
+        # completed.
+        print("  (different representations: restricted for a like-for-like read)")
 
     merged = frame[frame["arm"].isin([a, b])].merge(
         common.reset_index()[keys], on=keys, how="inner"
     )
-    print("\nper (edit_kind, regime) on the common set: median / within<=2")
-    summary = (
-        merged.groupby(["edit_kind", "regime", "arm"])["d_instr"]
-        .agg(n="size", median="median", within=lambda s: float((s <= 2).mean()))
-        .reset_index()
-    )
+    print(f"\nper {tuple(spec['group'])} on the common set:")
+    aggs: dict[str, Any] = {"n": "size", "median": "median"}
+    if table == "m1":
+        aggs["within_2"] = lambda s: float((s <= 2).mean())
+    summary = merged.groupby([*spec["group"], "arm"])[value].agg(**aggs).reset_index()
     print(summary.to_string(index=False))
+
+    if table == "m2":
+        print("\nrho(delta, d) on the common set -- must be equal per group:")
+        merged["delta"] = pd.to_numeric(merged["delta"], errors="coerce")
+        for gkeys, group in merged.groupby([*spec["group"], "arm"], sort=True):
+            sub = group[["delta", value]].dropna()
+            if len(sub) < 10 or sub["delta"].nunique() < 2:
+                continue
+            rho = spearmanr(sub["delta"], sub[value]).statistic
+            label = " / ".join(str(g) for g in gkeys)
+            print(f"  {label:<45} n={len(sub):>5} rho={rho:.4f}")
 
 
 def main(argv: Sequence[str] | None = None) -> int:
@@ -152,6 +205,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("check", choices=("agreement", "m4-rho", "common-set", "both"))
     parser.add_argument("--a", default="isalhg_levenshtein")
     parser.add_argument("--b", default="wstar_orbit")
+    parser.add_argument("--table", default="m1", choices=sorted(COMMON_SET_SPECS))
+    parser.add_argument(
+        "--no-expect-identical",
+        action="store_true",
+        help="the two arms are different representations; compare, do not assert",
+    )
     parser.add_argument("--root", required=True, type=Path, help="results root")
     parser.add_argument("--experiment", default="addressing")
     args = parser.parse_args(argv)
@@ -163,7 +222,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     if args.check in ("m4-rho", "both"):
         m4_rho(exp_dir)
     if args.check == "common-set":
-        common_set(exp_dir, args.a, args.b)
+        common_set(exp_dir, args.a, args.b, args.table, not args.no_expect_identical)
     return 0
 
 

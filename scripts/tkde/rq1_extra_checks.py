@@ -106,9 +106,52 @@ def m4_rho(exp_dir: Path) -> None:
             print(f"  {collection:<15} {arm:<22} n={len(sub):>5} rho={rho:.3f}{flag}")
 
 
+def common_set(exp_dir: Path, a: str, b: str) -> None:
+    """Compare two arms' M1 response on the units where *both* are uncensored.
+
+    Two arms that compute the same canonical word must produce the same
+    distance on the same edit. `w*_c` and `wstar_orbit` do (7012/7012 identical
+    words), yet their pooled M1 rows differ -- which can only be composition,
+    because the orbit engine completes members the unpruned search censors and
+    those members are harder. Restricting to the common completed set separates
+    the two explanations: equal here means composition and one row may be
+    printed for both; unequal here means a bug in one of the engines.
+    """
+    frame = _load(exp_dir, "m1")
+    frame["d_instr"] = pd.to_numeric(frame["d_instr"], errors="coerce")
+    keys = ["collection", "seed", "base_id", "edit_kind", "edit_idx"]
+    wide = frame.pivot_table(index=keys, columns="arm", values="d_instr", aggfunc="first")
+    if a not in wide.columns or b not in wide.columns:
+        raise SystemExit(f"need both {a} and {b} in the rows")
+    common = wide[[a, b]].dropna()
+    disagree = int((common[a] != common[b]).sum())
+    print(f"{a} vs {b} on the common uncensored set")
+    print(f"  units where both completed : {len(common)}")
+    print(f"  units where d_instr differs: {disagree}")
+    if disagree:
+        rows = common[common[a] != common[b]]
+        print(f"  *** NOT A COMPOSITION EFFECT -- {disagree} disagreements ***")
+        print(rows.head(10).to_string())
+        return
+    print("  identical on every common unit: the pooled gap is composition only")
+
+    merged = frame[frame["arm"].isin([a, b])].merge(
+        common.reset_index()[keys], on=keys, how="inner"
+    )
+    print("\nper (edit_kind, regime) on the common set: median / within<=2")
+    summary = (
+        merged.groupby(["edit_kind", "regime", "arm"])["d_instr"]
+        .agg(n="size", median="median", within=lambda s: float((s <= 2).mean()))
+        .reset_index()
+    )
+    print(summary.to_string(index=False))
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("check", choices=("agreement", "m4-rho", "both"))
+    parser.add_argument("check", choices=("agreement", "m4-rho", "common-set", "both"))
+    parser.add_argument("--a", default="isalhg_levenshtein")
+    parser.add_argument("--b", default="wstar_orbit")
     parser.add_argument("--root", required=True, type=Path, help="results root")
     parser.add_argument("--experiment", default="addressing")
     args = parser.parse_args(argv)
@@ -119,6 +162,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         agreement(exp_dir)
     if args.check in ("m4-rho", "both"):
         m4_rho(exp_dir)
+    if args.check == "common-set":
+        common_set(exp_dir, args.a, args.b)
     return 0
 
 

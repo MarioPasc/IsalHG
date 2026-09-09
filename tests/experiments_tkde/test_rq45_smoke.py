@@ -66,11 +66,34 @@ class TestMatrixUnits:
 
     def test_default_specs_cover_the_frozen_arms(self) -> None:
         units = mx.enumerate_units(mx.DEFAULT_SPECS)
-        assert len(units) == sum(len(arms) for arms in mx.DEFAULT_SPECS.values()) == 37
+        assert len(units) == sum(len(arms) for arms in mx.DEFAULT_SPECS.values()) == 31
         assert ("wd50k66", "fact_rank") in units
         # fact_rank_roles fails M0 invariance and is not a measurable arm.
         assert all(arm != "fact_rank_roles" for _, arm in units)
         assert units == list(dict.fromkeys(units)), "unit list must be duplicate-free"
+
+    def test_every_collection_carries_the_d_art5_isal_arm(self) -> None:
+        """``wstar_orbit`` is the paper's representation and needs an ``N x N``.
+
+        It was excluded while the whole-matrix build had nowhere to record a
+        per-member budget; wave 6 gave it the screen and the sidecar, so its
+        absence would now leave RQ4 and RQ5 with no Isal row at all.
+        """
+        units = mx.enumerate_units(mx.DEFAULT_SPECS)
+        for collection in mx.DEFAULT_SPECS:
+            assert (collection, "wstar_orbit") in units
+
+    def test_the_rq1_only_arms_are_gone(self) -> None:
+        """D-ART5 puts exactly one Isal row in a table; the RQ1 cells are not it.
+
+        ``wstar_rank`` is a different canonical value from ``w*_c`` and belongs
+        to the RQ1 ablation alone; the two ordered-walk policy variants were the
+        H-M1d ablation. ``isal_ow_struct`` keeps its matrix as the uncensored
+        reference but is published only in RQ7.
+        """
+        arms = {arm for _, arm in mx.enumerate_units(mx.DEFAULT_SPECS)}
+        assert arms.isdisjoint({"wstar_rank", "isal_ow_rank", "isal_ow_rank0"})
+        assert "isalhg_levenshtein" not in arms
 
     def test_build_specs_requires_name_and_arms(self) -> None:
         with pytest.raises(TkdeConfigError):

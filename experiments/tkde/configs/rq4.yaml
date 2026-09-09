@@ -25,16 +25,17 @@ n_seeds: 27
 n_jobs: null # null -> SLURM_CPUS_PER_TASK, else 1
 
 arms:
-  - fact_rank # exact (the record, D-ART4 (1))
-  - isal_ow_struct # exact (the Isal instruction word, Theorem C)
-  - wstar_rank # exact (the family's walk keyed by nauty's rank)
+  - fact_rank # exact (the retired comparator's record, D-ART4 note (c))
+  - wstar_orbit # exact (the Isal instruction word, the one Isal row under D-ART5)
   - nauty_cert # exact (certificate member)
+  - nauty_cert_rows # exact (the second tokenisation)
   - wl_l1
   - netlsd
   - hpd_jsd
   - bipartite_ged_path
-  - degree_seq_l1 # naive floor, mandatory
+  - bipartite_ged_assign
   - size_l1 # naive floor, mandatory
+  - degree_seq_l1 # naive floor, mandatory
 
 corruptions:
   - { kind: spurious_fact, budget: 1 }

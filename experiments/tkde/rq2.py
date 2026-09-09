@@ -47,6 +47,12 @@ from experiments.tkde import corpora as corpora_io
 from experiments.tkde.budget import run_with_budget_detail
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
+from experiments.tkde.matrices import (
+    MatrixCacheMissingError,
+    MatrixCensoringError,
+    load_cached_matrix_censored,
+    read_censoring,
+)
 from experiments.tkde.rq1 import (
     corpora_root,
     deploy_stamps,
@@ -99,6 +105,9 @@ COLUMNS_CENSUS: tuple[str, ...] = (
     "n_false_merges",
     "n_classes_arm",
     "n_classes_true",
+    "n_requested",
+    "n_censored_arm",
+    "n_censored_common",
     "tolerance",
     "source",
     "secs",
@@ -348,50 +357,70 @@ def matrix_for(
     matrices_root: Path,
     own: bool,
     n_jobs: int,
-) -> tuple[Any, str]:
-    """Return ``(D, source)`` -- the cached matrix, or one built here.
+) -> tuple[Any, tuple[str, ...], str]:
+    """Return ``(D, member_ids_of_D, source)`` -- the cached matrix, or one built here.
 
     ``own`` marks the collections this runner is responsible for computing
     (``ndc_substances``). For the others the matrix is an input produced by the
     shared matrices job; a missing one is an error, never a silent rebuild that
     would double the campaign's cost and produce a second, unversioned copy.
+
+    A budgeted build writes its manifest over the survivors, so the returned id
+    list is the matrix's own row order and not necessarily the frozen one; the
+    caller aligns by id. The member-order SHA-1 is still checked -- the ``.npy``
+    records nothing about which members its rows are, so a matrix built over a
+    different order would index correctly-shaped nonsense.
+
+    Parameters
+    ----------
+    collection : KBCollection
+        The loaded collection.
+    graphs : Sequence
+        Its hypergraphs, in frozen order; used only on the ``own`` path.
+    arm : str
+        Registered distance name.
+    matrices_root : Path
+        ``<results root>/matrices``.
+    own : bool
+        Whether this runner computes the matrix rather than reading it.
+    n_jobs : int
+        Worker processes for the ``own`` build.
+
+    Returns
+    -------
+    tuple
+        ``(matrix, member_ids, source)`` where ``source`` is ``"cache"`` or
+        ``"computed"``.
+
+    Raises
+    ------
+    Rq2Error
+        If a matrix this runner does not own is absent or unreadable.
     """
-    import json
-
-    import numpy as np
-
-    from isalhg.metric_space.toolkit.matrix import build_matrix, cache_paths, member_order_sha1
+    from isalhg.metric_space.toolkit.matrix import build_matrix
 
     cache_dir = matrices_root / collection.name
-    matrix_path, manifest_path = cache_paths(cache_dir, arm)
     member_ids = [record.kb_id for record in collection.records]
     if not own:
-        if not matrix_path.is_file():
-            raise Rq2Error(
-                f"no cached matrix at {matrix_path}; the census depends on the shared "
-                f"matrices job (submit with --dependency=afterok:<matrices job id>)"
-            )
-        # The .npy records nothing about which members its rows are, so a cache
-        # whose member order differs from ours would index a correct-looking
-        # matrix with the wrong ids and produce a plausible wrong census. The
-        # manifest's SHA-1 of the member-id list is what rules that out.
-        expected = member_order_sha1(member_ids)
         try:
-            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-        except (OSError, ValueError) as exc:
-            raise Rq2Error(f"unreadable matrix manifest at {manifest_path}: {exc}") from exc
-        if manifest.get("member_order_sha1") != expected:
-            raise Rq2Error(
-                f"{matrix_path} was built over a different member order "
-                f"({manifest.get('member_order_sha1')} != {expected}); refusing to index it"
+            matrix, kept_ids, censored_ids = load_cached_matrix_censored(
+                matrices_root.parent, collection.name, arm, member_ids
             )
-        matrix = np.load(matrix_path)
-        if matrix.shape[0] != len(member_ids):
+        except (MatrixCacheMissingError, MatrixCensoringError) as exc:
             raise Rq2Error(
-                f"{matrix_path} is {matrix.shape[0]}x{matrix.shape[0]} but the collection "
-                f"has {len(member_ids)} members"
+                f"no usable cached matrix for {collection.name}/{arm}: {exc}; the census "
+                f"depends on the shared matrices job "
+                f"(submit with --dependency=afterok:<matrices job id>)"
+            ) from exc
+        if censored_ids:
+            logger.warning(
+                "census %s/%s: %d of %d members censored by the matrices job",
+                collection.name,
+                arm,
+                len(censored_ids),
+                len(member_ids),
             )
-        return matrix, "cache"
+        return matrix, kept_ids, "cache"
     matrix = build_matrix(
         list(graphs),
         arm,
@@ -400,7 +429,7 @@ def matrix_for(
         cache_dir=cache_dir,
         n_jobs=n_jobs,
     )
-    return matrix, "computed"
+    return matrix, tuple(member_ids), "computed"
 
 
 def census_counts(matrix: Any, class_ids: Sequence[str]) -> dict[str, int]:
@@ -439,14 +468,62 @@ def census_counts(matrix: Any, class_ids: Sequence[str]) -> dict[str, int]:
     }
 
 
+def census_common_ids(
+    matrices_root: Path,
+    collection: str,
+    arms: Sequence[str],
+    member_ids: Sequence[str],
+    own: bool,
+) -> tuple[str, ...]:
+    """The members every census arm of this collection completed.
+
+    A false-merge count is only comparable across arms when the arms counted
+    over the same members: an arm scored on 3,988 members and one scored on
+    3,918 have different pair counts and different opportunities to merge. The
+    intersection is read from the sidecars alone, so a shard scoring one arm
+    still knows what the other arms lost without loading their matrices.
+
+    Parameters
+    ----------
+    matrices_root : Path
+        ``<results root>/matrices``.
+    collection : str
+        Frozen collection name.
+    arms : Sequence[str]
+        Every arm the census reports on this collection.
+    member_ids : Sequence[str]
+        The full frozen member order.
+    own : bool
+        Whether this runner builds the matrices itself, in which case nothing
+        was screened and the common set is the frozen order.
+
+    Returns
+    -------
+    tuple[str, ...]
+        The intersection, in frozen order.
+    """
+    if own:
+        return tuple(member_ids)
+    cache_dir = matrices_root / collection
+    censored: set[str] = set()
+    for arm in arms:
+        sidecar = read_censoring(cache_dir, arm)
+        if sidecar is not None:
+            censored.update(str(kb_id) for kb_id in sidecar.get("censored_ids", ()))
+    return tuple(kb_id for kb_id in member_ids if kb_id not in censored)
+
+
 def run_census(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
-    """One ``(collection, arm)`` census row."""
+    """One ``(collection, arm)`` census row, scored on the common survivor set."""
+    import numpy as np
+
     collection = ctx["collection"]
     graphs = ctx["graphs"]
     arm = str(unit.extra["arm"])
     config = ctx["config"]
     own = collection.name in set(config.get("census_own_collections") or ())
     master = seeds(RQ_INDEX)[0]
+    frozen_ids = [record.kb_id for record in collection.records]
 
     base = {
         **ctx["stamp"],
@@ -455,10 +532,11 @@ def run_census(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]
         "arm": arm,
         "tolerance": ZERO_TOLERANCE,
         "censored": 0,
+        "n_requested": len(frozen_ids),
     }
     started = time.monotonic()
     try:
-        matrix, source = matrix_for(
+        matrix, matrix_ids, source = matrix_for(
             collection,
             graphs,
             arm,
@@ -478,6 +556,8 @@ def run_census(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]
                     "n_false_merges": "",
                     "n_classes_arm": "",
                     "n_classes_true": "",
+                    "n_censored_arm": "",
+                    "n_censored_common": "",
                     "source": "missing",
                     "secs": round(time.monotonic() - started, 3),
                     "error": f"{type(exc).__name__}: {exc}",
@@ -485,12 +565,29 @@ def run_census(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]
             ]
         }
 
-    counts = census_counts(matrix, ctx["class_ids"])
+    common = census_common_ids(
+        ctx["matrices_root"],
+        collection.name,
+        tuple(config.get("census_arms") or (arm,)),
+        frozen_ids,
+        own,
+    )
+    row_of = {kb_id: row for row, kb_id in enumerate(matrix_ids)}
+    class_of = dict(zip(frozen_ids, ctx["class_ids"], strict=True))
+    # Align by member id, then restrict to the common set, so that every arm's
+    # row counts merges among the same members.
+    scored = [kb_id for kb_id in common if kb_id in row_of]
+    rows = [row_of[kb_id] for kb_id in scored]
+    counts = census_counts(
+        np.asarray(matrix)[np.ix_(rows, rows)], [class_of[kb_id] for kb_id in scored]
+    )
     return {
         "census": [
             {
                 **base,
                 **counts,
+                "n_censored_arm": len(frozen_ids) - len(matrix_ids),
+                "n_censored_common": len(frozen_ids) - len(scored),
                 "source": source,
                 "secs": round(time.monotonic() - started, 3),
                 "error": "",

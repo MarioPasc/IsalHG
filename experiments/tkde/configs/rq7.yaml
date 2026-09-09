@@ -14,7 +14,7 @@ pointer_budget_s: 60.0
 sweep_seeds: 27
 include_extension: true
 sweep_arms:
-  [isalhg_levenshtein, wstar_orbit, isal_ow_struct, wstar_rank, fact_rank, nauty_cert]
+  [isalhg_levenshtein, wstar_orbit, isal_ow_struct, fact_rank, nauty_cert]
 
 # Yield: real collections placed by their measured canonicalization time.
 # wd50k66_full is deliberately outside the envelope, so only the fact alphabet
@@ -41,10 +41,8 @@ yield_blocks:
 nscaling_collection: wd50k66
 nscaling_arms:
   - fact_rank
+  - wstar_orbit
   - isal_ow_struct
-  - isal_ow_rank
-  - isal_ow_rank0
-  - wstar_rank
   - nauty_cert
   - nauty_cert_rows
   - wl_l1
@@ -70,7 +68,7 @@ smoke:
   member_limit: 25
   yield_collections: [ndc_classes]
   yield_blocks: {ndc_classes: 1}
-  sweep_arms: [isalhg_levenshtein, isal_ow_struct, wstar_rank, fact_rank, nauty_cert]
+  sweep_arms: [isalhg_levenshtein, wstar_orbit, isal_ow_struct, fact_rank, nauty_cert]
   yield_arms: [isalhg_levenshtein, isal_ow_struct, fact_rank]
   nscaling_arms: [fact_rank, isal_ow_struct, nauty_cert, size_l1]
   nscaling_N: [25]

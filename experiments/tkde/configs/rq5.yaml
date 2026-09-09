@@ -23,10 +23,7 @@ experiments:
     n_seeds: 27 # = the number of PAM initializations on this design
     arms:
       - fact_rank
-      - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
+      - wstar_orbit
       - nauty_cert
       - nauty_cert_rows
       - wl_l1
@@ -45,10 +42,7 @@ experiments:
     n_seeds: 27
     arms:
       - fact_rank
-      - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
+      - wstar_orbit
       - nauty_cert
       - nauty_cert_rows
       - wl_l1
@@ -67,10 +61,7 @@ experiments:
     n_seeds: 27
     arms:
       - fact_rank
-      - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
+      - wstar_orbit
       - nauty_cert
       - wl_l1
       - size_l1

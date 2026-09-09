@@ -13,17 +13,24 @@
 rq: RQ3
 seed_count: 27
 
+# The medoid screen (D-KBf1). The same 60 s per member as RQ1 and as
+# matrices.yaml: a different value would make this census incomparable with
+# the one the reader met in RQ1. An arm that misses any member of a
+# collection reports no medoid for it.
+fingerprint_budget_s: 60.0
+
 medoid_arms:
   - fact_rank
-  - isal_ow_struct
-  - wstar_rank
+  - wstar_orbit
   - nauty_cert
+  - nauty_cert_rows
   - wl_l1
   - netlsd
   - hpd_jsd
   - bipartite_ged_path
-  - degree_seq_l1
+  - bipartite_ged_assign
   - size_l1
+  - degree_seq_l1
 
 corpus_a:
   collections: [ndc_classes, wd50k66]
@@ -71,6 +78,7 @@ corpus_b:
 
 smoke:
   seed_count: 1
+  fingerprint_budget_s: 5.0
   corpus_a:
     collections: [ndc_classes]
     n_values: [5]

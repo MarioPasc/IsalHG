@@ -899,3 +899,50 @@ mostly empty candidate set.
 
 Full RQ3 submitted under `reach′` into `IEEETKDE_isal_reachprime/`, leaving the
 superseded run intact as the record.
+
+### RQ2 complete — the false-merge census, and an OOM that cost nothing
+
+Task `2265309_10` was **OUT_OF_MEMORY**, and it is a non-event for the data:
+the log shows `unit bipartite-ndc_classes done in 7792.2 s: {'bipartite': 8992}`
+and the kill **nine seconds later**, after the rows were written
+(`rows_bipartite__da0ff0af-bipartite-ndc_classes.csv`, 1.46 MB, on disk). The
+job asked for 32 GB and peaked at 33.4 GB — it overran by ~1.4 GB in the
+in-job finalisation. **All 85 of 85 units have rows; nothing is missing.** Only
+`tables.md` / `stats.json` / `summary.json` were lost, and they regenerate from
+the rows; done on the login node.
+
+**The census (`n_false_merges`, and whether the induced partition equals the
+true one):**
+
+| arm | ndc_classes | ndc_substances | wd50k66 | partition |
+|---|---|---|---|---|
+| **`wstar_orbit`** | **0** | **0** | **0** | **exact** (530 / 1,086 / 3,677) |
+| `nauty_cert`, `nauty_cert_rows` | 0 | 0 | 0 | exact |
+| `fact_rank` | 0 | 0 | 0 | exact |
+| `wl_l1` | 0 | 0 | 0 | exact |
+| `bipartite_ged_path` | 0 | 0 | 0 | **splits** — 574 classes against 557 |
+| `netlsd` | 2,516 | 1 | 185,917 | merges |
+| `hpd_jsd` | 7,618 | 9,885 | 212,179 | merges |
+| `bipartite_ged_assign` | 59 | 1,332 | 201,010 | merges |
+| `degree_seq_l1` | 5,397 | 1,332 | 201,010 | merges |
+| `size_l1` | 52,660 | 33,713 | 291,227 | merges |
+
+Two readings the prose must carry. **`wl_l1` merges nothing on these three
+corpora** — refinement-based keys are incomplete on hypergraphs in theory
+(Prop 9), and on *this data* the incompleteness does not materialise; that is a
+measured negative for our own contrast and must be stated as such rather than
+quietly omitted. And **`bipartite_ged_path` fails exactness in the other
+direction**: no merges, but it splits isomorphic pairs into 574 classes where
+557 exist, so "0 false merges" is not "exact at zero".
+
+**D-KBf2's intersection is visible in the table.** Every uncensored arm carries
+two rows — its own full set (557 / 1,156 / 3,682) and the common set restricted
+to `wstar_orbit`'s survivors (530 / 1,086 / 3,677). The reader can see both, and
+the cross-arm comparison is on the second.
+
+**Caveat to clear before the RQ2 tables are quoted:** the analyzer reported
+`certificate validity: read`, and the file it read is the **pre-`reach′`** RQ3
+certificate output, because those rows live in `IEEETKDE/` while the `reach′`
+RQ3 writes to `IEEETKDE_isal_reachprime/`. RQ2 step 4 must be re-run against
+the new certificate file once RQ3 lands. Every other RQ2 section is independent
+of RQ3 and final.

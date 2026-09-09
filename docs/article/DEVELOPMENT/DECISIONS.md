@@ -440,3 +440,83 @@
   [`../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md`](../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md)
   (reading list, fixed facts, theory constraints, the A–D design space with
   hypotheses, code map, pitfalls, deliverables).
+
+- **D-ART5** — **[RECORDED 2026-09-09 under D-TA2 and D-ART4 — not a new
+  ruling; one item flagged for the author's objection]** The knowledge-base
+  article's canonical program is the family's frozen `w*_c`, **computed by the
+  stabiliser-orbit-pruned C++ engine**. Published budget: **60 s**. The
+  ordered walk `w°` is the order-only cell of the RQ1 ablation and the
+  deterministic cost floor of RQ7; the rank-keyed walk `w*_ρ` is the "both"
+  cell of RQ1 only.
+
+  *Why this is a record and not a decision.* Three questions were put to the
+  author as open. On review of the record all three were already answered, and
+  putting them up as open was an error of the orchestrator's, corrected here.
+
+  1. **The representation is D-TA2 executed as written.** D-TA2 froze the
+     *unpruned* tie-complete lex-min and named exactly one sanctioned
+     optimisation: "the only sanctioned future speedup is **stabiliser-orbit
+     pruning** (value-preserving by Proposition 6.0), never `ρ`-refinement".
+     The D-ART4 addendum (author, 2026-09-06) closes it: "the PI's supersession
+     of D-TA2 is **required only if the canonical *value* changes** …
+     stabiliser-orbit pruning is value-preserving". Design §8(1)/A3 says the
+     same. The value is unchanged, measured rather than assumed: identical
+     words on **7,013/7,013** members, identical single-edit distances on
+     **130,788/130,788** M1 units, identical ladder distances on **5,174/5,174**
+     M2 pairs with ρ equal to four decimals. So §8(1) is **not triggered**;
+     adopting the orbit engine *confirms* D-TA2. What *would* be PI-level is a
+     departure from it — `w*_ρ` is a different canonical value (65 % word
+     agreement) with no theorem in the proof file, and `w°` is a second
+     canonical form; neither is adopted. The pre-registration's naming of `w°`
+     as "the representation candidate" was an orchestrator decision (recorded
+     as such in the wave summary, "Design decisions taken by the orchestrator
+     (not the user)"), so departing from it is a §9 deviation, already
+     recorded, not a supersession.
+  2. **The budget is the pre-registration.** `pointer_budget_s: 60.0` in all
+     three RQ1 configs; design §3 defines `wstar_600` as "the same on the 60 s
+     -censored tail at 600 s" — a re-run *of the censored tail*, i.e.
+     characterisation by definition, never a row. Merging it would choose a
+     budget after seeing the numbers, force M1–M4 to be recomputed for every
+     arm, and make a published row a property of a budget rather than of the
+     representation. Nothing on record points the other way. The 600 s re-run
+     of the 77 orbit-censored members folds into the RQ7 envelope sweep.
+  3. **The fact arms were already conceded, in the main text.** D-ART4 (1)
+     retires the fact word *as a representation* — "the rows simply do not
+     appear in the article" — and in the same breath instructs the prose to own
+     the consequence: "*Consequence to own in the prose:* against that
+     comparator the Isal string is less local and slower." `prose.md` §2.3,
+     written after that ruling, already says "Where the certificate's or the
+     fact list's locality is better, the article does not claim otherwise."
+     The apparent tension between "leaves the paper" and "remains evidence" is
+     only apparent: the word is not ours, its rows are not in our tables, and
+     naming it as the comparator that beats us on two axes is what the author's
+     standing rule requires ("report failures with the same directness as
+     successes"). **The one item for objection:** the sentence now carries
+     numbers — the fact list is within two instructions on 57 % of interior
+     insertions against the Isal word's 8 %, and `fact_local_key` is more
+     monotone on all three series. The author may strike the quantification and
+     keep the qualitative concession.
+
+  *What the pre-registered rule decided.* Applied to the final data, the §3
+  selection rule (which ranges only over the `ow_*` arms) selects
+  `isal_ow_struct` — pooled within-≤2 of 0.0703 [0.0686, 0.0720], median 8,
+  against 0.0700 (median 9) and 0.0694 (median 9); the three are not
+  distinguishable at Holm-corrected 0.05 and the median breaks the tie. **Its
+  escape clause fired**: no `ow_*` arm beats `nauty_cert_rows` (0.1787), so, in
+  the rule's own words, "the paper argues from the language alone (D-ART4 (1)
+  already anticipates it) and the number is printed."
+
+  *The nauty sentence* (design §8(2), addendum (ii) "one sentence whichever
+  variant wins"): under D-ART5 the **oracle** sentence of design §7 is the
+  methods sentence — nauty supplies the automorphism group of the placed
+  prefix, the family's search explores one branch per orbit, and the string
+  returned is the frozen `w*_c`; the value does not depend on nauty, only the
+  time does. The **order** sentence is used once, in the RQ1 ablation.
+
+  *Restrictions after the decision.* R1 regime-specific and per corpus (see
+  T-KBe); R2 **lifted for symmetry** — orbit pruning takes censoring at
+  |Aut| ≥ 10⁷ from 36 to 0 and on WD50K from 237 to 7 — and **not lifted for
+  arity**, the residual 77 being 69 arity-10 members at |Aut| < 10³, which is
+  the RQ7 envelope's `(m, k)` axis; R3 proved (Prop. C.4); R4 filed (T-KBa);
+  R5 kept; R6 conceded for the search, with `w°` the machine's sub-millisecond
+  member.

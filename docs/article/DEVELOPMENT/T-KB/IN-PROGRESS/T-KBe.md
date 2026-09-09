@@ -355,3 +355,34 @@ of the arm whose cost distribution touches the boundary.
 **Nothing in the paper depends on the drifting number.** Under A′ the unpruned
 engine appears only as the M3 no-nauty cost cell; every published row is
 `wstar_orbit`'s, whose count is stable.
+
+## D-ART5 recorded (2026-09-09) — the three "decisions" were already ruled
+
+Put to the author as three open decisions; on review of the record, none was.
+D-ART5 is now in `DECISIONS.md` as a **record of application**, not a new
+ruling. The chain, in one line each:
+
+- **Representation.** D-TA2 names stabiliser-orbit pruning as the *one*
+  sanctioned speedup; the D-ART4 addendum says supersession is "required only
+  if the canonical *value* changes"; the value is unchanged on 7,013/7,013
+  words and 130,788/130,788 distances. Design §8(1) is not triggered. Only a
+  departure (to `w*_ρ` or `w°`) would have been PI-level.
+- **Budget.** 60 s is `pointer_budget_s` in all three configs, and design §3
+  defines `wstar_600` as a re-run *of the censored tail* — characterisation by
+  definition, never a row.
+- **Fact arms.** D-ART4 (1) itself instructs the prose to own the consequence,
+  and `prose.md` §2.3 already concedes it. Only the *quantification* is new,
+  and that is the single item left for the author to strike if they wish.
+
+**Acceptance.** Every measurement criterion is met (M0 0/0/0 on every Isal arm;
+absolute instructions first; the ≤2 fraction; censoring per (arm, m, |Aut|);
+BCa and Holm). The last clause — "with the PI's word" — waits on the author's
+acknowledgement of the record, not on a pending judgement. T-KBe stays
+IN-PROGRESS until then.
+
+**Error of the orchestrator, recorded.** Escalating settled questions is not a
+free action: it spends the author's attention and it invites a re-ruling on
+matters already closed. The check that was missing is cheap — before putting a
+question to the author, grep the decision record for the object it concerns and
+read the *reasoning of record*, not only the ruling line. D-TA2's sanctioned-
+speedup clause and D-ART4's addendum (i) each answer decision 1 outright.

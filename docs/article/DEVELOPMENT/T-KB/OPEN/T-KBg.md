@@ -24,3 +24,24 @@ sections, T-KBf.
 
 `prose.md` reads as the article with no pending markers; the PI reading is
 one page; the ledger and `DECISIONS.md` carry D-ART5.
+
+## Correction the campaign numbers force in `prose.md` §2.3 (2026-09-09)
+
+The paragraph "The consequence the paper states itself" ends: "…plus the one
+locality the Isal walk owns outright, **deletions**." The per-corpus,
+per-regime table makes that imprecise in two directions and it must be
+rewritten with D-ART5's numbers:
+
+- Against the **certificate**, what the Isal word owns outright is broader than
+  deletions and must be named by regime: the certificate is within two rows on
+  **0.000** of pendant deletions, pendant narrowings *and* constant-bringing
+  insertions, on every corpus.
+- Against the **fact list**, deletions are not owned: on *interior* deletions
+  the fact list is within two on 57.8 % against the Isal word's 13.9 %. The
+  Isal word owns the **pendant** regime, not deletion as a category.
+
+The distinction the sentence needs is pendant vs interior, not deletion vs
+insertion — the regime, not the edit kind. See T-KBe for the tables and for the
+naming ("pendant" = the edit changed the constant inventory; "interior" = it
+did not; `add_constant`/`remove_constant` are arity widening/narrowing of one
+fact, not inventory changes).

@@ -314,3 +314,47 @@ does not carry the citation. Two follow-ups, both cheap:
 Raised by `[IsalHG-Fable]`, which also conceded the reuse fix and asked for its
 precise form to be filed rather than applied — parked as **T-KBl**, landing
 window with or after T-KBj, never between RQ1 and RQ2.
+
+### Job 2264827 FAILED in 5 s — the nested-budget defect, and what it says about the smoke
+
+```
+experiments.tkde.config.TkdeConfigError: budgeted matrix unit
+wd50k66/wstar_orbit did not produce a matrix:
+AssertionError: daemonic processes are not allowed to have children
+```
+
+**Mechanism.** The matrices job nests two budgets: `run_unit` forks a child for
+the unit (so the build's in-process canonicalisation cannot poison the runner),
+and inside it `build_matrix_censored` forks one screen per member.
+`run_with_budget_detail` created every child with `daemon=True` — correct for a
+*leaf*, since it ties the child's lifetime to its parent, and wrong for a
+*supervisor*, since Python forbids a daemonic process from having children. The
+unit died on its first screen. Unit 0 (`fact_rank`) was a cache hit, so nothing
+on disk was touched and no compute was wasted.
+
+**Fix** (`c6a9a8c`): `daemon` is a keyword on both budget entry points,
+defaulting to `True`; the single supervisor call site passes `False`. A
+non-daemonic child is still killed on time-out, and SLURM's cgroup reaps it if
+the runner dies outright.
+
+**Why it reached a submission.** `BUDGETED_MATRIX_ARMS` has contained
+`wstar_rank` since wave 3, but **no budgeted arm was ever in `DEFAULT_SPECS`**,
+so the nesting existed from wave 6 and had never executed. Wave 6 unit-tested
+both budget levels in isolation; composition is the only place the defect
+lives. Two guards now:
+
+1. `tests/experiments_tkde/test_budget_nesting.py` — 5 tests reproducing the
+   failure as behaviour and pinning the fix, the default, and that opting out
+   of `daemon` does not weaken the time-out.
+2. `wstar_orbit` added to `SMOKE_SPECS`. **A smoke that omits the only budgeted
+   arm cannot exercise the mechanism the campaign depends on**, which is
+   exactly how this reached the cluster. The rule the smoke encodes is *cover
+   every code path the real run takes*, not every arm.
+
+Verified on the real path before resubmitting: the local 40-member smoke builds
+**11/11 units**, both `wstar_orbit` matrices included (ndc 5.7 s). No sidecar
+was written because nothing censored at that size — the censored branch is
+covered synthetically in the consumer wave.
+
+**Resubmitted as 2264831** at `c6a9a8c`, deployed with `--no-build` (Python-only
+change; the extension is current from the 09:07 rebuild).

@@ -497,3 +497,36 @@ no `wstar_rank`, no `isal_ow_*`.
 **Submitted:** full RQ5 as **2265389**. RQ4's smoke (2265368) carries the more
 delicate L15 requirement — the censoring rate by corrupted-vs-clean and by
 corruption type — and gates the full RQ4.
+
+### RQ4 smoke TIMEOUT (job 2265368) — the anomaly scoring is O(A·N) unbudgeted canonicalisations
+
+The smoke spent its whole 30-minute wall on **one unit**
+(`ndc_classes__spurious_fact_b1__seed40000`, 1,311 members, 11 arms), logging the
+censoring line at 13:07:39 and nothing after.
+
+**Mechanism.** `rq4.anomaly_rows` scores each anomaly against every member
+through `_row_worker`'s
+`[distance.pairwise(anomaly, other) for other in items]`, and the Isal engine's
+`pairwise` **re-canonicalises both sides on every call**. So `wstar_orbit` pays
+O(anomalies × N × 2) canonicalisations with no budget, on the corpus whose p99
+is 43 s and 70 of whose 1,381 members never finish at 60 s. One of those hangs
+the unit for ever.
+
+**The fix was already written — for the wrong arm.** `anomaly_rows`' docstring
+says it itself:
+
+> "`fact_rank` is served from precomputed words (one encoding per member, then
+> token Levenshtein) rather than through `pairwise`, which would re-derive the
+> canonical labelling on both sides of every call."
+
+`WORD_ARM = "fact_rank"` is the representation **D-ART4 retired**. The
+optimisation was never extended to the representation that replaced it, so the
+paper's own arm takes the slow path the comparator was spared. Generalising it
+is delegated (wave `2026-09-09-isal-kb-w9`), together with budgeting the
+canonicalisation and censoring an **anomaly** that does not finish — a case the
+matrices job cannot cover, since an anomaly is a hypergraph that never passed
+through it.
+
+Caught because the RQ4 smoke was run before the full submission. The full RQ4
+carries an 8-hour wall over 1,323 units; unfixed it would have burned it and
+produced nothing.

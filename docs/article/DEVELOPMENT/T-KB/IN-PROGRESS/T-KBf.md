@@ -756,3 +756,46 @@ the right direction for a gate deciding the placement of our own corpus, so it
 is kept — but the caption states plainly that the comparator is the post-hoc
 best of eleven and that the bias runs against us. A reader must not have to
 infer either.
+
+### Wave outcome, 2026-09-09 15:30 — what is banked and what is superseded
+
+| job | what | state | verdict |
+|---|---|---|---|
+| 2264827 | matrices | FAILED 5 s | nested-budget defect, fixed |
+| 2264831 | matrices, 31 units | COMPLETED 3:10:11 | **banked** |
+| 2265308 | RQ3 pilot | COMPLETED | caught T-KBn; rows discarded |
+| 2265309 | RQ2 main | 11/13 done | in progress |
+| 2265310 | RQ2 census | **COMPLETED 9/9** | **banked** |
+| 2265353 | RQ3 full + RQ6 | COMPLETED 2:30:26 | **part banked, part superseded** |
+| 2265368 | RQ4 smoke | TIMEOUT | diagnosed, fix merged |
+| 2265389 | RQ5 full | COMPLETED | **banked** |
+
+**RQ2's headline, on the campaign's most arity-heavy collection.**
+`ndc_substances` / `wstar_orbit`, built by the budgeted path added at `afab7c5`
+(without it the unit hangs rather than screens): 1,661 of 1,745 members
+(84 censored, 4.8 %), 1,378,630 pairs of which 1,373,305 non-isomorphic,
+**0 false merges**, and the induced partition equal to the true one at
+**1,086 = 1,086**. 8,446 s. That is RQ2's exactness result, measured rather
+than inherited from the theorem.
+
+**RQ3's censoring tally confirms the R3 mechanism exactly**, on the full run
+rather than a 25-source sample:
+
+| cell kind | collections censored |
+|---|---|
+| `ins` | **0** |
+| `del` | 982 |
+| `mix` | 1,638 |
+| Corpus B | **6** — classes 470, 471, 472, two runs each |
+
+Insertions never strand a constant, so they never censor; `del` and `mix` do.
+The Corpus B figure is exactly the 6 units D-KBf1a predicted from those three
+classes, so the cost-censoring model and the domain-censoring mechanism are
+cleanly separated in the data.
+
+**Banked from 2265353:** the Corpus A `ins` cells (64,293 Corpus A rows contain
+them) and Corpus B's **medoid** rows. **Superseded:** every `del`/`mix` cell
+(D-KBf5) and every Corpus B **consensus** row (the reach gate). RQ6 ran bundled
+(162 sample, 60 alignment rows) and its **alignment** rows need re-checking
+under `reach′`, since an alignment interior is built from the same machinery;
+its sample rows do not.

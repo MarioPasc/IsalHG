@@ -11,6 +11,8 @@ analyzers' ability to run on partial rows.
 
 from __future__ import annotations
 
+import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -32,6 +34,26 @@ N_PREDS = 1
 SOURCE_FACTS = ((0, (0, 1)), (0, (1, 2)), (0, (2, 3)))
 INSERTIONS = ((0, (0, 2)), (0, (0, 3)), (0, (0, 1, 2)), (0, (0, 1, 2, 3)))
 IDENTITIES = ("a", "b", "c", "d")
+
+
+def _run_rq3(arguments: list[str]) -> None:
+    """Run the RQ3 runner in a child process, as one SLURM shard does.
+
+    Since D-KBf1 the medoid screens its members for the engine arms, and that
+    screen forks. A process that has already canonicalized in the C++ engine
+    forks children that deadlock, so the screen's canary refuses rather than
+    report a censoring that never happened -- and an in-process ``rq3.main``
+    inherits whatever an earlier test in the session did to this interpreter.
+    The campaign never has that problem because every shard is a fresh process;
+    this makes the test model the campaign rather than weaken the guard.
+    """
+    completed = subprocess.run(
+        [sys.executable, "-m", "experiments.tkde.rq3", *arguments],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert completed.returncode == 0, completed.stderr[-4000:]
 
 
 def _record(kb_id: str, facts: tuple[tuple[int, tuple[int, ...]], ...], n: int = 4):
@@ -396,7 +418,7 @@ class TestEndToEnd:
 
     def test_rq3_smoke_and_analysis(self, tmp_path: Path):
         config = Path("experiments/tkde/configs/rq3.yaml")
-        assert rq3.main(["--config", str(config), "--out", str(tmp_path), "--smoke"]) == 0
+        _run_rq3(["--config", str(config), "--out", str(tmp_path), "--smoke"])
         rows = tmp_path / "RQ3_representative/corpus_a/parts/shard_001of001/rows_variants.csv"
         assert rows.is_file()
         certificates = (
@@ -412,10 +434,10 @@ class TestEndToEnd:
     def test_rq3_is_idempotent_per_unit(self, tmp_path: Path):
         config = Path("experiments/tkde/configs/rq3.yaml")
         arguments = ["--config", str(config), "--out", str(tmp_path), "--smoke"]
-        assert rq3.main(arguments) == 0
+        _run_rq3(arguments)
         rows = tmp_path / "RQ3_representative/corpus_a/parts/shard_001of001/rows_variants.csv"
         first = rows.read_text(encoding="utf-8")
-        assert rq3.main(arguments) == 0
+        _run_rq3(arguments)
         assert rows.read_text(encoding="utf-8") == first
 
     def test_rq6_smoke_and_analysis(self, tmp_path: Path):

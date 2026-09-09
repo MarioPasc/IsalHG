@@ -230,3 +230,62 @@ Still open at run time, and governed by the same rule: the
 528 consecutive pairs are constant-preserving, so runs all of whose pairs
 preserve the constant set are rare). It is counted when the RQ3 analyzer
 splits the regimes, and falls to a yield statement if either condition fails.
+
+---
+
+## Execution log
+
+### Cluster tree synced (2026-09-09 08:45, re-synced 08:59 and 09:0x)
+
+`scripts/tkde/sync_to_picasso.sh` at `80472bb`, then again at `d53b686` and
+`6c8d2a4`. Each run rebuilt the extension on the login node and verified it:
+`PIP EXIT 0`, `.so` mtime post-dating the sync, `cpp == python` on the Fano
+plane. Safe because no job was running — `squeue` showed only the long-standing
+admin-held 2132239 (PD).
+
+**Operational rule for the rest of the campaign:** the extension lives in the
+shared conda env (`.../conda_envs/isalhg-tkde/lib/python3.11/site-packages/`),
+so a rebuild swaps the `.so` under any *running* task. Nothing ahead touches
+C++, so every further deploy uses **`sync_to_picasso.sh --no-build`** unless
+`squeue` shows no running campaign job.
+
+### D-KBf3 executed
+
+`ISAL_MATRIX_ARMS = ("wstar_orbit", "isal_ow_struct")`; `matrices.yaml` on the
+D-ART5 arm set; 31 units (was 37). 28 new tests pin the screen/matrix
+agreement, 4 pin the arm set. Suite baseline verified rather than assumed: the
+three affected test files give **8 failed / 151 passed both before and after**,
+the identical eight pre-existing failures; the one failure the change caused
+was the frozen-arm count, fixed at `6c8d2a4`.
+
+**The objection that had to be cleared first.** `fingerprint()` resolves `k` as
+`required_k(H)` and the seed-prefix flag per member; `matrix()` resolves `k` as
+the corpus maximum and the flag over the corpus. If those differ, the screen
+certifies a member for a search the matrix then runs differently and
+*unbudgeted* — the twelve-minute-hang class of defect. Measured on both
+corpora rather than argued:
+
+- **k**: 0 word mismatches over 43 ndc members stratified across
+  `required_k` 2–9 against the corpus `k` of 10; cost ratio corpus-k /
+  per-member-k **median 0.96, max 1.03**. The encoder never names a pointer
+  index above the widest edge's, so surplus pointers are neither written nor
+  searched.
+- **prefix flag**: uniform per corpus — every ndc member carries 4 vertex
+  labels, every wd50k66 member carries 1 — so the member-level and
+  corpus-level flags agree on every member of both.
+
+So the screen's census *is* the matrix's census, and it is RQ1's: `rq1.py:682`
+also uses `required_k(H)` per member. The doubled computation
+(`build_matrix_censored` recomputes the survivors) is real, bounded and
+deliberate. Poisoning was already handled: `_build_censored_child` runs the
+whole build in a forked child that dies, and RQ4/RQ5 read cached `.npy` rather
+than building.
+
+### Submitted
+
+| job | what | submitted | note |
+|---|---|---|---|
+| **2264827** | `tkde-matrices`, 31 units, 32 cpus / 64 GB / 12 h | 2026-09-09 ~09:05 CEST | `--test-only` estimated a start of 2026-09-10T16:28 — the queue holds 4,274 jobs |
+
+Monitor armed on job state only (never on file counts), self-terminating on the
+terminal condition.

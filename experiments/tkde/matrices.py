@@ -784,6 +784,80 @@ def _load(
     return loaded
 
 
+def build_budgeted_matrix(
+    items: Sequence[Any],
+    ids: Sequence[str],
+    roles: Sequence[Any] | None,
+    arm: str,
+    cache_dir: Path | str,
+    *,
+    n_jobs: int = 1,
+    budget_s: float,
+    unit_budget_s: float = DEFAULT_UNIT_BUDGET_S,
+    label: str = "",
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Build one unbounded arm's matrix under the per-member budget, and cache it.
+
+    The single entry point for building a :data:`BUDGETED_MATRIX_ARMS` matrix,
+    so that every runner that needs one gets the same screen, the same sidecar
+    and the same process model. RQ2 computes ``ndc_substances`` itself rather
+    than reading it from the matrices job, and an unscreened in-process build
+    there would hang on the arity-10 tail (the collection carries 139 arity-10
+    and 227 arity-7 facts) and poison the runner for every later arm.
+
+    The build canonicalizes in-process, so it runs in a child that then dies.
+    That child is a *supervisor*, not a leaf -- it forks one screen per member --
+    and a daemonic process may not have children, so it is non-daemonic; a
+    daemonic one dies on its first screen (measured: job 2264827, five seconds).
+
+    Parameters
+    ----------
+    items : Sequence
+        The corpus, in frozen member order.
+    ids : Sequence[str]
+        Member id per item.
+    roles : Sequence or None
+        Role maps for a ``_roles`` arm, else None.
+    arm : str
+        Registered distance name, expected to be in :data:`BUDGETED_MATRIX_ARMS`.
+    cache_dir : Path or str
+        Where the ``.npy``, its manifest and the sidecar are written.
+    n_jobs : int, optional
+        Worker processes for the pairwise pass.
+    budget_s : float
+        Per-member wall-clock budget for the screen.
+    unit_budget_s : float, optional
+        Ceiling on the supervisor child. Process isolation, not a deadline.
+    label : str, optional
+        ``collection/arm``, used only in the error message.
+
+    Returns
+    -------
+    tuple
+        ``(kept ids, censored ids)``.
+
+    Raises
+    ------
+    TkdeConfigError
+        If the child produced no matrix, whether by error or by exhausting
+        ``unit_budget_s``.
+    """
+    result = guarded_budget_call(
+        _build_censored_child,
+        (items, ids, roles, arm, Path(cache_dir), n_jobs, float(budget_s)),
+        unit_budget_s,
+        daemon=False,
+    )
+    if not result.ok:
+        raise TkdeConfigError(
+            f"budgeted matrix unit {label or arm} did not produce a matrix: "
+            f"{'censored at the unit budget' if result.censored else result.error}"
+        ) from None
+    kept_ids, censored_ids = result.value
+    _write_censoring(Path(cache_dir), arm, kept_ids, censored_ids, len(ids))
+    return kept_ids, censored_ids
+
+
 def _build_censored_child(
     items: Sequence[Any],
     ids: Sequence[str],
@@ -879,25 +953,17 @@ def run_unit(
         cache_hit = False
         started = time.perf_counter()
         if screened:
-            # The build canonicalizes in-process and would poison this process
-            # for every later screen, so it is run in a child that then dies.
-            # That child is a supervisor, not a leaf: it forks one screen per
-            # member, and a daemonic process may not have children, so it must
-            # be non-daemonic or the whole unit dies on the first screen
-            # (measured: job 2264827 failed here in 5 s on wd50k66/wstar_orbit).
-            result = guarded_budget_call(
-                _build_censored_child,
-                (items, ids, roles, arm, cache_dir, n_jobs, float(fingerprint_budget_s or 0.0)),
-                unit_budget_s,
-                daemon=False,
+            kept_ids, censored_ids = build_budgeted_matrix(
+                items,
+                ids,
+                roles,
+                arm,
+                cache_dir,
+                n_jobs=n_jobs,
+                budget_s=float(fingerprint_budget_s or 0.0),
+                unit_budget_s=unit_budget_s,
+                label=f"{collection}/{arm}",
             )
-            if not result.ok:
-                raise TkdeConfigError(
-                    f"budgeted matrix unit {collection}/{arm} did not produce a matrix: "
-                    f"{'censored at the unit budget' if result.censored else result.error}"
-                ) from None
-            kept_ids, censored_ids = result.value
-            _write_censoring(cache_dir, arm, kept_ids, censored_ids, len(ids))
         else:
             build_matrix(
                 items,

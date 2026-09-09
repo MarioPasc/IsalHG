@@ -48,8 +48,10 @@ from experiments.tkde.budget import run_with_budget_detail
 from experiments.tkde.config import TkdeConfigError, load_yaml, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.matrices import (
+    BUDGETED_MATRIX_ARMS,
     MatrixCacheMissingError,
     MatrixCensoringError,
+    build_budgeted_matrix,
     load_cached_matrix_censored,
     read_censoring,
 )
@@ -357,6 +359,7 @@ def matrix_for(
     matrices_root: Path,
     own: bool,
     n_jobs: int,
+    arm_budget_s: float | None = None,
 ) -> tuple[Any, tuple[str, ...], str]:
     """Return ``(D, member_ids_of_D, source)`` -- the cached matrix, or one built here.
 
@@ -385,6 +388,9 @@ def matrix_for(
         Whether this runner computes the matrix rather than reading it.
     n_jobs : int
         Worker processes for the ``own`` build.
+    arm_budget_s : float or None, optional
+        Per-member screen budget for the ``own`` build of an unbounded arm.
+        ``None`` builds unscreened, which is only safe for the bounded arms.
 
     Returns
     -------
@@ -421,11 +427,42 @@ def matrix_for(
                 len(member_ids),
             )
         return matrix, kept_ids, "cache"
+
+    roles = corpora_io.roles_maps(collection) if arm.endswith("roles") else None
+    if arm_budget_s is not None and arm in BUDGETED_MATRIX_ARMS:
+        # ndc_substances carries 139 arity-10 and 227 arity-7 facts, which is
+        # exactly the displacement tail that censors; building it unscreened and
+        # in-process would hang the census and poison the runner for every arm
+        # after it. Same screen, sidecar and process model as the matrices job.
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        build_budgeted_matrix(
+            list(graphs),
+            member_ids,
+            roles,
+            arm,
+            cache_dir,
+            n_jobs=n_jobs,
+            budget_s=float(arm_budget_s),
+            label=f"{collection.name}/{arm}",
+        )
+        matrix, kept_ids, censored_ids = load_cached_matrix_censored(
+            matrices_root.parent, collection.name, arm, member_ids
+        )
+        if censored_ids:
+            logger.warning(
+                "census %s/%s: %d of %d members censored by this runner's budgeted build",
+                collection.name,
+                arm,
+                len(censored_ids),
+                len(member_ids),
+            )
+        return matrix, kept_ids, "computed"
+
     matrix = build_matrix(
         list(graphs),
         arm,
         member_ids=member_ids,
-        roles=corpora_io.roles_maps(collection) if arm.endswith("roles") else None,
+        roles=roles,
         cache_dir=cache_dir,
         n_jobs=n_jobs,
     )
@@ -543,6 +580,7 @@ def run_census(unit: Unit, ctx: dict[str, Any]) -> dict[str, list[dict[str, Any]
             matrices_root=ctx["matrices_root"],
             own=own,
             n_jobs=int(config.get("n_jobs", 1)),
+            arm_budget_s=float(config.get("pointer_budget_s", 60.0)),
         )
     except Exception as exc:  # noqa: BLE001 - a missing input is reported, not raised
         logger.error("census %s/%s failed: %s", collection.name, arm, exc)

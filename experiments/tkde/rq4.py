@@ -36,7 +36,7 @@ import logging
 import os
 import sys
 import time
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -46,7 +46,8 @@ from experiments.tkde.io import RunPaths, write_config, write_manifest, write_ro
 from experiments.tkde.matrices import (
     MatrixCacheMissingError,
     deploy_stamps,
-    load_cached_matrix,
+    load_arm_matrices,
+    load_cached_matrix_censored,
     parse_shard,
     resolve_data_root,
     shard_bounds,
@@ -122,6 +123,11 @@ ROWS_AUC_COLUMNS: tuple[str, ...] = (
     "n_inliers",
     "n_anomalies",
     "n_skipped",
+    "n_censored_members",
+    "n_censored_anomaly",
+    "n_censored_clean",
+    "censor_rate_anomaly",
+    "censor_rate_clean",
 )
 ROWS_ANOMALIES_COLUMNS: tuple[str, ...] = (
     "rq",
@@ -400,6 +406,76 @@ def anomaly_rows(
 # ---------------------------------------------------------------------------
 
 
+@dataclasses.dataclass(frozen=True)
+class Census:
+    """The members one unit lost to the matrices job's per-member budget.
+
+    L15's third clause bites here: a corrupted member carries one more fact
+    than its clean original, so it is marginally likelier to censor, and an AUC
+    computed on a set whose positives were preferentially removed is not the
+    AUC claimed. The rate is therefore reported split by label -- the members
+    the seed selected for corruption against the ones it left clean -- and the
+    corruption type is already a column of every row, so the analyzer can group
+    by it without further plumbing.
+    """
+
+    kept: tuple[int, ...]
+    n_censored: int
+    n_censored_anomaly: int
+    n_censored_clean: int
+    rate_anomaly: float | str
+    rate_clean: float | str
+
+
+def common_positions(
+    member_ids: Sequence[str],
+    loaded: Mapping[str, tuple[Any, Mapping[str, int]]],
+    anomaly_positions: Collection[int],
+) -> Census:
+    """Restrict a subcollection to the members every loaded arm completed.
+
+    This is the RQ1 ``restrict_to_common_units`` rule one level down: the unit
+    is the member, and a cross-arm statistic computed on different member sets
+    is not answering the same question for each arm. Arms with no matrix at all
+    are already absent from ``loaded`` and so drop out of the requirement rather
+    than emptying the intersection.
+
+    Parameters
+    ----------
+    member_ids : Sequence[str]
+        The subcollection's members, in local order.
+    loaded : Mapping
+        ``arm -> (matrix, {member_id: row})`` as returned by :func:`arm_matrices`.
+    anomaly_positions : Collection[int]
+        Local positions the seed selected for corruption, for the label split.
+
+    Returns
+    -------
+    Census
+        The surviving local positions and the censoring counts.
+    """
+    kept = tuple(
+        position
+        for position, kb_id in enumerate(member_ids)
+        if all(kb_id in rows for _, rows in loaded.values())
+    )
+    survivors = set(kept)
+    censored = [position for position in range(len(member_ids)) if position not in survivors]
+    chosen = set(anomaly_positions)
+    n_anomaly = sum(1 for position in censored if position in chosen)
+    n_clean = len(censored) - n_anomaly
+    n_chosen = len(chosen)
+    n_unchosen = len(member_ids) - n_chosen
+    return Census(
+        kept=kept,
+        n_censored=len(censored),
+        n_censored_anomaly=n_anomaly,
+        n_censored_clean=n_clean,
+        rate_anomaly=round(n_anomaly / n_chosen, 6) if n_chosen else "",
+        rate_clean=round(n_clean / n_unchosen, 6) if n_unchosen else "",
+    )
+
+
 def _score_matrix(
     base: NDArray[np.float64],
     rows: Mapping[tuple[int, str], list[float]],
@@ -549,36 +625,92 @@ def run_unit(
         for position in realised:
             words[position] = fact_word(modified[position])
 
+    loaded = load_arm_matrices(
+        matrices_root, sub.collection, arms, parent_ids, cache=collection_cache
+    )
+    census = common_positions([r.kb_id for r in records], loaded, chosen)
+    if census.n_censored:
+        # Every cross-arm number is computed on the members all the loaded arms
+        # completed, so the arms are answering the same question.
+        remap = {position: local for local, position in enumerate(census.kept)}
+        records = [records[position] for position in census.kept]
+        modified = [modified[position] for position in census.kept]
+        words = None if words is None else [words[position] for position in census.kept]
+        realised = [remap[position] for position in realised if position in remap]
+        n = len(census.kept)
+        is_anomaly = np.zeros(n, dtype=bool)
+        is_anomaly[realised] = True
+        logger.warning(
+            "unit %d (%s): %d members censored (%d selected for corruption, %d clean); "
+            "scoring the %d that every arm completed",
+            unit.index,
+            unit.unit_id,
+            census.n_censored,
+            census.n_censored_anomaly,
+            census.n_censored_clean,
+            n,
+        )
+
+    if not realised:
+        logger.warning(
+            "unit %d (%s): every corrupted member was censored; no AUC",
+            unit.index,
+            unit.unit_id,
+        )
+        for arm in arms:
+            for score in ("knn", "lof"):
+                tables["auc"].append(
+                    _auc_row(unit, arm, score, float("nan"), n, 0, n_skipped, 0.0, 1, census=census)
+                )
+        return tables
+
+    kept_ids = [record.kb_id for record in records]
+
     started = time.perf_counter()
     rows = anomaly_rows(modified, words, realised, arms, n_jobs=n_jobs)
     secs_rows = time.perf_counter() - started
 
     for arm in arms:
         arm_started = time.perf_counter()
-        try:
-            # Memoized: every unit of every seed reads the same matrices, and
-            # the wd50k66 parent is 64 MB per arm.
-            matrix_key = f"matrix::{sub.collection}::{arm}"
-            if matrix_key not in collection_cache:
-                collection_cache[matrix_key] = load_cached_matrix(
-                    matrices_root, sub.collection, arm, parent_ids
-                )
-            full = collection_cache[matrix_key]
-        except MatrixCacheMissingError as exc:
-            logger.error("unit %d arm %s: %s", unit.index, arm, exc)
+        if arm not in loaded:
             for score in ("knn", "lof"):
                 tables["auc"].append(
-                    _auc_row(unit, arm, score, float("nan"), n, len(realised), n_skipped, 0.0, 1)
+                    _auc_row(
+                        unit,
+                        arm,
+                        score,
+                        float("nan"),
+                        n,
+                        len(realised),
+                        n_skipped,
+                        0.0,
+                        1,
+                        census=census,
+                    )
                 )
             continue
-
-        base = np.asarray(full[np.ix_(indices, indices)], dtype=np.float64)
+        full, row_of = loaded[arm]
+        # Align by member id: a censored arm's rows are its survivors, not the
+        # frozen order, so the parent positions would index the wrong members.
+        arm_rows = [row_of[kb_id] for kb_id in kept_ids]
+        base = np.asarray(full[np.ix_(arm_rows, arm_rows)], dtype=np.float64)
         D = _score_matrix(base, rows, realised, arm)
         if D is None:
             logger.error("unit %d arm %s: anomaly rows incomplete; censored", unit.index, arm)
             for score in ("knn", "lof"):
                 tables["auc"].append(
-                    _auc_row(unit, arm, score, float("nan"), n, len(realised), n_skipped, 0.0, 1)
+                    _auc_row(
+                        unit,
+                        arm,
+                        score,
+                        float("nan"),
+                        n,
+                        len(realised),
+                        n_skipped,
+                        0.0,
+                        1,
+                        census=census,
+                    )
                 )
             continue
 
@@ -587,7 +719,18 @@ def run_unit(
                 # Too few members for this neighbourhood size; censor rather
                 # than report a score computed on a degenerate neighbourhood.
                 tables["auc"].append(
-                    _auc_row(unit, arm, score, float("nan"), n, len(realised), n_skipped, 0.0, 1)
+                    _auc_row(
+                        unit,
+                        arm,
+                        score,
+                        float("nan"),
+                        n,
+                        len(realised),
+                        n_skipped,
+                        0.0,
+                        1,
+                        census=census,
+                    )
                 )
                 continue
             values = fn(D, k)
@@ -602,6 +745,7 @@ def run_unit(
                     n_skipped,
                     time.perf_counter() - arm_started + secs_rows / max(1, len(arms)),
                     0,
+                    census=census,
                 )
             )
     return tables
@@ -617,8 +761,10 @@ def _auc_row(
     n_skipped: int,
     secs: float,
     censored: int,
+    *,
+    census: Census | None = None,
 ) -> dict[str, Any]:
-    """Return one ``rows_auc`` row."""
+    """Return one ``rows_auc`` row, carrying this unit's censoring census (L15)."""
     return {
         "rq": "RQ4",
         "experiment": unit.experiment.name,
@@ -635,6 +781,11 @@ def _auc_row(
         "n_inliers": n - n_anomalies,
         "n_anomalies": n_anomalies,
         "n_skipped": n_skipped,
+        "n_censored_members": 0 if census is None else census.n_censored,
+        "n_censored_anomaly": 0 if census is None else census.n_censored_anomaly,
+        "n_censored_clean": 0 if census is None else census.n_censored_clean,
+        "censor_rate_anomaly": "" if census is None else census.rate_anomaly,
+        "censor_rate_clean": "" if census is None else census.rate_clean,
     }
 
 
@@ -680,7 +831,7 @@ def ensure_smoke_matrices(
         cache_dir.mkdir(parents=True, exist_ok=True)
         for arm in arms:
             try:
-                load_cached_matrix(matrices_root, name, arm, ids)
+                load_cached_matrix_censored(matrices_root, name, arm, ids)
                 continue
             except MatrixCacheMissingError:
                 pass

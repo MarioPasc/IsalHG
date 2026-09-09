@@ -35,6 +35,7 @@ import dataclasses
 import logging
 import sys
 import time
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -44,8 +45,10 @@ from experiments.tkde.config import TkdeConfigError, load_yaml, results_root, se
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.matrices import (
     MatrixCacheMissingError,
+    common_member_ids,
     deploy_stamps,
-    load_cached_matrix,
+    load_arm_matrices,
+    load_cached_matrix_censored,
     parse_shard,
     resolve_data_root,
     shard_bounds,
@@ -123,6 +126,7 @@ ROWS_CLUSTERING_COLUMNS: tuple[str, ...] = (
     "ari_boot_high",
     "pam_cost",
     "n_init",
+    "n_censored_members",
 )
 ROWS_PER_CLASS_COLUMNS: tuple[str, ...] = (
     *_BASE_COLUMNS,
@@ -133,6 +137,8 @@ ROWS_PER_CLASS_COLUMNS: tuple[str, ...] = (
     "recall",
     "precision",
     "cluster",
+    "n_censored_class",
+    "censor_rate_class",
 )
 ROWS_GEOMETRY_COLUMNS: tuple[str, ...] = (
     *_BASE_COLUMNS,
@@ -144,6 +150,7 @@ ROWS_GEOMETRY_COLUMNS: tuple[str, ...] = (
     "hubness_skew_k10",
     "hubness_max_occurrence",
     "diameter_over_median",
+    "n_censored_members",
 )
 ROWS_MDS_COLUMNS: tuple[str, ...] = (
     *_BASE_COLUMNS,
@@ -563,23 +570,40 @@ def run_unit(
     }
 
     arms = (unit.arm,) if unit.arm is not None else experiment.arms
-    selected = _select_indices(experiment, labels_all, classes, unit.seed)
+    selected_all = _select_indices(experiment, labels_all, classes, unit.seed)
+    selected_labels = [labels_all[i] for i in selected_all]
+
+    # Memoized: a balanced design reads the same matrices at every one of its 27
+    # seeds, and wd50k66 is 64 MB per arm -- 19 GB of repeat I/O without this.
+    loaded = load_arm_matrices(matrices_root, name, arms, ids, cache=collection_cache)
+    survivors = set(common_member_ids([ids[i] for i in selected_all], loaded))
+    selected = [i for i in selected_all if ids[i] in survivors]
     truth = [labels_all[i] for i in selected]
+    n_censored = len(selected_all) - len(selected)
+    class_census = censored_by_class(selected_labels, truth)
+    if n_censored:
+        logger.warning(
+            "unit %d (%s): %d of %d selected members censored; clustering the rest",
+            unit.index,
+            unit.unit_id,
+            n_censored,
+            len(selected_all),
+        )
+
     n_init = experiment.n_seeds if experiment.design == "full" else 1
     init_seeds = seeds(RQ_INDEX, n_init) if experiment.design == "full" else [unit.seed or 0]
 
     for arm in arms:
         started = time.perf_counter()
-        try:
-            # Memoized: a balanced design reads the same 11 matrices at every
-            # one of its 27 seeds, and wd50k66 is 64 MB per arm -- 19 GB of
-            # repeat I/O without this.
-            matrix_key = f"matrix::{name}::{arm}"
-            if matrix_key not in collection_cache:
-                collection_cache[matrix_key] = load_cached_matrix(matrices_root, name, arm, ids)
-            full = collection_cache[matrix_key]
-        except MatrixCacheMissingError as exc:
-            logger.error("unit %d arm %s: %s", unit.index, arm, exc)
+        if arm not in loaded or len(selected) < k:
+            if arm in loaded:
+                logger.error(
+                    "unit %d arm %s: %d members survive for %d classes; censored",
+                    unit.index,
+                    arm,
+                    len(selected),
+                    k,
+                )
             tables["clustering"].append(
                 _base_row(unit, arm, 0.0, censored=1)
                 | {
@@ -595,11 +619,16 @@ def run_unit(
                     "ari_boot_high": float("nan"),
                     "pam_cost": float("nan"),
                     "n_init": n_init,
+                    "n_censored_members": n_censored,
                 }
             )
             continue
 
-        D = np.asarray(full[np.ix_(selected, selected)], dtype=np.float64)
+        full, row_of = loaded[arm]
+        # Align by member id: a censored arm's rows are its survivors, not the
+        # frozen order, so the frozen positions would index the wrong members.
+        arm_rows = [row_of[ids[i]] for i in selected]
+        D = np.asarray(full[np.ix_(arm_rows, arm_rows)], dtype=np.float64)
         np.fill_diagonal(D, 0.0)
 
         # --- PAM: 27 initializations on the full design, one on a balanced seed
@@ -631,10 +660,13 @@ def run_unit(
                 "ari_boot_high": boot_high,
                 "pam_cost": best_cost,
                 "n_init": n_init,
+                "n_censored_members": n_censored,
             }
         )
         tables["per_class"].extend(
-            _base_row(unit, arm, 0.0) | {"design": experiment.design, "method": "pam", **row}
+            _base_row(unit, arm, 0.0)
+            | {"design": experiment.design, "method": "pam", **row}
+            | _class_census_columns(class_census, row)
             for row in per_class_table(truth, list(best_labels))
         )
 
@@ -657,10 +689,13 @@ def run_unit(
                 "ari_boot_high": float("nan"),
                 "pam_cost": float("nan"),
                 "n_init": 1,
+                "n_censored_members": n_censored,
             }
         )
         tables["per_class"].extend(
-            _base_row(unit, arm, 0.0) | {"design": experiment.design, "method": "agglo", **row}
+            _base_row(unit, arm, 0.0)
+            | {"design": experiment.design, "method": "agglo", **row}
+            | _class_census_columns(class_census, row)
             for row in per_class_table(truth, list(agglo_labels))
         )
 
@@ -669,7 +704,11 @@ def run_unit(
             geometry_started = time.perf_counter()
             tables["geometry"].append(
                 _base_row(unit, arm, time.perf_counter() - geometry_started)
-                | {"design": experiment.design, **geometry_row(D)}
+                | {
+                    "design": experiment.design,
+                    **geometry_row(D),
+                    "n_censored_members": n_censored,
+                }
             )
 
         # --- the MDS map: a figure input, not an evaluation
@@ -691,6 +730,50 @@ def run_unit(
             )
 
     return tables
+
+
+def _class_census_columns(
+    census: Mapping[str, tuple[int, float]],
+    row: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Project one class's censoring counts onto its ``rows_per_class`` row."""
+    lost, rate = census.get(str(row.get("class")), (0, 0.0))
+    return {"n_censored_class": lost, "censor_rate_class": rate}
+
+
+def censored_by_class(
+    selected_labels: Sequence[str],
+    kept_labels: Sequence[str],
+) -> dict[str, tuple[int, float]]:
+    """Return ``label -> (censored count, censored rate)`` for one selection.
+
+    L15's label-correlated clause, in RQ5's currency: arity-heavy Wikidata types
+    censor more, so a clustering scored after censoring is scored on a class
+    distribution the corpus never had. The rate is reported per type rather than
+    pooled, since pooling is exactly what would hide it.
+
+    Parameters
+    ----------
+    selected_labels : Sequence[str]
+        Labels of the members the design selected, before restriction.
+    kept_labels : Sequence[str]
+        Labels of the members that survived every arm's screen.
+
+    Returns
+    -------
+    dict
+        Per label, the number of selected members lost and the fraction of that
+        label's selection they were.
+    """
+    selected_counts = Counter(selected_labels)
+    kept_counts = Counter(kept_labels)
+    return {
+        label: (
+            selected_counts[label] - kept_counts[label],
+            round((selected_counts[label] - kept_counts[label]) / selected_counts[label], 6),
+        )
+        for label in selected_counts
+    }
 
 
 def _base_row(unit: Unit, arm: str, secs: float, *, censored: int = 0) -> dict[str, Any]:
@@ -756,7 +839,7 @@ def ensure_smoke_matrices(
         cache_dir.mkdir(parents=True, exist_ok=True)
         for arm in sorted(arms):
             try:
-                load_cached_matrix(matrices_root, name, arm, ids)
+                load_cached_matrix_censored(matrices_root, name, arm, ids)
                 continue
             except MatrixCacheMissingError:
                 pass

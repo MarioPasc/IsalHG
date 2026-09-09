@@ -400,6 +400,97 @@ def load_cached_matrix_censored(
     return matrix, kept_ids, censored_ids
 
 
+def load_arm_matrices(
+    root: Path | str,
+    collection: str,
+    arms: Sequence[str],
+    member_ids: Sequence[str],
+    *,
+    cache: dict[str, Any] | None = None,
+) -> dict[str, tuple[NDArray[np.float32], dict[str, int]]]:
+    """Load several arms' matrices, each with the ``member id -> row`` map it needs.
+
+    The consumers index a submatrix of a whole-collection matrix. Positions in
+    the frozen order address it correctly only while every member is present,
+    which a budgeted arm's build breaks; the row map returned here is what lets
+    a caller align by member id instead, and the survivor sets it exposes are
+    what a cross-arm statistic must be intersected over.
+
+    An arm whose matrix is missing is logged and omitted rather than raised on,
+    so that one absent unit censors its own rows instead of the whole run --
+    and, mirroring RQ1's ``restrict_to_common_units``, drops out of the
+    intersection requirement rather than emptying it.
+
+    Parameters
+    ----------
+    root : Path or str
+        Results root.
+    collection : str
+        Frozen collection name.
+    arms : Sequence[str]
+        Arms to load.
+    member_ids : Sequence[str]
+        The full frozen member order.
+    cache : dict or None, optional
+        Per-process memo keyed ``matrix::<collection>::<arm>``; the wd50k66
+        parent is 64 MB per arm and a balanced design rereads it at every seed.
+
+    Returns
+    -------
+    dict
+        ``arm -> (matrix, {member_id: row})``, omitting the arms with no matrix.
+    """
+    memo = cache if cache is not None else {}
+    loaded: dict[str, tuple[NDArray[np.float32], dict[str, int]]] = {}
+    for arm in arms:
+        key = f"matrix::{collection}::{arm}"
+        if key not in memo:
+            try:
+                matrix, kept_ids, censored_ids = load_cached_matrix_censored(
+                    root, collection, arm, member_ids
+                )
+            except MatrixCacheMissingError as exc:
+                logger.error("arm %s on %s: %s", arm, collection, exc)
+                continue
+            if censored_ids:
+                logger.warning(
+                    "arm %s on %s: %d of %d members censored by the matrices job",
+                    arm,
+                    collection,
+                    len(censored_ids),
+                    len(member_ids),
+                )
+            memo[key] = (matrix, {kb_id: row for row, kb_id in enumerate(kept_ids)})
+        loaded[arm] = memo[key]
+    return loaded
+
+
+def common_member_ids(
+    member_ids: Sequence[str],
+    loaded: Mapping[str, tuple[Any, Mapping[str, int]]],
+) -> tuple[str, ...]:
+    """Return the members every loaded arm completed, in ``member_ids`` order.
+
+    The RQ1 ``restrict_to_common_units`` rule one level down: the unit is the
+    member, and a cross-arm statistic computed on different member sets is not
+    answering the same question for each arm.
+
+    Parameters
+    ----------
+    member_ids : Sequence[str]
+        Candidate members, in the order the caller wants them back.
+    loaded : Mapping
+        ``arm -> (matrix, {member_id: row})`` from :func:`load_arm_matrices`.
+
+    Returns
+    -------
+    tuple[str, ...]
+        The intersection, in input order. With no arms loaded this is
+        ``member_ids`` unchanged -- there is nothing to intersect over.
+    """
+    return tuple(kb_id for kb_id in member_ids if all(kb_id in rows for _, rows in loaded.values()))
+
+
 def cached_arms(root: Path | str, collection: str, member_ids: Sequence[str]) -> tuple[str, ...]:
     """Return the arms whose matrices are present and valid for ``collection``.
 

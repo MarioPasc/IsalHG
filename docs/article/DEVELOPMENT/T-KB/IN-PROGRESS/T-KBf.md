@@ -530,3 +530,60 @@ through it.
 Caught because the RQ4 smoke was run before the full submission. The full RQ4
 carries an 8-hour wall over 1,323 units; unfixed it would have burned it and
 produced nothing.
+
+### RQ3 Corpus A: the deletion variants violate R3 — measured 2026-09-09 14:2x
+
+Job 2265353 censors `wstar_orbit` on **2,616 collections** in its first 647
+units, and the pattern is a mechanism, not noise: **every censored cell is
+`_del` or `_mix`; no `_ins` cell censors at all.**
+
+**Cause: isolated constants, i.e. R3 — not cost.** Measured on 25 sampled
+Corpus A sources with the real generator:
+
+| kind | members | carrying an isolated constant | clean |
+|---|---|---|---|
+| `ins` | 350 | **0 (0 %)** | 350 |
+| `del` | 172 | **168 (97.7 %)** | 4 |
+| `mix` | 350 | **153 (43.7 %)** | 197 |
+
+The correspondence with the censoring pattern is exact.
+
+**The record already ruled the fix, and it was never implemented.**
+
+- R3 (D-ART4 (2)): "Connected only; isolated constants not representable
+  (**RQ3's deletion variants** and RQ6's interiors must respect this)."
+- D-ART4 (3): "**Variant generator: reject stranding deletions (R3).**"
+- `ladders.py::variant_collection` docstring: "the constant set is fixed,
+  **isolated constants are legal**." `DESIGN.md` §4 still says the same — both
+  predate D-ART4 and were never revised.
+
+**Why my D-KBf1 reason (iii) missed it.** Fable forced me to check that reason
+for **arity**, and arity was fine (`_arity_pool` bounds an insertion by the
+arities already in the record). Neither of us checked **connectivity**. The
+Corpus A window bounds `n`, `m` and arity; it says nothing about whether an
+edit leaves a constant in no fact. The lesson is that "outside the censoring
+regime" needed checking against *every* clause of the domain, not the one that
+was challenged.
+
+**The measured consequence of implementing D-ART4 (3) literally** — 40 sampled
+sources, collections keeping the full pre-registered `N` after rejection:
+
+| cell | wd50k66 | ndc_classes |
+|---|---|---|
+| `ins_*` (all four) | **40 / 40** | **40 / 40** |
+| `del_*` (all four) | **0 / 40** | **0 / 40** |
+| `mix_*` (all four) | 0–2 / 40 | 0–6 / 40 |
+
+Structural, not incidental: a constant-preserving deletion removes a fact and
+keeps the constant, and with `n ≤ 12`, `m ≤ 12` most constants sit in exactly
+one fact. `del_N9_t1` cannot be built at all, which the 2026-09-05 `m ≥ N + 1`
+amendment already knew for a different reason.
+
+**Status: not decided, nothing changed, job not cancelled.** The running job's
+`_ins` cells and Corpus B are unaffected and valid. Three options are on the
+table — implement the rejection and lose the deletion cells; keep the corpus and
+report the Isal arm as censored-by-domain there; or let deletions drop the
+stranded constant, abandoning "constant-preserving". D-ART4 (3) rules the
+*mechanism*; it does not rule what happens when the fix makes a pre-registered
+cell infeasible, and that gap is the author's. Put to `[IsalHG-Fable]` for the
+claim question and to the author for the scope call.

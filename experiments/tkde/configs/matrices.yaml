@@ -28,10 +28,8 @@ collections:
   - name: wd50k66 # 3,988 members; n_types = 1, n_preds = 351, roles present
     arms:
       - fact_rank
+      - wstar_orbit
       - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
       - nauty_cert
       - nauty_cert_rows
       - wl_l1
@@ -45,10 +43,8 @@ collections:
   - name: ndc_classes # 1,381 members; n_types = 4, n_preds = 1, no roles
     arms:
       - fact_rank
+      - wstar_orbit
       - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
       - nauty_cert
       - nauty_cert_rows
       - wl_l1
@@ -62,10 +58,8 @@ collections:
   - name: wd50k100 # 1,837 members; RQ5 purity control (supplement)
     arms:
       - fact_rank
+      - wstar_orbit
       - isal_ow_struct
-      - isal_ow_rank
-      - isal_ow_rank0
-      - wstar_rank
       - nauty_cert
       - wl_l1
       - size_l1

@@ -93,16 +93,25 @@ BUDGETED_MATRIX_ARMS: tuple[str, ...] = CPP_ENGINE_ARMS
 #: exactly as ``canonical_string(backend="cpp")`` does).
 DEFAULT_UNIT_BUDGET_S = 86_400.0
 
-#: The Isal instruction words that get an ``N x N`` matrix. ``wstar_orbit`` and
-#: ``isalhg_levenshtein`` are deliberately absent: both compute ``w*_c``, whose
-#: per-member cost is unbounded without the forked-child budget, and a budget is
-#: a per-member notion that a whole-matrix build has nowhere to record. They are
-#: measured per member in RQ1 and RQ7 instead.
+#: The Isal instruction words that get an ``N x N`` matrix. ``wstar_orbit`` is
+#: the paper's representation under D-ART5 and therefore needs one: the earlier
+#: exclusion of both ``w*_c`` engines ("a budget is a per-member notion that a
+#: whole-matrix build has nowhere to record") stopped being true at wave 6, when
+#: :data:`BUDGETED_MATRIX_ARMS` gained them, ``arm_fingerprint_screen`` supplied
+#: the per-member screen and ``<arm>.censored.json`` became the place to record
+#: it. ``isalhg_levenshtein`` stays absent: it is the no-nauty cost cell of RQ1,
+#: not an arm of any RQ2-RQ7 table, and its censoring drifts run to run.
+#:
+#: ``isal_ow_struct`` is built but published nowhere outside RQ7. Under D-ART5
+#: exactly one Isal row reaches a table, and the ordered walk is not it; the
+#: matrix is kept because it is the uncensored Isal reference against which a
+#: censored ``wstar_orbit`` subset can be checked in the supplement, it costs
+#: only its pairwise pass (its emitter is 0.54 ms/member), and a matrix is a
+#: cached artefact rather than a published row. Rebuilding one later is a
+#: multi-hour queue wait; the asymmetry favours having it.
 ISAL_MATRIX_ARMS: tuple[str, ...] = (
+    "wstar_orbit",
     "isal_ow_struct",
-    "isal_ow_rank",
-    "isal_ow_rank0",
-    "wstar_rank",
 )
 
 #: Arms per collection, frozen by the wave-3 brief. ``fact_rank_roles`` is not

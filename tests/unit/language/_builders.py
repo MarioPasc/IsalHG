@@ -11,8 +11,9 @@ from __future__ import annotations
 
 import random
 
-from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
 from isalhg.iso_backends.canonical_order import nauty_certificate_bytes
+from isalhg.language.reach import compact_constants, remove_facts
 
 DEFAULT_TYPES = 3
 DEFAULT_PREDS = 2
@@ -111,6 +112,27 @@ def with_substituted_fact(
     kept = facts_of(H)
     del kept[rng.randrange(len(kept))]
     return rebuild(H, [*kept, fact])
+
+
+def transported_remainder(
+    K: SparseHypergraph,
+    deleted_from_k: tuple[int, ...],
+    K2: SparseHypergraph,
+    deleted_from_k2: tuple[int, ...],
+    node_map: tuple[int | None, ...],
+) -> tuple[SparseHypergraph, SparseHypergraph]:
+    """Return ``(compact(K2 - B) carried over by node_map, compact(K - A))``.
+
+    ``node_map`` is stated over ``K2``'s constants and is partial, so it is
+    re-expressed as a permutation of the compacted remainder before
+    :func:`isalhg.core.sparse_hypergraph.permute` can apply it.  The two results
+    are equal exactly when the alignment's map is a genuine isomorphism.
+    """
+    left, left_survivors = compact_constants(remove_facts(K, deleted_from_k))
+    right, right_survivors = compact_constants(remove_facts(K2, deleted_from_k2))
+    position = {v: u for u, v in enumerate(left_survivors)}
+    sigma = [position[node_map[v]] for v in right_survivors]
+    return permute(right, sigma), left
 
 
 def nauty_iso(H1: SparseHypergraph, H2: SparseHypergraph) -> bool:

@@ -29,8 +29,8 @@ from isalhg.language.alignment import alignment_path
 from isalhg.language.reach import (
     ReachError,
     alignments,
+    compact_constants,
     fact_key_of,
-    node_map_from_ranks,
     reach,
     remove_facts,
 )
@@ -39,6 +39,7 @@ from tests.unit.language._builders import (
     DEFAULT_PREDS,
     DEFAULT_TYPES,
     random_kb,
+    transported_remainder,
     with_inserted_fact,
     with_substituted_fact,
 )
@@ -50,14 +51,11 @@ pytest.importorskip("rapidfuzz")
 
 
 def symmetric_path_kb() -> SparseHypergraph:
-    """A 4-constant path whose two end facts are exchanged by an automorphism.
+    """A 4-constant path ``0-1-2-3`` of one type, one predicate.
 
-    Facts ``{0,1}``, ``{1,2}``, ``{2,3}`` over four constants of one type.
-    Deleting the first leaves ``1-2-3`` with ``0`` isolated; deleting the last
-    leaves ``0-1-2`` with ``3`` isolated.  The two remainders are isomorphic but
-    not equal, so the identity --- which is exactly what composing the two
-    objects' own canonical ranks gives here, the object being the same one ---
-    is not an isomorphism between them.
+    Deleting the first fact strands ``0``; deleting the last strands ``3``.
+    Under ``reach'`` both remainders compact to the *same* 3-constant path, so
+    this fixture now pins the compaction semantics rather than the G1 hazard.
     """
     return SparseHypergraph(
         n_nodes=4,
@@ -66,6 +64,25 @@ def symmetric_path_kb() -> SparseHypergraph:
         n_edge_labels=1,
         vertex_labels=[0, 0, 0, 0],
         edge_labels=[0, 0, 0],
+    )
+
+
+def symmetric_cycle_kb() -> SparseHypergraph:
+    """A 4-constant cycle ``0-1-2-3-0`` of one type, one predicate.
+
+    Every constant keeps degree 2, so no single deletion strands one and
+    compaction is a no-op.  Deleting fact ``{0,1}`` and deleting fact ``{2,3}``
+    both leave a 4-constant path, isomorphic but *not equal*, so the identity
+    map --- which is what composing the two objects' own canonical ranks gives
+    here, the object being the same one --- is not an isomorphism between them.
+    """
+    return SparseHypergraph(
+        n_nodes=4,
+        hyperedges=[frozenset({0, 1}), frozenset({1, 2}), frozenset({2, 3}), frozenset({3, 0})],
+        n_vertex_labels=1,
+        n_edge_labels=1,
+        vertex_labels=[0, 0, 0, 0],
+        edge_labels=[0, 0, 0, 0],
     )
 
 
@@ -93,9 +110,14 @@ class TestNodeMapIsAnIsomorphism:
                 continue
             checked += 1
             for alignment in alignments(K, other, 2):
-                left = remove_facts(K, alignment.deleted_from_k)
-                right = remove_facts(other, alignment.deleted_from_k2)
-                assert permute(right, alignment.node_map) == left
+                carried, left = transported_remainder(
+                    K,
+                    alignment.deleted_from_k,
+                    other,
+                    alignment.deleted_from_k2,
+                    alignment.node_map,
+                )
+                assert carried == left
                 verified += 1
                 if alignment.deleted_from_k or alignment.deleted_from_k2:
                     with_deletions += 1
@@ -103,7 +125,7 @@ class TestNodeMapIsAnIsomorphism:
         assert with_deletions >= self.N_CASES // 4
 
     def test_naive_rank_transport_fails_on_a_symmetric_remainder(self) -> None:
-        K = symmetric_path_kb()
+        K = symmetric_cycle_kb()
         found = [
             alignment
             for alignment in alignments(K, K, 2)
@@ -117,12 +139,22 @@ class TestNodeMapIsAnIsomorphism:
         assert left != right
         assert fact_key_of(left) == fact_key_of(right)
 
-        naive = node_map_from_ranks(_ranks(K), _ranks(K))
-        assert naive == tuple(range(K.n_nodes))
+        naive = tuple(range(K.n_nodes))
+        assert _ranks(K) == _ranks(K)
         assert permute(right, naive) != left
 
         assert alignment.node_map != naive
-        assert permute(right, alignment.node_map) == left
+        carried, target = transported_remainder(K, (0,), K, (2,), alignment.node_map)
+        assert carried == target
+
+    def test_compaction_identifies_the_two_stranded_remainders(self) -> None:
+        K = symmetric_path_kb()
+        left, left_survivors = compact_constants(remove_facts(K, (0,)))
+        right, right_survivors = compact_constants(remove_facts(K, (2,)))
+        assert left_survivors == (1, 2, 3)
+        assert right_survivors == (0, 1, 2)
+        assert left == right
+        assert reach(remove_facts(K, (0,)), remove_facts(K, (2,))) == 0
 
     def test_alignment_at_radius_zero_is_isomorphism_only(self) -> None:
         rng = random.Random(43)
@@ -136,9 +168,25 @@ class TestNodeMapIsAnIsomorphism:
 
     def test_incompatible_pair_has_no_alignment(self) -> None:
         rng = random.Random(47)
-        K = random_kb(rng, n_lo=5, n_hi=5)
-        wider = random_kb(rng, n_lo=6, n_hi=6)
-        assert alignments(K, wider, 2) == []
+        base = random_kb(rng, n_lo=5, n_hi=5, m_lo=5, m_hi=5, n_preds=2)
+        members = [edge for _, edge, _ in base.iter_edges()]
+        types = [base.vertex_label(v) for v in range(base.n_nodes)]
+
+        def with_one_predicate(predicate: int) -> SparseHypergraph:
+            return SparseHypergraph(
+                n_nodes=base.n_nodes,
+                hyperedges=members,
+                n_vertex_labels=base.n_vertex_labels,
+                n_edge_labels=2,
+                vertex_labels=types,
+                edge_labels=[predicate] * len(members),
+            )
+
+        K = with_one_predicate(0)
+        other = with_one_predicate(1)
+        # every fact carries the other predicate, so the two profiles are
+        # disjoint and no budget of 2 deletions can align them
+        assert alignments(K, other, 2) == []
 
     def test_result_is_sorted_and_deterministic(self) -> None:
         rng = random.Random(53)

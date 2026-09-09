@@ -24,11 +24,19 @@ The candidate set
 The members, plus the *alignment-transfer* set: for an ordered pair
 ``(i, j)``, an alignment ``(A, B, node_map)`` between ``K_i`` and ``K_j`` says
 which facts of each are unmatched and, through the canonical labellings of the
-two isomorphic remainders, how ``K_j``'s constants sit inside ``K_i``'s.  Every
-``A' subset A`` and ``B' subset B`` with ``|A'| + |B'| <= r`` then yields the
-candidate ``K_i - A' + node_map(B')``, expressed in ``K_i``'s constant space so
-that the evaluation can inherit ``K_i``'s identities.  Classes are deduplicated
-by canonical key.
+two isomorphic compacted remainders, how ``K_j``'s constants sit inside
+``K_i``'s.  Every ``A' subset A`` and ``B' subset B`` with ``|A'| + |B'| <= r``
+then yields the candidate ``K_i - A' + node_map(B')``.  ``node_map`` is
+*partial*: a constant of ``K_j`` stranded by ``B`` has no counterpart in
+``K_i``, so a transferred fact naming it **creates** the constant, carrying the
+donor's type and (for evaluation only) the donor's identity.  That is
+``insert_fact_new_constant``, the one insertion kind the Isal word owns
+outright.  The candidate is then compacted --- a knowledge base is its facts, so
+a constant that ``A'`` stranded is gone --- and the classes are deduplicated by
+canonical key.  Because of both steps a candidate is no longer literally inside
+the anchor's constant space, and
+:attr:`ConsensusResult.constant_origin` records where each of its constants came
+from.
 
 The alignment budget: why ``2r``
 -------------------------------
@@ -74,9 +82,10 @@ from isalhg.language.reach import (
     FactSubset,
     LanguageError,
     RemainderIndex,
+    compact_constants,
     compatible,
     fact_key_of,
-    node_map_from_ranks,
+    node_map_from_remainders,
     remove_facts,
 )
 
@@ -124,15 +133,22 @@ class ConsensusResult:
     Parameters
     ----------
     kb : SparseHypergraph
-        The representative, in the constant space of ``members[anchor]``.
+        The representative, built on the constant space of ``members[anchor]``.
     anchor : int
-        Index of the member whose constant space (and, for evaluation,
-        identities) ``kb`` is expressed in.
-    node_map : tuple[int, ...]
+        Index of the member the representative was built from.
+    node_map : tuple[int | None, ...]
         ``node_map[v]`` is the constant of ``members[anchor]`` that constant
-        ``v`` of ``kb`` denotes.  Always the identity, because every candidate
-        is built inside its anchor's constant space; carried explicitly so a
-        caller never has to assume it.
+        ``v`` of ``kb`` denotes, or ``None`` when there is none.  It is *not*
+        the identity: compacting the candidate drops the constants its deletions
+        stranded and renumbers what is left, and a transferred fact can create a
+        constant the anchor never had.  Use :attr:`constant_origin` when the
+        created constants matter.
+    constant_origin : tuple[tuple[int, int], ...]
+        ``constant_origin[v] = (member index, constant of that member)`` for
+        every constant of ``kb``: where the constant --- and therefore, for
+        evaluation only, its identity --- came from.  Every entry names
+        ``anchor`` except those created by a transferred fact, which name the
+        donor.
     word : Word
         ``kb``'s canonical key.
     coverage, sum_reach : int
@@ -148,7 +164,8 @@ class ConsensusResult:
 
     kb: SparseHypergraph
     anchor: int
-    node_map: tuple[int, ...]
+    node_map: tuple[int | None, ...]
+    constant_origin: tuple[tuple[int, int], ...]
     word: Word
     coverage: int
     sum_reach: int
@@ -179,13 +196,35 @@ def _pair_alignments(
             table_b = right.level(b)
             for word in sorted(table_a.keys() & table_b.keys()):
                 for subset_a in table_a[word]:
-                    ranks_a = left.ranks(subset_a)
+                    remainder_a = left.remainder(subset_a)
                     for subset_b in table_b[word]:
                         yield Alignment(
                             deleted_from_k=subset_a,
                             deleted_from_k2=subset_b,
-                            node_map=node_map_from_ranks(ranks_a, right.ranks(subset_b)),
+                            node_map=node_map_from_remainders(
+                                remainder_a, right.remainder(subset_b)
+                            ),
                         )
+
+
+@dataclass(frozen=True)
+class _Candidate:
+    """One decoded candidate together with the provenance of each of its constants.
+
+    Parameters
+    ----------
+    kb : SparseHypergraph
+        The candidate, compacted.
+    host_of : tuple[int | None, ...]
+        Per candidate constant, the host constant it came from, or ``None``.
+    donor_of : tuple[int | None, ...]
+        Per candidate constant, the donor constant that created it, or ``None``.
+        Exactly one of the two entries is set for every constant.
+    """
+
+    kb: SparseHypergraph
+    host_of: tuple[int | None, ...]
+    donor_of: tuple[int | None, ...]
 
 
 def _transfer(
@@ -193,22 +232,62 @@ def _transfer(
     drop: FactSubset,
     donor: SparseHypergraph,
     take: FactSubset,
-    node_map: tuple[int, ...],
-) -> SparseHypergraph:
-    """Return ``host - drop`` with the facts ``take`` of ``donor`` carried over by ``node_map``."""
+    node_map: tuple[int | None, ...],
+) -> _Candidate:
+    """Return ``host - drop`` with the facts ``take`` of ``donor`` carried over by ``node_map``.
+
+    A donor constant with no image under the partial ``node_map`` is *created*
+    in the host's space with the donor's type, which is the
+    ``insert_fact_new_constant`` edit of the language.  The result is compacted,
+    because a constant that ``drop`` stranded is no longer part of the knowledge
+    base.
+
+    Parameters
+    ----------
+    host, donor : SparseHypergraph
+        The two members.
+    drop, take : FactSubset
+        Facts removed from ``host`` and carried over from ``donor``.
+    node_map : tuple[int | None, ...]
+        Partial map from ``donor``'s constants to ``host``'s.
+
+    Returns
+    -------
+    _Candidate
+        The compacted candidate and the origin of each of its constants.
+    """
     result = remove_facts(host, drop)
     edges = [members for _, members, _ in result.iter_edges()]
     labels = [label for _, _, label in result.iter_edges()]
+    types = [host.vertex_label(v) for v in range(host.n_nodes)]
+    created: dict[int, int] = {}
     for e in take:
-        edges.append(frozenset(node_map[v] for v in donor.members(e)))
+        members = []
+        for v in donor.members(e):
+            image = node_map[v]
+            if image is None:
+                image = created.get(v)
+                if image is None:
+                    image = len(types)
+                    created[v] = image
+                    types.append(donor.vertex_label(v))
+            members.append(image)
+        edges.append(frozenset(members))
         labels.append(donor.edge_label(e))
-    return SparseHypergraph(
-        host.n_nodes,
+    extended = SparseHypergraph(
+        len(types),
         edges,
         n_vertex_labels=host.n_vertex_labels,
         n_edge_labels=host.n_edge_labels,
-        vertex_labels=[host.vertex_label(v) for v in range(host.n_nodes)],
+        vertex_labels=types,
         edge_labels=labels,
+    )
+    kb, survivors = compact_constants(extended)
+    donor_by_slot = {slot: v for v, slot in created.items()}
+    return _Candidate(
+        kb=kb,
+        host_of=tuple(v if v < host.n_nodes else None for v in survivors),
+        donor_of=tuple(donor_by_slot.get(v) for v in survivors),
     )
 
 
@@ -260,7 +339,7 @@ class _Scorer:
         """
         unreached = self._r + 1
         best = [unreached] * len(self._members)
-        live = [i for i, H in enumerate(self._members) if compatible(candidate, H)]
+        live = [i for i, H in enumerate(self._members) if compatible(candidate, H, self._r)]
         for a in range(self._r + 1):
             live = [i for i in live if best[i] > a]
             if not live:
@@ -278,16 +357,64 @@ class _Scorer:
         return coverage, sum(best)
 
 
+def _provenance(
+    built: _Candidate, host_index: int, donor_index: int
+) -> tuple[tuple[int, int], ...]:
+    """Return, per constant of ``built.kb``, the member and constant it came from.
+
+    Parameters
+    ----------
+    built : _Candidate
+        The candidate and its two per-constant origin vectors.
+    host_index, donor_index : int
+        Positions of the host and the donor in the member sequence.
+
+    Returns
+    -------
+    tuple[tuple[int, int], ...]
+        Index-aligned with the candidate's constants.
+
+    Raises
+    ------
+    ConsensusError
+        If a constant claims neither a host nor a donor origin, which would mean
+        the transfer lost track of an identity.
+    """
+    out: list[tuple[int, int]] = []
+    for host_constant, donor_constant in zip(built.host_of, built.donor_of, strict=True):
+        if host_constant is not None:
+            out.append((host_index, host_constant))
+        elif donor_constant is not None:
+            out.append((donor_index, donor_constant))
+        else:
+            raise ConsensusError("a transferred candidate carries a constant with no origin")
+    return tuple(out)
+
+
+@dataclass(frozen=True)
+class _PoolEntry:
+    """A deduplicated candidate class: the object, its anchor, its provenance, its origin tag."""
+
+    kb: SparseHypergraph
+    anchor: int
+    constant_origin: tuple[tuple[int, int], ...]
+    origin: str
+
+
 def _candidate_pool(
     members: Sequence[SparseHypergraph],
     r: int,
     budget: AlignmentBudget,
     scorer: _Scorer,
-) -> dict[Word, tuple[SparseHypergraph, int, str]]:
+) -> dict[Word, _PoolEntry]:
     """Build the deduplicated candidate set: the members, then the alignment transfers."""
-    pool: dict[Word, tuple[SparseHypergraph, int, str]] = {}
+    pool: dict[Word, _PoolEntry] = {}
     for i, H in enumerate(members):
-        pool.setdefault(scorer.key(H), (H, i, f"member:{i}"))
+        core, survivors = compact_constants(H)
+        pool.setdefault(
+            scorer.key(core),
+            _PoolEntry(core, i, tuple((i, v) for v in survivors), f"member:{i}"),
+        )
 
     indices = [RemainderIndex(H, _index_radius(r, budget)) for H in members]
     for i, host in enumerate(members):
@@ -298,8 +425,11 @@ def _candidate_pool(
             for alignment in _pair_alignments(indices[i], indices[j], r, budget):
                 for drop in _subsets_up_to(alignment.deleted_from_k, r):
                     for take in _subsets_up_to(alignment.deleted_from_k2, r - len(drop)):
-                        candidate = _transfer(host, drop, donor, take, alignment.node_map)
-                        pool.setdefault(scorer.key(candidate), (candidate, i, origin))
+                        built = _transfer(host, drop, donor, take, alignment.node_map)
+                        pool.setdefault(
+                            scorer.key(built.kb),
+                            _PoolEntry(built.kb, i, _provenance(built, i, j), origin),
+                        )
     return pool
 
 
@@ -353,14 +483,14 @@ def coverage_consensus(
 
     scores: list[CandidateScore] = []
     ranked: list[tuple[tuple[int, int, Word], Word]] = []
-    for word, (candidate, _, origin) in pool.items():
-        coverage, sum_reach = scorer.score(candidate)
-        scores.append(CandidateScore(word, coverage, sum_reach, origin))
+    for word, entry in pool.items():
+        coverage, sum_reach = scorer.score(entry.kb)
+        scores.append(CandidateScore(word, coverage, sum_reach, entry.origin))
         ranked.append(((-coverage, sum_reach, word), word))
 
     ranked.sort(key=lambda item: item[0])
     (best_neg_coverage, best_sum_reach, _), winner_word = ranked[0]
-    kb, anchor, _ = pool[winner_word]
+    winner = pool[winner_word]
     n_ties = (
         sum(
             1
@@ -371,9 +501,13 @@ def coverage_consensus(
     )
 
     return ConsensusResult(
-        kb=kb,
-        anchor=anchor,
-        node_map=tuple(range(kb.n_nodes)),
+        kb=winner.kb,
+        anchor=winner.anchor,
+        node_map=tuple(
+            constant if member == winner.anchor else None
+            for member, constant in winner.constant_origin
+        ),
+        constant_origin=winner.constant_origin,
         word=winner_word,
         coverage=-best_neg_coverage,
         sum_reach=best_sum_reach,

@@ -363,6 +363,46 @@ class ConsensusOutcome:
     n_ties: int
 
 
+def consensus_identities(
+    result: ConsensusResult, identities: Sequence[Sequence[str]]
+) -> tuple[str, ...]:
+    """Return the external identity of every constant of the consensus.
+
+    A candidate is no longer built entirely inside its anchor's constant space:
+    a transferred fact can name a constant the anchor never had, and the
+    candidate is compacted afterwards. ``ConsensusResult.constant_origin`` says,
+    per constant, which member it came from, so the identity is read from that
+    member.
+
+    Parameters
+    ----------
+    result : ConsensusResult
+        The consensus.
+    identities : Sequence of Sequence of str
+        Per member, its external constant identities, in member order.
+
+    Returns
+    -------
+    tuple[str, ...]
+        One identity per constant of ``result.kb``, index aligned.
+
+    Raises
+    ------
+    RQ3Error
+        If an origin names a member or a constant the identity table does not
+        have, which would mean the axis lost a constant.
+    """
+    out: list[str] = []
+    for member, constant in result.constant_origin:
+        try:
+            out.append(identities[member][constant])
+        except IndexError as exc:
+            raise RQ3Error(
+                f"consensus constant origin ({member}, {constant}) is outside the identity table"
+            ) from exc
+    return tuple(out)
+
+
 def consensus_outcome(
     members: Sequence[SparseHypergraph],
     identities: Sequence[Sequence[str]],
@@ -392,7 +432,7 @@ def consensus_outcome(
         The score and the candidate-set statistics the rows carry.
     """
     result: ConsensusResult = coverage_consensus(members, r, alignment_budget=alignment_budget)
-    out = identity_facts_of_hypergraph(result.kb, identities[result.anchor], result.node_map)
+    out = identity_facts_of_hypergraph(result.kb, consensus_identities(result, identities))
     return ConsensusOutcome(
         fact_dist=fact_distance(out, truth_facts),
         coverage=result.coverage,

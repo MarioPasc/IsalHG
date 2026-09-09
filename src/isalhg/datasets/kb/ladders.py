@@ -10,9 +10,11 @@ Three generators, all pure functions of ``(record, parameters, seed)``:
     RQ1 M2(b) -- cumulative fact insert / delete walks with the constant set
     held fixed, so ``delta = |F_0 triangle F_t|`` is exact.
 ``variant_collection``
-    RQ3 Corpus A -- ``N`` members, each ``t`` independent constant-preserving
-    fact edits of one source, pairwise non-isomorphic and non-isomorphic to the
-    source.
+    RQ3 Corpus A -- ``N`` members, each ``t`` independent fact edits of one
+    source, pairwise non-isomorphic and non-isomorphic to the source.  The
+    constant set is *not* held fixed: a deletion that takes the last fact
+    naming a constant removes the constant, so members of one collection may
+    differ in constant count.
 
 Ported from ``scripts/diagnostics/d_art3_probes_2026-09-03/f4_topology/f4_corpora.py``
 (``apply_edit``, ``sample_edits``, ``_stable_step``, ``random_walk``).
@@ -409,6 +411,38 @@ def constant_preserving_ladder(
     return rungs
 
 
+def _identity_facts(record: KBRecord) -> frozenset[tuple[int, frozenset[str]]] | None:
+    """Return ``record``'s facts addressed by external identity, or ``None`` without ids.
+
+    Constant *numbers* are not stable across a compaction, so a fact-level delta
+    between a source and one of its variants has to be read off the identities.
+
+    Parameters
+    ----------
+    record : KBRecord
+        The record.
+
+    Returns
+    -------
+    frozenset or None
+        ``{(predicate, frozenset of identities)}``, or ``None`` when the record
+        carries no ``constant_ids``.
+    """
+    ids = record.constant_ids
+    if ids is None:
+        return None
+    return frozenset((pred, frozenset(ids[v] for v in members)) for pred, members in record.facts)
+
+
+def _variant_delta(source: KBRecord, member: KBRecord) -> int:
+    """Fact-level difference between a source and one of its variants."""
+    left = _identity_facts(source)
+    right = _identity_facts(member)
+    if left is None or right is None:
+        return len(source.fact_set() ^ member.fact_set())
+    return len(left ^ right)
+
+
 def _variant_member(
     source: KBRecord,
     t: int,
@@ -417,7 +451,13 @@ def _variant_member(
     envelope: Envelope,
     kb_id: str,
 ) -> KBRecord | None:
-    """``t`` independent constant-preserving fact edits; isolated constants legal."""
+    """``t`` independent fact edits of ``source``; a stranded constant leaves with its facts.
+
+    The constant set is *not* pinned: a knowledge base is its set of facts, so a
+    deletion that takes the last fact naming a constant removes the constant
+    too, and the member then carries fewer constants than the source.  Every
+    rung stays connected.
+    """
     facts = list(source.facts)
     working = source
     ops: list[str] = []
@@ -428,20 +468,20 @@ def _variant_member(
             return None
         facts, op = step
         ops.append(op)
-        candidate = make_record(
+        candidate = compact(
             kb_id,
-            source.n,
-            source.types,
+            working.types,
             facts,
-            constant_ids=source.constant_ids,
-            label=source.label,
+            constant_ids=working.constant_ids,
+            label=working.label,
             meta={"n_types": source.n_types, "n_preds": source.n_preds},
-            require_connected=False,
         )
         if candidate is None:
             return None
         working = candidate
-    if working.facts == source.facts or working.max_arity > envelope.k_max:
+    if working.max_arity > envelope.k_max:
+        return None
+    if working.n == source.n and working.facts == source.facts:
         return None
     return KBRecord(
         kb_id=kb_id,
@@ -449,14 +489,14 @@ def _variant_member(
         types=working.types,
         facts=working.facts,
         constant_ids=working.constant_ids,
-        label=working.label,
+        label=source.label,
         meta={
             "source_id": source.kb_id,
             "t": t,
             "kind": kind,
             "ops": ops,
-            "delta": len(source.fact_set() ^ working.fact_set()),
-            "constant_set_preserved": True,
+            "delta": _variant_delta(source, working),
+            "constant_set_preserved": working.n == source.n,
             "n_types": source.n_types,
             "n_preds": source.n_preds,
         },
@@ -474,10 +514,12 @@ def variant_collection(
 ) -> list[KBRecord] | None:
     """Build one RQ3 Corpus A variant collection over a real member.
 
-    Every member is ``t`` independent constant-preserving fact edits of
-    ``source`` (``mix``: each edit insert or delete with probability 1/2). The
-    constant set is fixed, isolated constants are legal, and the members are
-    pairwise non-isomorphic and non-isomorphic to the source.
+    Every member is ``t`` independent fact edits of ``source`` (``mix``: each
+    edit insert or delete with probability 1/2), stays connected, and the
+    members are pairwise non-isomorphic and non-isomorphic to the source. A
+    deletion that strands a constant removes it, so members may carry fewer
+    constants than the source and may differ from each other in constant count;
+    ``meta["constant_set_preserved"]`` records which members kept the source's.
 
     Parameters
     ----------

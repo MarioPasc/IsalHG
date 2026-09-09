@@ -382,22 +382,30 @@ real collections are near-unique under labels; the census says so).
 reference, and with what guarantee?
 
 **Definitions (frozen).**
-- *Reach.* `reach_F(K → K′) = min{ |A| + |B| : A ⊆ F(K), B ⊆ F(K′), (K − A) ≅ (K′ − B) }`,
-  the fewest fact-token indels from `w(K)` to a word decoding to `K′`
-  (constants fixed; substitution excluded — the **indel** ball of Prop 5,
-  because a substitution would collapse the `2t` gap between siblings).
+- *Reach.* `reach′_F(K → K′) = min{ |A| + |B| : A ⊆ F(K), B ⊆ F(K′),
+  compact(K − A) ≅ compact(K′ − B) }`, the fewest fact-token indels from `w(K)`
+  to a word decoding to `K′` (substitution excluded — the **indel** ball of
+  Prop 5, because a substitution would collapse the `2t` gap between siblings).
   Computed exactly for `r ≤ 2` by delete-and-match: enumerate `A`, `B` with
-  `|A| + |B| ≤ r` and compare canonical keys of the remainders.
+  `|A| + |B| ≤ r` and compare canonical keys of the *compacted* remainders.
+  **Amended 2026-09-09 (D-KBf5):** the remainders are compacted because a
+  knowledge base is its set of facts (§2.1), so a deletion that takes the last
+  fact naming a constant takes the constant with it; the earlier reading pinned
+  the constant set and therefore returned ∞ on every deletion variant and on
+  1,146 of the 1,400 natural Corpus B member pairs.
 - *Coverage consensus.* Over candidates `C`, return
-  `argmax_{c ∈ C} ( cov_r(c), −Σ_i min(reach_F(c → K_i), r+1), lexicographic word )`
-  with `cov_r(c) = #{ i : reach_F(c → K_i) ≤ r }`. Candidates: the members, and
+  `argmax_{c ∈ C} ( cov_r(c), −Σ_i min(reach′_F(c → K_i), r+1), lexicographic word )`
+  with `cov_r(c) = #{ i : reach′_F(c → K_i) ≤ r }`. Candidates: the members, and
   every knowledge base `K_i − A′ + π(B′)` obtained from an alignment `(A, B, π)`
   of two members `K_i`, `K_j` with `|A| + |B| ≤ 2r` — the *triangle-complete*
   set, since a candidate within `r` of both members forces
-  `reach_F(K_i, K_j) ≤ 2r` — taking `A′ ⊆ A`, `B′ ⊆ B` with `|A′| + |B′| ≤ r`
+  `reach′_F(K_i, K_j) ≤ 2r` — taking `A′ ⊆ A`, `B′ ⊆ B` with `|A′| + |B′| ≤ r`
   (alignment-transfer generation), with decoded classes deduplicated by
   canonical key. `π` comes from the canonical labellings of the two isomorphic
-  remainders, never from the ranks of `K_i` and `K_j` themselves (G1). The
+  compacted remainders, never from the ranks of `K_i` and `K_j` themselves (G1);
+  it is therefore *partial*, and a transferred fact naming a constant `B`
+  stranded creates that constant with the donor's type and identity — the
+  `insert_fact_new_constant` edit (D-KBf5, 2026-09-09). The
   narrower budgets "per side" (`|A|, |B| ≤ r`) and "sum" (`|A| + |B| ≤ r`) are
   implemented as recorded variants only; under "sum" the source is provably
   outside the candidate set for `t = r`, which is how the ambiguity was found
@@ -408,9 +416,10 @@ reference, and with what guarantee?
 - *Truth and the axis.* Exact fact-level distance `|F(out) △ F(truth)|`
   computed with constant identities carried through the pipeline for
   evaluation only: a member keeps its identities; a candidate inherits the
-  identities of the member it was derived from; transferred facts are
-  expressed in that member's constant space. The methods never read
-  identities.
+  identities of the member it was derived from; a transferred fact is expressed
+  in that member's constant space where it can be, and where it names a
+  constant that member does not have, the constant is created and keeps the
+  *donor's* identity. The methods never read identities.
 
 **Hypotheses.** H3a (directional): the coverage consensus returns the source
 exactly (distance 0) in ≥ 95 % of insertion-only and deletion-only variant
@@ -422,14 +431,18 @@ the coverage consensus matches `majority_merge` (which uses identities) on
 recovery rate within 5 points. H3d: every medoid ratio under `fact_rank` is
 ≤ `2 − 2/N`, and the measured ratios are ≤ 1.7.
 
-**Corpus A — constant-preserving variant collections over real members
-(primary).** Sources: real members of `ndc_classes` and `wd50k66` with
+**Corpus A — fact-edit variant collections over real members (primary).**
+Sources: real members of `ndc_classes` and `wd50k66` with
 `4 ≤ n ≤ 12`, `4 ≤ m ≤ 12`, max arity `≤ 6`; per cell `(collection, N ∈ {5, 9},
 t ∈ {1, 2}, kind ∈ {ins, del, mix})`, 27 seeds × 8 sources = 216 variant
-collections; members are `t` independent constant-preserving fact edits of the
-source (mix: each edit insert or delete with probability ½), pairwise
-non-isomorphic and non-isomorphic to the source (50 resampling attempts, else
-the collection is dropped and counted). Isolated constants are legal.
+collections; members are `t` independent fact edits of the source (mix: each
+edit insert or delete with probability ½), pairwise non-isomorphic and
+non-isomorphic to the source (50 resampling attempts, else the collection is
+dropped and counted). Every member is connected, and a deletion that takes the
+last fact naming a constant takes the constant with it, so members of one
+collection may differ from the source and from each other in constant count
+(renamed off "constant-preserving" at D-KBf5, 2026-09-09;
+`meta["constant_set_preserved"]` records which members kept the source's set).
 **Deletion-only eligibility (amended 2026-09-05):** a source with `m` facts has
 at most `m` single-fact deletions, fewer up to isomorphism, so `N` pairwise
 non-isomorphic deletion variants need `m ≥ N + 1`; the deletion cells sample

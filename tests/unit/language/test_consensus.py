@@ -20,9 +20,12 @@ import random
 
 import pytest
 
+from isalhg.core.canonical import canonical_string
 from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
-from isalhg.language.consensus import ConsensusError, coverage_consensus
-from isalhg.language.reach import fact_key_of, reach
+from isalhg.core.string_to_hypergraph import string_to_hypergraph
+from isalhg.iso_backends.canonical_order import nauty_certificate_bytes
+from isalhg.language.consensus import ConsensusError, ConsensusResult, coverage_consensus
+from isalhg.language.reach import compact_constants, fact_key_of, reach, remove_facts
 from tests.unit.language._builders import (
     facts_of,
     new_fact,
@@ -292,6 +295,94 @@ class TestResultShape:
         assert members is not None
         result = coverage_consensus(members, r=2)
         assert 0 <= result.anchor < len(members)
-        assert result.kb.n_nodes == members[result.anchor].n_nodes
-        assert result.node_map == tuple(range(result.kb.n_nodes))
+        assert len(result.constant_origin) == result.kb.n_nodes
+        assert len(result.node_map) == result.kb.n_nodes
         assert fact_key_of(result.kb) == result.word
+        for constant, (member, source_constant) in enumerate(result.constant_origin):
+            assert 0 <= member < len(members)
+            assert 0 <= source_constant < members[member].n_nodes
+            expected = source_constant if member == result.anchor else None
+            assert result.node_map[constant] == expected
+
+
+def deleted_member(source: SparseHypergraph, index: int) -> SparseHypergraph:
+    """Return ``source`` minus fact ``index``, compacted --- one deletion variant."""
+    core, _ = compact_constants(remove_facts(source, (index,)))
+    return core
+
+
+def winning_origin(result: ConsensusResult) -> str:
+    """Return the ``origin`` tag of the candidate that won."""
+    return next(score.origin for score in result.candidates if score.word == result.word)
+
+
+def hub_and_pendants(n_pendants: int) -> SparseHypergraph:
+    """A hub fact ``{0,1}`` plus one private-constant fact per pendant.
+
+    Each pendant carries its own predicate, so the deletion members are pairwise
+    non-isomorphic; deleting a pendant fact strands that pendant's constant, so
+    the member is a knowledge base with one constant fewer.
+    """
+    edges = [frozenset({0, 1})]
+    labels = [0]
+    for i in range(n_pendants):
+        edges.append(frozenset({0, 2 + i}))
+        labels.append(1 + i)
+    return SparseHypergraph(
+        n_nodes=2 + n_pendants,
+        hyperedges=edges,
+        n_vertex_labels=1,
+        n_edge_labels=1 + n_pendants,
+        vertex_labels=[0] * (2 + n_pendants),
+        edge_labels=labels,
+    )
+
+
+class TestTransferCreatesAConstant:
+    """A donor fact may name a constant the host lost; the transfer creates it.
+
+    Every member here is the source minus one pendant fact, so every member is
+    missing exactly the constant that fact named.  Recovering the source
+    therefore *requires* an insertion that brings a constant back, which is the
+    ``insert_fact_new_constant`` edit.  The recovered candidate is checked to be
+    a genuine connected knowledge base by round-tripping it through the Isal
+    word: ``S2H(H2S(kb))`` reproduces it (`DESIGN.md` Prop. C.4).
+    """
+
+    def test_the_consensus_recovers_a_source_no_member_can_express(self) -> None:
+        source = hub_and_pendants(3)
+        members = [deleted_member(source, index) for index in range(1, source.n_edges)]
+        assert all(member.n_nodes == source.n_nodes - 1 for member in members)
+
+        result = coverage_consensus(members, r=2)
+
+        assert result.word == fact_key_of(source)
+        assert result.kb.n_nodes == source.n_nodes
+        assert result.coverage == len(members)
+        assert winning_origin(result).startswith("transfer:")
+
+    def test_the_recovered_candidate_carries_the_donor_identity(self) -> None:
+        source = hub_and_pendants(3)
+        members = [deleted_member(source, index) for index in range(1, source.n_edges)]
+        result = coverage_consensus(members, r=2)
+
+        donors = {member for member, _ in result.constant_origin if member != result.anchor}
+        assert donors, result.constant_origin
+        for member, constant in result.constant_origin:
+            assert 0 <= constant < members[member].n_nodes
+
+    def test_the_recovered_candidate_is_a_connected_knowledge_base_that_decodes(self) -> None:
+        source = hub_and_pendants(3)
+        members = [deleted_member(source, index) for index in range(1, source.n_edges)]
+        result = coverage_consensus(members, r=2)
+
+        kb = result.kb
+        assert kb.is_connected()
+        word = canonical_string(kb, k=kb.n_nodes)
+        decoded = string_to_hypergraph(
+            word,
+            k=kb.n_nodes,
+            n_vertex_labels=kb.n_vertex_labels,
+            n_edge_labels=kb.n_edge_labels,
+        )
+        assert nauty_certificate_bytes(decoded) == nauty_certificate_bytes(kb)

@@ -1,4 +1,4 @@
-"""Reach is exact, symmetric, and agrees with an independent brute force.
+"""Reach' is exact, symmetric, and agrees with an independent brute force.
 
 The definition of done for ``reach`` is three claims.  The pinned cases fix the
 semantics on hand-built inputs (0 for an isomorphic pair, 1 for one inserted
@@ -9,6 +9,11 @@ The brute-force agreement on 200 random cases is the exactness check: the
 reference enumerates the same deletion pairs but adjudicates isomorphism with
 nauty certificates instead of fact words, so a defect in the word path would
 show up as a disagreement.
+
+Since the remainders are compacted, a fourth block pins the properties that
+change with it: a source is at reach 1 from a single-fact-deletion member even
+when the deleted fact stranded a constant, two such members are at reach 2, and
+a constant naming nothing is not part of the knowledge base at all.
 """
 
 from __future__ import annotations
@@ -22,6 +27,7 @@ from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
 from isalhg.language.reach import (
     ReachError,
     RemainderIndex,
+    compact_constants,
     compatible,
     fact_key_of,
     reach,
@@ -42,16 +48,17 @@ pytest.importorskip("pynauty")
 
 
 def brute_force_reach(K: SparseHypergraph, K2: SparseHypergraph, r_max: int) -> int | None:
-    """Reference reach: same enumeration, nauty certificates as the isomorphism test."""
+    """Reference reach': same enumeration, nauty certificates as the isomorphism test."""
     best: int | None = None
     for a in range(r_max + 1):
         for b in range(r_max + 1 - a):
             if best is not None and a + b >= best:
                 continue
             for A in combinations(range(K.n_edges), a):
-                left = remove_facts(K, A)
+                left, _ = compact_constants(remove_facts(K, A))
                 for B in combinations(range(K2.n_edges), b):
-                    if nauty_iso(left, remove_facts(K2, B)):
+                    right, _ = compact_constants(remove_facts(K2, B))
+                    if nauty_iso(left, right):
                         best = a + b
                         break
                 else:
@@ -110,7 +117,7 @@ class TestPinnedCases:
         assert reach(H, grown, r_max=2) is None
         assert reach(H, grown, r_max=3) == 3
 
-    def test_different_constant_count_is_unreachable(self) -> None:
+    def test_a_constant_naming_nothing_is_not_part_of_the_knowledge_base(self) -> None:
         rng = random.Random(6)
         H = random_kb(rng, n_lo=6, n_hi=6)
         wider = SparseHypergraph(
@@ -121,8 +128,27 @@ class TestPinnedCases:
             vertex_labels=[H.vertex_label(v) for v in range(H.n_nodes)] + [0],
             edge_labels=[label for label, _ in facts_of(H)],
         )
-        assert not compatible(H, wider)
-        assert reach(H, wider) is None
+        assert compatible(H, wider, 2)
+        assert reach(H, wider) == 0
+
+    def test_disjoint_fact_profiles_are_unreachable(self) -> None:
+        rng = random.Random(6)
+        base = random_kb(rng, n_lo=6, n_hi=6, m_lo=5, m_hi=5, n_preds=2)
+        members = [edge for _, edge in facts_of(base)]
+        types = [base.vertex_label(v) for v in range(base.n_nodes)]
+
+        def with_one_predicate(predicate: int) -> SparseHypergraph:
+            return SparseHypergraph(
+                n_nodes=base.n_nodes,
+                hyperedges=members,
+                n_vertex_labels=base.n_vertex_labels,
+                n_edge_labels=2,
+                vertex_labels=types,
+                edge_labels=[predicate] * len(members),
+            )
+
+        assert not compatible(with_one_predicate(0), with_one_predicate(1), 2)
+        assert reach(with_one_predicate(0), with_one_predicate(1)) is None
 
     def test_type_multiset_gates_reach(self) -> None:
         rng = random.Random(7)
@@ -153,6 +179,177 @@ class TestPinnedCases:
         H = random_kb(rng)
         with pytest.raises(ReachError):
             reach(H, H, r_max=-1)
+
+
+def deletion_member(H: SparseHypergraph, index: int) -> SparseHypergraph:
+    """Return ``H`` minus one fact, compacted --- one Corpus A deletion variant."""
+    core, _ = compact_constants(remove_facts(H, (index,)))
+    return core
+
+
+def pendant_kb(n_pendants: int) -> SparseHypergraph:
+    """A hub fact plus ``n_pendants`` facts, each attaching one private constant.
+
+    Deleting a pendant fact strands its private constant, so the deletion member
+    carries one constant fewer than the source; deleting several strands
+    several.  Constants ``0`` and ``1`` are the hub and are never stranded.
+    Each pendant carries its own predicate, so no two of them are exchanged by
+    an automorphism and the deletion members are pairwise non-isomorphic ---
+    which is what a variant collection requires.
+    """
+    edges = [frozenset({0, 1})]
+    labels = [0]
+    for i in range(n_pendants):
+        edges.append(frozenset({0, 2 + i}))
+        labels.append(1 + i)
+    return SparseHypergraph(
+        n_nodes=2 + n_pendants,
+        hyperedges=edges,
+        n_vertex_labels=1,
+        n_edge_labels=1 + n_pendants,
+        vertex_labels=[0] * (2 + n_pendants),
+        edge_labels=labels,
+    )
+
+
+class TestReachPrimeSanity:
+    """The four properties `D-KBf5` pins for ``reach'`` on compacted remainders."""
+
+    def test_source_to_its_deletion_member_is_one(self) -> None:
+        source = pendant_kb(3)
+        for index in range(source.n_edges):
+            member = deletion_member(source, index)
+            assert compatible(source, member, 2)
+            assert reach(source, member) == 1
+
+    def test_two_distinct_deletion_members_are_two_apart(self) -> None:
+        source = pendant_kb(3)
+        first = deletion_member(source, 0)
+        second = deletion_member(source, 1)
+        assert fact_key_of(first) != fact_key_of(second)
+        assert reach(first, second) == 2
+
+    def test_reach_is_symmetric_across_the_deletion_family(self) -> None:
+        source = pendant_kb(3)
+        family = [source, *(deletion_member(source, i) for i in range(source.n_edges))]
+        for left in family:
+            for right in family:
+                assert reach(left, right) == reach(right, left)
+
+    def test_reach_of_a_knowledge_base_with_itself_is_zero(self) -> None:
+        rng = random.Random(101)
+        for _ in range(20):
+            H = random_kb(rng)
+            assert reach(H, H) == 0
+
+    @pytest.mark.parametrize("n_pendants", [1, 2, 3])
+    def test_a_member_losing_several_constants_stays_in_reach(self, n_pendants: int) -> None:
+        source = pendant_kb(3)
+        dropped = tuple(range(1, 1 + n_pendants))
+        member, _ = compact_constants(remove_facts(source, dropped))
+        assert member.n_nodes == source.n_nodes - n_pendants
+        assert reach(source, member, r_max=n_pendants) == n_pendants
+        assert reach(source, member, r_max=n_pendants - 1) is None
+
+    def test_an_empty_deletion_set_leaves_the_knowledge_base_alone(self) -> None:
+        source = pendant_kb(2)
+        core, survivors = compact_constants(remove_facts(source, ()))
+        assert core == source
+        assert survivors == tuple(range(source.n_nodes))
+
+    def test_deleting_every_fact_leaves_the_empty_knowledge_base(self) -> None:
+        source = pendant_kb(1)
+        core, survivors = compact_constants(remove_facts(source, tuple(range(source.n_edges))))
+        assert core.n_nodes == 0
+        assert core.n_edges == 0
+        assert survivors == ()
+        assert fact_key_of(core) == ()
+
+    def test_a_single_fact_knowledge_base(self) -> None:
+        single = SparseHypergraph(
+            n_nodes=2,
+            hyperedges=[frozenset({0, 1})],
+            n_vertex_labels=1,
+            n_edge_labels=1,
+            vertex_labels=[0, 0],
+            edge_labels=[0],
+        )
+        assert reach(single, single) == 0
+        empty, _ = compact_constants(remove_facts(single, (0,)))
+        assert reach(single, empty, r_max=1) == 1
+
+
+class TestTheGateStaysNecessary:
+    """``compatible`` may over-accept; it must never reject a reachable pair.
+
+    The pin is the tempting-but-wrong gate: comparing the type multisets of the
+    constants that occur in a fact.  Compaction can *remove* an occurring
+    constant, so those multisets need not agree even at reach 1.
+    """
+
+    def test_occurring_type_multisets_are_not_a_necessary_condition(self) -> None:
+        K = SparseHypergraph(
+            n_nodes=3,
+            hyperedges=[frozenset({0, 1}), frozenset({1, 2})],
+            n_vertex_labels=2,
+            n_edge_labels=2,
+            vertex_labels=[0, 0, 1],
+            edge_labels=[0, 1],
+        )
+        K2 = SparseHypergraph(
+            n_nodes=2,
+            hyperedges=[frozenset({0, 1})],
+            n_vertex_labels=2,
+            n_edge_labels=2,
+            vertex_labels=[0, 0],
+            edge_labels=[0],
+        )
+        occurring = [
+            sorted(H.vertex_label(v) for v in range(H.n_nodes) if H.degree(v) > 0) for H in (K, K2)
+        ]
+        assert occurring[0] != occurring[1]
+        assert reach(K, K2) == 1
+        assert compatible(K, K2, 2)
+
+    def test_the_gate_never_rejects_a_pair_the_enumeration_can_match(self) -> None:
+        rng = random.Random(313)
+        checked = 0
+        while checked < 150:
+            H = random_kb(rng, n_lo=4, n_hi=6, m_lo=2, m_hi=4, arity_hi=3)
+            other = with_inserted_fact(rng, H, arity_hi=3)
+            if other is None:
+                continue
+            checked += 1
+            for r_max in (0, 1, 2):
+                if brute_force_reach(H, other, r_max) is not None:
+                    assert compatible(H, other, r_max)
+
+
+class TestDeletionMembersWereUnreachableBefore:
+    """The gate that ``reach'`` replaces rejected exactly these pairs.
+
+    The frozen ``compatible`` compared constant counts, so a deletion member
+    that lost a constant was declared unreachable from its source and from its
+    siblings.  These are the pairs the change repairs; the old test is kept in
+    spirit by asserting the constant counts really do differ.
+    """
+
+    def test_source_and_member_differ_in_constant_count_yet_are_compatible(self) -> None:
+        source = pendant_kb(3)
+        member = deletion_member(source, 1)
+        assert member.n_nodes != source.n_nodes
+        assert compatible(source, member, 2)
+        assert reach(source, member) == 1
+
+    def test_two_members_differ_in_constant_count_from_the_source_yet_reach_each_other(
+        self,
+    ) -> None:
+        source = pendant_kb(3)
+        first = deletion_member(source, 1)
+        second = deletion_member(source, 2)
+        assert first.n_nodes == second.n_nodes == source.n_nodes - 1
+        assert compatible(first, second, 2)
+        assert reach(first, second) == 2
 
 
 class TestSymmetry:
@@ -235,14 +432,17 @@ class TestRemainderIndex:
         assert table[fact_key_of(H)] == 0
         assert all(0 <= value <= 2 for value in table.values())
 
-    def test_ranks_require_indexing_first(self) -> None:
+    def test_remainders_require_indexing_first(self) -> None:
         rng = random.Random(23)
         H = random_kb(rng)
         index = RemainderIndex(H, 1)
         with pytest.raises(ReachError):
-            index.ranks((0,))
+            index.remainder((0,))
         index.level(1)
-        assert len(index.ranks((0,))) == H.n_nodes
+        got = index.remainder((0,))
+        assert got.n_source == H.n_nodes
+        assert len(got.ranks) == len(got.survivors) <= H.n_nodes
+        assert sorted(got.ranks) == list(range(len(got.ranks)))
 
     def test_remove_facts_keeps_every_constant(self) -> None:
         rng = random.Random(29)

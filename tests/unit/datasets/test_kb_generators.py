@@ -24,6 +24,13 @@ pytestmark = pytest.mark.unit
 RELAXED = Envelope(n_max=24, m_min=1, m_max=110, k_max=10)
 
 
+def identity_facts(record: KBRecord) -> frozenset[tuple[int, frozenset[str]]]:
+    """Return ``record``'s facts addressed by external identity, not by constant number."""
+    ids = record.constant_ids
+    assert ids is not None
+    return frozenset((pred, frozenset(ids[v] for v in members)) for pred, members in record.facts)
+
+
 def base_record(kb_id: str = "base") -> KBRecord:
     """Six constants, seven facts of arity 2-3, two predicates, two types."""
     facts = (
@@ -137,17 +144,35 @@ class TestVariantCollection:
             ladders.variant_collection(source, 5, 2, kind, 4, envelope=RELAXED)
         )
         fingerprints = {iso_fingerprint(source)}
+        assert source.constant_ids is not None
+        source_type_of = dict(zip(source.constant_ids, source.types, strict=True))
         for member in members:
-            assert member.n == source.n
-            assert member.types == source.types
-            assert member.constant_ids == source.constant_ids
+            # a stranded constant leaves with its last fact, so the constant set
+            # shrinks rather than staying pinned; identities and types travel
+            assert member.constant_ids is not None
+            assert member.n == len(member.constant_ids) <= source.n
+            assert set(member.constant_ids) <= set(source.constant_ids)
+            assert member.types == tuple(source_type_of[c] for c in member.constant_ids)
             assert member.meta["source_id"] == source.kb_id
             assert member.meta["cell_kind"] == kind
             assert member.meta["cell_t"] == 2
-            assert member.meta["constant_set_preserved"] is True
+            assert member.meta["constant_set_preserved"] is (member.n == source.n)
             fingerprint = iso_fingerprint(member)
             assert fingerprint not in fingerprints
             fingerprints.add(fingerprint)
+
+    def test_deletion_members_may_lose_a_constant(self) -> None:
+        source = base_record()
+        shrunk = [
+            member
+            for kind in ("del", "mix")
+            for member in (
+                ladders.variant_collection(source, 5, 2, kind, 4, envelope=RELAXED) or ()
+            )
+            if member.n < source.n
+        ]
+        assert shrunk, "no member stranded a constant; the fixture no longer exercises compaction"
+        assert all(member.meta["constant_set_preserved"] is False for member in shrunk)
 
     def test_insertion_only_grows_and_deletion_only_shrinks(self) -> None:
         source = base_record()
@@ -156,8 +181,10 @@ class TestVariantCollection:
         assert ins is not None and dele is not None
         assert all(m.m == source.m + 2 for m in ins)
         assert all(m.m == source.m - 2 for m in dele)
-        assert all(source.fact_set() <= m.fact_set() for m in ins)
-        assert all(m.fact_set() <= source.fact_set() for m in dele)
+        # constant numbers shift under compaction, so the containment is read
+        # off the identities rather than off the numbering
+        assert all(identity_facts(source) <= identity_facts(m) for m in ins)
+        assert all(identity_facts(m) <= identity_facts(source) for m in dele)
 
     def test_impossible_cell_returns_none(self) -> None:
         tiny = KBRecord(kb_id="tiny", n=2, types=(0, 0), facts=((0, (0, 1)),))

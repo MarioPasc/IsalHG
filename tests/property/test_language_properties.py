@@ -34,10 +34,10 @@ from isalhg.language import (
     coverage_consensus,
     fact_key_of,
     reach,
-    remove_facts,
     string_ball,
 )
 from isalhg.metric_space.distances.fact_levenshtein import fact_word, word_distance
+from tests.unit.language._builders import transported_remainder
 
 pytestmark = pytest.mark.property
 
@@ -158,9 +158,14 @@ class TestAlignments:
         H = random_kb(rng, n_hi=6, m_hi=4, arity_hi=3)
         other = neighbour(rng, H)
         for alignment in alignments(H, other, 2):
-            left = remove_facts(H, alignment.deleted_from_k)
-            right = remove_facts(other, alignment.deleted_from_k2)
-            assert permute(right, alignment.node_map) == left
+            carried, left = transported_remainder(
+                H,
+                alignment.deleted_from_k,
+                other,
+                alignment.deleted_from_k2,
+                alignment.node_map,
+            )
+            assert carried == left
 
     @given(SEEDS)
     @CASE_SETTINGS

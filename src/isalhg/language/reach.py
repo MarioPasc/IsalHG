@@ -1,35 +1,42 @@
 """Exact fact-level reach between two knowledge bases, by delete-and-match.
 
 ``reach_F(K, K')`` is the fewest fact indels that carry one knowledge base onto
-the other with its constants held fixed::
+the other::
 
     reach_F(K, K') = min { |A| + |B| : A subset F(K), B subset F(K'),
-                                       (K - A) isomorphic (K' - B) }
+                           compact(K - A) isomorphic compact(K' - B) }
 
 Substitution is excluded on purpose (`DESIGN.md` RQ3): it is the **indel** ball,
 because a substitution would collapse the ``2t`` gap between two members of a
-variant collection.  Constants are never deleted, so an isolated constant left
-behind by a removed fact is legal and the two remainders always carry the same
-constant count.
+variant collection.
+
+A knowledge base *is* its set of ground facts, so a constant left with no fact
+by a deletion has left the knowledge base: both remainders are **compacted**
+before they are compared, exactly as
+:func:`isalhg.datasets.kb.base.compact` does for records.  The two remainders
+therefore need not carry the same constant count, and a deletion member of a
+variant collection is at reach 1 from its source even when the deleted fact was
+the last one naming some constant.
 
 The computation is exact for a bounded radius and needs no isomorphism search
 of its own.  Enumerate every ``A`` with ``|A| <= r_max`` and every ``B`` with
-``|B| <= r_max``, canonicalize both remainders with the article's addressing
-(:func:`isalhg.metric_space.distances.fact_levenshtein.fact_word`) and compare
-*words*: because the fact word is a complete isomorphism invariant, word
-equality is isomorphism.  Scanning the total budget ``s = |A| + |B|`` upwards
-and returning the first ``s`` that matches gives the minimum, and the
+``|B| <= r_max``, canonicalize both compacted remainders with the article's
+addressing (:func:`isalhg.metric_space.distances.fact_levenshtein.fact_word`)
+and compare *words*: because the fact word is a complete isomorphism invariant,
+word equality is isomorphism.  Scanning the total budget ``s = |A| + |B|``
+upwards and returning the first ``s`` that matches gives the minimum, and the
 enumeration is symmetric in its two arguments, so ``reach`` is symmetric.
 
 Never compare rank *vectors* across two knowledge bases (`DESIGN.md` G1): a
 canonical labelling is canonical only up to an automorphism of the canonical
 form.  This module only ever compares words; :mod:`isalhg.language.alignment`
-takes ranks from the two *isomorphic* remainders, where rank equality is a
-genuine isomorphism.
+takes ranks from the two *isomorphic* compacted remainders, where rank equality
+is a genuine isomorphism.
 """
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import combinations
@@ -39,7 +46,7 @@ from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.errors import IsalHGError
 from isalhg.iso_backends.canonical_order import canonical_ranks
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
-from isalhg.types import EdgeId
+from isalhg.types import EdgeId, NodeId
 
 FactSubset = tuple[EdgeId, ...]
 
@@ -52,12 +59,55 @@ class ReachError(LanguageError):
     """Raised when a reach computation is asked for something it cannot answer."""
 
 
+def compact_constants(H: SparseHypergraph) -> tuple[SparseHypergraph, tuple[NodeId, ...]]:
+    """Return ``H`` without the constants that occur in no fact, densely renumbered.
+
+    A knowledge base is its set of facts, so a constant naming nothing is not
+    part of it.  This is the hypergraph-level twin of
+    :func:`isalhg.datasets.kb.base.compact`.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        The knowledge base.
+
+    Returns
+    -------
+    kb : SparseHypergraph
+        Same facts, same types, same label vocabularies; only the constants of
+        positive degree, renumbered ``0 .. len(survivors) - 1`` in ascending
+        order of their old ids.
+    survivors : tuple[NodeId, ...]
+        ``survivors[u]`` is the constant of ``H`` that constant ``u`` of ``kb``
+        came from.
+    """
+    survivors = tuple(v for v in range(H.n_nodes) if H.degree(v) > 0)
+    if len(survivors) == H.n_nodes:
+        return H, survivors
+    remap = {v: u for u, v in enumerate(survivors)}
+    edges = []
+    labels = []
+    for _, members, label in H.iter_edges():
+        edges.append(frozenset(remap[v] for v in members))
+        labels.append(label)
+    kb = SparseHypergraph(
+        len(survivors),
+        edges,
+        n_vertex_labels=H.n_vertex_labels,
+        n_edge_labels=H.n_edge_labels,
+        vertex_labels=[H.vertex_label(v) for v in survivors],
+        edge_labels=labels,
+    )
+    return kb, survivors
+
+
 def fact_key_of(H: SparseHypergraph) -> Word:
-    """Return the canonical key of ``H`` --- its role-free fact word.
+    """Return the canonical key of ``H`` --- the role-free fact word of its compaction.
 
     The key every construction in this package is indexed by.  Two knowledge
-    bases share a key iff they are isomorphic as labelled hypergraphs, so the
-    key is what a "decoded class" means here.
+    bases share a key iff they are isomorphic as labelled hypergraphs once the
+    constants naming nothing are dropped, so the key is what a "decoded class"
+    means here.
 
     Parameters
     ----------
@@ -67,19 +117,25 @@ def fact_key_of(H: SparseHypergraph) -> Word:
     Returns
     -------
     Word
-        ``fact_word(H)``: ``n`` type tokens in canonical-rank order followed by
-        ``m`` fact tokens sorted by ``(predicate, rank tuple)``.
+        ``fact_word(compact(H))``: one type token per occurring constant in
+        canonical-rank order followed by ``m`` fact tokens sorted by
+        ``(predicate, rank tuple)``.
 
     Raises
     ------
     isalhg.errors.BackendUnavailableError
         If ``pynauty`` is not installed.
     """
-    return fact_word(H)
+    core, _ = compact_constants(H)
+    return fact_word(core)
 
 
 def remove_facts(H: SparseHypergraph, drop: Iterable[EdgeId]) -> SparseHypergraph:
     """Return ``H`` with the facts in ``drop`` removed and every constant kept.
+
+    The constants are kept here so the caller can still address them; the
+    compaction that gives a remainder its identity is
+    :func:`compact_constants`, applied downstream.
 
     Parameters
     ----------
@@ -121,8 +177,34 @@ def remove_facts(H: SparseHypergraph, drop: Iterable[EdgeId]) -> SparseHypergrap
     )
 
 
+@dataclass(frozen=True)
+class Remainder:
+    """One compacted remainder ``compact(H - A)``, addressed back to ``H``.
+
+    Parameters
+    ----------
+    word : Word
+        Canonical key of the compacted remainder; the value remainders are
+        matched on.
+    ranks : tuple[int, ...]
+        ``ranks[u]`` is the canonical rank of constant ``u`` of the *compacted*
+        remainder.
+    survivors : tuple[int, ...]
+        ``survivors[u]`` is the constant of ``H`` that constant ``u`` of the
+        compacted remainder came from.
+    n_source : int
+        Constant count of ``H``, so a map built from this remainder can be
+        stated over the whole source constant set.
+    """
+
+    word: Word
+    ranks: tuple[int, ...]
+    survivors: tuple[int, ...]
+    n_source: int
+
+
 class RemainderIndex:
-    """The canonical words of every remainder of ``H`` under ``<= r_max`` deletions.
+    """The canonical words of every compacted remainder of ``H`` under ``<= r_max`` deletions.
 
     Levels are computed on first access and cached, so a caller that can decide
     after level ``a`` never pays for level ``a + 1``.  One level costs
@@ -141,7 +223,7 @@ class RemainderIndex:
         If ``r_max`` is negative.
     """
 
-    __slots__ = ("_H", "_levels", "_min_deletions", "_r_max", "_ranks")
+    __slots__ = ("_H", "_levels", "_min_deletions", "_r_max", "_remainders")
 
     def __init__(self, H: SparseHypergraph, r_max: int) -> None:
         if r_max < 0:
@@ -149,7 +231,7 @@ class RemainderIndex:
         self._H = H
         self._r_max = r_max
         self._levels: list[dict[Word, list[FactSubset]] | None] = [None] * (r_max + 1)
-        self._ranks: dict[FactSubset, tuple[int, ...]] = {}
+        self._remainders: dict[FactSubset, Remainder] = {}
         self._min_deletions: dict[Word, int] | None = None
 
     @property
@@ -189,19 +271,19 @@ class RemainderIndex:
             return cached
         table: dict[Word, list[FactSubset]] = {}
         for subset in combinations(range(self._H.n_edges), size):
-            remainder = remove_facts(self._H, subset)
-            ranks = canonical_ranks(remainder)
-            word = encode_fact_word(remainder, ranks)
-            self._ranks[subset] = ranks
+            core, survivors = compact_constants(remove_facts(self._H, subset))
+            ranks = canonical_ranks(core)
+            word = encode_fact_word(core, ranks)
+            self._remainders[subset] = Remainder(word, ranks, survivors, self._H.n_nodes)
             table.setdefault(word, []).append(subset)
         self._levels[size] = table
         return table
 
-    def ranks(self, subset: FactSubset) -> tuple[int, ...]:
-        """Return the canonical ranks of the remainder ``H - subset``.
+    def remainder(self, subset: FactSubset) -> Remainder:
+        """Return the compacted remainder ``H - subset``, with its addressing back to ``H``.
 
         The subset must already have been produced by :meth:`level`, which is
-        where the ranks are computed; they are kept because
+        where the canonicalization happens; the result is kept because
         :mod:`isalhg.language.alignment` builds its node maps from the ranks of
         the two isomorphic remainders and must not recompute them.
 
@@ -212,8 +294,8 @@ class RemainderIndex:
 
         Returns
         -------
-        tuple[int, ...]
-            ``rank[v]`` for every constant ``v`` of ``H``.
+        Remainder
+            Its word, canonical ranks, surviving constants, and ``H.n_nodes``.
 
         Raises
         ------
@@ -221,7 +303,7 @@ class RemainderIndex:
             If the subset has not been indexed.
         """
         try:
-            return self._ranks[subset]
+            return self._remainders[subset]
         except KeyError as exc:
             raise ReachError(f"deletion set {subset!r} has not been indexed") from exc
 
@@ -244,28 +326,69 @@ class RemainderIndex:
         return table
 
 
-def compatible(K: SparseHypergraph, K2: SparseHypergraph) -> bool:
-    """Return whether a finite reach between ``K`` and ``K2`` is possible at all.
+def _fact_profile(H: SparseHypergraph) -> Counter[tuple[int, int]]:
+    """Return the multiset of ``(predicate, arity)`` over ``H``'s facts."""
+    return Counter((label, len(members)) for _, members, label in H.iter_edges())
 
-    Deleting facts never deletes a constant, so isomorphic remainders force
-    equal constant counts and equal type multisets.  The test is exact as a
-    *necessary* condition and costs no canonicalization.
+
+def _occurring_types(H: SparseHypergraph) -> Counter[int]:
+    """Return the multiset of types over the constants of ``H`` that occur in a fact."""
+    return Counter(H.vertex_label(v) for v in range(H.n_nodes) if H.degree(v) > 0)
+
+
+def _stable_types(H: SparseHypergraph, r_max: int) -> Counter[int]:
+    """Return the multiset of types over constants no ``<= r_max`` deletion can strand."""
+    return Counter(H.vertex_label(v) for v in range(H.n_nodes) if H.degree(v) > r_max)
+
+
+def compatible(K: SparseHypergraph, K2: SparseHypergraph, r_max: int) -> bool:
+    """Return whether a reach of at most ``r_max`` between ``K`` and ``K2`` is possible.
+
+    Two necessary conditions, both cheap and both stated so that compaction
+    cannot break them.  Neither looks at the *total* constant count, which
+    compaction no longer preserves.
+
+    *Fact profile.*  Isomorphic knowledge bases carry the same multiset of
+    ``(predicate, arity)``, and a deletion only removes elements from that
+    multiset.  Writing ``P`` for the profile and ``Q`` for the common profile of
+    the two remainders, ``Q`` is contained in both ``P(K)`` and ``P(K2)``, hence
+    in their multiset intersection; so ``|A| = m - |Q| >= m - |P(K) & P(K2)|``
+    and likewise for ``|B|``.  A budget below ``m + m2 - 2 |P(K) & P(K2)|``
+    therefore cannot exist.
+
+    *Undeletable types.*  A constant of degree greater than ``r_max`` keeps a
+    fact under every deletion set the budget allows, so it survives compaction
+    and its type appears in the remainder's type multiset.  The remainder's
+    constants are a subset of the other side's occurring constants, so the
+    types of ``K``'s high-degree constants must be contained, as a multiset, in
+    the types of ``K2``'s occurring constants --- and symmetrically.
 
     Parameters
     ----------
     K, K2 : SparseHypergraph
         The two knowledge bases.
+    r_max : int
+        Total deletion budget ``|A| + |B|`` the caller will spend.
 
     Returns
     -------
     bool
-        ``False`` when no deletion pair can make the two isomorphic.
+        ``False`` when no deletion pair inside ``r_max`` can make the two
+        isomorphic.  ``True`` is not a promise that one does.
+
+    Raises
+    ------
+    ReachError
+        If ``r_max`` is negative.
     """
-    if K.n_nodes != K2.n_nodes:
+    if r_max < 0:
+        raise ReachError(f"r_max must be non-negative; got {r_max}")
+    shared = _fact_profile(K) & _fact_profile(K2)
+    if K.n_edges + K2.n_edges - 2 * sum(shared.values()) > r_max:
         return False
-    left = sorted(K.vertex_label(v) for v in range(K.n_nodes))
-    right = sorted(K2.vertex_label(v) for v in range(K2.n_nodes))
-    return left == right
+    return _stable_types(K, r_max) <= _occurring_types(K2) and _stable_types(
+        K2, r_max
+    ) <= _occurring_types(K)
 
 
 def reach(K: SparseHypergraph, K2: SparseHypergraph, r_max: int = 2) -> int | None:
@@ -283,9 +406,10 @@ def reach(K: SparseHypergraph, K2: SparseHypergraph, r_max: int = 2) -> int | No
     Returns
     -------
     int or None
-        ``min |A| + |B|`` over deletion pairs whose remainders are isomorphic,
-        or ``None`` when no such pair exists within ``r_max``.  ``0`` iff the
-        two are isomorphic.  The value is symmetric in its two arguments.
+        ``min |A| + |B|`` over deletion pairs whose compacted remainders are
+        isomorphic, or ``None`` when no such pair exists within ``r_max``.
+        ``0`` iff the two are isomorphic once their constants naming nothing are
+        dropped.  The value is symmetric in its two arguments.
 
     Raises
     ------
@@ -296,7 +420,7 @@ def reach(K: SparseHypergraph, K2: SparseHypergraph, r_max: int = 2) -> int | No
     """
     if r_max < 0:
         raise ReachError(f"r_max must be non-negative; got {r_max}")
-    if not compatible(K, K2):
+    if not compatible(K, K2, r_max):
         return None
     left = RemainderIndex(K, r_max)
     right = RemainderIndex(K2, r_max)
@@ -317,39 +441,52 @@ class Alignment:
         Edge ids removed from the first knowledge base (``A``), ascending.
     deleted_from_k2 : tuple[int, ...]
         Edge ids removed from the second (``B``), ascending.
-    node_map : tuple[int, ...]
+    node_map : tuple[int | None, ...]
         ``node_map[v]``, for a constant ``v`` of the *second* knowledge base, is
-        the constant of the *first* it corresponds to.  A genuine isomorphism
-        ``(K2 - B) -> (K - A)``: applying it with
-        :func:`isalhg.core.sparse_hypergraph.permute` reproduces ``K - A``
-        exactly.
+        the constant of the *first* it corresponds to, or ``None`` when ``v``
+        occurs in no surviving fact of ``K2 - B`` and so has no counterpart.
+        Restricted to the constants it does map, it is a genuine isomorphism
+        ``compact(K2 - B) -> compact(K - A)``.
     """
 
     deleted_from_k: tuple[int, ...]
     deleted_from_k2: tuple[int, ...]
-    node_map: tuple[int, ...]
+    node_map: tuple[int | None, ...]
 
 
-def node_map_from_ranks(
-    ranks_left: tuple[int, ...], ranks_right: tuple[int, ...]
-) -> tuple[int, ...]:
-    """Compose the two remainders' canonical labellings into an isomorphism.
+def node_map_from_remainders(left: Remainder, right: Remainder) -> tuple[int | None, ...]:
+    """Compose two isomorphic compacted remainders into a partial constant map.
 
-    ``ranks_left`` addresses the constants of ``K - A``, ``ranks_right`` those
-    of ``K2 - B``, and the two remainders have equal words.  The composition
-    ``v -> rank_left^-1(rank_right(v))`` is then an isomorphism
-    ``(K2 - B) -> (K - A)``: equal type prefixes make it label preserving, and
-    equal fact-token sequences make it fact preserving, because the rank map is
-    injective so a fact and its token determine one another.
+    ``left`` addresses the constants of ``compact(K - A)``, ``right`` those of
+    ``compact(K2 - B)``, and the two carry the same word.  The composition
+    ``u -> rank_left^-1(rank_right(u))`` is an isomorphism
+    ``compact(K2 - B) -> compact(K - A)``: equal type prefixes make it label
+    preserving, and equal fact-token sequences make it fact preserving, because
+    the rank map is injective so a fact and its token determine one another.
+    Lifting both ends through ``survivors`` states it over ``K2``'s constants,
+    where it is *partial*: a constant stranded by ``B`` has no image.
 
     This is the only place ranks cross between two objects, and it is legal
     precisely because the two objects are isomorphic (`DESIGN.md` G1).  The
     ranks of ``K`` and ``K2`` themselves are never composed.
+
+    Parameters
+    ----------
+    left, right : Remainder
+        Two remainders with equal words.
+
+    Returns
+    -------
+    tuple[int | None, ...]
+        Length ``right.n_source``; ``None`` where the constant did not survive.
     """
-    inverse = [0] * len(ranks_left)
-    for v, r in enumerate(ranks_left):
-        inverse[r] = v
-    return tuple(inverse[r] for r in ranks_right)
+    inverse = [0] * len(left.ranks)
+    for u, rank in enumerate(left.ranks):
+        inverse[rank] = u
+    out: list[int | None] = [None] * right.n_source
+    for u, rank in enumerate(right.ranks):
+        out[right.survivors[u]] = left.survivors[inverse[rank]]
+    return tuple(out)
 
 
 def alignments(
@@ -359,7 +496,7 @@ def alignments(
     *,
     max_per_side: int | None = None,
 ) -> list[Alignment]:
-    """Return every bounded deletion pair whose remainders are isomorphic.
+    """Return every bounded deletion pair whose compacted remainders are isomorphic.
 
     Parameters
     ----------
@@ -381,8 +518,7 @@ def alignments(
     -------
     list[Alignment]
         Sorted by ``(deleted_from_k, deleted_from_k2)``, so the result is
-        deterministic.  Empty when the two constant sets or type multisets
-        differ.
+        deterministic.  Empty when no deletion pair inside the budget matches.
 
     Raises
     ------
@@ -395,7 +531,7 @@ def alignments(
         raise ReachError(f"r_max must be non-negative; got {r_max}")
     if max_per_side is not None and max_per_side < 0:
         raise ReachError(f"max_per_side must be non-negative; got {max_per_side}")
-    if not compatible(K, K2):
+    if not compatible(K, K2, r_max):
         return []
     side_cap = r_max if max_per_side is None else min(r_max, max_per_side)
     left = RemainderIndex(K, side_cap)
@@ -407,13 +543,15 @@ def alignments(
             table_b = right.level(b)
             for word in table_a.keys() & table_b.keys():
                 for subset_a in table_a[word]:
-                    ranks_a = left.ranks(subset_a)
+                    remainder_a = left.remainder(subset_a)
                     for subset_b in table_b[word]:
                         found.append(
                             Alignment(
                                 deleted_from_k=subset_a,
                                 deleted_from_k2=subset_b,
-                                node_map=node_map_from_ranks(ranks_a, right.ranks(subset_b)),
+                                node_map=node_map_from_remainders(
+                                    remainder_a, right.remainder(subset_b)
+                                ),
                             )
                         )
     found.sort(key=lambda item: (item.deleted_from_k, item.deleted_from_k2))
@@ -425,10 +563,12 @@ __all__ = [
     "FactSubset",
     "LanguageError",
     "ReachError",
+    "Remainder",
     "RemainderIndex",
     "alignments",
+    "compact_constants",
     "compatible",
-    "node_map_from_ranks",
+    "node_map_from_remainders",
     "fact_key_of",
     "reach",
     "remove_facts",

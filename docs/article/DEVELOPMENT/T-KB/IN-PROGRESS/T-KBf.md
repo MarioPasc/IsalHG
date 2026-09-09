@@ -799,3 +799,52 @@ them) and Corpus B's **medoid** rows. **Superseded:** every `del`/`mix` cell
 (162 sample, 60 alignment rows) and its **alignment** rows need re-checking
 under `reach′`, since an alignment interior is built from the same machinery;
 its sample rows do not.
+
+### D-KBf5 measured — the gate re-opens Corpus B
+
+`reach′` merged. The Corpus B probe re-run independently from the merged tree
+(`scripts/diagnostics/reach_prime_corpus_b_probe.py`), reproducing the
+implementer's numbers exactly:
+
+| Corpus B, 1,400 pairs / 69 runs, r = 2 | frozen | `reach′` |
+|---|---|---|
+| gate-rejected | **1,146 (81.9 %)** | **387 (27.6 %)** |
+| no finite reach within r = 2 | 1,148 | 446 (31.9 %) |
+| runs carrying such a pair | 60 / 69 | 51 / 69 |
+
+**Consensus, the worst run** (class 389, T = 36, 35 members, 595 pairs):
+1.4 s, 319 candidates, 495 of 595 pairs finite, **coverage 34 of 35** — against
+the frozen 0.4 s, 103 candidates, 112 finite, **coverage 13 of 35**. The
+consensus goes from covering a third of a run to covering all but one member,
+and the 1,800 s guard is cleared by three orders of magnitude, so the array is
+safe. Median run: 0.0 s, 48 candidates against 12.
+
+**Prop. 5 is unchanged — for a reason worth recording.** Unique maximiser 12/12
+at both noise levels, copy-to-copy 0.00–0.02, identical to the published
+numbers. But its probe measures the **token-level** ball and never imports
+`isalhg.language`, so Prop. 5 is *independent of* this change rather than
+validated by it. The prose must not cite it as evidence for `reach′`.
+
+**Three corrections from the implementer, all verified.**
+1. **My suggested gate was wrong.** "Type multiset of constants occurring in
+   ≥ 1 fact" is not a necessary condition, because compaction removes occurring
+   constants — counterexample at `reach′ = 1` with multisets `[0,0,1]` vs
+   `[0,0]`, now a regression test. The shipped gate uses a fact-profile budget
+   and undeletable-type containment, both necessary, and takes `r_max` because
+   the second depends on it.
+2. **"Infinite reach" does not exist under `reach′`**: deleting every fact on
+   both sides always matches, so `reach′ ≤ m + m′`. The reportable quantity is
+   "no finite reach within `r`", and the prose must say that.
+3. `_variant_member` also had to stop reading `source.types` and
+   `source.constant_ids`, not only `source.n` — all stale after a compacting
+   step.
+
+**One consequence left unfixed, filed as T-KBo:** `rq6.Reach1Index._shape()`
+hard-codes the frozen precondition and buckets members by constant count, so it
+withholds exactly the pairs `reach′` admits (`reach(sample, src, 1) == 1` while
+`within_one(sample)` returns `None`). RQ6's `reach1` column must be re-derived;
+nothing else in RQ6 is implicated.
+
+**Every RQ3 and RQ6 result on disk is now stale.** The re-run goes into the
+clean root under the D-KBf5a gate, which was committed before any of these
+numbers existed.

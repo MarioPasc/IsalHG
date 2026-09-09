@@ -44,7 +44,7 @@ from experiments.tkde.budget import (
     arm_fingerprint_screen,
     guarded_budget_call,
 )
-from experiments.tkde.config import TkdeConfigError, load_yaml, results_root
+from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from isalhg.metric_space.toolkit.matrix import cache_paths, member_order_sha1
 
@@ -172,6 +172,17 @@ SMOKE_MEMBERS = 40
 
 class MatrixCacheMissingError(RuntimeError):
     """A consumer asked for a matrix the matrices job has not produced."""
+
+
+class MatrixCensoringError(TkdeError):
+    """A censoring sidecar does not partition the frozen member order.
+
+    Distinct from :class:`MatrixCacheMissingError` on purpose, and rooted
+    outside it: a cache miss is a unit that has yet to run and callers such as
+    :func:`cached_arms` swallow it, whereas a sidecar that names members the
+    frozen order does not contain -- or omits members it does contain -- is a
+    corrupted artefact whose matrix would be indexed under the wrong ids.
+    """
 
 
 # ---------------------------------------------------------------------------
@@ -311,6 +322,82 @@ def load_cached_matrix(
             f"shape mismatch for collection={collection!r} arm={arm!r}: {matrix.shape}"
         )
     return matrix
+
+
+def load_cached_matrix_censored(
+    root: Path | str,
+    collection: str,
+    arm: str,
+    member_ids: Sequence[str],
+) -> tuple[NDArray[np.float32], tuple[str, ...], tuple[str, ...]]:
+    """Read one cached matrix, tolerating a budgeted build's short member order.
+
+    A budgeted unit writes its manifest over the *survivors*
+    (:func:`_write_censoring`), so :func:`load_cached_matrix` -- which validates
+    against the full frozen order -- reads a censored arm as a cache miss. This
+    reader consults the ``<arm>.censored.json`` sidecar first and validates
+    against whichever order actually describes the matrix, returning the
+    survivor and censored id lists so that the caller can align by member id
+    and report the census (L15).
+
+    An absent sidecar means the arm was never screened, and the call is
+    :func:`load_cached_matrix` with the full order as the survivor list.
+
+    Parameters
+    ----------
+    root : Path or str
+        Results root.
+    collection : str
+        Frozen collection name.
+    arm : str
+        Arm name, exactly as the matrices job requested it.
+    member_ids : Sequence[str]
+        The full frozen member order the sidecar must partition.
+
+    Returns
+    -------
+    tuple
+        ``(matrix, kept_ids, censored_ids)``. ``matrix`` is
+        ``(len(kept_ids), len(kept_ids))`` and its rows are ``kept_ids`` in
+        order; ``censored_ids`` is empty for an unscreened arm.
+
+    Raises
+    ------
+    MatrixCacheMissingError
+        If the matrix, its manifest, or the member-order agreement is absent.
+    MatrixCensoringError
+        If the sidecar's ``member_ids`` and ``censored_ids`` do not partition
+        ``member_ids``.
+    """
+    frozen = tuple(str(member) for member in member_ids)
+    cache_dir = collection_cache_dir(root, collection)
+    sidecar = read_censoring(cache_dir, arm)
+    if sidecar is None:
+        return load_cached_matrix(root, collection, arm, frozen), frozen, ()
+
+    kept_ids = tuple(str(member) for member in sidecar.get("member_ids", ()))
+    censored_ids = tuple(str(member) for member in sidecar.get("censored_ids", ()))
+
+    # A sidecar is a partition of the frozen order, not merely a subset of it:
+    # equal sets alone would admit an id repeated on both sides, which would
+    # index two matrix rows under one member.
+    covered = set(kept_ids) | set(censored_ids)
+    if covered != set(frozen) or len(kept_ids) + len(censored_ids) != len(frozen):
+        raise MatrixCensoringError(
+            f"censoring sidecar for collection={collection!r} arm={arm!r} does not partition "
+            f"the frozen order: {len(kept_ids)} kept + {len(censored_ids)} censored over "
+            f"{len(frozen)} frozen members; "
+            f"unknown={sorted(covered - set(frozen))[:5]} "
+            f"missing={sorted(set(frozen) - covered)[:5]}"
+        )
+
+    matrix = _read_matrix_at(cache_dir, arm, kept_ids)
+    if matrix.shape != (len(kept_ids), len(kept_ids)):
+        raise MatrixCacheMissingError(
+            f"shape mismatch for collection={collection!r} arm={arm!r}: {matrix.shape} "
+            f"for {len(kept_ids)} surviving members"
+        )
+    return matrix, kept_ids, censored_ids
 
 
 def cached_arms(root: Path | str, collection: str, member_ids: Sequence[str]) -> tuple[str, ...]:

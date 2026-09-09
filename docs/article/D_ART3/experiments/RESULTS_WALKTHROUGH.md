@@ -179,6 +179,16 @@ to the source is 0.18–0.20 for the consensus against 1.50–1.54 for every med
 `2 − 2/N` holds on all 4,457 medoids (max 1.778; the cosmetic 1.7 target is
 dropped).
 
+> **SUPERSEDED 2026-09-09 (D-KBf5, `DEVELOPMENT/T-KB/IN-PROGRESS/T-KBf.md`).**
+> These numbers were measured under the frozen `reach`, whose `compatible()`
+> gate rejects any pair with unequal constant counts. On this corpus **1,146 of
+> 1,400 member pairs (81.9 %) are therefore at infinite reach, and 60 of the 69
+> runs contain such a pair**, so the triangle-complete candidate set was mostly
+> empty and the consensus was crippled rather than tested. The stated mechanism
+> below — "a natural series is not a set of variants of one source, so there is
+> nothing for a consensus to converge to" — is an untested causal claim that the
+> measurement cannot support. Re-measured under `reach′` before any use.
+
 **Corpus B — the natural NDC quarter series** (69 runs): the consensus is worse
 than the medoids and than the majority merge on the held-out quarter (fact
 distance 2.60 vs 1.84–2.40; exact recovery 0.145 vs up to 0.226). A natural

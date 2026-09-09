@@ -658,3 +658,34 @@ contradict the code.
 **D-ART4 (3) is satisfied in purpose, not in letter:** no member is left outside
 R3's domain, but deletions are resolved by compaction rather than by rejection.
 Recorded so the instruction is not left looking violated.
+
+### The Corpus B demotion was decided by the crippled measurement — gate void
+
+`DESIGN.md` §4's A → A′ gate reads: *"If Corpus B shows the consensus no better
+than the medoid, Corpus B goes to the supplement as the characterized weak
+regime."* It fired. `RESULTS_WALKTHROUGH.md` records the numbers that fired it —
+fact distance 2.60 against 1.84–2.40, exact recovery 0.145 against up to 0.226 —
+and explains them: *"A natural series is not a set of variants of one source, so
+there is nothing for a consensus to converge to."*
+
+Both are void. Those numbers were produced with **81.9 % of Corpus B's member
+pairs at infinite reach**, so the consensus was not given a candidate set to
+work with; and the explanation is an untested causal claim the measurement
+cannot support. The gate is re-run under `reach′`, and **Corpus B's placement is
+undecided rather than "supplement"** until it is. Supersession notes are written
+in place at both sites so neither can be inherited by inertia into T-KBg.
+
+**Fable's hypothesis that the audit's §3.3 is this same gate is wrong**, and the
+reason matters. §3.3 ("the deletion boundary is real, the stated mechanism is
+wrong") concerns **Corpus A** `t = 2` deletion cells, and under the *old*
+generator every Corpus A member keeps `n = source.n` — isolated constants were
+retained — so `compatible()` always passed there and the reach gate never bit.
+§3.3's measured mechanism stands: the source is in the candidate set 108/108 and
+the plain union equals the source 108/108, so the consensus loses to the
+objective's summed-reach criterion or its lexicographic tie-break, "a property
+of the objective, not of the data".
+
+**But §3.3 now needs re-checking for a new reason.** Under `reach′` Corpus A
+deletion members *do* change constant count, so the summed-reach criterion is
+computed over different quantities than when §3.3 tested it. Its conclusion may
+survive or may not; it must be re-run alongside Prop. 5 rather than assumed.

@@ -473,6 +473,11 @@ collections, that is a bug (the source is provably in it). If Corpus B shows
 the consensus no better than the medoid, Corpus B goes to the supplement as the
 characterized weak regime and the main text carries Corpus A with the regime
 boundary stated (this is the plan of record in `../START_HERE.md` §6.0).
+**This gate fired on a crippled measurement and its verdict is void (D-KBf5,
+2026-09-09):** under the frozen `reach`, 81.9 % of Corpus B's member pairs sit
+at infinite reach because `compatible()` requires equal constant counts, so the
+consensus was never given a candidate set to work with. The gate is re-run under
+`reach′`; until then Corpus B's placement is undecided, not "supplement".
 
 **Compute.** 2 collections × 12 cells × 216 = 5,184 variant collections;
 per collection `N²` alignments × ≈ 200 canonicalizations at 50 µs ≈ 1–5 s →

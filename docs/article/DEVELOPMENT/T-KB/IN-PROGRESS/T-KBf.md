@@ -730,3 +730,29 @@ axes: exact fact-level distance to the held-out quarter, and exact-recovery rate
 **One ambiguity resolved rather than left open:** the rule says "the medoid"
 while the campaign now runs eleven medoid arms. Read as the best arm per axis
 (above). Recorded so the reading is not chosen later.
+
+#### D-KBf5a amendment — two pre-named comparisons, not one
+
+The gate above answers *"may Corpus B carry the main text?"*. It does not answer
+the question RQ3 actually asks. Both are pre-named here; neither is chosen after
+the numbers.
+
+**Primary comparison (the paper's claim):** coverage consensus versus
+**`medoid[wstar_orbit]`** — the paper's own metric. RQ3's claim is that *the
+language buys something beyond the metric*: a representative that is a decoded
+object no member wrote, against the best object the same distance can return by
+picking an input. That question is answered by our own medoid, not by the
+strongest competitor, and it is the row the RQ3 table leads with.
+
+**Placement gate (conservative check):** coverage consensus versus the
+**best-performing medoid arm per axis**, as pre-registered above. This decides
+main text versus supplement and nothing else.
+
+**Winner's-curse disclosure, required in the caption.** The best of eleven arms
+chosen per axis *after seeing the numbers* is a selection-biased comparator, and
+the Holm correction across the two axes does not account for that selection: the
+bias grows with the number of arms and runs **against** the consensus. That is
+the right direction for a gate deciding the placement of our own corpus, so it
+is kept — but the caption states plainly that the comparator is the post-hoc
+best of eleven and that the bias runs against us. A reader must not have to
+infer either.

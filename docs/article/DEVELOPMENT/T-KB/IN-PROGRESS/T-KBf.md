@@ -848,3 +848,29 @@ nothing else in RQ6 is implicated.
 **Every RQ3 and RQ6 result on disk is now stale.** The re-run goes into the
 clean root under the D-KBf5a gate, which was committed before any of these
 numbers existed.
+
+### The RQ4 smoke is a structurally invalid gate — do not read its TIMEOUT as a failure
+
+Job 2265661 (the fix's re-run) sat at 28:43 with no unit complete, the same
+shape as the pre-fix 2265368. It is **not** the same failure, and the process
+table proves it: the parent had **29:15 elapsed against 00:01:06 of CPU
+(3.7 %)**, spawning one short-lived child at a time. That is a sequential
+budgeted-fork warm-up, not a hang — the pre-fix job was burning CPU inside an
+unbounded `pairwise`.
+
+**Why one unit cannot finish in 30 minutes, by design.** `member_words_for_unit`
+memoises pristine members' words **per process, per sub-collection**, so "the
+budgeted fork is paid once each" across the run; only the ~66 corrupted members
+are recomputed per unit. A single-unit smoke therefore pays the whole warm-up —
+for `ndc_classes` / `wstar_orbit` that is the ≈ 5,823 s the matrices job itself
+paid — and amortises it over nothing. The full run has **1,323 units in one
+process** and pays it once.
+
+So the smoke's 30-minute wall can never be met by the first unit, and the
+correct gate is the first two unit timings of the real run: unit 0 pays the
+warm-up, unit 1 shows the steady state. That measurement comes free from the
+submission and is what decides whether the 8-hour wall holds.
+
+Recorded because the obvious reading — "the fix did not work" — is wrong, and
+because the same trap applies to any runner that memoises across units: a
+one-unit smoke measures warm-up, never throughput.

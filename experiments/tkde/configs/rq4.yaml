@@ -24,6 +24,14 @@
 n_seeds: 27
 n_jobs: null # null -> SLURM_CPUS_PER_TASK, else 1
 
+# Per-member wall-clock budget for the word arms' representation (fact_rank,
+# isal_ow_struct, wstar_rank, wstar_orbit). Each member's word is computed once,
+# in a forked child; a member -- clean or corrupted -- whose word overruns is
+# dropped from the unit and counted in the `n_censored_word_*` columns. Matches
+# the matrices job's `fingerprint_budget_s`, so a member censored here is one
+# that job would have censored too.
+member_budget_s: 60.0
+
 arms:
   - fact_rank # exact (the retired comparator's record, D-ART4 note (c))
   - wstar_orbit # exact (the Isal instruction word, the one Isal row under D-ART5)

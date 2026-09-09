@@ -41,6 +41,13 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from experiments.tkde import corpora
+from experiments.tkde.budget import (
+    CPP_ENGINE_ARMS,
+    encode_symbols,
+    engine_word,
+    guarded_budget_call,
+    pointer_symbols,
+)
 from experiments.tkde.config import TkdeConfigError, load_yaml, results_root, seeds
 from experiments.tkde.io import RunPaths, write_config, write_manifest, write_rows
 from experiments.tkde.matrices import (
@@ -101,7 +108,25 @@ DEFAULT_CORRUPTIONS: tuple[tuple[str, int], ...] = (
 CONTAMINATION = 0.05
 KNN_K = 5
 LOF_K = 20
-WORD_ARM = "fact_rank"
+
+#: Arms whose distance is a token-level Levenshtein over a per-member word.
+#: These are served from precomputed representations, never through
+#: ``pairwise``: every ``pairwise`` call re-derives the canonical labelling on
+#: BOTH sides, so one anomaly row costs ``2 N`` canonicalizations where ``N + 1``
+#: suffice. On ``wstar_orbit`` -- p99 43 s per ndc_classes member -- that is the
+#: difference between a unit that finishes and one that runs past its wall
+#: (measured: job 2265368, 30 min on a single 1,311-member unit).
+WORD_ARMS: tuple[str, ...] = ("fact_rank", "isal_ow_struct", "wstar_rank", "wstar_orbit")
+
+#: ``arm -> engine selector of experiments.tkde.budget.engine_word``. These are
+#: the Isal instruction-word arms, and the members of :data:`WORD_ARMS` whose
+#: representation is unbounded from inside Python.
+ENGINE_ARMS: dict[str, str] = {"wstar_rank": "rank", "wstar_orbit": "orbit"}
+
+#: Per-member wall-clock budget for one word-arm representation. Matches the
+#: matrices job's ``fingerprint_budget_s``, so a member this run censors is a
+#: member that run would have censored too.
+DEFAULT_MEMBER_BUDGET_S = 60.0
 
 _BASE_COLUMNS: tuple[str, ...] = (
     "rq",
@@ -128,6 +153,9 @@ ROWS_AUC_COLUMNS: tuple[str, ...] = (
     "n_censored_clean",
     "censor_rate_anomaly",
     "censor_rate_clean",
+    "n_censored_word_anomaly",
+    "n_censored_word_clean",
+    "word_censored_arms",
 )
 ROWS_ANOMALIES_COLUMNS: tuple[str, ...] = (
     "rq",
@@ -291,6 +319,184 @@ def subcollection_indices(collection: Any, sub: SubCollection) -> list[int]:
 
 
 # ---------------------------------------------------------------------------
+# Precomputed word representations (the word arms' fast path)
+# ---------------------------------------------------------------------------
+
+
+def _plain_word(arm: str, H: SparseHypergraph) -> tuple[Any, ...]:
+    """Return the token word of a word arm that is not an Isal engine arm.
+
+    Parameters
+    ----------
+    arm : str
+        A member of :data:`WORD_ARMS` outside :data:`ENGINE_ARMS`.
+    H : SparseHypergraph
+
+    Returns
+    -------
+    tuple
+        The token sequence the arm's ``pairwise`` measures.
+    """
+    if arm == "fact_rank":
+        from isalhg.metric_space.distances.fact_levenshtein import fact_word
+
+        return tuple(fact_word(H))
+    from isalhg.metric_space.registry import get_distance
+
+    word = get_distance(arm).fingerprint(H)
+    if word is None:
+        raise TkdeConfigError(f"arm {arm!r} has no standalone fingerprint; it is not a word arm")
+    return tuple(word)
+
+
+def member_word(
+    arm: str,
+    H: SparseHypergraph,
+    *,
+    augment: bool,
+    budget_s: float,
+) -> tuple[Any, ...] | None:
+    """Return one member's word for ``arm``, or None when it does not finish.
+
+    The word is computed in a forked child under ``budget_s``, exactly as the
+    matrices job screens its members: neither engine returns to the interpreter
+    on time-out, so a budget enforced from inside Python does not bound them.
+    ``cpp_engine`` is set from :data:`experiments.tkde.budget.CPP_ENGINE_ARMS`
+    because it declares what the child does -- reaching the C++ canonicalizer
+    from a poisoned parent hangs, and reporting that hang as a censoring would
+    be a fiction; the fact-word and ordered-walk children are unaffected and
+    must not be guarded, or work that would have succeeded is refused.
+
+    ``k`` is the member's own ``required_k``. Neither Isal engine word changes
+    with ``k`` above the widest edge -- the walk never names a pointer index it
+    does not need -- so this is the same value the pair maximum ``pairwise``
+    resolves would produce.
+
+    Parameters
+    ----------
+    arm : str
+        A member of :data:`WORD_ARMS`.
+    H : SparseHypergraph
+        A connected knowledge base.
+    augment : bool
+        Whether the corpus vertex vocabulary is non-trivial, which is when the
+        ``("seed", label)`` prefix is part of the fingerprint (Corollary A).
+        Constant across a knowledge-base collection, since ``n_vertex_labels``
+        is the collection's declared type alphabet.
+    budget_s : float
+        Per-member wall-clock budget.
+
+    Returns
+    -------
+    tuple or None
+        The token sequence, or None when the child was censored or raised.
+    """
+    if arm in ENGINE_ARMS:
+        from isalhg.core.canonical import required_k
+
+        result = engine_word(H, required_k(H), budget_s, engine=ENGINE_ARMS[arm])
+        if not result.ok:
+            return None
+        word, seed_label = result.value
+        return pointer_symbols(word, seed_label, augment=augment)
+
+    result = guarded_budget_call(_plain_word, (arm, H), budget_s, cpp_engine=arm in CPP_ENGINE_ARMS)
+    return None if not result.ok else tuple(result.value)
+
+
+def member_words(
+    arm: str,
+    items: Sequence[SparseHypergraph],
+    *,
+    augment: bool,
+    budget_s: float,
+    memo: dict[str, tuple[Any, ...] | None] | None = None,
+    keys: Sequence[str] | None = None,
+) -> list[tuple[Any, ...] | None]:
+    """Return one word per item, memoised by member id when one is supplied.
+
+    Parameters
+    ----------
+    arm : str
+        A member of :data:`WORD_ARMS`.
+    items : Sequence[SparseHypergraph]
+    augment : bool
+        See :func:`member_word`.
+    budget_s : float
+        Per-member wall-clock budget.
+    memo : dict or None, optional
+        ``{member id: word or None}``, filled in place. Pristine members are
+        the same objects in every unit of a sub-collection, so their words are
+        computed once per process rather than once per unit.
+    keys : Sequence[str] or None, optional
+        Memo key per item; required when ``memo`` is given.
+
+    Returns
+    -------
+    list
+        One entry per item; ``None`` where the word did not finish.
+
+    Raises
+    ------
+    TkdeConfigError
+        If ``memo`` is given without ``keys``, or ``keys`` does not align.
+    """
+    if memo is not None and (keys is None or len(keys) != len(items)):
+        raise TkdeConfigError("member_words: `memo` requires a `keys` aligned with `items`")
+
+    words: list[tuple[Any, ...] | None] = []
+    for index, H in enumerate(items):
+        if memo is None:
+            words.append(member_word(arm, H, augment=augment, budget_s=budget_s))
+            continue
+        key = keys[index]  # type: ignore[index]
+        if key not in memo:
+            memo[key] = member_word(arm, H, augment=augment, budget_s=budget_s)
+        words.append(memo[key])
+    return words
+
+
+def word_rows(
+    words: Sequence[tuple[Any, ...]],
+    positions: Sequence[int],
+    *,
+    n_jobs: int,
+) -> list[list[float]]:
+    """Return ``d(word[p], word[x])`` for every ``p`` in ``positions``.
+
+    One shared private alphabet for the whole population, then a single
+    ``rapidfuzz.process.cdist`` call -- the encode-once pattern every
+    amortizing arm's own ``matrix`` uses. Levenshtein is invariant under any
+    bijective relabelling of the symbols, so the shared alphabet returns
+    exactly the per-pair values ``pairwise`` returns.
+
+    Parameters
+    ----------
+    words : Sequence[tuple]
+        One token sequence per member, in population order.
+    positions : Sequence[int]
+        Local indices of the anomalies.
+    n_jobs : int
+        ``workers`` for the ``cdist`` call.
+
+    Returns
+    -------
+    list[list[float]]
+        One row per position, each of length ``len(words)``.
+    """
+    import numpy as np
+    from rapidfuzz import process
+    from rapidfuzz.distance import Levenshtein
+
+    encoded = encode_symbols(words)
+    queries = [encoded[position] for position in positions]
+    matrix = process.cdist(
+        queries, encoded, scorer=Levenshtein.distance, workers=n_jobs, dtype=np.float64
+    )
+    return [[float(value) for value in row] for row in np.asarray(matrix)]
+
+
+# ---------------------------------------------------------------------------
 # Fresh anomaly rows (the only distances this module computes)
 # ---------------------------------------------------------------------------
 
@@ -322,7 +528,7 @@ def _row_worker(task: tuple[int, str]) -> tuple[int, str, list[float] | None]:
 
 def anomaly_rows(
     items: Sequence[SparseHypergraph],
-    words: Sequence[Any] | None,
+    words: Mapping[str, Sequence[tuple[Any, ...]]] | None,
     positions: Sequence[int],
     arms: Sequence[str],
     *,
@@ -335,16 +541,21 @@ def anomaly_rows(
     the other anomalies are still their originals would score a collection that
     was never assembled.
 
-    ``fact_rank`` is served from precomputed words (one encoding per member,
-    then token Levenshtein) rather than through ``pairwise``, which would
-    re-derive the canonical labelling on both sides of every call.
+    Every :data:`WORD_ARMS` arm is served from precomputed words -- one
+    encoding per member, then one token-Levenshtein pass -- rather than through
+    ``pairwise``, which re-derives the canonical labelling on both sides of
+    every call. The values are identical; the cost is ``N + 1``
+    canonicalizations per row instead of ``2 N``.
 
     Parameters
     ----------
     items : Sequence[SparseHypergraph]
         The modified collection, anomalies already substituted.
-    words : Sequence or None
-        Fact words aligned with ``items``, or None to skip the words path.
+    words : Mapping or None
+        ``{arm: words aligned with items}`` for the word arms, or None to route
+        every arm through ``pairwise``. Every entry must be complete: a member
+        whose word did not finish is dropped from the population upstream, not
+        carried here as a hole.
     positions : Sequence[int]
         Local indices of the anomalies.
     arms : Sequence[str]
@@ -359,23 +570,19 @@ def anomaly_rows(
         that anomaly; the caller censors the arm rather than scoring a matrix
         with a stale row in it.
     """
-    from isalhg.metric_space.distances.fact_levenshtein import word_distance
-
     result: dict[tuple[int, str], list[float]] = {}
+    served = {arm: words[arm] for arm in arms if words is not None and arm in words}
 
-    if words is not None and WORD_ARM in arms:
-        for position in positions:
-            anomaly_word = words[position]
-            try:
-                result[(position, WORD_ARM)] = [
-                    float(word_distance(anomaly_word, other)) for other in words
-                ]
-            except Exception as exc:  # noqa: BLE001 -- censor the arm, do not end the shard
-                logger.warning(
-                    "arm %s failed on anomaly at position %d: %r", WORD_ARM, position, exc
-                )
+    for arm, arm_words in served.items():
+        try:
+            served_rows = word_rows(arm_words, positions, n_jobs=n_jobs)
+        except Exception as exc:  # noqa: BLE001 -- censor the arm, do not end the shard
+            logger.warning("arm %s failed on the word path: %r", arm, exc)
+            continue
+        for position, served_row in zip(positions, served_rows, strict=True):
+            result[(position, arm)] = served_row
 
-    pairwise_arms = [a for a in arms if not (words is not None and a == WORD_ARM)]
+    pairwise_arms = [arm for arm in arms if arm not in served]
     tasks = [(position, arm) for arm in pairwise_arms for position in positions]
     if not tasks:
         return result
@@ -417,6 +624,15 @@ class Census:
     the seed selected for corruption against the ones it left clean -- and the
     corruption type is already a column of every row, so the analyzer can group
     by it without further plumbing.
+
+    A member can also be lost *here*, to the per-member word budget of a
+    :data:`WORD_ARMS` arm. The corpus members were screened once by the
+    matrices job, but an anomaly is a hypergraph that job never saw, so its
+    canonicalization can overrun where its clean original did not -- and L15's
+    third clause bites again, in the same direction. Those losses are counted
+    separately in ``n_censored_word_*`` (and rolled into the totals) so a reader
+    can tell an upstream censoring from one this run made; the arms that caused
+    them are named in ``word_censored_arms``.
     """
 
     kept: tuple[int, ...]
@@ -425,6 +641,9 @@ class Census:
     n_censored_clean: int
     rate_anomaly: float | str
     rate_clean: float | str
+    n_censored_word_anomaly: int = 0
+    n_censored_word_clean: int = 0
+    word_censored_arms: str = ""
 
 
 def common_positions(
@@ -476,6 +695,70 @@ def common_positions(
     )
 
 
+def fold_word_census(
+    census: Census,
+    lost: Collection[int],
+    anomaly_positions: Collection[int],
+    arms: Collection[str],
+    *,
+    n_chosen: int,
+    n_members: int,
+) -> Census:
+    """Return ``census`` with the members lost to the word budget folded in.
+
+    A member whose word does not finish is dropped from the population for
+    **every** arm, not only for the arm that lost it: this is the same
+    common-member rule :func:`common_positions` enforces one level up, and a
+    cross-arm AUC computed on different member sets is not answering the same
+    question for each arm.
+
+    Parameters
+    ----------
+    census : Census
+        The matrix-censoring census, whose ``kept`` is in the parent's local
+        indexing.
+    lost : Collection[int]
+        Positions *within* ``census.kept`` whose word did not finish.
+    anomaly_positions : Collection[int]
+        Parent-local positions the seed selected for corruption.
+    arms : Collection[str]
+        The word arms that lost at least one member.
+    n_chosen : int
+        Selected-for-corruption members of the whole sub-collection, the
+        denominator of ``rate_anomaly``.
+    n_members : int
+        Members of the whole sub-collection.
+
+    Returns
+    -------
+    Census
+        A new census restricted to the survivors, with the totals updated.
+    """
+    dropped = set(lost)
+    if not dropped:
+        return census
+    chosen = set(anomaly_positions)
+    kept = tuple(position for local, position in enumerate(census.kept) if local not in dropped)
+    lost_positions = [position for local, position in enumerate(census.kept) if local in dropped]
+    n_anomaly = sum(1 for position in lost_positions if position in chosen)
+    n_clean = len(lost_positions) - n_anomaly
+    total_anomaly = census.n_censored_anomaly + n_anomaly
+    total_clean = census.n_censored_clean + n_clean
+    n_unchosen = n_members - n_chosen
+    return dataclasses.replace(
+        census,
+        kept=kept,
+        n_censored=census.n_censored + len(lost_positions),
+        n_censored_anomaly=total_anomaly,
+        n_censored_clean=total_clean,
+        rate_anomaly=round(total_anomaly / n_chosen, 6) if n_chosen else "",
+        rate_clean=round(total_clean / n_unchosen, 6) if n_unchosen else "",
+        n_censored_word_anomaly=census.n_censored_word_anomaly + n_anomaly,
+        n_censored_word_clean=census.n_censored_word_clean + n_clean,
+        word_censored_arms=",".join(sorted(arms)),
+    )
+
+
 def _score_matrix(
     base: NDArray[np.float64],
     rows: Mapping[tuple[int, str], list[float]],
@@ -503,6 +786,96 @@ def _score_matrix(
     return D
 
 
+def _restrict(
+    records: Sequence[Any],
+    modified: Sequence[SparseHypergraph],
+    realised: Sequence[int],
+    keep: Sequence[int],
+) -> tuple[list[Any], list[SparseHypergraph], list[int]]:
+    """Restrict a unit's population to ``keep``, remapping the anomaly indices."""
+    remap = {position: local for local, position in enumerate(keep)}
+    return (
+        [records[position] for position in keep],
+        [modified[position] for position in keep],
+        [remap[position] for position in realised if position in remap],
+    )
+
+
+def unit_words(
+    arms: Sequence[str],
+    modified: Sequence[SparseHypergraph],
+    member_ids: Sequence[str],
+    realised: Sequence[int],
+    *,
+    budget_s: float,
+    cache: dict[str, Any],
+    cache_scope: str,
+) -> tuple[dict[str, list[tuple[Any, ...] | None]], list[int], set[str]]:
+    """Return each word arm's per-member words, and the members none finished.
+
+    Pristine members are the same hypergraphs in every unit of a
+    sub-collection, so their words are memoised per process and the budgeted
+    fork is paid once each. The corrupted members are new objects the matrices
+    job never saw, so their words are computed fresh every unit and are the
+    place an anomaly can be lost.
+
+    Parameters
+    ----------
+    arms : Sequence[str]
+        The :data:`WORD_ARMS` members this unit scores.
+    modified : Sequence[SparseHypergraph]
+        The population, anomalies already substituted.
+    member_ids : Sequence[str]
+        Member id per position, the memo key for the pristine members.
+    realised : Sequence[int]
+        Positions holding a corrupted member.
+    budget_s : float
+        Per-member wall-clock budget.
+    cache : dict
+        The runner's per-process cache.
+    cache_scope : str
+        Sub-collection name, so two sub-collections of one parent do not share
+        a memo keyed only by member id.
+
+    Returns
+    -------
+    tuple
+        ``(words, lost, lost_arms)``: ``words`` maps arm to one token sequence
+        per position, ``None`` where the word did not finish; ``lost`` are the
+        positions holding such a hole under any arm; ``lost_arms`` names those
+        arms.
+    """
+    augment = any(H.n_vertex_labels > 1 for H in modified)
+    corrupted = set(realised)
+    words: dict[str, list[tuple[Any, ...] | None]] = {}
+    lost: set[int] = set()
+    lost_arms: set[str] = set()
+
+    for arm in arms:
+        memo: dict[str, tuple[Any, ...] | None] = cache.setdefault(
+            f"words::{arm}::{cache_scope}", {}
+        )
+        column: list[tuple[Any, ...] | None] = []
+        for position, H in enumerate(modified):
+            if position in corrupted:
+                column.append(member_word(arm, H, augment=augment, budget_s=budget_s))
+                continue
+            key = member_ids[position]
+            if key not in memo:
+                memo[key] = member_word(arm, H, augment=augment, budget_s=budget_s)
+            column.append(memo[key])
+        missing = {position for position, word in enumerate(column) if word is None}
+        if missing:
+            lost |= missing
+            lost_arms.add(arm)
+        words[arm] = column
+
+    # The columns are handed back at full length, holes included, so the caller
+    # restricts words, records and hypergraphs in one pass and they stay
+    # aligned; after that restriction no hole remains.
+    return words, sorted(lost), lost_arms
+
+
 def run_unit(
     unit: Unit,
     *,
@@ -511,6 +884,7 @@ def run_unit(
     arms: Sequence[str],
     n_jobs: int,
     collection_cache: dict[str, Any],
+    member_budget_s: float = DEFAULT_MEMBER_BUDGET_S,
 ) -> dict[str, list[dict[str, Any]]]:
     """Execute one unit and return its rows, keyed by table name.
 
@@ -529,6 +903,10 @@ def run_unit(
         Worker processes.
     collection_cache : dict
         Per-process memo of loaded collections and their derived words.
+    member_budget_s : float, optional
+        Per-member wall-clock budget for the :data:`WORD_ARMS` representations.
+        A member whose word overruns it is dropped and counted (L15), never
+        scored against a stale or zero row.
 
     Returns
     -------
@@ -537,7 +915,6 @@ def run_unit(
     """
     import numpy as np
 
-    from isalhg.metric_space.distances.fact_levenshtein import fact_word
     from isalhg.metric_space.toolkit import auroc, knn_score, lof_score
 
     experiment = unit.experiment
@@ -613,33 +990,20 @@ def run_unit(
         logger.warning("unit %d (%s): no corruption realised", unit.index, unit.unit_id)
         return tables
 
-    is_anomaly = np.zeros(n, dtype=bool)
-    is_anomaly[realised] = True
-
-    words = None
-    if WORD_ARM in arms:
-        key = f"words::{sub.name}"
-        if key not in collection_cache:
-            collection_cache[key] = [fact_word(h) for h in items]
-        words = list(collection_cache[key])
-        for position in realised:
-            words[position] = fact_word(modified[position])
-
     loaded = load_arm_matrices(
         matrices_root, sub.collection, arms, parent_ids, cache=collection_cache
     )
+    # An arm with no cached matrix is censored whatever its rows say, so its
+    # rows are never computed: on wstar_orbit that is 2 N canonicalizations per
+    # anomaly spent on a number that is discarded.
+    scored_arms = [arm for arm in arms if arm in loaded]
+
     census = common_positions([r.kb_id for r in records], loaded, chosen)
     if census.n_censored:
         # Every cross-arm number is computed on the members all the loaded arms
         # completed, so the arms are answering the same question.
-        remap = {position: local for local, position in enumerate(census.kept)}
-        records = [records[position] for position in census.kept]
-        modified = [modified[position] for position in census.kept]
-        words = None if words is None else [words[position] for position in census.kept]
-        realised = [remap[position] for position in realised if position in remap]
+        records, modified, realised = _restrict(records, modified, realised, census.kept)
         n = len(census.kept)
-        is_anomaly = np.zeros(n, dtype=bool)
-        is_anomaly[realised] = True
         logger.warning(
             "unit %d (%s): %d members censored (%d selected for corruption, %d clean); "
             "scoring the %d that every arm completed",
@@ -650,6 +1014,47 @@ def run_unit(
             census.n_censored_clean,
             n,
         )
+
+    columns, lost, lost_arms = unit_words(
+        [arm for arm in scored_arms if arm in WORD_ARMS],
+        modified,
+        [record.kb_id for record in records],
+        realised,
+        budget_s=member_budget_s,
+        cache=collection_cache,
+        cache_scope=sub.name,
+    )
+    keep = list(range(n))
+    if lost:
+        census = fold_word_census(
+            census, lost, chosen, lost_arms, n_chosen=len(chosen), n_members=len(indices)
+        )
+        dropped = set(lost)
+        keep = [local for local in keep if local not in dropped]
+        records, modified, realised = _restrict(records, modified, realised, keep)
+        n = len(keep)
+        logger.warning(
+            "unit %d (%s): %d member(s) lost to the %.0f s word budget of %s "
+            "(%d selected for corruption, %d clean); scoring the remaining %d",
+            unit.index,
+            unit.unit_id,
+            len(lost),
+            member_budget_s,
+            ",".join(sorted(lost_arms)),
+            census.n_censored_word_anomaly,
+            census.n_censored_word_clean,
+            n,
+        )
+
+    # After the restriction no column carries a hole, which is what
+    # `anomaly_rows` requires: a scored member has a word under every word arm.
+    words: dict[str, list[tuple[Any, ...]]] = {
+        arm: [word for local in keep if (word := column[local]) is not None]
+        for arm, column in columns.items()
+    }
+
+    is_anomaly = np.zeros(n, dtype=bool)
+    is_anomaly[realised] = True
 
     if not realised:
         logger.warning(
@@ -667,7 +1072,7 @@ def run_unit(
     kept_ids = [record.kb_id for record in records]
 
     started = time.perf_counter()
-    rows = anomaly_rows(modified, words, realised, arms, n_jobs=n_jobs)
+    rows = anomaly_rows(modified, words, realised, scored_arms, n_jobs=n_jobs)
     secs_rows = time.perf_counter() - started
 
     for arm in arms:
@@ -786,6 +1191,9 @@ def _auc_row(
         "n_censored_clean": 0 if census is None else census.n_censored_clean,
         "censor_rate_anomaly": "" if census is None else census.rate_anomaly,
         "censor_rate_clean": "" if census is None else census.rate_clean,
+        "n_censored_word_anomaly": 0 if census is None else census.n_censored_word_anomaly,
+        "n_censored_word_clean": 0 if census is None else census.n_censored_word_clean,
+        "word_censored_arms": "" if census is None else census.word_censored_arms,
     }
 
 
@@ -889,6 +1297,7 @@ def refill_unit(
     corpora_root: Path | str | None,
     n_jobs: int,
     collection_cache: dict[str, Any],
+    member_budget_s: float = DEFAULT_MEMBER_BUDGET_S,
 ) -> bool:
     """Re-score one arm of one unit in place, leaving every other arm untouched.
 
@@ -903,6 +1312,8 @@ def refill_unit(
     corpora_root : Path or str or None
     n_jobs : int
     collection_cache : dict
+    member_budget_s : float, optional
+        Per-member word budget, passed through to :func:`run_unit`.
 
     Returns
     -------
@@ -928,6 +1339,7 @@ def refill_unit(
         arms=[arm],
         n_jobs=n_jobs,
         collection_cache=collection_cache,
+        member_budget_s=member_budget_s,
     )
 
     anomalies_path = rows_paths.dir / f"rows_anomalies__{unit.unit_id}.csv"
@@ -1057,6 +1469,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # --out. Defaulting to out_root keeps the single-root local runs working.
     matrices_root = Path(args.matrices_root) if args.matrices_root else out_root
     n_jobs = args.n_jobs or int(config.get("n_jobs") or os.environ.get("SLURM_CPUS_PER_TASK", 1))
+    member_budget_s = float(config.get("member_budget_s") or DEFAULT_MEMBER_BUDGET_S)
 
     if args.unit is not None:
         selected = [args.unit]
@@ -1100,6 +1513,7 @@ def main(argv: Sequence[str] | None = None) -> int:
                 corpora_root=data_root,
                 n_jobs=n_jobs,
                 collection_cache=collection_cache,
+                member_budget_s=member_budget_s,
             ):
                 n_refilled += 1
                 logger.info(
@@ -1159,6 +1573,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             arms=arms,
             n_jobs=n_jobs,
             collection_cache=collection_cache,
+            member_budget_s=member_budget_s,
         )
         for table, columns in _TABLES.items():
             if tables[table]:
@@ -1182,6 +1597,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             "n_units": len(units),
             "selected": selected,
             "n_jobs": n_jobs,
+            "member_budget_s": member_budget_s,
             "smoke": args.smoke,
         },
     )

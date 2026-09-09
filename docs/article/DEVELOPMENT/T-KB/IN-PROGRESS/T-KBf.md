@@ -464,3 +464,36 @@ record"). Nothing is moved or deleted. The runner defect is filed as **T-KBn**.
 **Submitted:** full RQ3 as **2265353** into the clean root. RQ2 (2265309 /
 2265310) continues in the shared tree; its rows are tag-separable and its
 census already carries `wstar_orbit`.
+
+### D-KBf2 verified on real data (RQ5 smoke, job 2265369)
+
+The consumer side was tested only on synthetic frames before this. The smoke
+read the real `wstar_orbit` matrix with its sidecar and behaved as designed:
+
+```
+WARNING matrices  arm wstar_orbit on wd50k66: 5 of 3988 members censored by the matrices job
+WARNING __main__  unit 11 (wd50k66_balanced__seed50000): 1 of 280 selected members censored;
+                  clustering the rest
+```
+
+**The intersection is applied at the scoring level, not merely recorded.** Every
+arm in the unit reports `n_members = 279`, `n_censored_members = 1` — including
+the ten arms that censor nothing:
+
+| arm | n_members | n_censored |
+|---|---|---|
+| `wstar_orbit` | 279 | 1 |
+| `fact_rank`, `nauty_cert`, `nauty_cert_rows`, `wl_l1`, `netlsd`, `hpd_jsd`, `bipartite_ged_{path,assign}`, `size_l1`, `degree_seq_l1` | 279 each | 1 each |
+
+So the uncensored arms are scored on exactly the members the Isal arm could
+represent. This is rule 9 made structural, and it is the property whose absence
+produced the three retracted directional claims of RQ1 (design §9 item 8): there,
+each arm was scored on its own completed subset and an eyeballed ordering was an
+artefact of the differing unit sets.
+
+The D-ART5 arm set is present and complete — 11 arms, `wstar_orbit` among them,
+no `wstar_rank`, no `isal_ow_*`.
+
+**Submitted:** full RQ5 as **2265389**. RQ4's smoke (2265368) carries the more
+delicate L15 requirement — the censoring rate by corrupted-vs-clean and by
+corruption type — and gates the full RQ4.

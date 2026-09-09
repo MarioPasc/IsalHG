@@ -382,3 +382,45 @@ The degenerate row is a genuine silent-wrong-result hazard and is parked as
 **T-KBm** rather than fixed inline: the campaign's 60 s budget censors 7 of
 3,988 and 70 of 1,381, so it is not on the submission path, and changing
 censoring behaviour mid-campaign would break census comparability.
+
+### Matrices 2264831 COMPLETED (3:10:11, 31/31 units) — and it re-measures the census
+
+The `wstar_orbit` screen inside the matrix build is an **independent re-run** of
+the RQ1 M3 census, so it tests the k-invariance argument of D-KBf3 at campaign
+scale rather than on 43 sampled members.
+
+| corpus | matrices job | RQ1 M3 | relation |
+|---|---|---|---|
+| ndc_classes | 70 of 1,381 | 70 | **identical member ids** |
+| wd50k66 | 5 of 3,988 | 7 | **strict subset** — `Q183066`, `Q707986` completed |
+| wd50k100 | 11 of 1,837 | — | new collection |
+
+**This confirms the argument rather than straining it.** A screen running a
+*different*, harder search (the corpus `k`) would censor a **superset**, and
+ndc — the corpus with the whole arity-10 tail — would not match to the id. A
+strict subset on the other corpus is the signature of the same search meeting a
+less loaded node.
+
+**A correction to the record.** T-KBe reports `wstar_orbit` as stable at 77
+across four reads while the unpruned engine drifted 357/354/356/353. Those were
+four reads of **one run's rows**, not four runs. This is the first independent
+re-run, and the arm does drift — by 2 on wd50k66, none on ndc. That is exactly
+what its near-boundary mass predicts (6 completions in [55, 60) s), so the drift
+model stands; only the claim "the published arms never moved" needs the
+qualifier *within a run*. Nothing published moves: `d_I` values are identical
+(same seeds, same words), and censoring decides only which units enter a table.
+The two members are the smallest of the seven (n=22 m=16 and n=20 m=12).
+
+`ndc_substances` carries matrices for the cheap arms from an earlier campaign
+but **no `wstar_orbit`**, so RQ2's own budgeted build — the path fixed at
+`afab7c5` — is exercised on exactly the collection it was written for.
+
+### Submitted
+
+| job | what | note |
+|---|---|---|
+| 2264827 | matrices | FAILED in 5 s, nested-budget defect |
+| **2264831** | matrices, 31 units | **COMPLETED** 3:10:11 |
+| **2265308** | **RQ3 pilot** — one NDC cell | D-ART4 note (b): pilot before the full RQ3, since the consensus canonicalises hundreds of candidates per cell and NDC sources are symmetric |
+| **2265309** | RQ2 non-census kinds | exact0, bipartite, oracle, hypercot |
+| **2265310** | RQ2 census array | `afterok:2264831`, dependency read back and verified |

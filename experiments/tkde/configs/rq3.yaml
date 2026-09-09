@@ -15,15 +15,16 @@ seed_count: 27
 
 medoid_arms:
   - fact_rank
-  - isal_ow_struct
-  - wstar_rank
+  - wstar_orbit
   - nauty_cert
+  - nauty_cert_rows
   - wl_l1
   - netlsd
   - hpd_jsd
   - bipartite_ged_path
-  - degree_seq_l1
+  - bipartite_ged_assign
   - size_l1
+  - degree_seq_l1
 
 corpus_a:
   collections: [ndc_classes, wd50k66]

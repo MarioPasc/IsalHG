@@ -24,10 +24,6 @@ exact0_arms:
   - fact_rank
   - isalhg_levenshtein
   - wstar_orbit
-  - wstar_rank
-  - isal_ow_struct
-  - isal_ow_rank
-  - isal_ow_rank0
   - nauty_cert
   - nauty_cert_rows
   - wl_l1
@@ -45,10 +41,7 @@ census_collections: [wd50k66, ndc_classes, ndc_substances]
 census_own_collections: [ndc_substances]   # the ones this runner builds itself
 census_arms:
   - fact_rank
-  - isal_ow_struct
-  - isal_ow_rank
-  - isal_ow_rank0
-  - wstar_rank
+  - wstar_orbit
   - nauty_cert
   - nauty_cert_rows
   - wl_l1
@@ -89,10 +82,10 @@ smoke:
   exact0_collections: [ndc_classes]
   exact0_pairs: 5
   exact0_arms:
-    [fact_rank, isal_ow_struct, wstar_rank, nauty_cert, netlsd, bipartite_ged_path, size_l1]
+    [fact_rank, wstar_orbit, nauty_cert, netlsd, bipartite_ged_path, size_l1]
   census_collections: [ndc_classes]
   census_own_collections: [ndc_classes]
-  census_arms: [fact_rank, isal_ow_struct, wstar_rank, nauty_cert, size_l1]
+  census_arms: [fact_rank, wstar_orbit, nauty_cert, size_l1]
   bipartite_collections: [ndc_classes]
   bipartite_pairs: 10
   bipartite_triples: 10

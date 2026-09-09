@@ -587,3 +587,74 @@ stranded constant, abandoning "constant-preserving". D-ART4 (3) rules the
 *mechanism*; it does not rule what happens when the fix makes a pre-registered
 cell infeasible, and that gap is the author's. Put to `[IsalHG-Fable]` for the
 claim question and to the author for the scope call.
+
+### D-KBf5 — RQ3 adopts `reach′` on compacted remainders (author-ruled 2026-09-09)
+
+**Ruling (author, in session):** coherent option (C). Criterion he gave:
+*"keep it scoped inside the Isal paradigm as much as possible and be as general
+as possible within the knowledge-bases domain."*
+
+**What is adopted.** `reach′_F(K, K′) = min{|A| + |B| : compact(K − A) ≅
+compact(K′ − B)}`. A deletion that leaves a constant with no fact removes the
+constant, because a knowledge base **is** its set of facts (prose §2.1), which
+is what `datasets/kb/base.py::compact` already implements and documents. Every
+Corpus A member is then in the domain Prop. C.4 fixes, and all three edit kinds
+survive at the full pre-registered `N` on both corpora.
+
+**Why the one-flag version was rejected — verified, not argued.** Flipping
+`require_connected` in `_variant_member` alone fails by construction:
+
+- `language/reach.py` docstring: "Constants are never deleted, so an isolated
+  constant left behind by a removed fact is legal and **the two remainders
+  always carry the same constant count**."
+- `language/reach.py::compatible`: `if K.n_nodes != K2.n_nodes: return False`.
+
+A compacted deletion member has `n − 1` constants, so it is at **infinite
+reach** from its source; `cov_r` collapses and H3a fails for every deletion
+cell by definition rather than by evidence. `[IsalHG-Fable]` found this and
+withdrew its own earlier (A)+sub-pool proposal; the lines check out.
+
+**The finding that enlarges the ruling.** The same gate already cripples
+**Corpus B**, independently of anything in this campaign. On the 69 natural
+`T ≥ 4` runs:
+
+| | |
+|---|---|
+| member pairs | 1,400 |
+| **at infinite reach under the frozen `compatible()`** | **1,146 (81.9 %)** |
+| runs with ≥ 1 incompatible pair | **60 of 69** |
+
+`DATA`/`DESIGN` already record that constants change in 400 of 528 natural
+consecutive pairs; what was not recorded is that the frozen reach therefore
+returns ∞ on most of them, so the triangle-complete candidate set is mostly
+empty and **the coverage consensus — RQ3's flagship, "a decoded consensus that
+is no member" — has been measuring a crippled method on the real-data corpus.**
+`reach′` repairs that. This is a larger gain than the deletion cells and was
+not part of the case put to the author when he ruled; it is recorded here as
+supporting evidence found immediately after.
+
+**Scope of the change** (verified against the sources):
+1. `language/reach.py` — compact both remainders before keying; replace
+   `compatible()`'s `n_nodes` equality with a test on the constants surviving
+   compaction (or drop it and pay the canonicalisations).
+2. `language/consensus.py` — `node_map` is documented "always the identity,
+   because every candidate is built inside its anchor's constant space"; it
+   must admit a partial map and create an unmapped constant with the donor's
+   type and identity. In the language that is `insert_fact_new_constant`, the
+   one insertion kind the Isal word owns outright (RQ1).
+3. `datasets/kb/ladders.py::_variant_member` — stop passing
+   `require_connected=False` and keep `source.n`.
+4. **Prop. 5 must be re-measured** under `reach′` (its "source unique maximiser
+   12/12, member-to-member reach 0.00–0.02" is cited in `prose.md` §4).
+5. Design record: Corpus A is renamed off "constant-preserving"; `DESIGN.md` §4
+   gains `reach′` with the date; prose §2.1/§4 gain the disclosure sentences.
+
+**A prose caution for T-KBg**, found on the way: `RemainderIndex` keys
+remainders on the **fact word** — chosen because remainders may be disconnected,
+and used as an internal complete invariant, not as a representation claim. The
+prose must say "any complete invariant" there rather than `F°`, or it will
+contradict the code.
+
+**D-ART4 (3) is satisfied in purpose, not in letter:** no member is left outside
+R3's domain, but deletions are resolved by compaction rather than by rejection.
+Recorded so the instruction is not left looking violated.

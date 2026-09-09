@@ -801,6 +801,35 @@ def _restrict(
     )
 
 
+def _restrict_words(
+    columns: Mapping[str, Sequence[tuple[Any, ...] | None]],
+    keep: Sequence[int],
+) -> dict[str, list[tuple[Any, ...]]]:
+    """Restrict each arm's word column to ``keep``, refusing to drop a hole.
+
+    A hole that survived into the scored population would shorten one column
+    and silently misalign it with the hypergraphs, so it is an error rather
+    than a filter: every kept member has a word under every word arm.
+
+    Raises
+    ------
+    TkdeConfigError
+        If a kept position carries no word.
+    """
+    restricted: dict[str, list[tuple[Any, ...]]] = {}
+    for arm, column in columns.items():
+        words: list[tuple[Any, ...]] = []
+        for local in keep:
+            word = column[local]
+            if word is None:
+                raise TkdeConfigError(
+                    f"arm {arm!r}: member at position {local} has no word but was kept"
+                )
+            words.append(word)
+        restricted[arm] = words
+    return restricted
+
+
 def unit_words(
     arms: Sequence[str],
     modified: Sequence[SparseHypergraph],
@@ -1046,12 +1075,7 @@ def run_unit(
             n,
         )
 
-    # After the restriction no column carries a hole, which is what
-    # `anomaly_rows` requires: a scored member has a word under every word arm.
-    words: dict[str, list[tuple[Any, ...]]] = {
-        arm: [word for local in keep if (word := column[local]) is not None]
-        for arm, column in columns.items()
-    }
+    words = _restrict_words(columns, keep)
 
     is_anomaly = np.zeros(n, dtype=bool)
     is_anomaly[realised] = True

@@ -88,6 +88,8 @@ def run_with_budget_detail(
     fn: Callable[..., Any],
     args: Sequence[Any] = (),
     seconds: float = 60.0,
+    *,
+    daemon: bool = True,
 ) -> BudgetResult:
     """Run ``fn(*args)`` in a forked child, killed after ``seconds``.
 
@@ -100,6 +102,15 @@ def run_with_budget_detail(
         Positional arguments.
     seconds : float, optional
         Wall-clock budget. Default 60.
+    daemon : bool, optional
+        Whether the child is daemonic. Default True, which ties its lifetime to
+        this process. Pass False when ``fn`` itself budgets something -- a
+        daemonic process may not have children, so a nested budget raises
+        ``AssertionError: daemonic processes are not allowed to have children``
+        from inside the child and surfaces as a unit that produced no result
+        (measured: job 2264827, ``wd50k66/wstar_orbit``). A non-daemonic child
+        is still killed here on time-out, and SLURM's cgroup reaps it if this
+        process dies outright.
 
     Returns
     -------
@@ -117,7 +128,7 @@ def run_with_budget_detail(
 
     ctx = mp.get_context("fork")
     parent_conn, child_conn = ctx.Pipe(duplex=False)
-    process = ctx.Process(target=_child, args=(fn, tuple(args), child_conn), daemon=True)
+    process = ctx.Process(target=_child, args=(fn, tuple(args), child_conn), daemon=daemon)
     try:
         process.start()
     except OSError as exc:
@@ -332,6 +343,7 @@ def guarded_budget_call(
     seconds: float = 60.0,
     *,
     cpp_engine: bool = True,
+    daemon: bool = True,
 ) -> BudgetResult:
     """:func:`run_with_budget_detail` under the fork-health canary.
 
@@ -359,6 +371,9 @@ def guarded_budget_call(
         Wall-clock budget.
     cpp_engine : bool, optional
         Whether the child may reach the C++ engine. Default True.
+    daemon : bool, optional
+        Passed through to :func:`run_with_budget_detail`. Pass False when ``fn``
+        budgets something of its own, since a daemonic process may not fork.
 
     Returns
     -------
@@ -372,10 +387,10 @@ def guarded_budget_call(
         which case a censored result here would be a fiction.
     """
     if not cpp_engine:
-        return run_with_budget_detail(fn, args, seconds)
+        return run_with_budget_detail(fn, args, seconds, daemon=daemon)
     if not cpp_fork_is_healthy():
         raise TkdeBudgetError(_POISONED)
-    result = run_with_budget_detail(fn, args, seconds)
+    result = run_with_budget_detail(fn, args, seconds, daemon=daemon)
     if result.censored and not cpp_fork_is_healthy(recheck=True):
         raise TkdeBudgetError(_POISONED)
     return result

@@ -157,15 +157,22 @@ DEFAULT_SPECS: dict[str, tuple[str, ...]] = {
 
 #: A tiny configuration for ``--smoke``: two collections, the fast arms, a
 #: handful of members. Must finish well inside five minutes.
+#:
+#: ``wstar_orbit`` is here because it is the only *budgeted* arm, and a smoke
+#: that omits the budgeted path does not exercise the mechanism the campaign
+#: depends on: the nested-fork defect that killed job 2264827 in five seconds
+#: survived a green smoke precisely because no budgeted arm was in this dict.
+#: A smoke must cover every code path the real run takes, not every arm.
 SMOKE_SPECS: dict[str, tuple[str, ...]] = {
     "wd50k66": (
         "fact_rank",
+        "wstar_orbit",
         "isal_ow_struct",
         "nauty_cert",
         "wl_l1",
         "size_l1",
     ),
-    "ndc_classes": ("fact_rank", "isal_ow_struct", "nauty_cert", "degree_seq_l1"),
+    "ndc_classes": ("fact_rank", "wstar_orbit", "isal_ow_struct", "nauty_cert", "degree_seq_l1"),
 }
 SMOKE_MEMBERS = 40
 
@@ -696,10 +703,15 @@ def run_unit(
         if screened:
             # The build canonicalizes in-process and would poison this process
             # for every later screen, so it is run in a child that then dies.
+            # That child is a supervisor, not a leaf: it forks one screen per
+            # member, and a daemonic process may not have children, so it must
+            # be non-daemonic or the whole unit dies on the first screen
+            # (measured: job 2264827 failed here in 5 s on wd50k66/wstar_orbit).
             result = guarded_budget_call(
                 _build_censored_child,
                 (items, ids, roles, arm, cache_dir, n_jobs, float(fingerprint_budget_s or 0.0)),
                 unit_budget_s,
+                daemon=False,
             )
             if not result.ok:
                 raise TkdeConfigError(

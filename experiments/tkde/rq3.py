@@ -33,8 +33,9 @@ from typing import Any
 import numpy as np
 
 from experiments.tkde import corpora, io
-from experiments.tkde.budget import guarded_budget_call
+from experiments.tkde.budget import CPP_ENGINE_ARMS, arm_fingerprint_screen, guarded_budget_call
 from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root, seeds
+from experiments.tkde.matrices import BUDGETED_MATRIX_ARMS
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.datasets.kb.base import KBCollection, KBRecord
 from isalhg.datasets.kb.ladders import variant_collection
@@ -93,6 +94,7 @@ VARIANT_COLUMNS: tuple[str, ...] = (
     "medoid_cost",
     "LB",
     "ratio",
+    "n_censored_members",
     "n_candidates",
     "n_ties",
 )
@@ -121,6 +123,7 @@ NATURAL_COLUMNS: tuple[str, ...] = (
     "medoid_cost",
     "LB",
     "ratio",
+    "n_censored_members",
     "n_candidates",
     "n_ties",
 )
@@ -144,6 +147,10 @@ CERTIFICATE_COLUMNS: tuple[str, ...] = (
 )
 
 IdentityFacts = frozenset[tuple[int, frozenset[str]]]
+
+#: Slack added to a guarded matrix build over and above ``N`` per-member
+#: budgets, covering the pairwise pass the screen does not bound.
+BUILD_MARGIN_S = 60.0
 
 
 class RQ3Error(TkdeError):
@@ -407,6 +414,197 @@ def majority_outcome(
 
 
 # ---------------------------------------------------------------------------
+# The medoid's per-member screen (D-KBf1)
+# ---------------------------------------------------------------------------
+
+
+def censored_members(
+    arm: str,
+    members_H: Sequence[SparseHypergraph],
+    member_ids: Sequence[str],
+    budget_s: float,
+) -> tuple[str, ...]:
+    """Return the ids whose representation under ``arm`` did not finish in ``budget_s``.
+
+    The screen is the one :mod:`experiments.tkde.matrices` runs, at the same 60 s
+    per member as RQ1, so that the census a reader meets here is the census they
+    met there. Each member is put to a forked child, so this process is never
+    poisoned by the engine and the later arms' screens stay honest.
+
+    Parameters
+    ----------
+    arm : str
+        Registered distance name.
+    members_H : Sequence[SparseHypergraph]
+        The collection's members, in row order.
+    member_ids : Sequence[str]
+        Member id per entry of ``members_H``.
+    budget_s : float
+        Per-member wall-clock budget.
+
+    Returns
+    -------
+    tuple[str, ...]
+        The censored ids, in member order; empty when every member finished.
+
+    Raises
+    ------
+    experiments.tkde.budget.TkdeBudgetError
+        If ``arm`` reaches the C++ engine and this process has already used it,
+        in which case every censoring reported here would be a fiction.
+    """
+    screen = arm_fingerprint_screen(arm, budget_s)
+    return tuple(kb_id for kb_id, H in zip(member_ids, members_H, strict=True) if not screen(H))
+
+
+def medoid_matrix(
+    members_H: Sequence[SparseHypergraph],
+    member_ids: Sequence[str],
+    arm: str,
+    budget_s: float | None,
+) -> Any:
+    """Build one collection's ``N x N`` matrix under the arm's process model.
+
+    An in-process C++ canonicalization leaves a process whose forked children
+    deadlock, so an engine arm's build runs in a child that then dies -- the
+    discipline :mod:`experiments.tkde.matrices` follows, and the reason the
+    consensus guard below can keep trusting its own forks. Every other arm
+    builds in this process, where nothing can poison it.
+
+    Parameters
+    ----------
+    members_H : Sequence[SparseHypergraph]
+        The collection's members, in row order.
+    member_ids : Sequence[str]
+        Member id per entry of ``members_H``.
+    arm : str
+        Registered distance name.
+    budget_s : float or None
+        The per-member screen budget the members already cleared; the child's
+        ceiling is derived from it.
+
+    Returns
+    -------
+    numpy.ndarray
+        The ``(N, N)`` matrix as ``float64``.
+
+    Raises
+    ------
+    RQ3Error
+        If the guarded build timed out or failed.
+    """
+
+    def build() -> Any:
+        return build_matrix(list(members_H), arm, member_ids=list(member_ids), cache_dir=None)
+
+    if arm not in CPP_ENGINE_ARMS:
+        return np.asarray(build(), dtype=np.float64)
+
+    # Every member cleared the screen, so the build is bounded by N budgets plus
+    # the pairwise pass; the margin covers the latter.
+    ceiling = len(members_H) * float(budget_s or 0.0) + BUILD_MARGIN_S
+    status, value = run_guarded(build, ceiling, cpp_engine=True)
+    if status != "ok":
+        raise RQ3Error(f"guarded matrix build for arm {arm!r} returned {status!r}")
+    return np.asarray(value, dtype=np.float64)
+
+
+def survivor_medoid_row(
+    *,
+    arm: str,
+    members: Sequence[KBRecord],
+    members_H: Sequence[SparseHypergraph],
+    member_ids: Sequence[str],
+    censored_ids: Sequence[str],
+    truth_facts: IdentityFacts,
+    shared: Mapping[str, Any],
+    budget_s: float | None,
+) -> dict[str, Any] | None:
+    """The sensitivity supplement of D-KBf1: the medoid over what survived.
+
+    Emitted only on a censored collection, and only as a supplement. Prop 3's
+    certificate bounds the optimum over the ``N`` members, so over a survivor
+    subset it certifies a different object; ``LB`` and ``ratio`` are therefore
+    left blank and the row is marked ``method="medoid_survivors"`` so that it can
+    never be pooled with the main table. It exists to bound the flattery of
+    collection-level censoring, which is otherwise unmeasured.
+
+    Parameters
+    ----------
+    arm : str
+        Registered distance name.
+    members : Sequence[KBRecord]
+        The collection's members, in row order.
+    members_H : Sequence[SparseHypergraph]
+        Their hypergraphs, in the same order.
+    member_ids : Sequence[str]
+        Member id per row.
+    censored_ids : Sequence[str]
+        The ids the screen dropped.
+    truth_facts : IdentityFacts
+        The truth the medoid is scored against.
+    shared : Mapping
+        Columns common to every row of this collection.
+    budget_s : float or None
+        The screen budget, for the guarded build's ceiling.
+
+    Returns
+    -------
+    dict or None
+        The supplement row, or ``None`` when fewer than two members survived
+        (a medoid over one member has no lower bound to report) or the build
+        failed.
+    """
+    dropped = set(censored_ids)
+    keep = [index for index, kb_id in enumerate(member_ids) if kb_id not in dropped]
+    if len(keep) < 2:
+        logger.info(
+            "arm %s: %d survivors on %s; no survivor medoid",
+            arm,
+            len(keep),
+            shared.get("collection_id"),
+        )
+        return None
+
+    started = time.perf_counter()
+    try:
+        D = medoid_matrix(
+            [members_H[index] for index in keep],
+            [member_ids[index] for index in keep],
+            arm,
+            budget_s,
+        )
+        result = medoid(D)
+    except Exception as exc:  # noqa: BLE001 - the supplement must not kill the unit
+        logger.warning(
+            "survivor medoid for arm %s failed on %s: %s",
+            arm,
+            shared.get("collection_id"),
+            exc,
+        )
+        return None
+    distance = fact_distance(identity_facts_of_record(members[keep[result.index]]), truth_facts)
+    return {
+        **shared,
+        "arm": arm,
+        "method": "medoid_survivors",
+        "radius": "",
+        "secs": time.perf_counter() - started,
+        # A computed result: the collection's censoring is carried by the
+        # `medoid` row beside it and by n_censored_members here.
+        "censored": 0,
+        "n_censored_members": len(censored_ids),
+        "fact_dist": distance,
+        "exact_recovery": int(distance == 0),
+        "medoid_cost": result.cost,
+        "LB": "",
+        "ratio": "",
+        "n_candidates": "",
+        "n_ties": "",
+    }
+
+
+# ---------------------------------------------------------------------------
 # One collection: every method, every arm
 # ---------------------------------------------------------------------------
 
@@ -423,6 +621,7 @@ def evaluate_collection(
     unit: str,
     alignment_budget: str,
     consensus_budget_s: float | None,
+    fingerprint_budget_s: float | None = None,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     """Run every method on one collection and return ``(method rows, certificate rows)``.
 
@@ -449,6 +648,14 @@ def evaluate_collection(
         Candidate-generation budget passed to the consensus.
     consensus_budget_s : float or None
         Wall-clock budget per consensus call; ``None`` runs it unguarded.
+    fingerprint_budget_s : float or None, optional
+        Per-member wall-clock budget for the arms of ``BUDGETED_MATRIX_ARMS``.
+        An arm that fails to canonicalize *any* member of the collection reports
+        no medoid for it (D-KBf1): the certificate bounds the optimum over the
+        ``N`` members, so a medoid over the survivors would be printed under a
+        column headed "certified ratio" while certifying a different object.
+        ``None`` screens nothing, which is what a smoke or a replay of the
+        pre-D-KBf1 rows wants.
 
     Returns
     -------
@@ -472,11 +679,55 @@ def evaluate_collection(
 
     for arm in arms:
         started = time.perf_counter()
-        try:
-            D = np.asarray(
-                build_matrix(members_H, arm, member_ids=member_ids, cache_dir=None),
-                dtype=np.float64,
+        screened = fingerprint_budget_s is not None and arm in BUDGETED_MATRIX_ARMS
+        # Outside the try: a refused fork is a dead process, not a dead arm, and
+        # reporting it as a censoring would mark every collection censored.
+        dropped_ids = (
+            censored_members(arm, members_H, member_ids, float(fingerprint_budget_s or 0.0))
+            if screened
+            else ()
+        )
+        if dropped_ids:
+            logger.info(
+                "arm %s: %d of %d members censored on %s; no medoid for this collection",
+                arm,
+                len(dropped_ids),
+                len(members_H),
+                collection_id,
             )
+            rows.append(
+                {
+                    **shared,
+                    "arm": arm,
+                    "method": "medoid",
+                    "radius": "",
+                    "secs": time.perf_counter() - started,
+                    "censored": 1,
+                    "n_censored_members": len(dropped_ids),
+                    "fact_dist": "",
+                    "exact_recovery": "",
+                    "medoid_cost": "",
+                    "LB": "",
+                    "ratio": "",
+                    "n_candidates": "",
+                    "n_ties": "",
+                }
+            )
+            supplement = survivor_medoid_row(
+                arm=arm,
+                members=members,
+                members_H=members_H,
+                member_ids=member_ids,
+                censored_ids=dropped_ids,
+                truth_facts=truth_facts,
+                shared=shared,
+                budget_s=fingerprint_budget_s,
+            )
+            if supplement is not None:
+                rows.append(supplement)
+            continue
+        try:
+            D = medoid_matrix(members_H, member_ids, arm, fingerprint_budget_s)
             result = medoid(D)
             secs = time.perf_counter() - started
             distance = fact_distance(identity_facts_of_record(members[result.index]), truth_facts)
@@ -488,6 +739,7 @@ def evaluate_collection(
                     "radius": "",
                     "secs": secs,
                     "censored": 0,
+                    "n_censored_members": 0 if screened else "",
                     "fact_dist": distance,
                     "exact_recovery": int(distance == 0),
                     "medoid_cost": result.cost,
@@ -525,6 +777,7 @@ def evaluate_collection(
                     "radius": "",
                     "secs": secs,
                     "censored": 1,
+                    "n_censored_members": 0 if screened else "",
                     "fact_dist": "",
                     "exact_recovery": "",
                     "medoid_cost": "",
@@ -829,6 +1082,7 @@ def run_unit_a(
             unit=unit.key,
             alignment_budget=str(block.get("alignment_budget", "triangle")),
             consensus_budget_s=_budget(block.get("consensus_budget_s")),
+            fingerprint_budget_s=_budget(config.get("fingerprint_budget_s")),
         )
         rows.extend(unit_rows)
         certificate_rows.extend(unit_certificates)
@@ -872,6 +1126,7 @@ def run_unit_b(
         unit=unit.key,
         alignment_budget=str(block.get("alignment_budget", "triangle")),
         consensus_budget_s=_budget(block.get("consensus_budget_s", 1800)),
+        fingerprint_budget_s=_budget(config.get("fingerprint_budget_s")),
     )
     return rows
 
@@ -1141,6 +1396,8 @@ def _apply_smoke(config: dict[str, Any]) -> dict[str, Any]:
     merged["corpus_b"] = {**config["corpus_b"], **(smoke.get("corpus_b") or {})}
     if "medoid_arms" in smoke:
         merged["medoid_arms"] = smoke["medoid_arms"]
+    if "fingerprint_budget_s" in smoke:
+        merged["fingerprint_budget_s"] = smoke["fingerprint_budget_s"]
     merged["smoke"] = True
     return merged
 

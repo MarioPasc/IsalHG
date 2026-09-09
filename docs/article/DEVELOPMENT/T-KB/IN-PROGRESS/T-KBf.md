@@ -689,3 +689,44 @@ of the objective, not of the data".
 deletion members *do* change constant count, so the summed-reach criterion is
 computed over different quantities than when §3.3 tested it. Its conclusion may
 survive or may not; it must be re-run alongside Prop. 5 rather than assumed.
+
+### D-KBf5a — the operative A → A′ gate for Corpus B, pre-registered before the re-run
+
+The rule in `DESIGN.md` §4 is *"If Corpus B shows the consensus no better than
+the medoid, Corpus B goes to the supplement"* — a verdict with **no threshold
+and no test**. It was applied once, informally, on a crippled measurement, and
+the placement of an entire real-data corpus followed. Committed here **before**
+`reach′` produces a single number, so the placement cannot be read as chosen.
+
+**The comparison.** Coverage consensus against the **certified medoid**, on two
+axes: exact fact-level distance to the held-out quarter, and exact-recovery rate.
+
+- **Comparator:** the *best-performing medoid arm on each axis*, not the Isal
+  one — the gate must be conservative against us. `majority_merge` is reported
+  beside them as the reference ceiling and is **not** part of the gate, since it
+  uses constant identities that every other method is denied (`DESIGN.md` §4
+  Methods).
+- **Units:** the common set of Corpus B runs — the D-KBf1 rule, 63 of 69 at
+  present. Corpus B members are real quarters, not generated variants, so the
+  generator change does not move that set; if the re-run's censoring differs,
+  the common set is recomputed and the number stated.
+- **Test:** paired Wilcoxon under the 27-seed harness where seeds exist, sign
+  test on the paired runs where they do not; Holm across the two axes; 0.05.
+- **Verdict:** *"no better"* means the consensus fails to beat the best medoid
+  at Holm-corrected 0.05 **on both** axes. Placement follows from that and from
+  nothing else.
+
+**Both readings pre-stated, so neither is written after the fact.**
+
+- *If the consensus wins under `reach′`:* the explanation of record — "a natural
+  series is not a set of variants of one source, so there is nothing for a
+  consensus to converge to" — is **retracted as an artefact of the reach gate**,
+  and Corpus B becomes the main-text real-data result. The retraction is printed,
+  not silently dropped.
+- *If it still loses:* the explanation **stands**, restated as measured under a
+  working candidate set for the first time, and Corpus B goes to the supplement
+  exactly as the pre-registered rule says.
+
+**One ambiguity resolved rather than left open:** the rule says "the medoid"
+while the campaign now runs eleven medoid arms. Read as the best arm per axis
+(above). Recorded so the reading is not chosen later.

@@ -66,7 +66,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |
 | [`T-OPT`](T-OPT/) | C++ engine revision for the metric-space workload | 1 | 2 |
-| [`T-KB`](T-KB/) | The Isal instruction word for knowledge bases (D-ART4): ordered walk, orbit-pruned `w*_c`, rank-keyed walk, C++ ports, harness arms, RQ re-runs — handoff `../D_ART3/experiments/HANDOFF_2026-09-07_isal.md` | 9 (+4 in progress) | 0 |
+| [`T-KB`](T-KB/) | The Isal instruction word for knowledge bases (D-ART4): ordered walk, orbit-pruned `w*_c`, rank-keyed walk, C++ ports, harness arms, RQ re-runs — handoff `../D_ART3/experiments/HANDOFF_2026-09-07_isal.md` | 10 (+4 in progress) | 0 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)
 

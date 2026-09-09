@@ -424,3 +424,43 @@ but **no `wstar_orbit`**, so RQ2's own budgeted build — the path fixed at
 | **2265308** | **RQ3 pilot** — one NDC cell | D-ART4 note (b): pilot before the full RQ3, since the consensus canonicalises hundreds of candidates per cell and NDC sources are symmetric |
 | **2265309** | RQ2 non-census kinds | exact0, bipartite, oracle, hypercot |
 | **2265310** | RQ2 census array | `afterok:2264831`, dependency read back and verified |
+
+### The RQ3 pilot earned its place — it caught a silent stale-row defect (T-KBn)
+
+D-ART4 note (b) asks for one NDC cell before the full RQ3, on the grounds that
+the consensus canonicalises hundreds of candidates per cell. It found something
+else, and worse.
+
+Job 2265308 completed in 5 minutes with 0 errors and looked healthy. It was not:
+
+| | pilot on the dirty tree | fresh local run |
+|---|---|---|
+| rows | 44 variants / 20 natural | **58 / 27** |
+| wall-clock | 0.3 s | **80 s** |
+| `wstar_orbit` rows | **0** | matrix built, n=20, 1.32 s |
+| `nauty_cert_rows`, `bipartite_ged_assign` | **0** | present |
+| persisted `config.json` | the **new** 11-arm list | the new list |
+
+RQ3 decides what to skip by reading its own **untagged** aggregated row files,
+so a changed arm set leaves every unit "done": it re-aggregated the 2026-09-05
+rows and wrote a fresh `config.json` naming arms those rows do not contain. On
+the real tree (49,027 pre-D-ART5 rows) the full RQ3 would have produced a
+complete, plausible table **with no Isal row at all**, over a provenance stamp
+saying otherwise.
+
+**Scope of the hazard, checked per runner rather than assumed.** Only RQ3 calls
+`_done_units`. RQ4/RQ5/RQ6/RQ7 do not skip; but RQ4/RQ5/RQ6 do not tag either,
+so they would *overwrite* the pre-D-ART5 rows D-ART4 (1) requires be kept. RQ2
+is correct as it stands — it writes `rows_census__<tag>-<unit>.csv`, and today's
+`ndc_classes-wstar_orbit` sits beside the untagged Sep-5 files rather than
+replacing them.
+
+**Operational fix, following this campaign's own precedent.** RQ3–RQ7 run into a
+clean root `~/results/IEEETKDE_isal/` with `matrices` symlinked to the shared
+build — the same separation T-KBe used for the RQ1 harvest
+(`results/IEEETKDE_isal/RQ1_addressing/`, "not into the campaign's frozen
+record"). Nothing is moved or deleted. The runner defect is filed as **T-KBn**.
+
+**Submitted:** full RQ3 as **2265353** into the clean root. RQ2 (2265309 /
+2265310) continues in the shared tree; its rows are tag-separable and its
+census already carries `wstar_orbit`.

@@ -203,3 +203,30 @@ D-ART4 note (c); supplement only) · `wl_l1`, `netlsd`, `hpd_jsd`,
 **Out:** `wstar_rank` (RQ1 only), `isal_ow_rank`, `isal_ow_rank0` (RQ1 policy
 ablation), `fact_rank_roles` (fails M0). `isal_ow_struct` appears **only in
 RQ7**, as the deterministic cost floor.
+
+### D-KBf1a applied — the count, taken after the rule was committed
+
+Rule committed at `6ebbc2f`; the join was run afterwards
+(`scripts/` scratch, `corpora.consecutive_runs(ndc_classes, 4)` against the
+70 censored `wstar_orbit` member ids of the frozen M3 rows).
+
+| | units | with a censored collection member | surviving | retention |
+|---|---|---|---|---|
+| Corpus B, all runs `T ≥ 4` | **69** | 6 | **63** | **0.913** |
+| `T ≥ 5` subset | 46 | 6 | **40** | 0.870 |
+
+**Both conditions hold on both rows** — (a) 63 ≥ 20 and 40 ≥ 20; (b) 0.913 and
+0.870, both ≥ 2/3 — so Corpus B is **scored**, with the three disclosures, not
+reduced to a yield statement.
+
+The footprint is much narrower than the 27-of-171 class figure implies: the
+censoring touches **3 drug classes** (470, 471, 472), each contributing two
+maximal runs, because most of the 27 censored classes have no run of four
+consecutive encodable quarters at all. The survivor-medoid sensitivity row
+therefore covers 6 units.
+
+Still open at run time, and governed by the same rule: the
+**constant-preserving regime row**, whose thinness predates censoring (128 of
+528 consecutive pairs are constant-preserving, so runs all of whose pairs
+preserve the constant set are rare). It is counted when the RQ3 analyzer
+splits the regimes, and falls to a yield statement if either condition fails.

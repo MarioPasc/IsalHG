@@ -289,3 +289,28 @@ than building.
 
 Monitor armed on job state only (never on file counts), self-terminating on the
 terminal condition.
+
+### Provenance obligation for the matrices harvest
+
+The `k`-invariance measurement is not a curiosity: it is **the fact that
+licenses RQ4/RQ5's budget to be read from the RQ1 census**. Without it, a
+reviewer is entitled to ask why a matrix built at the corpus `k` may be censored
+by a screen run at each member's own `k`. It must therefore travel with the
+matrices, not only with this ledger entry.
+
+Job **2264827** started before this was written, so its `config.json` stamp
+does not carry the citation. Two follow-ups, both cheap:
+
+1. At harvest, attach to the matrices run record: *"the censoring census is the
+   per-member screen's; screen and build agree because `w°`/`w*_c` are
+   invariant to surplus pointers (0 mismatches / 43 members, `required_k` 2–9
+   at corpus `k` = 10, cost ratio 0.96–1.03) and the vertex-label count is
+   uniform per corpus (ndc 4, wd50k66 1); pinned by
+   `tests/unit/metric_space/test_isal_engine_k_invariance.py`."*
+2. Fold the same sentence into `matrices.py`'s module docstring at the merge of
+   the RQ2–RQ5 consumer wave, so every later run stamps it. Not done inline
+   here: `matrices.py` is held by the consumer agent's worktree.
+
+Raised by `[IsalHG-Fable]`, which also conceded the reuse fix and asked for its
+precise form to be filed rather than applied — parked as **T-KBl**, landing
+window with or after T-KBj, never between RQ1 and RQ2.

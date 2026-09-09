@@ -874,3 +874,28 @@ submission and is what decides whether the 8-hour wall holds.
 Recorded because the obvious reading — "the fix did not work" — is wrong, and
 because the same trap applies to any runner that memoises across units: a
 one-unit smoke measures warm-up, never throughput.
+
+### D-KBf5 verified on the cluster (RQ3 pilot 2267401)
+
+| | pre-`reach′` full run | pilot under `reach′` |
+|---|---|---|
+| collections censored | 2,626 (`del` 982, `mix` 1,638, B 6) | **1** |
+| Corpus A rows | — | 56 (was 44 at the same cell set) |
+| Corpus B rows | — | 27 (was 20) |
+| Corpus A domain censoring | heavy | **0** |
+| Corpus B censoring | — | 1, the residual **cost** censoring |
+| `medoid_survivors` rows | — | **1**, on that one collection |
+| coverage rows carrying a result | — | A 8/8, B **2/2** |
+
+Three things confirmed at once. The R3 domain violation is **gone** — no Corpus
+A collection is censored, so every variant is now a knowledge base and all
+eleven arms including `wstar_orbit` produce medoids. D-KBf1's **cost**
+censoring still fires correctly and independently, on exactly one Corpus B
+collection, with its survivor-medoid supplement row beside it — so the two
+censoring mechanisms remain separated in the data, which was the point of
+giving them different reasons. And the coverage consensus **returns a result on
+every Corpus B unit it was given**, where the frozen reach left it with a
+mostly empty candidate set.
+
+Full RQ3 submitted under `reach′` into `IEEETKDE_isal_reachprime/`, leaving the
+superseded run intact as the record.

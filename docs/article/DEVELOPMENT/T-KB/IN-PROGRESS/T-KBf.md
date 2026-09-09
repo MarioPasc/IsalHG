@@ -358,3 +358,27 @@ covered synthetically in the consumer wave.
 
 **Resubmitted as 2264831** at `c6a9a8c`, deployed with `--no-build` (Python-only
 change; the extension is current from the 09:07 rebuild).
+
+### The censoring branch pre-tested before the cluster reached it
+
+Job 2264831 hits `ndc_classes/wstar_orbit` — the first real censoring build in
+the campaign's history — about half an hour after launch. The branch was
+exercised locally first, at a 4 ms budget to force censoring:
+
+| unit | censored | result |
+|---|---|---|
+| `ndc_classes/wstar_orbit` | 12 of 40 | 28×28 matrix; sidecar `n_requested 40, n_censored 12, member_ids 28`; manifest `n = 28` over the kept order |
+| `wd50k66/wstar_orbit` | **40 of 40** | `(0, 0)` matrix, `manifest.n = 0`, **reported as success** |
+
+Two things settled. The sidecar **partitions the frozen order** exactly as the
+consumer loader's assertion requires, so D-KBf2's design is sound against the
+real artefact rather than only against synthetic frames. And the fork canary
+**survived 12 censorings inside the non-daemonic supervisor child** — the risk
+that `guarded_budget_call`'s `cpp_fork_is_healthy(recheck=True)` would fire on a
+censored screen and kill the unit does not materialise, which is what licenses
+the 70 censorings the ndc unit is about to take.
+
+The degenerate row is a genuine silent-wrong-result hazard and is parked as
+**T-KBm** rather than fixed inline: the campaign's 60 s budget censors 7 of
+3,988 and 70 of 1,381, so it is not on the submission path, and changing
+censoring behaviour mid-campaign would break census comparability.

@@ -329,3 +329,23 @@ the episode that taught it (provenance in `measured_facts.md`).*
   written and print the interval beside it. Same discipline as refusing to read a
   direction off a null at n = 63, applied to a threshold rather than to a
   comparison.
+
+  **A count is not a liveness signal: every progress figure carries the newest
+  mtime beside it.** A stale directory and a live one are **indistinguishable by
+  file count** — only a timestamp or a write rate separates them. Every RQ4
+  progress figure reported in one session ("stuck at 819", "moved to 974",
+  "1,292") came from a results root frozen five days earlier, while the live root
+  had 1,106 files and was being written to that minute. The handoff already says
+  this for monitors — key on job state, never on file counts — and the reporting
+  was doing exactly what that rule forbids.
+
+  It costs one field: `1,106 files, newest 23:33`. Staleness then announces
+  itself instead of waiting to be suspected, which would have surfaced this at
+  the first report rather than the twentieth.
+
+  **Four of the session's failures had nothing wrong with the method — only with
+  what it was pointed at**: the wrong results root, a model fitted without the
+  corpus's `roles` flag, a membership set of truncated shas, a check whose key
+  omitted `radius`. Alongside "reproduce a campaign quantity beside the new one",
+  these say the same thing: **verify the target, not only the method.** A correct
+  instrument aimed at the wrong object returns a clean number every time.

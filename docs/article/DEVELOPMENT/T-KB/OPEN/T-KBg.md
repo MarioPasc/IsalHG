@@ -154,3 +154,14 @@ Already known to be stale or unsourceable, and **do-not-quote** until re-derived
 | `rows_samples.reach1_frac` "4.7 % / 9.6 %" | ~~do-not-quote~~ **RESOLVED**: struck; the sourced values are in `foundation/rq6_generation_facts.md` from job **2279079**, which passed the pre-registered check with all six eligible counts exact. Quote the three-column form (validity, reach1-given-valid, joint), never `reach1_frac` alone. |
 | completion "within reach 1 75.3 % / 21.0 %" | pre-`reach′`; under `reach′` **76.7 % / 21.3 %** |
 | "256 / 1,000" and "disconnected three times in four" | struck; the sourced values are 0.4157 (NDC) / 0.1260 (WD50K), and no single ratio describes both |
+
+**The precondition runs in BOTH directions.** As written above it audits every
+number the prose carries against a `foundation/` entry. That is silent on the
+inverse, which has already occurred: the word "novel" appeared nowhere in
+`prose.md`, so an RQ6 result and its caveat existed only in the fact base and
+would have been folded by nobody. So the checklist also walks each
+`foundation/` entry and asks which of its results the prose states — and, for
+any it does not, whether that is a deliberate cut or an omission. A result
+present in the fact base and absent from the prose is as much a defect as a
+number in the prose absent from the fact base.
+

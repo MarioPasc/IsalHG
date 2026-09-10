@@ -309,3 +309,13 @@ the episode that taught it (provenance in `measured_facts.md`).*
   mismatch there as disqualifying the new number — a second recorded opinion
   rather than a second check, which is a different kind of redundancy from the
   structural guards and catches a different class.
+
+  **The inverse failure: a source with no number in front of it.** The word
+  "novel" appeared **nowhere** in `prose.md`, so an entire RQ6 result *and* its
+  caveat existed only in `foundation/`. That is the mirror image of the day's
+  other mode — not a quoted number that cannot be sourced, but a sourced result
+  that is quoted nowhere — and **T-KBg's fold precondition does not catch it**:
+  the precondition audits the numbers the prose already carries, and is silent
+  about the ones it should carry and does not. Both directions need checking, so
+  the fold's checklist runs the `foundation/` entries against the prose as well
+  as the prose against the entries.

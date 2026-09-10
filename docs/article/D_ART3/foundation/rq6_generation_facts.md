@@ -213,6 +213,30 @@ normalisations, and the difference runs in the retired arm's favour.**
 **Consequence: state the normalisation per column; change nothing.** Novelty and
 reach1 answer different questions and either normalisation is defensible so long
 as the paper says which. The 1.2-point gap moves no conclusion — novelty is 0.98
-either way — but the figure is **not** cross-arm comparable at finer resolution
-than that, and the paper contrasts the arms, so the sentence must not lean on a
-0.99-vs-0.94 gap of the same order as the artefact.
+either way.
+
+**A caution written here first was wrong and is withdrawn.** It said the paper
+"contrasts 0.99 against 0.94, a gap of the same order as the artefact". Those two
+numbers are **`fact_ngram` on NDC and on WD50K** — the two *collections* for one
+arm, in the `X / Y` form used throughout — **not** a contrast between arms. Both
+sides carry the artefact equally, so that comparison is on a consistent
+normalisation and needs no caution. Written without establishing what the two
+figures were, which is the defect this very section documents.
+
+**The measured novelty, per arm and collection** (`IEEETKDE_isal_reach1b`, 27
+seeds):
+
+| collection | `ow_ngram` | `fact_ngram` | `incidence_ngram` |
+|---|---|---|---|
+| ndc_classes | 0.9172 | **0.9883** | 1.0000 |
+| wd50k66 | 0.9138 | **0.9425** | 1.0000 |
+
+**The fact alphabet is more novel than the ordered walk on both collections** —
+a place the retired comparator beats us, and it is reported as such. The
+artefact inflates the *fact* side, so correcting it **narrows** that lead rather
+than widening it: on NDC from 0.0711 to about 0.0603. The reported gap is
+therefore an over-statement of the comparator's advantage, not an under-statement
+of ours, and the honest sentence says which normalisation produced it.
+
+(`incidence_ngram` at 1.0000 is not a result: its validity is 0.0190 / 0.0102, so
+the handful of samples that decode at all are all novel.)

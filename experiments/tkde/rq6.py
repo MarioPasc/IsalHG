@@ -333,16 +333,36 @@ class Reach1Index:
     The shared-remainder test that replaces them is not a heuristic: ``reach'``
     is by definition the least ``|A| + |B|`` whose compacted remainders agree,
     so a common word within budget *is* the answer.
+
+    Bucketing returns, on a key that **is** valid after compaction: the fact
+    count. If ``reach'(K, K2) <= 1`` then the compacted remainders are
+    isomorphic, hence carry the same number of facts, so
+    ``m - |A| = m2 - |B|`` with ``|A| + |B| <= 1``; the only solutions are
+    ``(0,0)``, ``(1,0)`` and ``(0,1)``, giving ``|m - m2| <= 1``. Scanning the
+    three buckets ``m-1, m, m+1`` is therefore exact, and unlike the constant
+    count the fact count *is* preserved up to the budget, because a deletion
+    removes exactly one fact while compaction removes only constants.
     """
 
     def __init__(self, members: Sequence[SparseHypergraph]) -> None:
         self._members = list(members)
+        self._by_facts: dict[int, list[int]] = {}
+        for index, H in enumerate(self._members):
+            self._by_facts.setdefault(H.n_edges, []).append(index)
         self._deletions: dict[int, dict[Word, int]] = {}
 
     def _member_deletions(self, index: int) -> dict[Word, int]:
         if index not in self._deletions:
             self._deletions[index] = _deletion_keys(self._members[index])
         return self._deletions[index]
+
+    def _candidates(self, sample: SparseHypergraph) -> list[int]:
+        """Member indices whose fact count is within the budget of ``sample``'s."""
+        m = sample.n_edges
+        out: list[int] = []
+        for delta in (-1, 0, 1):
+            out.extend(self._by_facts.get(m + delta, ()))
+        return out
 
     def within_one(self, sample: SparseHypergraph) -> bool | None:
         """Whether some member is within ``reach' <= 1`` of ``sample``.
@@ -354,16 +374,19 @@ class Reach1Index:
             ``r_max = 1``, preserving the tri-state the callers expect: the
             question was not answerable rather than answered "no".
         """
+        candidates = self._candidates(sample)
+        if not candidates:
+            return None
         sample_deletions = _deletion_keys(sample)
         answerable = False
-        for index, member in enumerate(self._members):
-            if not compatible(sample, member, 1):
+        for index in candidates:
+            if not compatible(sample, self._members[index], 1):
                 continue
             answerable = True
             member_deletions = self._member_deletions(index)
             shared = sample_deletions.keys() & member_deletions.keys()
             if any(sample_deletions[w] + member_deletions[w] <= 1 for w in shared) and (
-                reach(sample, member, r_max=1) is not None
+                reach(sample, self._members[index], r_max=1) is not None
             ):
                 return True
         return False if answerable else None

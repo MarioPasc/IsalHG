@@ -2020,3 +2020,57 @@ before the number existed — I had written the expected reading into the output
 text. It now reports the two widths and tells the reader to compare them. Same
 failure mode as the rest of the session: the conclusion written ahead of the
 measurement.
+
+### Correction: the oracle is not a competitor, and the arms sit at chance
+
+**My previous sentence over-conceded** and `[IsalHG-Fable]` caught it. "Everywhere
+else the consensus is the worse choice" is true against the oracle bound and
+**false against anything anyone can run** — no method achieves 2.050, which is
+selected with the truth in hand. The achievable field is the eleven arms. The
+honest statement has **three** terms:
+
+> On the hard stratum the consensus's bulk is **comparable to every actual
+> method** (2.875 against arms spanning 2.800–3.150), **worse than an
+> unachievable oracle** (2.050), and **distinguished by mass at a point no
+> input-returning method can reach** (3/40 at zero, against 0/40 for every arm).
+
+Written the earlier way a reader concludes the consensus is dominated. It is not:
+it is ordinary on the bulk and unique at zero. The oracle stays in the table
+because it is the structural bound that makes the 3 meaningful, but it does not
+stand in for the competitors.
+
+**The mechanism behind the cross-arm null — measured.** The representation-free
+landmark is the expected score of picking a member uniformly at random:
+
+| hard stratum (n = 40) | mean |
+|---|---|
+| oracle bound (best input) | 2.050 |
+| consensus | 2.875 |
+| **random member (chance)** | **3.090** |
+| the eleven arms | 2.800 – 3.150 |
+| worst input | 4.225 |
+
+The arms **straddle chance** (four of eleven score *worse* than 3.090; their mean
+is ≈3.03). So the statement is not "the representations agree" but:
+
+> **No representation's medoid does better than picking a quarter at random.**
+
+**And there is a real defence, not a face-saving one.** The medoid minimises
+summed distance to the other members — a **centrality** criterion, with no reason
+to anticipate a held-out *later* quarter. Scoring at chance on a **prediction**
+axis is what a centrality criterion should do. Corpus B's medoid axis measures
+prediction while the medoid optimises centrality, and no representation bridges
+that gap. That is a finding about the **task**, not a failure of the arms.
+
+**The real relationship between the two corpora** (replacing the false
+unification): on Corpus A the medoid axis is **pinned** and the arms are provably
+one number; on Corpus B the axis is **wide open** and the arms land **at
+chance**. Both say the medoid axis carries no information about representations —
+for entirely different reasons.
+
+**A second self-validating cell.** The oracle bound scores zero on **28 of 68**,
+which is exactly the `truth_in_members` count. It had to be — the best input is
+exact precisely when the truth is among the members — and it is. Together with
+the empty `TRUTH_ABSENT × member × recovered` cell, that is two cells which had
+to come out a particular way and did; they are what make the rest of the table
+credible.

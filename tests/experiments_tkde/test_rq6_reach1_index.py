@@ -13,6 +13,8 @@ at ``reach' = 1``. It fails against the bucketed index and passes against the
 
 from __future__ import annotations
 
+import random
+
 import pytest
 
 from experiments.tkde.rq6 import Reach1Index
@@ -83,3 +85,68 @@ class TestReachOneAcrossConstantCounts:
 def index_answer(sample: SparseHypergraph, member: SparseHypergraph) -> bool | None:
     """The index's verdict for a one-member corpus."""
     return Reach1Index([member]).within_one(sample)
+
+
+class TestFactCountBucketIsExact:
+    """The bucket key must never exclude a pair the definition admits.
+
+    ``Reach1Index`` scans only members whose fact count is within one of the
+    sample's. The argument: isomorphic compacted remainders carry equally many
+    facts, so ``m - |A| = m2 - |B|`` with ``|A| + |B| <= 1`` forces
+    ``|m - m2| <= 1``. The proof is short enough to be wrong, so it is also
+    measured over random pairs.
+    """
+
+    @staticmethod
+    def _random_kb(rng: random.Random, n_nodes: int, n_facts: int) -> SparseHypergraph:
+        edges: set[frozenset[int]] = set()
+        guard = 0
+        while len(edges) < n_facts and guard < 200:
+            guard += 1
+            size = rng.choice((2, 2, 3))
+            if size > n_nodes:
+                continue
+            edges.add(frozenset(rng.sample(range(n_nodes), size)))
+        ordered = sorted(edges, key=sorted)
+        return SparseHypergraph(
+            n_nodes=n_nodes,
+            hyperedges=ordered,
+            n_vertex_labels=2,
+            n_edge_labels=2,
+            vertex_labels=[rng.randrange(2) for _ in range(n_nodes)],
+            edge_labels=[rng.randrange(2) for _ in ordered],
+        )
+
+    def test_no_reachable_pair_is_outside_the_bucket(self) -> None:
+        rng = random.Random(20260910)
+        checked = admitted = 0
+        for _ in range(300):
+            a = self._random_kb(rng, rng.randint(3, 6), rng.randint(2, 5))
+            b = self._random_kb(rng, rng.randint(3, 6), rng.randint(2, 5))
+            if a.n_edges == 0 or b.n_edges == 0:
+                continue
+            checked += 1
+            if reach(a, b, r_max=1) is not None:
+                admitted += 1
+                assert abs(a.n_edges - b.n_edges) <= 1, (
+                    f"reach' <= 1 across a fact-count gap of "
+                    f"{abs(a.n_edges - b.n_edges)}; the bucket key is unsound"
+                )
+        assert checked > 100, f"only {checked} pairs exercised"
+        assert admitted > 0, "no pair was within reach 1; the test asserts nothing"
+
+    def test_index_agrees_with_a_brute_force_scan(self) -> None:
+        rng = random.Random(4242)
+        members = [self._random_kb(rng, rng.randint(3, 5), rng.randint(2, 4)) for _ in range(12)]
+        members = [H for H in members if H.n_edges > 0]
+        index = Reach1Index(members)
+        disagreements = 0
+        for _ in range(60):
+            sample = self._random_kb(rng, rng.randint(3, 5), rng.randint(2, 4))
+            if sample.n_edges == 0:
+                continue
+            brute = any(reach(sample, H, r_max=1) is not None for H in members)
+            answer = index.within_one(sample)
+            if brute and answer is not True:
+                disagreements += 1
+        assert disagreements == 0, f"{disagreements} reachable samples were missed by the index"

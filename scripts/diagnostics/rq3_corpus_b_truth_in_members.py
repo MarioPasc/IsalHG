@@ -267,9 +267,13 @@ def oracle_report(
         print()
         print(f"-- {label}: n = {len(units)} --")
         w_vals = [float(max(dists[c])) for c in units]
+        # The representation-free landmark: the expected score of picking a
+        # member uniformly at random. An arm that lands here beat nothing.
+        r_vals = [sum(dists[c]) / len(dists[c]) for c in units]
         for name, vals in (
             ("consensus", c_vals),
             ("oracle bound (best input)", o_vals),
+            ("random member (chance)", r_vals),
             ("worst input", w_vals),
         ):
             zero = sum(1 for v in vals if v == 0)

@@ -1582,3 +1582,29 @@ standalone, so T-KBo can be fixed and RQ6 re-run on its own — the RQ3 rows fro
 
 Nothing else in RQ6 is implicated: validity 1.000, connectivity, fidelity and
 the alignment interiors do not use the index. The headline results are unchanged.
+
+### RQ7's `|Aut|` axis is populated with real spread (interim, machinery only)
+
+Verified on 8,100 sampled sweep rows from 176 completed row files — **machinery,
+not science**; RQ7 is incomplete and no conclusion is drawn.
+
+`aut_bucket` carries genuine spread rather than being a constant column:
+
+| stratum | rows |
+|---|---|
+| `< 1e3` | 7,520 |
+| `1e3–1e6` | 430 |
+| `≥ 1e7` | 150 |
+
+That is D-ART4 (3)'s *"cells over `(m, k, |Aut|)`, since `|Aut|` is the measured
+frontier, not `m`"* actually measured. A constant column here would have looked
+identical in every summary and invalidated the symmetry axis silently, which is
+why it is worth checking before the analysis rather than during it.
+
+All five sweep arms are present — `isalhg_levenshtein` (the no-nauty cell),
+`wstar_orbit` (oracle), `isal_ow_struct` (order-only cost floor), `nauty_cert`
+(the certificate) and `fact_rank` (the retired comparator) — so RQ7 measures the
+full four-cell nauty ablation of D-ART4 (3b) on the cost axis, which is where
+D-ART5's claim that the envelope moves *from `|Aut|` to `(m, k)`* gets tested.
+Censoring is 494 of 8,100 (6.1 %), expected since the sweep deliberately
+includes cells past the frontier.

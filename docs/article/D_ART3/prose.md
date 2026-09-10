@@ -168,9 +168,14 @@ and *a closed language* — every word decodes to a knowledge base. Prop. C.4
 now proves what was only measured: every word of `Σ_HG` decodes to a
 **connected** knowledge base with no isolated constant, so every prefix,
 every edit, every alignment interior and every generated sample is one.
-Measured again in RQ6: 1,000/1,000 samples of the Isal generator are
-connected, against 256/1,000 for a fact-list generator whose samples are
-valid but disconnected three times in four.
+Measured again in RQ6, at campaign scale (27 seeds x 10,000 samples per
+collection): every sample of the Isal generator is valid **and** connected —
+270,000/270,000 on NDC and 270,000/270,000 on WD50K, validity 1.0000 and
+connectivity 1.0000 on both. The fact-list generator's samples are all valid
+but connected only 41.6 % of the time on NDC and 12.6 % on WD50K; no single
+ratio describes both collections. The sharper contrast is the third generator:
+an incidence-list serialisation with a strict decoder must **reject 98.1 %
+(NDC) and 98.98 % (WD50K) of its own output**, against validity 1 by theorem.
 
 **Compactness** rides along: `|w| ≤ m(1+kn)` (proved); measured medians of 6
 (WD50K) and 8 (NDC) instructions per member against 12 rows of the canonical
@@ -388,7 +393,7 @@ sections, in order.
 | Thm 2 | Metric: `d(K,K') = d_Lev` on the canonical token sequences is a metric on isomorphism classes, one `(k, vocabulary)` per comparison | proved (Corollary A; Corollary C for the deterministic programs) | all |
 | **Thm 3** | **Exactness of every deterministic canonical program**: an emitter along a canonical labelling that round-trips through `S2H` is a complete isomorphism invariant — the ordered walk `w°` and the rank-keyed greedy walk `w*_ρ` in particular | proved (Theorem C, `theorem_c_ordered_walk.tex`) | RQ1, RQ2 |
 | Prop 1 | Length and key size: `\|w\| ≤ m(1+kn)` for every Isal program; measured medians 6 / 8 instructions (WD50K / NDC) against 12 certificate rows; fixed-width bits against the incidence list | proved / measured | RQ1, RQ7 |
-| Prop 2 | Closure **and connectivity**: the interpreter is total, and every word of `Σ_HG` decodes to a *connected* knowledge base with no isolated constant — hence every prefix, edit, alignment interior and generated sample | proved (Prop. C.4); measured 1,000/1,000 connected samples vs 256/1,000 for a fact-list generator | RQ3, RQ6 |
+| Prop 2 | Closure **and connectivity**: the interpreter is total, and every word of `Σ_HG` decodes to a *connected* knowledge base with no isolated constant — hence every prefix, edit, alignment interior and generated sample | proved (Prop. C.4); measured validity 1.0000 **and** connectivity 1.0000 on 270,000 samples per collection (`ow_ngram`, 27 seeds x 10,000, both NDC and WD50K), against fact-list connectivity 0.4157 (NDC) / 0.1260 (WD50K) and an incidence-list generator rejecting 98.10 % / 98.98 % of its own samples | RQ3, RQ6 |
 | Prop 3 | Certificates: medoid `≤ (2 − 2/N)·OPT`; `LB ≤ OPT`; hence `LB ≤ OPT ≤ Σ_i d(M, K_i)` certifies any candidate | proved (Jiang–Münger–Bunke 2001 for the medoid) | RQ3 |
 | Prop 4 | Fact-level simulation: a fact insertion is reachable through a non-canonical word with the pointer displacement as an additive cost, so the ball of radius `r` contains every knowledge base within `r` fact insertions up to that cost | measured (1,200/1,200 insertion witnesses, 717/717 deletions) | RQ1, RQ3 |
 | Prop 5 | Source identifiability on the indel ball: if the members are `t` fact insertions from a common source, the source covers all `N` at radius `t` while no member reaches another in fewer than `2t` | measured (source unique maximiser 12/12 at both noise levels; member-to-member reach 0.00–0.02) | RQ3 |
@@ -531,7 +536,8 @@ insertion locality where the constant set is preserved, the refutation of
 content-hashed addresses, the renumbering trade-off. Its price was the
 machine, and with it the two properties the paper claims and the fact list
 cannot: a language closed under every edit whose words are all *connected*
-knowledge bases (its samples are disconnected three times in four), and a
+knowledge bases (its samples are disconnected 58 % of the time on NDC and
+87 % on WD50K), and a
 deletion locality no rank-addressed serialisation has.
 
 **The honest price, now paid.** Three canonical programs were implemented

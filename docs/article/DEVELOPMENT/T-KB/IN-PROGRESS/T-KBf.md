@@ -2286,3 +2286,62 @@ a radius *below* `t` behaves the same way, and the design never asked for one.
 Consequence for the table: the radius column may be collapsed, with the caption
 carrying the reason and the honest N (2,134) so a reader sees a measurement
 rather than an editorial choice.
+
+### The pre-registered check fired — and caught a 2.18× bias in my own fix
+
+Job **2279064** landed. `scripts/diagnostics/rq6_reach1_rederivation_check.py`,
+committed before the rows existed, returned **28 violations**.
+
+**Bit-identity held exactly where predicted**, which is the part that validates
+the method: `rows_completion` 600 rows, `rows_alignment` 60, `rows_rejections`
+358 — all bit-identical. So sampling really is deterministic, the re-run really
+was a re-derivation over the same samples, and the change really did touch only
+the index. Only the three allowed columns moved.
+
+**The direction prediction was falsified.** `reach1_eligible` fell in 28 units.
+
+| collection | model | elig old | elig new | hits old | hits new |
+|---|---|---|---|---|---|
+| ndc | fact_ngram | 8,068 | 26,515 | 352 | 1,238 |
+| ndc | incidence_ngram | 2,367 | 2,713 | 8 | 88 |
+| ndc | ow_ngram | 12,458 | 26,697 | 2,545 | 4,382 |
+| wd50k | fact_ngram | 24,113 | 26,192 | 1,720 | 7,560 |
+| **wd50k** | **incidence_ngram** | **2,764** | **1,266** | 0 | 76 |
+| wd50k | ow_ngram | 25,572 | 26,647 | 3,191 | 7,321 |
+
+**Two things were wrong, and only the second is a defect.**
+
+*My reasoning.* The old and new gates are **incomparable**, not nested. The old
+required an identical constant count *and* type multiset while ignoring fact
+count; the new bounds fact count while ignoring constants and types. "Strictly
+more permissive" was never true. I asserted a containment I had not checked —
+inside the very artefact whose purpose is to hold me to what was checked.
+
+*The defect it exposed.* The fact-count window is a **necessary** condition for
+`reach′ ≤ 1`, so an empty window is a **proof** that no member lies within reach
+1 — a definite `False`, not an inability to answer. Returning `None` dropped
+those samples from the denominator:
+
+| `wd50k66` / `incidence_ngram` | |
+|---|---|
+| reported | 76 / 1,266 = **0.0600** |
+| true | 76 / 2,764 = **0.0275** |
+| overstatement | **2.18×** |
+
+**It overstated in our favour, on the arm the paper argues against** — the
+direction nobody would have questioned.
+
+**This also corrects the `None` semantics I named before the run.** I said `None`
+meant "out of the comparison domain, a censoring category". Under the *frozen*
+reach that was right: a differing constant count left the relation undefined.
+Under `reach′` there is no undefined case, so the tri-state has no third referent.
+`within_one` now returns a plain `bool`, every decoded sample is answerable, and
+the denominator is the decoded subset itself.
+
+Re-running as **2279079** into `IEEETKDE_isal_reach1b/`. The first `reach1` root
+is kept as the superseded run whose entire value was catching this.
+
+**Worth recording as a method point:** a pre-registered prediction that rested on
+an unchecked assumption *still did its job*. It failed loudly and the failure
+pointed at a real bias. That is a stronger argument for pre-registration than a
+prediction that holds would have been.

@@ -2345,3 +2345,46 @@ is kept as the superseded run whose entire value was catching this.
 an unchecked assumption *still did its job*. It failed loudly and the failure
 pointed at a real bias. That is a stronger argument for pre-registration than a
 prediction that holds would have been.
+
+#### Pre-registered prediction for 2279079, written before it lands
+
+The `None` → `False` fix makes **every decoded sample answerable**, so
+`reach1_eligible` must become exactly the decoded subset size:
+
+| cell | predicted `reach1_eligible` | 2279064 gave |
+|---|---|---|
+| ndc / `ow_ngram` | **27,000** (27 seeds × 1,000) | 26,697 |
+| ndc / `fact_ngram` | **27,000** | 26,515 |
+| wd50k / `ow_ngram` | **27,000** | 26,647 |
+| wd50k / `fact_ngram` | **27,000** | 26,192 |
+| ndc / `incidence_ngram` | **5,135** (= `n_valid`) | 2,713 |
+| wd50k / `incidence_ngram` | **2,764** (= `n_valid`) | 1,266 |
+
+Any cell missing its target means the fix is incomplete. Unlike the falsified
+prediction, this one follows from the code rather than from an assumed
+containment between two gates.
+
+#### `reach1` shares connectivity's denominator defect — and the joint rate factorises
+
+Raised by `[IsalHG-Fable]`, and it is the same structure one table over.
+`reach1` counts over `decoded[:reach1_subset]` — the **valid** subset. At
+validity 1.0000 that is 1,000 per seed of 10,000 drawn; for `incidence_ngram` it
+is however few decoded, which is why **2,764** appeared as a denominator and is
+exactly that cell's `n_valid`.
+
+No re-run is needed to state it, because the joint rate factorises:
+
+> `P(valid AND within reach 1) = validity × reach1_frac`
+>
+> `wd50k66` / `incidence_ngram`: 0.0102 × 0.0275 = **0.00028**
+
+So the table carries three columns — validity, reach1 **given valid**, and the
+joint — exactly as Prop 2 now does. Third table today whose tell was one arm's
+denominator being smaller than the others for a reason nobody had stated.
+
+**Direction is reported per arm, never as one claim.** Overstating
+`incidence_ngram`'s reach1 makes the *baseline* look better, so that defect ran
+**against** us and its correction runs **for** us — the direction that gets waved
+through. The eligible counts move both ways between runs, so no single sentence
+covers them and the table prints the correction factor per arm and per
+collection.

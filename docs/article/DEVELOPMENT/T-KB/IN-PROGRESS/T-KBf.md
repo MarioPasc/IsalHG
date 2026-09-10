@@ -2501,3 +2501,63 @@ refuted as written and I am not softening it — but a reader should know the
 margin is a single member, because "orbit does not recover materially" and
 "orbit recovers 24.7 % against a 25 % bar" are different sentences and only the
 second is honest at this margin.
+
+### tail600 — confound ruled out, and what the inversion actually means
+
+**The node-load confound is ruled out**, checked before write-up because the
+comparison is wall-clock across two arms on a shared cluster:
+
+| | |
+|---|---|
+| shards carrying **both** arms | **16 of 16** — zero segregated |
+| `host_cpu` | identical for all 130 calls (Xeon Gold 6230R) |
+| **within-shard direction** | rank > orbit in **10** shards, orbit > rank in **2**, 4 ties |
+
+So the arms are interleaved within every task, any per-node slowness hits both
+equally, and **the inversion is consistent within shards** rather than a pooling
+artefact. Node load does not explain a 26-point differential.
+
+**The inversion is what the two complexity classes predict** (`[IsalHG-Fable]`).
+A tenfold budget buys very different progress depending on how cost grows:
+
+- **`wstar_orbit` is a tie-complete *search*.** Its censored members are the ones
+  where that search explodes; 10× the time is ~3.3 doublings of an exponential,
+  which barely dents them → **24.7 %**.
+- **`wstar_rank` is a deterministic greedy *walk*.** Its censored members are
+  merely large; 10× the time is roughly a doubling of tractable size → **50.9 %**.
+
+**This is better evidence for the design's own thesis than the prediction would
+have been**: that **the search, not the alphabet and not the arity, is what
+costs**. The four-cell reading gains a measured cost dimension — order alone is
+microseconds, the tie key is expensive but tractable, the search is intractable
+on its own tail.
+
+**What the prediction got wrong, and it is a shared error.** It inferred the
+*unobserved* distribution from the observed one: 32 orbit completions in [30, 60)
+implied its censored members sat just over the line, rank's zero implied its sat
+far over. But completions in [30, 60) describe the right tail of the members that
+**finished**; a censored member's recorded seconds are the budget by construction
+and say nothing about how far past it the true cost sits. For an exponential
+process across varying arity that spread is orders of magnitude.
+
+### What is rewritten, precisely — and what is not
+
+**The sentence that dies is the *explanation*, not the census.** "The rank key
+does not remove it either" is **refuted**: the rank key helps substantially. The
+corrected R2 reading is that the **orbit** engine's residual tail is the search
+itself, which a tenfold budget barely moves, while the **rank** engine's is
+expensive but tractable. RQ7's envelope sentence inherits the same correction.
+
+**D-ART5 does not reopen.** Its rationale weighed cost explicitly, and the
+censoring difference between the arms is 24 members at 60 s and would be 32 at
+600 s. The decision rested on the definitional argument and on locality, not on
+the two tails sharing a mechanism.
+
+### Clause 1 was never resolvable at n = 77
+
+19/77 = 0.247, **95 % Wilson CI [0.164, 0.354]** — the 25 % threshold sits
+**inside its own confidence interval**. The clause was decided by a coin from the
+moment it was written with a fixed cut and no power consideration. It stands
+**REFUTED as written** — a pre-registered threshold is not softened after the
+fact — and the interval is printed beside it so nobody leans on the verdict in
+either direction.

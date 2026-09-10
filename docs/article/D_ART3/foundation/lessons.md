@@ -319,3 +319,13 @@ the episode that taught it (provenance in `measured_facts.md`).*
   about the ones it should carry and does not. Both directions need checking, so
   the fold's checklist runs the `foundation/` entries against the prose as well
   as the prose against the entries.
+
+  **A pre-registered threshold needs a power statement written at the same
+  moment, or it pre-registers a coin flip.** tail600's clause 1 was committed in
+  code before any data was read — correct discipline — as "orbit recovers ≥ 25 %
+  of its 77". It landed at 19/77 = 24.7 %, whose 95 % Wilson interval is
+  [0.164, 0.354]: **the threshold sits inside its own confidence interval**, so
+  at n = 77 the clause could never have resolved anything. Report it refuted as
+  written and print the interval beside it. Same discipline as refusing to read a
+  direction off a null at n = 63, applied to a threshold rather than to a
+  comparison.

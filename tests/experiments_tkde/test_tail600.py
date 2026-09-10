@@ -461,10 +461,11 @@ class TestScore:
         """If most of the 53 complete, the mechanism clause must say so."""
         rows = _rows("wstar_orbit", 70, 7) + _rows("wstar_rank", 45, 8)
         _, verdicts = score(rows)
-        # The fourth is the differential clause: both arms recover heavily here
-        # (90.9% vs 84.9%), so there is no differential to support the mechanism
-        # claim and it is REFUTED alongside the per-arm ones.
-        assert [v.outcome for v in verdicts] == [CONFIRMED, REFUTED, REFUTED, REFUTED]
+        # The fourth is the differential clause. Rank recovering 84.9% refutes
+        # clause 2 on its own; the differential is INDETERMINATE rather than
+        # REFUTED because orbit is nominally higher (90.9%) but the interval
+        # spans zero -- the two facts are separate and both are reported.
+        assert [v.outcome for v in verdicts] == [CONFIRMED, REFUTED, REFUTED, INDETERMINATE]
 
     def test_the_report_names_every_outcome(self) -> None:
         tallies, verdicts = score(_rows("wstar_orbit", 1, 76) + _rows("wstar_rank", 0, 53))
@@ -614,15 +615,56 @@ class TestDifferentialVerdict:
         )
         assert verdict.outcome == analyze_tail600.CONFIRMED
 
-    def test_comparable_rates_refute_even_when_both_clauses_pass(self) -> None:
-        """The case a per-arm rate hides: 45.5% vs 45.3% is not a differential."""
+    def test_the_underpowered_middle_case_is_indeterminate_not_refuted(self) -> None:
+        """An estimate favouring the claim but spanning zero is not a refutation.
+
+        At 77 and 53 members the comparison cannot resolve a moderate
+        differential, so labelling it REFUTED would retire a true claim -- and
+        this verdict propagates to R2, RQ7's envelope sentence and D-ART5's
+        rationale, so it would rewrite three claims on insufficient data.
+        Raised by ``[IsalHG-Fable]``.
+        """
+        verdict = analyze_tail600.verdict_differential(
+            self._tally("wstar_orbit", 30, 47), self._tally("wstar_rank", 14, 39)
+        )
+        assert verdict.outcome == analyze_tail600.INDETERMINATE
+        assert "UNDERPOWERED" in verdict.detail
+        assert "95% CI" in verdict.detail
+
+    def test_the_detail_carries_the_difference_and_its_interval(self) -> None:
+        verdict = analyze_tail600.verdict_differential(
+            self._tally("wstar_orbit", 30, 47), self._tally("wstar_rank", 5, 48)
+        )
+        # The verdict must be readable from the numbers, not from the label.
+        assert "difference" in verdict.detail and "95% CI" in verdict.detail
+
+    def test_newcombe_interval_matches_the_published_example(self) -> None:
+        """Newcombe (1998) Stat Med 17:873-890, method 10: 56/70 vs 48/80."""
+        low, high = analyze_tail600.difference_ci(56, 70, 48, 80)
+        assert round(low, 4) == 0.0524
+        assert round(high, 4) == 0.3339
+
+    def test_a_knife_edge_positive_delta_is_indeterminate(self) -> None:
+        """45.5% vs 45.3% nominally favours the claim by a trivial amount.
+
+        REFUTED would assert evidence *against* the claim, which +0.2 points
+        does not provide either. The honest label is that the data cannot
+        distinguish the two tails.
+        """
         orbit = self._tally("wstar_orbit", 35, 42)
         rank = self._tally("wstar_rank", 24, 29)
         assert orbit.completion_fraction >= analyze_tail600.MATERIAL_FRACTION
-        assert rank.completion_fraction >= analyze_tail600.MOST_FRACTION - 0.05
+        verdict = analyze_tail600.verdict_differential(orbit, rank)
+        assert verdict.outcome == analyze_tail600.INDETERMINATE
+
+    def test_a_null_or_inverted_estimate_refutes(self) -> None:
+        """When rank recovers at least as often, the claim genuinely fails."""
+        orbit = self._tally("wstar_orbit", 35, 42)
+        rank = self._tally("wstar_rank", 25, 28)
+        assert orbit.completion_fraction < rank.completion_fraction
         verdict = analyze_tail600.verdict_differential(orbit, rank)
         assert verdict.outcome == analyze_tail600.REFUTED
-        assert "not distinguishable" in verdict.detail
+        assert "INVERTED" in verdict.detail
 
     def test_an_inverted_difference_refutes(self) -> None:
         verdict = analyze_tail600.verdict_differential(

@@ -242,6 +242,39 @@ def verdict_mechanism(tally_: ArmTally) -> Verdict:
     )
 
 
+def _wilson(successes: int, trials: int, z: float = 1.959963985) -> tuple[float, float]:
+    """Wilson score interval for one proportion."""
+    if trials == 0:
+        return (0.0, 1.0)
+    phat = successes / trials
+    denom = 1 + z**2 / trials
+    centre = (phat + z**2 / (2 * trials)) / denom
+    half = z * ((phat * (1 - phat) / trials + z**2 / (4 * trials**2)) ** 0.5) / denom
+    return (max(0.0, centre - half), min(1.0, centre + half))
+
+
+def difference_ci(a_ok: int, a_n: int, b_ok: int, b_n: int) -> tuple[float, float]:
+    """Newcombe's hybrid-score interval for the difference of two proportions.
+
+    Accurate at the sample sizes here (77 and 53) where a normal-approximation
+    interval is not. Built from the two Wilson intervals, per Newcombe (1998),
+    *Statistics in Medicine* 17(8):873-890, method 10.
+
+    Returns
+    -------
+    tuple of float
+        95 % interval for ``p_a - p_b``.
+    """
+    p_a = a_ok / a_n if a_n else 0.0
+    p_b = b_ok / b_n if b_n else 0.0
+    l_a, u_a = _wilson(a_ok, a_n)
+    l_b, u_b = _wilson(b_ok, b_n)
+    delta = p_a - p_b
+    lower = delta - ((p_a - l_a) ** 2 + (u_b - p_b) ** 2) ** 0.5
+    upper = delta + ((u_a - p_a) ** 2 + (p_b - l_b) ** 2) ** 0.5
+    return (max(-1.0, lower), min(1.0, upper))
+
+
 def verdict_differential(orbit: ArmTally, rank: ArmTally) -> Verdict:
     """The claim is DIFFERENTIAL, so the arms are tested against each other.
 
@@ -282,27 +315,38 @@ def verdict_differential(orbit: ArmTally, rank: ArmTally) -> Verdict:
         [rank.completed, rank.censored],
     ]
     _, pvalue = fisher_exact(table, alternative="two-sided")
-    higher = orbit.completion_fraction > rank.completion_fraction
+    low, high = difference_ci(orbit.completed, orbit.total, rank.completed, rank.total)
+    delta = orbit.completion_fraction - rank.completion_fraction
     detail = (
         f"orbit {orbit.completed}/{orbit.total} = {orbit.completion_fraction:.1%} vs "
         f"rank {rank.completed}/{rank.total} = {rank.completion_fraction:.1%}, "
+        f"difference {delta:+.1%} 95% CI [{low:+.1%}, {high:+.1%}], "
         f"Fisher exact two-sided p = {pvalue:.3g}"
     )
-    if pvalue < DIFFERENTIAL_ALPHA and higher:
+    if pvalue < DIFFERENTIAL_ALPHA and delta > 0:
         return Verdict("differential", "wstar_orbit vs wstar_rank", CONFIRMED, detail)
-    if pvalue >= DIFFERENTIAL_ALPHA:
+    if delta <= 0:
+        # The point estimate is null or inverted: the claim genuinely fails,
+        # whether or not the failure reaches significance.
         return Verdict(
             "differential",
             "wstar_orbit vs wstar_rank",
             REFUTED,
-            detail + " -- the two tails are not distinguishable, so the mechanism claim "
-            "is unsupported whatever the per-arm clauses say",
+            detail + " -- the estimate is null or INVERTED, so the mechanism claim fails "
+            "whatever the per-arm clauses say",
         )
+    # The estimate favours the claim but the interval spans zero. That is an
+    # underpowered comparison, not a refutation: at 77 and 53 members Fisher
+    # needs roughly a 25-point gap, so a real mechanism of moderate size lands
+    # here. Labelling it REFUTED would retire a true claim -- and this verdict
+    # propagates to R2, RQ7's envelope sentence and D-ART5's rationale, so it
+    # would rewrite three claims on insufficient data.
     return Verdict(
         "differential",
         "wstar_orbit vs wstar_rank",
-        REFUTED,
-        detail + " -- significant but INVERTED: the rank engine recovers more",
+        INDETERMINATE,
+        detail + " -- favours the claim but the interval spans no differential: "
+        "UNDERPOWERED at these member counts, not refuted",
     )
 
 

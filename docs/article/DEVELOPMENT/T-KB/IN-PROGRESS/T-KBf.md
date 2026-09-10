@@ -2515,7 +2515,26 @@ comparison is wall-clock across two arms on a shared cluster:
 
 So the arms are interleaved within every task, any per-node slowness hits both
 equally, and **the inversion is consistent within shards** rather than a pooling
-artefact. Node load does not explain a 26-point differential.
+artefact.
+
+**Stronger than "consistent": it is significant within the stratification.** A
+paired sign test on the 12 discordant shards gives **two-sided exact p = 0.0386**
+(95 % CI on P(rank favoured | discordant) = [0.552, 0.953]); verified against
+`scipy.stats.binomtest`, which returns the same 0.0386.
+
+**Two tests, answering two different objections on the same data:**
+
+| test | what it answers |
+|---|---|
+| pooled Fisher, −26.3 % CI [−41.6 %, −9.4 %], p = 0.00279 | the size of the effect |
+| **stratified sign test, 10 of 12 shards, p = 0.0386** | **load-independence** — it holds each shard's node and conditions fixed |
+
+The second stands on its own without the pooled result, which is the point: a
+reader who suspects node conditions is answered by a test that never pools across
+them, rather than by an assurance that the hardware was the same. Identical
+hardware under *different load* is exactly the case that would have manufactured
+this differential spuriously, and it is closed by design rather than by
+argument.
 
 **The inversion is what the two complexity classes predict** (`[IsalHG-Fable]`).
 A tenfold budget buys very different progress depending on how cost grows:

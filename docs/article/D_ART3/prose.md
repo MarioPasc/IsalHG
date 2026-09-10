@@ -281,6 +281,16 @@ unpruned search never finished, in 50 s and 7 s. On NDC it completes 48 of
 members whose cost is the displacement search, which pruning cannot touch.
 Both numbers go in the paper.
 
+> **QUALIFIED by the 600 s characterisation (job 2279006, T-KBf).** "Pruning
+> cannot touch it" stands — the orbit engine recovers only 24.7 % of that tail
+> even at a tenfold budget. What does **not** stand is reading the tail as
+> intractable *in itself*: the deterministic rank walk clears **50.9 %** of it at
+> 600 s, significantly more than orbit (−26.3 %, 95 % CI [−41.6 %, −9.4 %],
+> Fisher p = 0.00279; stratified sign test over shards p = 0.0386). So the cost is
+> **the tie-complete search on that tail**, not a property of arity-10 members
+> that no method can address. The census (69 of 77 at arity 10, |Aut| < 10³) is
+> unchanged; only the explanation is. Rewrite at the fold.
+
 **The selection rule was pre-registered** (design record §3): among the
 exact, uncensored arms, the one with the highest fraction of
 constant-preserving edits within two instructions, ties by median; the

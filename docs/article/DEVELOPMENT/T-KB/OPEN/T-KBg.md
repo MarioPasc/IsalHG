@@ -212,3 +212,28 @@ avoid.
 The first table is `foundation/rq6_generation_facts.md` §"Quoted forms", which
 back-fills the twelve forms the prose already carries.
 
+
+**A cross-document consistency pass, over the claims corrected today.** Every
+other check here is **per-number or per-sentence**: the bidirectional audit
+compares prose against entries, the predicate pass checks nouns against
+definitions, the quoted-forms rule matches transformations. **None reads two
+corrected sentences against each other**, and inheritance across documents is
+where drift lives. A paper saying the residual tail is displacement in one
+section and the search in another is worse than one that says either
+consistently — and a reviewer finds it in ten minutes, because contradictions are
+easier to spot than errors.
+
+So the fold runs one pass reading the corrected claims **together**, scoped to
+the list below. Homes verified by grep, not from memory:
+
+| claim | where it lives |
+|---|---|
+| **residual-tail explanation** (displacement vs the search) | `prose.md` §"symmetric-input cost" (**marked QUALIFIED**), `T-KBe`, `T-KBp`, `T-KBf`, `STATE` §10–11. `DECISIONS.md` R2 states only *counts* and is unaffected. |
+| **joint rate / conditional denominators** | `foundation/rq6_generation_facts.md`, `prose.md` (generation ¶), `STATE`, `T-KBo`, `lessons.md` |
+| **per-corpus rule** ("no single ratio describes both") | `prose.md`, `foundation/rq6_generation_facts.md`, this file |
+| **Corpus A's structural floor** (eleven arms = one row) | `T-KBf`, `STATE` §10 |
+| **`reach1` is characterisation, scores nobody** | `foundation/rq6_generation_facts.md`, `RESULTS_WALKTHROUGH.md`, this file |
+| **struck `256/1,000` and "three times in four"** | `prose.md` (replaced), `RESULTS_WALKTHROUGH.md`, `foundation/`, this file |
+| **the Corpus B "collapse" retraction** | `T-KBf`, `STATE` §10 |
+
+Cheap, once, and **at** the fold rather than after it.

@@ -343,20 +343,27 @@ analyzer wrote, so each transformed form is recorded here beside the value it
 came from. Audited against `prose.md` 2026-09-10; the fold adds a line per new
 form as it writes it (T-KBg obligation).
 
-| the prose prints | stored value | where |
-|---|---|---|
-| "270,000/270,000" (valid, and connected) | validity 1.0000, connectivity 1.0000 × 270,000 drawn | `prose.md:173` |
-| "reject **98.10 %** (NDC)" | `incidence_ngram` rejection 0.9810 | `:177`, `:423` |
-| "**98.98 %** (WD50K)" | rejection 0.9898 | `:178`, `:423` |
-| "a usable knowledge base **every time**" | joint valid∧connected 1.000000 | `:181` |
-| "**one time in two**" (NDC) | 0.415748 | `:181` |
-| "**one in eight**" (WD50K) | 0.125959 | `:182` |
-| "**one in 578**" (NDC) | 0.001730 | `:183` |
-| "**one in 11,739**" (WD50K) | 0.000085 | `:183` |
-| "**7.3 %** are connected" | P(connected \| novel) 0.0726 | `:188` |
-| "of ours, **100 %**" | 1.0000, Prop. C.4 + 270,000/270,000 | `:189`, `:216` |
-| "disconnected **58 %** of the time on NDC" | 1 − 0.4157 = 0.5843 | `:566` |
-| "**87 %** on WD50K" | 1 − 0.1260 = 0.8740 | `:567` |
+| the prose prints | stored value |
+|---|---|
+| "270,000/270,000" (valid, and connected) | validity 1.0000, connectivity 1.0000 × 270,000 drawn |
+| "reject **98.10 %** (NDC)" | `incidence_ngram` rejection 0.9810 |
+| "**98.98 %** (WD50K)" | rejection 0.9898 |
+| "a usable knowledge base **every time**" | joint valid∧connected 1.000000 |
+| "**one time in two**" (NDC) | 0.415748 |
+| "**one in eight**" (WD50K) | 0.125959 |
+| "**one in 578**" (NDC) | 0.001730 |
+| "**one in 11,739**" (WD50K) | 0.000085 |
+| "**7.3 %** are connected" | P(connected \| novel) 0.0726 |
+| "of ours, **100 %**" | 1.0000, Prop. C.4 + 270,000/270,000 |
+| "disconnected **58 %** of the time on NDC" | 1 − 0.4157 = 0.5843 |
+| "**87 %** on WD50K" | 1 − 0.1260 = 0.8740 |
+
+All twelve are in `prose.md`, in the generation paragraph of §2 and the
+fact-list-detour paragraph of §11.1. **Located by phrase, not by line number**:
+`coding_rules.md` §7.2 forbids line citations because they rot, and these
+phrases straddle line wraps anyway — a `grep` for "one time in two" returns
+nothing, because the prose breaks it as "one / time in two". Search the quoted
+phrase's distinctive tail instead ("time in two", "in 578").
 
 Two of these are reciprocals ("one in 578" from 0.001730) and two are
 complements ("58 %" from 0.4157) — the forms a grep for the stored value will

@@ -946,3 +946,48 @@ certificate output, because those rows live in `IEEETKDE/` while the `reach′`
 RQ3 writes to `IEEETKDE_isal_reachprime/`. RQ2 step 4 must be re-run against
 the new certificate file once RQ3 lands. Every other RQ2 section is independent
 of RQ3 and final.
+
+### D-KBf5a applied — the gate says SUPPLEMENT, and the old explanation is refuted
+
+RQ3 under `reach′` (job 2267425, 2:40:19): 62,398 Corpus A rows, 901 Corpus B
+rows, 49,027 certificate rows, and **6 censored collections against 2,626** —
+all six the Corpus B *cost* censorings of classes 470/471/472, **zero `del`/`mix`
+domain censorings**. The R3 violation is gone across the full run.
+
+**The gate, applied exactly as pre-registered** (common set **63 units**, the
+number D-KBf5a named in advance; paired Wilcoxon; Holm across two axes; 0.05):
+
+| | consensus | best medoid | Δ | p |
+|---|---|---|---|---|
+| fact distance | **1.873** | `wl_l1` 1.905 | −0.032 | 0.679 |
+| exact recovery | **0.286** | `wstar_orbit` 0.286 | +0.000 | 1.000 |
+
+Holm 1.358 / 1.000. **The consensus does not beat the best medoid on either
+axis → Corpus B goes to the supplement**, which is what the rule says and what
+it said before any of these numbers existed.
+
+**Primary comparison** (the paper's claim, consensus vs `medoid[wstar_orbit]`):
+fact distance −0.111 (p = 0.265), recovery ±0.000 (p = 1.000). The language
+does not buy a measurable advantage over its own metric on this corpus.
+
+**But the explanation of record is refuted, and that must be printed.** The
+superseded numbers had the consensus at fact distance 2.60 against medoids
+1.84–2.40 and recovery 0.145 against up to 0.226 — *worse than every medoid and
+worse than the merge* — and concluded "a natural series is not a set of variants
+of one source, so there is nothing for a consensus to converge to". Under a
+working candidate set the consensus is **better in point estimate than all
+eleven medoid arms** (1.873 against 1.905–2.270) and **best-equal on recovery**
+(0.286, tying `wstar_orbit` and beating the other ten). It even **beats
+`majority_merge` on recovery** — 0.286 against 0.254 — and that reference uses
+constant identities every other method is denied, though it still leads on fact
+distance (1.667).
+
+So the sentence "the consensus is worse than the medoids and than the majority
+merge" is **false**, and the causal story built on it does not survive. What
+survives is the weaker, measured statement: *on 63 natural runs the consensus is
+not distinguishable from the best medoid at 0.05 on either axis.* The placement
+is unchanged; the reason for it is not the reason previously given.
+
+This is what the pre-registration was for. Had the gate been applied after
+seeing these numbers, "better on all eleven arms but not significantly" could
+have been written up either way.

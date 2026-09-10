@@ -215,3 +215,16 @@ the episode that taught it (provenance in `measured_facts.md`).*
   side by side sit on two different denominators. Report the **joint** rate as
   the headline (valid *and* connected, over samples drawn) and give validity and
   connectivity as its factors.
+
+  **Make the rule a function, not a habit.** Two of these rules each caught a
+  defect in the script written to enforce the *other*, both written by the author
+  who had just filed the lesson. That is not inattention; it is evidence that a
+  rule which must be remembered at every call site will not be. The guards now
+  live in `scripts/diagnostics/rowsio.py` and are the only sanctioned way a
+  diagnostic reads campaign rows: `num()` coerces instead of string-comparing,
+  `key_by()` **raises** when two rows share a key instead of dropping one by
+  last-wins, `load_rows()` announces the row count it consumed, and
+  `expect_rows()` fails when that count is not the expected one. Tested in
+  `tests/experiments_tkde/test_rowsio_guards.py`, including the two silent
+  failures themselves. Habits failed twice in one session; the collision error
+  is what worked.

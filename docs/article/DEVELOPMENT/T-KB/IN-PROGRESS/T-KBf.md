@@ -1412,3 +1412,36 @@ silently.
 confirms. At 4.0 % movement over 4,457 Corpus A collections, roughly 180
 collections change, so the published numbers move slightly and the re-run is not
 optional.
+
+### The suite's two unexplained failures were load, not a mismatch — D-ART5 stands
+
+The full-suite run over the merged consensus change gave **8 failed / 2,942
+passed**, reproducing the agent's result exactly. Two failures were ones this
+session had not seen before, and they guard D-ART5's own claim:
+`test_orbit_matches_unpruned_wstar_c[wd50k66]` and `[ndc_classes]`.
+
+Settled before submitting anything:
+
+| run | result |
+|---|---|
+| inside the full suite, three ssh monitors + an agent active | **2 failed** |
+| the same two tests alone | **2 passed** (254 s) |
+
+The test compares only where the unpruned arm completes, then requires 12
+successful comparisons. A value mismatch would be **deterministic** and would
+have failed in isolation too; it did not. So the failing assert is the count
+guard — under load more members exhaust the 60 s budget, fewer pairs are
+comparable, and the test fails having found no disagreement at all. Filed as
+**T-KBr**.
+
+Neither recent merge could have caused it either: the consensus change touched
+`rq3.py`, `consensus.py`, `language/__init__.py`; the `reach′` change touched
+`reach.py`, `consensus.py`, `ladders.py`. The test calls `budget.engine_word`
+directly, through neither path.
+
+**And the claim never depended on this test.** D-ART5 rests on 7,013/7,013
+identical words, 130,788 identical single-edit distances and 5,174 ladder
+pairs, with the matrices job independently reproducing RQ1's censoring census to
+the member id. The 25-member contract check is the weakest evidence for that
+claim, not the strongest — which is exactly why a load-sensitive verdict on it
+is worth fixing rather than tolerating.

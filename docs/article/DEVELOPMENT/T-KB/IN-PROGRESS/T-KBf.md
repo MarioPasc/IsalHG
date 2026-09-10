@@ -1638,3 +1638,51 @@ tokenisation genuinely matters is the locality and compactness comparison
 Prop 1's "12 rows of the canonical adjacency certificate"), and that is measured
 in **RQ1**, which carries both. Adding `nauty_cert_rows` to the sweep would buy
 a near-duplicate cost curve.
+
+### T-KBp built — and the two tails nest, which sharpens the prediction
+
+The 600 s tail runner is merged (standalone module, launcher, analyzer; rows
+outside every RQ tree per D-ART5 decision 2). Not submitted — four campaign jobs
+are in flight.
+
+**My brief named the wrong input, for a reason I created.** I said to read the
+censored ids from the matrices sidecars. Those hold **170** members over **four**
+collections (ndc 70, ndc_substances 84, wd50k100 11, wd50k66 5) — the matrices
+job's censoring, not the 77 D-ART5 speaks of — and **there is no `wstar_rank`
+sidecar at all**, because removing `wstar_rank` from `ISAL_MATRIX_ARMS` under
+D-ART5 is what stopped one being written. So the brief asked for data an earlier
+decision of mine had made unavailable, and the *refutable* clause about the 53
+was unmeasurable that way. The runner defaults to the RQ1 merged M3 census,
+which D-ART5 names in words and which reproduces 77 and 53 exactly.
+
+**Two facts the ledger did not have**, verified independently from the census:
+
+| | |
+|---|---|
+| `rank ⊆ orbit` | **true — zero rank-only censorings** |
+| orbit \ rank | **24** members orbit censors and rank completes |
+| union / calls at 600 s | 77 / 130 |
+| orbit tail by arity | **69 of 77 at k = 10**, all at k ≥ 7 |
+| orbit tail by symmetry | **69 of 77 at \|Aut\| < 10³** |
+
+The last row re-derives D-ART5's R2 sentence to the member, from the census
+rather than from the wave log.
+
+**The nesting sharpens T-KBe's prediction rather than threatening it.** The
+prediction was that orbit should recover a material fraction of its 77 while
+rank should not recover most of its 53. Now that the 53 are known to be a strict
+subset of the 77 — the hardest core, on which *both* engines fail, with rank
+additionally completing 24 that orbit cannot — the two clauses are no longer
+independent. Rank is strictly the stronger completer on this tail, so "most of
+the 53 still censored at 600 s" is a claim about the hardest 53 of orbit's 77,
+not about a different population. That is a cleaner statement than the ledger
+carried, and it is the form the analyzer must report against.
+
+**Three defects its self-review caught**, each committed separately: a recursive
+glob that would have scored smoke rows with real ones; a cutoff-truncated shard
+that the recovery sweep would have **skipped** rather than redone, because this
+runner writes one row file per shard unlike RQ7; and last-writer-wins provenance
+across 15 shards.
+
+Suite: 2,942 passed / 8 failed at base → **3,038 passed / 8 failed**, failure
+sets identical by `diff`, +96 exactly the new test file.

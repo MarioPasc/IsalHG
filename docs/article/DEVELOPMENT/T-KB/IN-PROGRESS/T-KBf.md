@@ -2237,10 +2237,36 @@ For the 2,323 `t = 2` units radius `t` *is* radius 2, so the work is literally
 the same. For the 2,134 `t = 1` units the radii genuinely differ — different
 candidate pools, different runtimes — **and the outcome is identical anyway**.
 
-> **On Corpus A the consensus is insensitive to the search radius: the larger
-> radius examines more candidates, takes longer, and returns the same winner in
-> every one of the 4,457 units.**
+**CORRECTED (same session, `[IsalHG-Fable]`): the N is 2,134, not 4,457, and
+this answers a pre-registered question rather than reporting an invariance.**
 
-That is a result about the method, not about the bug, and it fell out of the bug
-hunt. It also means the radius column can be collapsed in the paper's table with
-a measured justification rather than an assumption.
+DESIGN §412 sets the two radii up as a question, verbatim: *"Default radius
+`r = 2` (budget unknown to the method); `r = t` reported as the known-budget
+variant."* So the comparison asks whether a method **told the true edit budget**
+beats one that is not.
+
+On the **2,323** units with `t = 2` the two arms are literally the same run
+(`radius "t"` *is* 2), so their agreement is a tautology and is evidence of
+nothing. The genuine comparison is the **2,134** units with `t = 1`, where the
+radii differ in pool *and* in the coverage objective's threshold:
+
+> **Knowing the true edit budget confers no advantage on any of the 2,134 units
+> where the two settings actually differ** — identical `fact_dist`,
+> `exact_recovery`, `winner_origin`, `n_ties` and `medoid_cost` on every one.
+> (The remaining 2,323 units are identical by construction and are named, not
+> counted.)
+
+Quoting 4,457 would have inflated the evidence by more than a factor of two with
+a number that had to come out that way — the same discipline as the empty
+`TRUTH_ABSENT × member × recovered` cell and the oracle's 28 zeros.
+
+Two things my first phrasing got wrong. "Insensitive to the search radius"
+**understated** it — the radius is not only the candidate pool but the coverage
+objective's threshold, so the two runs optimise *different objectives over
+different pools* and still land on the same winner. And it **overstated** it —
+every radius tested here is at or above the true budget, so nothing measured says
+a radius *below* `t` behaves the same way, and the design never asked for one.
+
+Consequence for the table: the radius column may be collapsed, with the caption
+carrying the reason and the honest N (2,134) so a reader sees a measurement
+rather than an editorial choice.

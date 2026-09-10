@@ -452,10 +452,17 @@ runs of the idempotency check no longer differ in in-process state — but that 
 an inference from the change, not something this measured, and it is a
 pre-existing failure either way.
 
-The first attempt at this run died silently at 14 % with no summary and no
-surviving process, while the audit, the smoke and the cost probe were running
-alongside it; re-run alone it completed. Recorded so a reader does not read the
-truncated file as a hang in the changed code.
+**Replicated.** The suite was run twice over the same commit, once alongside the
+audit / smoke / cost probe and once alone (1955.59 s and 1963.13 s). Both give
+**8 failed, 2942 passed, 30 skipped** with the *identical* eight failures, so
+the count is not an artefact of load. Mid-run the first attempt looked dead —
+its output file sat at 14 % and `ps` showed no `pytest` — and this log first
+recorded it as having been killed by memory pressure; **that was wrong**, it was
+still running and finished normally. The `ps` reading was the mistake: the
+sandbox this agent runs commands in does not list the background job's
+processes, so "no process" was not evidence of one. Corrected here rather than
+quietly dropped, since the same reading could be used to explain away a genuine
+hang.
 
 ## 8. Residual risk
 

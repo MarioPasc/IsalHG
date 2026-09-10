@@ -1315,3 +1315,46 @@ is what the caption will carry, and it is deferred until RQ4 completes.
 Recorded now because the columns being *populated* is the thing that could have
 silently failed; the disclosure was pre-registered before the run and is not
 retrofittable.
+
+### RQ6's analyzer names the retired alphabet "ours", and understates the result
+
+Found by a systematic sweep for surviving fact-alphabet couplings, run to test
+rather than assert the pattern that every defect so far sat where the pipeline
+still used the retired representation.
+
+`rq6.py:63` sets `MODEL_OURS = "fact_ngram"`, so the analyzer's H6a verdict
+reads *"every sample **over the fact alphabet** decodes (validity 1.000)"*. Both
+halves of that are true and it is **the wrong arm and the weaker claim**:
+
+| model | validity | connectivity | rejection |
+|---|---|---|---|
+| `fact_ngram` (labelled ours) | 1.0000 | **0.2709** | 0.0000 |
+| `incidence_ngram` (baseline) | 0.0146 | 0.0494 | 0.9854 |
+| **`ow_ngram` (Σ_HG)** | **1.0000** | **1.0000** | 0.0000 |
+
+The fact alphabet is **total but not connected**: 73 % of its samples are
+disconnected knowledge bases, which R3 places outside the Isal domain entirely.
+The Isal alphabet is total **and** connected — validity 1.000 *and*
+connectivity 1.000 — which is Prop. C.4 measured, and is strictly the stronger
+guarantee. `rq6.py:66–68` already says so in a comment; the constant and the
+analyzer verdict disagree with the comment.
+
+**`prose.md` §2.2 already has this right** — "1,000/1,000 samples of the Isal
+generator are connected, against 256/1,000 for a fact-list generator" is this
+measurement (0.271 here). So the prose is safe; what is mislabelled is the
+analyzer's headline, and anyone reading `summary.json` cold would quote the
+weaker number as the paper's.
+
+**Two actions, neither urgent, both before the tables are drawn.** Rename
+`MODEL_OURS` to the Isal model so the verdict quotes Σ_HG, keeping the fact
+alphabet as the retired comparator it is (D-ART4 (1)); and state the connectivity
+column beside validity everywhere, since validity alone is the property the
+retired alphabet also has.
+
+**One question for the arm set, flagged not decided:** `ow_ngram` is the
+**ordered walk**, and D-ART5 puts the ordered walk in RQ7 alone. For generation
+that is defensible — Prop. C.4 is a property of the *alphabet*, not of a
+canonical form, so any Σ_HG word model inherits validity and connectivity — but
+if the paper wants its one Isal row to be `w*_c` throughout, RQ6's model should
+be fitted on `w*_c` words. The measurement would not change (both are Σ_HG);
+only the label would.

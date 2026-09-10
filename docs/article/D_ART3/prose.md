@@ -182,6 +182,25 @@ generator returns a usable knowledge base **every time**, the fact list **one
 time in two** (NDC) and **one in eight** (WD50K), and the incidence list **one
 in 578** and **one in 11,739**.
 
+**Novelty is where the fact list wins, and the win is real**: 0.9883 (NDC) and
+0.9425 (WD50K) of its samples are non-isomorphic to every member, against 0.9172
+and 0.9138 for the Isal generator. What that figure conceals is the price. Of the
+fact list's genuinely new samples, **7.3 % are knowledge bases at all** (WD50K);
+of ours, **100 %**, by Proposition C.4 and not by measurement. The fact list
+produces something connected, which is then usually a near-copy of a member, or
+something novel, which is then usually not a knowledge base — rarely both. Its
+novelty is bought by leaving the domain, and a closed language has nothing to buy
+it with, because there is nowhere outside the domain to go. The dependence is a
+WD50K phenomenon and is stated as one: on NDC the two are nearly independent
+(joint 0.4040 against 0.4109 if they were).
+
+One asymmetry a reader will notice, stated because the answer is evidence of
+care rather than a concession: on the roles-carrying corpus the models are fitted
+on role-aware words and every evaluation column is role-free, so a sample
+reproducing a member up to argument roles counts as a **reproduction**. That
+makes novelty harder to earn, not easier — and hardest for the comparator, whose
+novelty figure is the one that beats ours.
+
 **Compactness** rides along: `|w| ≤ m(1+kn)` (proved); measured medians of 6
 (WD50K) and 8 (NDC) instructions per member against 12 rows of the canonical
 adjacency certificate.

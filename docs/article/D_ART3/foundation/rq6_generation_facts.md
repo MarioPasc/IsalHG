@@ -274,9 +274,14 @@ domain to go.
 
 | | |
 |---|---|
-| novelty overall | 0.9425 |
-| **P(novel \| connected)** | **0.5435** |
-| P(connected \| novel) | 0.0726 |
+| **P(connected \| novel)** — `fact_ngram` | **0.0726** |
+| **P(connected \| novel)** — `ow_ngram` | **1.0000**, by Prop. C.4 (and 270,000/270,000 measured) |
+| P(novel \| connected) — `fact_ngram` | 0.5435, against 0.9425 overall |
+
+**Lead with the first pair.** *Of the samples that generator produces which are
+genuinely new, seven in a hundred are knowledge bases at all; of ours, all of
+them.* One figure from a theorem, one from 270,000 samples. `P(novel | connected)`
+is the same fact told less vividly and belongs in the second sentence.
 
 A connected sample is only about **half** as likely to be novel as one drawn at
 random, and only 7 % of its novel samples are connected. Plainly: *it produces

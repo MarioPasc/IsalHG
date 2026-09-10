@@ -2388,3 +2388,44 @@ denominator being smaller than the others for a reason nobody had stated.
 through. The eligible counts move both ways between runs, so no single sentence
 covers them and the table prints the correction factor per arm and per
 collection.
+
+### tail600 — how the 16 shards get evaluated, fixed before they land
+
+**A correction to my own reading first.** On the first shard (8 rows) I wrote
+that two recoveries "confirm the mechanism T-KBe predicted". They do not, and
+the sentence replaced a **differential** prediction with a general one — *"a 10×
+budget recovers some members"* — which is nearly unfalsifiable and which the data
+would satisfy whatever it showed. `[IsalHG-Fable]` caught it. It is the
+session's own failure mode applied to the session's own summary.
+
+**What was actually pre-registered** (T-KBe §"Pre-stated expectation", T-KBp):
+
+| arm | expectation | basis |
+|---|---|---|
+| `wstar_orbit` | a **material fraction** of its 77 finishes by 600 s | 32 completions in [30, 60) s, 6 in [55, 60) — a population that dense below the budget should continue above it |
+| `wstar_rank` | **most of its 53 still censored** at 600 s | **zero** completions in [30, 60) — the tail is arity-10 displacement enumeration, exponential in arity, not a slow tail of a feasible search |
+
+**The refutable form:** if most of the 53 complete at 600 s, the bimodality is an
+artefact of the budget rather than of the mechanism, and D-ART5's claim that the
+residual tail is **displacement rather than symmetry** needs rewriting — which
+propagates to R2 and to RQ7's envelope sentence.
+
+**Thresholds, sharpened now rather than after.** "Most" is unambiguous (> 50 %).
+"A material fraction" is not, so it is fixed here, before any of the 16 shards
+are read:
+
+1. `wstar_rank` recovery **< 50 %** of 53 (i.e. ≥ 27 still censored) — the
+   pre-registered claim holds; **≥ 50 %** refutes it and the D-ART5 rationale is
+   rewritten, not reinterpreted.
+2. `wstar_orbit` recovery **≥ 20 %** of 77 counts as "material".
+3. The claim is **differential**, so the test is orbit-vs-rank recovery on a
+   2×2 table (Fisher exact, two-sided, α = 0.05). Both arms recovering at a
+   comparable rate refutes the mechanism *even if both are high* — that is the
+   reading a per-arm rate alone would hide.
+
+**Current state: not evidence, and recorded so it cannot be absorbed later.**
+One shard of 16 has landed: 8 rows, 4 per arm. One of the two recoveries is
+`wstar_rank` at 124.7 s, which points *slightly against* clause 1. At four rank
+rows that is noise and no direction is claimed — it is written down now precisely
+so that, when all 16 land, the sentence is evaluated as written rather than
+softened to fit.

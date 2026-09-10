@@ -754,21 +754,48 @@ def main(argv: Sequence[str] | None = None) -> int:
         start_cutoff_epoch=args.start_cutoff_epoch,
     )
     write_rows(paths, table, rows, columns=COLUMNS_TAIL)
-    write_config(paths, {**config, "shard": shard, "n_shards": n_shards, "run_tag": tag})
-    write_summary(
-        paths,
-        {
-            "kind": KIND,
-            "budget_s": budget,
-            "baseline_budget_s": BASELINE_BUDGET_S,
-            "shard": shard,
-            "n_shards": n_shards,
-            "n_rows": len(rows),
-            "n_completed": sum(1 for row in rows if not row["censored"]),
-            **report,
-        },
+    record = {
+        "kind": KIND,
+        "config_path": str(args.config),
+        "config": dict(config),
+        "run_tag": tag,
+        "shard": f"{shard}/{n_shards}",
+        "smoke": bool(args.smoke),
+        "census_root": str(census_root),
+        "results_root": str(results_root),
+        "members": [f"{m.collection}/{m.arm}/{m.member_id}" for m in mine],
+    }
+    summary = {
+        "kind": KIND,
+        "budget_s": budget,
+        "baseline_budget_s": BASELINE_BUDGET_S,
+        "shard": f"{shard}/{n_shards}",
+        "n_rows": len(rows),
+        "n_completed": sum(1 for row in rows if not row["censored"]),
+        **report,
+    }
+    extra = {
+        "kind": KIND,
+        "run_tag": tag,
+        "shard": f"{shard}/{n_shards}",
+        "rows_written": len(rows),
+    }
+    write_config(paths, record)
+    write_summary(paths, summary)
+    write_manifest(paths, extra=extra)
+    # Sixteen shards share one experiment directory, so the three provenance
+    # files above are last-writer-wins. RQ7 answers this by also writing a
+    # per-shard copy, and the same reason applies here: without it fifteen
+    # shards' provenance is gone.
+    shard_paths = resolve_paths(results_root, smoke=bool(args.smoke))
+    shard_paths = RunPaths(
+        root=shard_paths.root,
+        rq=shard_paths.rq,
+        experiment=f"{shard_paths.experiment}/_shards/{shard:03d}",
     )
-    write_manifest(paths, extra={"kind": KIND, "run_tag": tag, "shard": f"{shard}/{n_shards}"})
+    write_config(shard_paths, record)
+    write_summary(shard_paths, summary)
+    write_manifest(shard_paths, extra=extra)
     logger.info("wrote %d rows to %s", len(rows), target)
     if len(rows) < len(mine):
         logger.warning(

@@ -338,6 +338,10 @@ class TestOutputLocation:
         name = tail600.table_file("deadbeef", 3, 16)
         assert name.startswith("tail600__") and "m3" not in name
 
+    def test_shard_row_files_do_not_collide(self) -> None:
+        names = {tail600.table_file("deadbeef", i, 16) for i in range(16)}
+        assert len(names) == 16
+
 
 # ---------------------------------------------------------------------------
 # The verdict logic -- inputs whose answer is known by construction

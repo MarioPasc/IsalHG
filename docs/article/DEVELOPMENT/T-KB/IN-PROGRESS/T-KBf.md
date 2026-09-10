@@ -1172,3 +1172,36 @@ RQ5 finds the degree-sequence floor leading over `wstar_orbit` on knowledge
 bases. Two independent campaigns, different corpora, same conclusion: degree
 structure is the dominant clustering signal and the canonical string does not
 capture it. That is a limitation to state once, plainly, not to rediscover.
+
+### RQ6 — every clause holds, and it is the capability differentiator measured at scale
+
+Analysed from the `reach′` run (`IEEETKDE_isal_reachprime/RQ6_generation/`):
+
+| hypothesis | measured | holds |
+|---|---|---|
+| H6a validity by theorem | **540,000 of 540,000 samples decode** (validity 1.000) | ✔ |
+| H6a baseline rejects | the strict decoder rejects **0.9854 [0.9850, 0.9857]** of 540,000 | ✔ |
+| H6b fidelity | largest mean JSD over the five histograms **0.2118** | ✔ |
+| H6c interiors decode, `fact_rank` | 86 of 86 on wd50k66, 0 pairs censored | ✔ |
+| H6c interiors decode, `isal_ow_struct` | **119 of 119**, 0 censored | ✔ |
+| H6c interiors decode, `pointer` | 86 of 86, 0 censored | ✔ |
+
+**Validity 1.000 against a baseline that rejects 98.5 % of its own samples** is
+the sharpest statement of the closed-alphabet claim the campaign has produced —
+sharper than the 256/1,000-connected figure `prose.md` currently quotes, which
+measures connectivity rather than validity. Both belong; they are different
+properties and the prose should not merge them.
+
+**The "pointer" arm is `w*_c` — the paper's representation, under its
+pre-D-ART5 name.** `rq6._pointer_word` is
+`canonical_string(H, algorithm="canonical", backend="cpp")`, which is the frozen
+tie-complete form. RQ6 needs no separate `wstar_orbit` arm **because orbit
+pruning is value-preserving**: the word is bit-identical (verified 7,013/7,013
+at D-ART5) and only the wall-clock differs, and generation is a statement about
+words. So RQ6's arm set is correct as it stands; what must change is the label
+in the table, from `pointer` to `w*_c`. Recorded so nobody "fixes" RQ6 by adding
+a redundant arm.
+
+Caveat carried: RQ6's **`reach1` column** still needs re-deriving (T-KBo) —
+`Reach1Index` buckets on the frozen precondition. Nothing above depends on it;
+validity, fidelity and the interiors do not use that index.

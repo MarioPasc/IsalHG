@@ -68,21 +68,29 @@ class TestReachOneAcrossConstantCounts:
         sample = _kb(2, [([0, 1], 0)], [0, 0])
         member = _kb(4, [([0, 1], 0), ([1, 2], 1), ([2, 3], 1)], [0, 0, 0, 0])
         assert reach(sample, member, r_max=1) is None
-        assert index_answer(sample, member) in (False, None)
+        assert index_answer(sample, member) is False
 
     def test_exact_match_is_within_one(self) -> None:
         sample = _kb(2, [([0, 1], 0)], [0, 0])
         member = _kb(2, [([0, 1], 0)], [0, 0])
         assert Reach1Index([member]).within_one(sample) is True
 
-    def test_no_compatible_member_is_none(self) -> None:
-        # A member sharing no fact profile at all: not answerable, not "no".
+    def test_an_empty_fact_count_window_is_False_not_None(self) -> None:
+        """An empty window is a proof of "no", never an inability to answer.
+
+        The fact-count window is a *necessary* condition for ``reach' <= 1``, so
+        no member inside it means no member within reach 1. Returning ``None``
+        here excluded such samples from the ``reach1_eligible`` denominator and
+        inflated the rate 2.18x on wd50k66/incidence_ngram.
+        """
         sample = _kb(2, [([0, 1], 0)], [0, 0])
         far = _kb(6, [([0, 1], 2), ([2, 3], 2), ([4, 5], 2)], [1, 1, 1, 1, 1, 1])
-        assert Reach1Index([far]).within_one(sample) is None
+        assert far.n_edges - sample.n_edges > 1, "the window must really be empty"
+        assert Reach1Index([far]).within_one(sample) is False
+        assert reach(sample, far, r_max=1) is None, "and the answer is genuinely no"
 
 
-def index_answer(sample: SparseHypergraph, member: SparseHypergraph) -> bool | None:
+def index_answer(sample: SparseHypergraph, member: SparseHypergraph) -> bool:
     """The index's verdict for a one-member corpus."""
     return Reach1Index([member]).within_one(sample)
 

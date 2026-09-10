@@ -376,30 +376,37 @@ class Reach1Index:
             self._word_index = index
         return self._word_index
 
-    def _eligible(self, sample: SparseHypergraph) -> bool:
-        """Whether any member is inside the fact-count budget of ``sample``.
-
-        The cheap, compaction-sound eligibility gate that replaces the frozen
-        precondition: ``|m - m2| <= 1`` is necessary for ``reach' <= 1``, so a
-        sample with no member in the window is genuinely incomparable and
-        contributes no fraction. It is strictly more permissive than the old
-        gate, which is the direction T-KBo requires.
-        """
+    def _within_budget(self, sample: SparseHypergraph) -> bool:
+        """Whether any member is inside the fact-count budget of ``sample``."""
         m = sample.n_edges
         return any(self._by_facts.get(m + delta) for delta in (-1, 0, 1))
 
-    def within_one(self, sample: SparseHypergraph) -> bool | None:
+    def within_one(self, sample: SparseHypergraph) -> bool:
         """Whether some member is within ``reach' <= 1`` of ``sample``.
 
-        Returns
-        -------
-        bool or None
-            ``None`` when no member is within the fact-count budget of
-            ``sample``, preserving the tri-state the callers expect: the
-            question was not answerable rather than answered "no".
+        Always answerable, so the return is a plain ``bool``. Under the *frozen*
+        reach a differing constant count meant the relation was undefined, and
+        the index returned ``None`` for "not comparable". Under ``reach'`` there
+        is no such case: the fact-count window is a **necessary condition**, so
+        an empty window is a *proof* that no member lies within reach 1 — a
+        definite ``False``, not an inability to answer.
+
+        Reporting those samples as unanswerable excludes them from the
+        ``reach1_eligible`` denominator and inflates the rate. Measured on
+        `wd50k66`/`incidence_ngram`, where the window is empty for more than half
+        the samples: 76/1,266 = 0.0600 reported, against 76/2,764 = 0.0275 true —
+        a **2.18x** overstatement. Caught by the pre-registered direction check
+        on job 2279064, which predicted ``reach1_eligible`` could only rise and
+        found it falling in 28 units.
+
+        (The prediction was wrong for a second reason worth recording: the old
+        and new gates are **incomparable**, not nested. The old one required an
+        identical constant count and type multiset while ignoring fact count;
+        the new one bounds fact count while ignoring constants and types.
+        Neither contains the other.)
         """
-        if not self._eligible(sample):
-            return None
+        if not self._within_budget(sample):
+            return False
         index = self._index()
         for word, ds in _deletion_keys(sample).items():
             for member, dm in index.get(word, ()):
@@ -505,11 +512,12 @@ def run_sample_unit(
         subset = decoded[:reach_subset]
         eligible = hits = 0
         for H in subset:
-            answer = reach_index.within_one(H)
-            if answer is None:
-                continue
+            # Every decoded sample is answerable under reach', so the
+            # denominator is the decoded subset itself. There is no exclusion:
+            # dropping the "no member within the fact-count budget" samples
+            # inflated this rate 2.18x on wd50k66/incidence_ngram.
             eligible += 1
-            hits += int(answer)
+            hits += int(reach_index.within_one(H))
         row["reach1_eligible"] = eligible
         row["reach1_hits"] = hits
         row["reach1_frac"] = hits / eligible if eligible else ""

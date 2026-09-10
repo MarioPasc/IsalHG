@@ -542,6 +542,32 @@ class TestReadRows:
 # ---------------------------------------------------------------------------
 
 
+class TestShardIsDone:
+    """A truncated shard must be re-run, not skipped: the count is the result."""
+
+    def test_a_complete_shard_is_done(self, tmp_path: Path) -> None:
+        path = _write_tail_rows(
+            tmp_path, [_tail_row("a", "wstar_orbit", 1), _tail_row("b", "wstar_orbit", 0)]
+        )
+        assert tail600.shard_is_done(path, 2) is True
+
+    def test_a_truncated_shard_is_not_done(self, tmp_path: Path) -> None:
+        path = _write_tail_rows(tmp_path, [_tail_row("a", "wstar_orbit", 1)])
+        assert tail600.shard_is_done(path, 9) is False
+
+    def test_a_missing_file_is_not_done(self, tmp_path: Path) -> None:
+        assert tail600.shard_is_done(tmp_path / "nothing.csv", 1) is False
+
+    def test_a_header_only_file_is_done_for_an_empty_shard(self, tmp_path: Path) -> None:
+        path = _write_tail_rows(tmp_path, [])
+        assert tail600.shard_is_done(path, 0) is True
+
+    def test_an_empty_file_is_not_done(self, tmp_path: Path) -> None:
+        path = tmp_path / "rows_tail600__tag-000of001.csv"
+        path.write_text("", encoding="utf-8")
+        assert tail600.shard_is_done(path, 0) is False
+
+
 class TestMeasureMember:
     def test_a_non_budgeted_arm_is_refused(self) -> None:
         member = TailMember("ndc_classes", "a", "nauty_cert", k=3)

@@ -740,8 +740,8 @@ def main(argv: Sequence[str] | None = None) -> int:
 
     table = table_file(tag, shard, n_shards)
     target = paths.dir / f"rows_{table}.csv"
-    if _rows_present(target):
-        logger.info("skip shard %d/%d (rows present at %s)", shard, n_shards, target)
+    if shard_is_done(target, len(mine)):
+        logger.info("skip shard %d/%d (%d rows present at %s)", shard, n_shards, len(mine), target)
         return 0
 
     rows = measure_shard(
@@ -770,17 +770,55 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     write_manifest(paths, extra={"kind": KIND, "run_tag": tag, "shard": f"{shard}/{n_shards}"})
     logger.info("wrote %d rows to %s", len(rows), target)
+    if len(rows) < len(mine):
+        logger.warning(
+            "shard %d/%d is PARTIAL (%d of %d rows): the start cutoff deferred the rest; "
+            "the recovery sweep re-runs this shard",
+            shard,
+            n_shards,
+            len(rows),
+            len(mine),
+        )
     return 0
 
 
-def _rows_present(target: Path) -> bool:
-    """True when a shard's row file exists and its header parses."""
+def shard_is_done(target: Path, expected: int) -> bool:
+    """True when a shard's row file exists, parses, and holds all its rows.
+
+    Counting is the whole point, not a refinement of "the file is there". A
+    shard is one row file, so a run truncated by the start cutoff leaves a
+    *partial* file; a presence-only check would then let the recovery sweep skip
+    it and the deferred members would never be measured -- silently subtracting
+    them from the completion count the verdict turns on.
+
+    Parameters
+    ----------
+    target : Path
+        The shard's row file.
+    expected : int
+        How many data rows this shard owns.
+
+    Returns
+    -------
+    bool
+        True when the file holds exactly ``expected`` data rows.
+    """
     if not target.is_file():
         return False
     try:
         with target.open(encoding="utf-8", newline="") as handle:
-            next(csv.reader(handle))
+            reader = csv.reader(handle)
+            next(reader)
+            written = sum(1 for _ in reader)
     except (OSError, StopIteration, UnicodeDecodeError):
+        return False
+    if written != expected:
+        logger.warning(
+            "%s holds %d of %d rows; re-running the shard rather than skipping it",
+            target,
+            written,
+            expected,
+        )
         return False
     return True
 

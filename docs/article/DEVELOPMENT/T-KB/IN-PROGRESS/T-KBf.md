@@ -1525,3 +1525,37 @@ claim, and D-KBf5a's gate result — a tie against the best medoid — reads ver
 differently depending on the answer. A tie achieved by returning inputs is a
 medoid with extra steps; a tie achieved by returning decoded objects is the
 capability claim holding on real data.
+
+### The pilot under the corrected objective — instrumentation live, prediction consistent
+
+Pilot 2275979 (`IEEETKDE_isal_consensus/`), 8 coverage rows:
+
+| field | value |
+|---|---|
+| `winner_origin` | `transfer:i,j` on **8 of 8** |
+| transfer fraction | **1.0000** |
+| exact recovery | 1.0000 |
+| `winner_connected` | **1.0 on all 8** |
+| `n_disconnected_candidates` | 0 on some collections, **10** on another |
+
+The pre-registered check is **consistent**: transfer 1.0000 ≥ the 0.835 bound.
+It is also a *weak* instance — recovery is 1.0 on this tiny smoke, so the bound
+is trivially met. The real test is the full run, where recovery is 0.835 and the
+bound has room to fail.
+
+The instrumentation works end to end: one collection generated **10 disconnected
+candidates**, all were excluded, and its winner is connected — the guard doing
+its job on real data rather than on a fixture. Medoid rows correctly carry empty
+values for the coverage-only columns.
+
+**A mis-read of my own, recorded because it is the second today.** I first
+reported `winner_connected` as "not all 1" and treated it as a possible defect
+in the fix. The field serialises as `'1.0'`, not `'1'`, and my one-liner
+compared against the wrong string; every winner was connected. The earlier one
+was the recovery-axis sign convention in `rq3_consensus_forensics.py`, which
+printed "consensus worse in 3,723 of 3,723" for what was "better in 3,723 of
+3,723". Both were caught by checking values against the summary rather than
+trusting the summary — which is the only reason neither reached the ledger as a
+finding. Ad-hoc analysis one-liners are the least-reviewed code in this campaign
+and have now been wrong twice; anything they produce that would change a
+conclusion gets re-derived from a committed script.

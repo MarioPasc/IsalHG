@@ -282,7 +282,8 @@ domain to go.
 genuinely new, seven in a hundred are **connected**; of ours, all of them.*
 
 **Not "are knowledge bases at all"** — that overstates, and the paper's own
-definition (§2.1, `prose.md:117`) says why: *a knowledge base is a finite set of
+definition (`prose.md` §2.1, *"A knowledge base `K` is a finite set of facts"*)
+says why: *a knowledge base is a finite set of
 facts*, and a disconnected set of facts is still a finite set of facts. What
 those samples fail is **connectivity**, which is *this representation's* domain
 condition (R3, `DECISIONS.md:331` — "connected only; isolated constants not

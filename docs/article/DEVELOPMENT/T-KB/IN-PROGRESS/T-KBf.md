@@ -2417,7 +2417,7 @@ are read:
 1. `wstar_rank` recovery **< 50 %** of 53 (i.e. ≥ 27 still censored) — the
    pre-registered claim holds; **≥ 50 %** refutes it and the D-ART5 rationale is
    rewritten, not reinterpreted.
-2. `wstar_orbit` recovery **≥ 20 %** of 77 counts as "material".
+2. `wstar_orbit` recovery **≥ 25 %** of 77 counts as "material" — the value already committed as `MATERIAL_FRACTION` in `analyze_tail600.py`, which predates this note and is therefore the pre-registration. (I first wrote 20 % here; the code is stricter and the code wins.)
 3. The claim is **differential**, so the test is orbit-vs-rank recovery on a
    2×2 table (Fisher exact, two-sided, α = 0.05). Both arms recovering at a
    comparable rate refutes the mechanism *even if both are high* — that is the

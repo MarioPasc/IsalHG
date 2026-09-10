@@ -17,7 +17,7 @@ from typing import Any
 
 import pytest
 
-from experiments.tkde import tail600
+from experiments.tkde import analyze_tail600, tail600
 from experiments.tkde.analyze_tail600 import (
     CONFIRMED,
     INDETERMINATE,
@@ -438,21 +438,33 @@ class TestVerdictMechanism:
 
 
 class TestScore:
-    def test_scores_all_three_clauses(self) -> None:
+    def test_scores_all_four_clauses(self) -> None:
+        # orbit 51.9% vs rank 3.8%: every per-arm clause holds AND the two tails
+        # are distinguishable, which is the shape the mechanism claim predicts.
         rows = _rows("wstar_orbit", 40, 37) + _rows("wstar_rank", 2, 51)
         tallies, verdicts = score(rows)
         assert [t.arm for t in tallies] == ["wstar_orbit", "wstar_rank"]
-        assert [v.outcome for v in verdicts] == [CONFIRMED, CONFIRMED, CONFIRMED]
+        assert [v.outcome for v in verdicts] == [CONFIRMED, CONFIRMED, CONFIRMED, CONFIRMED]
 
     def test_an_arm_with_no_rows_is_indeterminate_across_its_clauses(self) -> None:
+        # The differential needs both arms, so it is indeterminate too rather
+        # than being scored against an absent census.
         _, verdicts = score(_rows("wstar_orbit", 40, 37))
-        assert [v.outcome for v in verdicts] == [CONFIRMED, INDETERMINATE, INDETERMINATE]
+        assert [v.outcome for v in verdicts] == [
+            CONFIRMED,
+            INDETERMINATE,
+            INDETERMINATE,
+            INDETERMINATE,
+        ]
 
     def test_the_refutation_case_end_to_end(self) -> None:
         """If most of the 53 complete, the mechanism clause must say so."""
         rows = _rows("wstar_orbit", 70, 7) + _rows("wstar_rank", 45, 8)
         _, verdicts = score(rows)
-        assert [v.outcome for v in verdicts] == [CONFIRMED, REFUTED, REFUTED]
+        # The fourth is the differential clause: both arms recover heavily here
+        # (90.9% vs 84.9%), so there is no differential to support the mechanism
+        # claim and it is REFUTED alongside the per-arm ones.
+        assert [v.outcome for v in verdicts] == [CONFIRMED, REFUTED, REFUTED, REFUTED]
 
     def test_the_report_names_every_outcome(self) -> None:
         tallies, verdicts = score(_rows("wstar_orbit", 1, 76) + _rows("wstar_rank", 0, 53))
@@ -578,3 +590,49 @@ class TestMeasureMember:
         with pytest.raises(Tail600Error, match="not a budgeted engine arm"):
             measure = tail600.measure_member
             measure(member, object(), 1.0)
+
+
+class TestDifferentialVerdict:
+    """The tail600 claim is differential, so the arms are tested against each other.
+
+    Clauses 1 and 2 score each arm against its own threshold and can both pass
+    while the two tails are statistically indistinguishable -- which would leave
+    the mechanism claim (a dense near-boundary population for the orbit engine
+    versus arity-10 displacement enumeration for the rank engine) unsupported.
+    Raised by ``[IsalHG-Fable]`` before the 16 shards landed.
+    """
+
+    @staticmethod
+    def _tally(arm: str, completed: int, censored: int) -> analyze_tail600.ArmTally:
+        return analyze_tail600.ArmTally(
+            arm=arm, completed=completed, censored=censored, total=completed + censored
+        )
+
+    def test_mechanism_holds_when_orbit_recovers_and_rank_does_not(self) -> None:
+        verdict = analyze_tail600.verdict_differential(
+            self._tally("wstar_orbit", 30, 47), self._tally("wstar_rank", 5, 48)
+        )
+        assert verdict.outcome == analyze_tail600.CONFIRMED
+
+    def test_comparable_rates_refute_even_when_both_clauses_pass(self) -> None:
+        """The case a per-arm rate hides: 45.5% vs 45.3% is not a differential."""
+        orbit = self._tally("wstar_orbit", 35, 42)
+        rank = self._tally("wstar_rank", 24, 29)
+        assert orbit.completion_fraction >= analyze_tail600.MATERIAL_FRACTION
+        assert rank.completion_fraction >= analyze_tail600.MOST_FRACTION - 0.05
+        verdict = analyze_tail600.verdict_differential(orbit, rank)
+        assert verdict.outcome == analyze_tail600.REFUTED
+        assert "not distinguishable" in verdict.detail
+
+    def test_an_inverted_difference_refutes(self) -> None:
+        verdict = analyze_tail600.verdict_differential(
+            self._tally("wstar_orbit", 10, 67), self._tally("wstar_rank", 40, 13)
+        )
+        assert verdict.outcome == analyze_tail600.REFUTED
+        assert "INVERTED" in verdict.detail
+
+    def test_an_empty_arm_is_indeterminate_not_refuted(self) -> None:
+        verdict = analyze_tail600.verdict_differential(
+            self._tally("wstar_orbit", 0, 0), self._tally("wstar_rank", 5, 48)
+        )
+        assert verdict.outcome == analyze_tail600.INDETERMINATE

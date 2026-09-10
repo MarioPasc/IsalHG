@@ -52,6 +52,9 @@ MATERIAL_FRACTION = 0.25
 #: The fraction that makes "most" (clause 2 and the refutable form).
 MOST_FRACTION = 0.50
 
+#: Significance level for the differential (orbit vs rank) test.
+DIFFERENTIAL_ALPHA = 0.05
+
 CONFIRMED = "CONFIRMED"
 REFUTED = "REFUTED"
 INDETERMINATE = "INDETERMINATE"
@@ -239,6 +242,70 @@ def verdict_mechanism(tally_: ArmTally) -> Verdict:
     )
 
 
+def verdict_differential(orbit: ArmTally, rank: ArmTally) -> Verdict:
+    """The claim is DIFFERENTIAL, so the arms are tested against each other.
+
+    Clauses 1 and 2 score each arm against a threshold, and both can pass while
+    the arms are statistically indistinguishable from one another -- orbit at
+    45 % and rank at 40 % would score CONFIRMED twice and still leave the
+    mechanism claim unsupported, because the claim is that these are *different*
+    tails: a dense near-boundary population above the budget for the orbit
+    engine, and arity-10 displacement enumeration for the rank engine.
+
+    Two arms recovering at a comparable rate therefore refutes the mechanism
+    **even when both individual clauses pass**, which is the reading a per-arm
+    rate alone hides. Fisher's exact test on the 2x2, two-sided.
+
+    Parameters
+    ----------
+    orbit, rank : ArmTally
+        The two censuses.
+
+    Returns
+    -------
+    Verdict
+        ``CONFIRMED`` when the recovery rates differ significantly *and* orbit
+        is the higher of the two; ``REFUTED`` when they do not differ or the
+        ordering is inverted; ``INDETERMINATE`` when either arm has no rows.
+    """
+    if orbit.total == 0 or rank.total == 0:
+        return Verdict(
+            "differential",
+            "wstar_orbit vs wstar_rank",
+            INDETERMINATE,
+            "one arm has no rows: the differential claim cannot be scored",
+        )
+    from scipy.stats import fisher_exact
+
+    table = [
+        [orbit.completed, orbit.censored],
+        [rank.completed, rank.censored],
+    ]
+    _, pvalue = fisher_exact(table, alternative="two-sided")
+    higher = orbit.completion_fraction > rank.completion_fraction
+    detail = (
+        f"orbit {orbit.completed}/{orbit.total} = {orbit.completion_fraction:.1%} vs "
+        f"rank {rank.completed}/{rank.total} = {rank.completion_fraction:.1%}, "
+        f"Fisher exact two-sided p = {pvalue:.3g}"
+    )
+    if pvalue < DIFFERENTIAL_ALPHA and higher:
+        return Verdict("differential", "wstar_orbit vs wstar_rank", CONFIRMED, detail)
+    if pvalue >= DIFFERENTIAL_ALPHA:
+        return Verdict(
+            "differential",
+            "wstar_orbit vs wstar_rank",
+            REFUTED,
+            detail + " -- the two tails are not distinguishable, so the mechanism claim "
+            "is unsupported whatever the per-arm clauses say",
+        )
+    return Verdict(
+        "differential",
+        "wstar_orbit vs wstar_rank",
+        REFUTED,
+        detail + " -- significant but INVERTED: the rank engine recovers more",
+    )
+
+
 def score(rows: Sequence[Mapping[str, Any]]) -> tuple[list[ArmTally], list[Verdict]]:
     """Every arm's census and the three clause verdicts.
 
@@ -262,6 +329,7 @@ def score(rows: Sequence[Mapping[str, Any]]) -> tuple[list[ArmTally], list[Verdi
         verdict_material(orbit),
         verdict_most_censored(rank),
         verdict_mechanism(rank),
+        verdict_differential(orbit, rank),
     ]
 
 

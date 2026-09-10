@@ -305,3 +305,49 @@ what makes ten times the time buy almost nothing.
 the members are asymmetric, so there is no orbit to prune. *The residual cost is
 the branching* — the same enumeration without it clears half the tail.
 
+### The illustration the paragraph should use: 15 matched members
+
+Proposed by `[IsalHG-Fable]` from marginals, **with the explicit instruction not
+to use it until joined** — the operation that had just cost the "eight". Joined
+member-by-member on `(collection, member_id)`, orbit's censored set against
+rank's:
+
+| | |
+|---|---|
+| `rank ⊆ orbit` | **confirmed** — 0 rank-only censorings |
+| orbit-only | **24** |
+
+| k | `\|Aut\|` | orbit-only |
+|---|---|---|
+| 7 | 10³–10⁶ | 5 |
+| 7 | < 10³ | 1 |
+| 8 | 10³–10⁶ | 1 |
+| 9 | < 10³ | 1 |
+| 10 | 10³–10⁶ | 1 |
+| **10** | **< 10³** | **15** |
+
+> **15 members sit at maximum arity and negligible symmetry, where the
+> deterministic walk completes and the branching search does not.**
+
+**This controls for both alternatives by matching rather than by argument:**
+identical arity (k = 10), so the displacement cost is the same; `|Aut| < 10³`, so
+there is no orbit structure to explain the difference; and the strict-subset
+result makes them genuinely orbit-only. **The only remaining difference is
+tie-complete branching against deterministic tie resolution** — which is exactly
+the mechanism the paragraph claims, evidenced at **15** rather than at 2.
+
+The marginal estimate happened to be right this time. It was still worth joining:
+the same subtraction across two marginals is what produced the "eight", and both
+marginals reproduced exactly there too.
+
+### The surviving clause, in its accurate form
+
+Not *"the members are asymmetric"* — true of 69 and false of 8. Write the
+proportion and name the exception:
+
+> **69 of the 77 sit below `|Aut|` 10³, where there is no symmetry to prune; the
+> remaining 8 carry moderate symmetry that pruning reduced without eliminating.**
+
+Nine in ten, stated as a count, with the exception named rather than
+contradicted by the paragraph's own load-bearing evidence.
+

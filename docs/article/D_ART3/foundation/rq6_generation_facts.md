@@ -279,8 +279,21 @@ domain to go.
 | P(novel \| connected) — `fact_ngram` | 0.5435, against 0.9425 overall |
 
 **Lead with the first pair.** *Of the samples that generator produces which are
-genuinely new, seven in a hundred are knowledge bases at all; of ours, all of
-them.* One figure from a theorem, one from 270,000 samples. `P(novel | connected)`
+genuinely new, seven in a hundred are **connected**; of ours, all of them.*
+
+**Not "are knowledge bases at all"** — that overstates, and the paper's own
+definition (§2.1, `prose.md:117`) says why: *a knowledge base is a finite set of
+facts*, and a disconnected set of facts is still a finite set of facts. What
+those samples fail is **connectivity**, which is *this representation's* domain
+condition (R3, `DECISIONS.md:331` — "connected only; isolated constants not
+representable"), and which Prop. C.4 makes automatic for us. The accurate version
+is no weaker: a disconnected sample cannot be encoded, hence cannot be
+canonicalised, compared, or added to the collection.
+
+**Do not generalise it to the comparator's own requirements.** Whether the fact
+list needs connectivity is a separate question this campaign does not answer.
+The claim is about what fraction of novel output is usable *in the representation
+the paper adopts* — which is exactly what the closed-language argument is about. One figure from a theorem, one from 270,000 samples. `P(novel | connected)`
 is the same fact told less vividly and belongs in the second sentence.
 
 A connected sample is only about **half** as likely to be novel as one drawn at

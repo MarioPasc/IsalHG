@@ -185,12 +185,15 @@ in 578** and **one in 11,739**.
 **Novelty is where the fact list wins, and the win is real**: 0.9883 (NDC) and
 0.9425 (WD50K) of its samples are non-isomorphic to every member, against 0.9172
 and 0.9138 for the Isal generator. What that figure conceals is the price. Of the
-fact list's genuinely new samples, **7.3 % are knowledge bases at all** (WD50K);
-of ours, **100 %**, by Proposition C.4 and not by measurement. The fact list
-produces something connected, which is then usually a near-copy of a member, or
-something novel, which is then usually not a knowledge base — rarely both. Its
-novelty is bought by leaving the domain, and a closed language has nothing to buy
-it with, because there is nowhere outside the domain to go. The dependence is a
+fact list's genuinely new samples, **7.3 % are connected** (WD50K); of ours,
+**100 %**, by Proposition C.4 and not by measurement. Connectivity is the bar
+rather than a nicety because it is this representation's domain condition (R3):
+a disconnected sample cannot be encoded, so it cannot be canonicalised, compared,
+or added to the collection at all. The fact list produces something connected,
+which is then usually a near-copy of a member, or something novel, which is then
+usually not encodable — rarely both. Its novelty is bought by leaving the domain,
+and a closed language has nothing to buy it with, because there is nowhere
+outside the domain to go. The dependence is a
 WD50K phenomenon and is stated as one: on NDC the two are nearly independent
 (joint 0.4040 against 0.4109 if they were).
 

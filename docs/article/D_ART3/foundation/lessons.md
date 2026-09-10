@@ -349,3 +349,21 @@ the episode that taught it (provenance in `measured_facts.md`).*
   omitted `radius`. Alongside "reproduce a campaign quantity beside the new one",
   these say the same thing: **verify the target, not only the method.** A correct
   instrument aimed at the wrong object returns a clean number every time.
+
+  **Take the join; marginals cannot tell you when they are safe.** Two counts
+  reported separately were subtracted twice in one session. Once it gave
+  "8 branching-only casualties", which the join reduced to 2 — six of the eight
+  turned out to carry the very symmetry the claim assumed absent. Once it gave
+  "about 15 matched members", which the join confirmed exactly.
+
+  **Both marginals were correct in both cases.** Nothing available before the
+  join distinguishes them, which is the argument in its strongest form: it is not
+  that marginals are unreliable, it is that the same operation was right once and
+  wrong once and **the difference is invisible from the marginals themselves**.
+
+  This is the fourth appearance of the day's dominant failure — a valid operation
+  applied to the wrong object. The four differed only in what supplied the wrong
+  object: a results path never checked, a config flag not reproduced, a display
+  string mistaken for a value, and a grouping never joined. The operation was
+  correct every time and no error was raised any time, because **a correct
+  operation on the wrong object has nothing to complain about**.

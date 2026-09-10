@@ -329,6 +329,29 @@ rank's:
 > **15 members sit at maximum arity and negligible symmetry, where the
 > deterministic walk completes and the branching search does not.**
 
+**The fifteen has a denominator, and the rate is the better sentence.** Within
+that matched stratum (`k = 10`, `|Aut| < 10³`), taken from the join and not by
+subtraction:
+
+| | |
+|---|---|
+| orbit fails | **67** |
+| rank fails (⊆ orbit) | **52** |
+| **orbit-only** | **15 = 22.4 %** |
+| **defeat both engines** | **52 = 77.6 %** |
+
+> **Displacement alone accounts for 52 of the 67 hardest members; branching
+> converts a further 15 — about a fifth — from survivable into failures.**
+
+A bare count says branching *can* cause failure; the rate says **how much of the
+hardest stratum it accounts for**, with arity and symmetry held fixed by
+construction rather than by argument. It is also the more credible sentence
+because it **concedes the larger share to displacement in the same breath**.
+
+Two independent magnitudes for one mechanism, on different axes: **22.4 % of the
+hardest stratum at the published budget**, and **24.7 % against 50.9 % recovery
+at a tenfold budget**.
+
 **This controls for both alternatives by matching rather than by argument:**
 identical arity (k = 10), so the displacement cost is the same; `|Aut| < 10³`, so
 there is no orbit structure to explain the difference; and the strict-subset

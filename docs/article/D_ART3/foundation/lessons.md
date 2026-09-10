@@ -367,3 +367,22 @@ the episode that taught it (provenance in `measured_facts.md`).*
   string mistaken for a value, and a grouping never joined. The operation was
   correct every time and no error was raised any time, because **a correct
   operation on the wrong object has nothing to complain about**.
+
+  **Pre-register what must be *reported*, not what you expect to find.** RQ4's
+  missing units acquired three successive explanations in one session — "no
+  bundle size fixes it", "deferral tracks per-unit cost", and finally the
+  measured one (the deadline is computed from the array's submit time, so
+  deferral is monotonic in start delay). The first two were asserted without
+  measurement and withdrawn.
+
+  What survived all three was an **obligation** written while both parties still
+  believed something false about the cause: *report the missing set's
+  `(m, max arity, |Aut|)` profile beside the censored set, and if it is
+  non-random the AUC carries the caveat.* That requirement is still what will
+  settle whether the loss is biased.
+
+  **A diagnosis has to be right to be useful; an obligation to report a
+  distribution only has to be asked.** So when something is missing or censored,
+  pre-register the *reporting* of its profile rather than an explanation of its
+  cause — the explanation can be wrong three times over and the obligation still
+  does its work.

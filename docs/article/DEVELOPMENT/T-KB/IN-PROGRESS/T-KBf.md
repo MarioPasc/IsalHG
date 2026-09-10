@@ -1445,3 +1445,48 @@ pairs, with the matrices job independently reproducing RQ1's censoring census to
 the member id. The 25-member contract check is the weakest evidence for that
 claim, not the strongest — which is exactly why a load-sensitive verdict on it
 is worth fixing rather than tolerating.
+
+### Correction — the empty knowledge base is real but narrow, and it never happened in the corpus
+
+`[IsalHG-Fable]` challenged the arithmetic of "the empty KB wins outright" and
+was right to. The bound is `|A′| + |B′| ≤ r = 2`, so `K_i − A′` is empty only
+when `K_i` carries at most two facts, and ∅ covers a member only when that
+member's facts can all be deleted inside the same budget. Corpus A sources carry
+`4 ≤ m ≤ 12`, so ∅ can only arise from a member already reduced to `m ≤ 2` by a
+`t = 2` deletion, and can only win when **every** member of the collection is at
+`m ≤ 2`.
+
+The fixture confirms the bound rather than straining it. `EMPTY_WINNER` in
+`tests/unit/language/test_consensus_domain_tiebreak.py:129` is documented as
+*"two two-fact members"* — both members at `m = 2`, `r = 2`. It was found by a
+search over **random** variant collections (seed 20260910), not in Corpus A.
+
+**And it never occurred in the real corpus:** the audit over 323 Corpus A
+collections across all 24 cells found **zero** out-of-domain winners of any
+kind, empty or disconnected.
+
+So the accurate statement is: *the domain has two walls, and the exclusion
+guards both; on the real corpus neither was ever breached.* My earlier wording
+let "wins outright" imply it was happening in Corpus A. It was not, no bound is
+violated, and the candidate set is the pre-registered one. The guard stays —
+∅ is out of domain for the same reason a disconnected candidate is — but it is a
+**guarantee, not a repair**, and the rows were never wrong.
+
+### No fork-poisoning residue is possible
+
+Fable asked whether any harvested deliverable contains rows from a run made
+after `w*_c` entered the tie break and before `cpp_engine=True` landed.
+
+**There was no such window.** Both changes are in the same commit, `60c9b98` —
+the tie break, `cpp_engine=True` and the Corpus A `consensus_budget_s: 1800`
+were never separately deployed. The first cluster run on this code is the RQ3
+pilot 2275979, submitted after the merge. Nothing on disk can carry poisoned
+rows.
+
+Its detector is still worth having as a **standing** check rather than for this
+instance: RQ3's medoid screen runs the same engine at the same 60 s budget on
+the same members as RQ1, so its censored set should be RQ1's restricted to the
+collections in play, and a count materially above that is poisoning rather than
+cost. That is a cheap in-run assertion and catches the class, not the case.
+Folded into T-KBm's acceptance, which already covers censoring that reports
+success it did not earn.

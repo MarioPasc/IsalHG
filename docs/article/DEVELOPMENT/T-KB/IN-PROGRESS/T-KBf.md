@@ -1776,3 +1776,85 @@ after the first instance — re-derive from a committed script anything that wou
 change a conclusion — did not prevent instances two, three or four, because all
 four were checks of *my own* reasoning rather than campaign outputs. The check
 now lives in the committed script with the coercion documented as its purpose.
+
+### The Corpus A medoid axis is a structural floor — D-KBf5a's comparison restated
+
+Taken to `[IsalHG-Fable]`, which supplied the mechanism and two falsifiable
+consequences; both measured, both hold.
+
+**Fable's correction to my own pre-registered check, accepted.** The bound
+`transfer ≥ recovery` is a check on **Corpus A only**. There, members are
+non-isomorphic to the source by construction, so a run recovering the source
+cannot have won with a member. On Corpus B the members are quarters 1..T−1 of a
+natural series and consecutive quarters are frequently identical (77 of 528
+consecutive pairs at Δ = 0 in the frozen census), so a member winner *can*
+recover the truth. **Corpus B's 0.3824 ≥ 0.2794 is struck as a check** and kept
+as a description; the script's docstring records this.
+
+**The mechanism.** Every Corpus A member is exactly `cell_t` constant-preserving
+fact edits from the source, so every member sits at fact distance `t` and none is
+the source. Any method restricted to returning an input scores `fact_dist = t`
+and `exact_recovery = 0` *whatever representation it ranks with*. Two
+consequences, both measured:
+
+| consequence | Corpus A | Corpus B |
+|---|---|---|
+| all **11** medoid arms identical on `fact_dist` | **4,457 / 4,457** | 26 / 63 |
+| all **11** identical on `exact_recovery` | **4,457 / 4,457** | 52 / 63 |
+| per-cell median `fact_dist` = cell's `t` | **12 / 12 cells exact** | n/a (no `cell_t`) |
+
+Cells: `N5_t1_{del,ins,mix}` median 1.000 (n = 362/432/432), `N5_t2_*` median
+2.000 (416/432/432), `N9_t1_*` median 1.000 (44/432/432), `N9_t2_*` median 2.000
+(179/432/432). Nothing cancelled. The medoid's mean of 1.521 is the t=1/t=2
+mixture over unequal cell sizes, **not** a property of any metric.
+
+**What this costs the result, and it is not nothing.** Both Corpus A axes compare
+a language-scale method against a floor, not against a representation. The result
+survives and remains the point of RQ3, but the sentence must be:
+
+> No method restricted to returning an input can score below `t`; the consensus
+> scores 0.269.
+
+**not** "the consensus beats the medoid under our metric" — written the second
+way a reviewer finds the floor and reads the result as inflated. **Corpus A's
+eleven medoid arms are one row in the table, not eleven, because they are
+provably one number.** The earlier reading — that arm agreement said something
+about representations — is withdrawn; it says the axis is constant. Corpus B,
+where the arms *do* separate, is the only place the representation is exercised.
+
+**The existence result, and why the raw recovery rate would have overstated it.**
+Cross-tabulating `winner_origin` against `exact_recovery` (an existence check,
+deliberately not a test — n = 1 suffices and subsetting to the 26 transfer runs
+would be selection on the outcome):
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| member, not recovered | 594 | 26 |
+| member, **recovered** | 0 | **16** |
+| transfer, not recovered | 852 | 23 |
+| transfer, **recovered** | **7,468** | **3** |
+
+**Three runs on real natural series won with a transfer and reproduced the
+held-out quarter exactly** — a decoded knowledge base no member wrote, matching
+the truth. No member-returning method can do this at all. That is H3b on real
+data.
+
+It also shows what the raw rate hides: **Corpus B's 19 recoveries decompose as 16
+member + 3 transfer.** Sixteen are runs where a member happened to equal the
+truth. Reporting 0.2794 as evidence for the capability would have counted them.
+
+**The capability sentence for the natural corpus,** both halves together: the
+coverage objective finds a transferable candidate in 26 of 68 runs, and in the
+remainder the consensus returns an input — so the capability the method exists
+for is exercised on about two runs in five. When the winner *is* a member the
+method has not reduced to the medoid; it is selecting under (coverage,
+`sum_reach`), a different objective, and on Corpus B the two demonstrably
+disagree (identical `fact_dist` in only 41 of 63).
+
+**A false alarm I caught in my own check:** it flagged Corpus B's per-cell test
+as DEVIATES. A natural series carries no planted edit budget, so there is no `t`
+and no floor to expect — the code was inventing a failure. It now says so.
+
+**Not re-running for the winner id.** It would only answer the mechanism
+question, and the mechanism no longer carries a claim; plumb it through the next
+instrumented run, where it is nearly free.

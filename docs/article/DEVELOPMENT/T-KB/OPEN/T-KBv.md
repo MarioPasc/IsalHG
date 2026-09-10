@@ -85,3 +85,14 @@ this second route.
 
 **Out of scope here:** the missing idempotent skip (T-KBq); whether the deferred
 set is cost-biased (T-KBq's profile obligation); re-running RQ4.
+
+**Acceptance test, shared with T-KBq.** The `iso_twin` restore has to run anyway,
+so it is the criterion for both fixes: resubmitting those cells through the
+**ordinary launcher** must touch exactly the missing units and nothing else. **If
+late tasks still defer, this fix is wrong**; if units that already have rows are
+re-run, T-KBq's skip fix is wrong.
+
+**The restore must not precede this fix.** Working around the deadline with
+bespoke invocations would give the restored seeds a different code path from the
+surviving ones, inside the single cell whose comparability carries RQ4's claim —
+*a reproduction that does not reproduce the configuration is not a reproduction*.

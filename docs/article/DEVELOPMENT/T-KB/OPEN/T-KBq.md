@@ -290,3 +290,44 @@ observed damage:
 
 Fixing either alone leaves RQ4 incomplete: without T-KBv late tasks still defer;
 without this, a resubmission still cannot reach what they deferred.
+
+### The skip predicate must be "a complete, valid row", not "a file exists"
+
+Raised by `[IsalHG-Fable]` against the obvious fix. Pointing `_unit_done` at the
+durable root is necessary but not sufficient: a teardown interrupted mid-copy
+leaves a **truncated file**, which a presence check treats as done **forever**.
+The unit then becomes permanently unreachable by any number of resubmissions —
+**the same failure this task documents, arriving from the other direction.**
+
+So the predicate reads the file and requires a complete, valid row set, not
+`Path.exists()`. This is the count-versus-liveness distinction again: **a file's
+existence is not evidence that the work behind it finished.**
+
+### The restore is the acceptance test for this task and T-KBv
+
+The `iso_twin` re-run has to happen anyway, so it costs nothing to adopt as the
+criterion, and it is sharper than what either task carries today:
+
+> Resubmitting the `iso_twin` cells through the **ordinary launcher** must touch
+> **exactly** the missing units and nothing else.
+> **If it re-runs units that already have rows, the skip fix is wrong. If late
+> tasks still defer, the deadline fix (T-KBv) is wrong.**
+
+### Why the restore waits on the fixes rather than merely may
+
+The restored units **must come from the same code path as the surviving 1,106.**
+Hand-built `--unit` invocations routed around two unfixed defects use a different
+entry point, different deadline handling and different skip behaviour — they
+would produce units of **unknown comparability inside the one cell whose
+comparability carries RQ4's claim.**
+
+That is this session's own lesson in its exact form: *a reproduction that does
+not reproduce the configuration is not a reproduction*, which already cost a
+WD50K number faithful to a pipeline nobody runs. **This is a stronger reason to
+wait than the hour was.**
+
+### On this task's title
+
+Left as written. "RQ4 has no resume" names a fix that was never the fix — the
+observation was right and the diagnosis wrong — and the ledger should **show**
+that pattern rather than hide it behind a rename.

@@ -56,10 +56,25 @@ consensus readings come from.
    rather than *censored*, and that the census counts it separately.
 3. The two pre-fix roots are marked in place with the audit above, so anyone
    reading them knows which counts are provably genuine and which are not.
-4. **The audit generalises**: sweep every flag column for the same collapse —
-   anywhere a guard can short-circuit *before* the work happens. The fork-health
-   canary is one such guard and is upstream of every budgeted arm; `skipped`,
-   `n_censored_members` and `n_excluded_candidates` are the other candidates.
+4. **A bounded schema audit, before the prose fold.** Sweep the flag columns
+   behind numbers that will actually be quoted -- the `foundation/` entries
+   enumerate those -- rather than every column in the schema, asking of each
+   whether "could not determine" is currently encoded as one of the two
+   outcomes. Anywhere a guard can short-circuit *before* the work happens is a
+   candidate; the fork-health canary is one such guard and is upstream of every
+   budgeted arm.
+
+   | column | why |
+   |---|---|
+   | `censored` | the subject of this task |
+   | `skipped` | a guard can set it before any work happens |
+   | `n_censored_members` / `n_excluded_candidates` | aggregate the same collapse |
+   | **`aut_bucket`** | the **stratification variable of the census under audit**, and R2 quotes counts *per bucket*. A member that could not be classified may sit *in* a bucket rather than outside the table -- a collapsed state in the stratifier is worse than one in the measure. |
+   | **`n_ties`** | zero carries two meanings: genuinely tie-free, or not recorded. The invariant-neutrality claim rests on 221/221 tie-free collections being bit-identical and on 94.7 % tie-free, so if any zero is a **default** rather than a count, both figures inflate. |
+
+   Timing: **before** the fold, because a number whose flag column has a
+   collapsed state is not properly sourced, and that is precisely the fold's
+   precondition.
 
 **Out of scope here:** re-running any campaign job; the canary itself, which is
 correct; L15's reporting format.

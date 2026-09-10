@@ -93,7 +93,7 @@ Superseded twice before landing, so the lineage matters:
 
 | lineage | status |
 |---|---|
-| the quoted "4.7 % / 9.6 %" | **struck** — matches no run |
+| the quoted "4.7 % / 9.6 %" | **struck** — matches no run; superseded **by** `IEEETKDE_isal_reach1b` (job 2279079) |
 | `IEEETKDE_isal_consensus` (frozen `Reach1Index`) | superseded: the index was gated on the *frozen* reach precondition (T-KBo) |
 | `IEEETKDE_isal_reach1` (job 2279064) | superseded: `None` for an empty fact-count window dropped samples from the denominator, overstating one arm **2.18×** |
 | **`IEEETKDE_isal_reach1b` (job 2279079)** | **the derivation of record** |
@@ -121,8 +121,60 @@ walk on this axis (0.2800 against 0.2711) and on NDC it is well behind (0.0459
 against 0.1623). No single direction covers both, and the WD50K cell is one the
 comparator wins.
 
+**`reach1` SCORES NOBODY — it is characterisation, and the design says so.**
+H6b (DESIGN §625) reads: *"most samples are **novel** (not isomorphic to a
+member) while **a stated fraction** sit within reach 1 of one."* The design asks
+for the fraction to be **stated**, not to be high or low, and it is right not to
+name a direction, because both readings are defensible:
+
+- high `reach1` = **fidelity**, samples landing near real knowledge bases;
+- high `reach1` = **memorisation**, the generator reproducing near-copies of its
+  training members.
+
+Nothing in RQ6's evaluation — validity rate and profile divergence — settles
+which. The direction-bearing claim is **novelty** (0.99 / 0.94), which is
+precisely the memorisation guard; `reach1` describes how tightly the novel
+samples sit around the collection.
+
+So the numbers above are reported and **no arm is scored on them**. Deciding the
+direction *after* seeing that it splits by collection — `fact_ngram` ahead on
+WD50K, well behind on NDC — is the move this whole session has been about.
+Raised by `[IsalHG-Fable]`; confirmed against the design text rather than
+inferred.
+
 **Verification.** `scripts/diagnostics/rq6_reach1_rederivation_check.py`,
 committed before the rows existed: `rows_completion` (600), `rows_alignment`
 (60) and `rows_rejections` (358) came back **bit-identical**, only the three
 `reach1_*` columns moved, and neither `reach1_eligible` nor `reach1_hits` fell in
 any unit.
+
+---
+
+## Censoring provenance — verification for the R2 counts
+
+Recorded here rather than in the prose, per `CLAUDE.md`'s split: **assertions in
+the paper, verification in the fact base.** D-ART5's R2 sentence states its
+counts plainly and takes **no caveat**; a caveat would advertise a doubt this
+audit has closed, and a reader could not evaluate it.
+
+`censored` encodes two states — *attempted and exceeded the budget* and *never
+attempted* — and the fork-poisoning defect could once write the second as the
+first. **The current code cannot**: `guarded_budget_call` raises
+`TkdeBudgetError` on a poisoned fork instead of recording a censoring, and no
+caller swallows it (the two `rq3.py` mentions are `Raises` docstrings). Verified
+2026-09-10, so the next reader does not go looking for a bug fixed on
+2026-09-07.
+
+**Verified per row against `a99775a`** ("a poisoned fork must not be recorded as
+a censoring", 2026-09-07 09:17), resolving every `git_sha` the rows carry with
+`git merge-base --is-ancestor`:
+
+> **All rows in `IEEETKDE_isal_merged`, `_consensus`, `_preview`, `_reachprime`
+> and `_reach1{,b}` are post-fix — 0 pre-fix rows.** The M3 census the 77/53 is
+> counted from, and every RQ3 row behind the consensus readings, are therefore
+> provably genuine censorings.
+
+The 2,378,890 pre-fix rows carry one of four shas, all dated **2026-09-05** (the
+first wave), and sit only in `IEEETKDE` (1,314,688) and `IEEETKDE_isal`
+(1,064,202). Those two roots are marked in place; **T-KBu** carries the schema
+split so the two states stop sharing a column.

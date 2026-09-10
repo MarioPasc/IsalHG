@@ -17,10 +17,12 @@ Four exhibits are produced:
    of a Levenshtein alignment between two real members, in both alphabets.
 3. ``rows_completion`` --- the conditional-completion exhibit.
 
-The reach-1 fraction is computed exactly. Its precondition (same constant count
-and same type multiset) is a necessary condition for a finite reach at fixed
-constants; a sample with no member satisfying it contributes no fraction rather
-than a zero.
+The reach-1 fraction is computed exactly, under ``reach'`` (D-KBf5): reach on
+*compacted* remainders, so a deletion that isolates a constant removes it and the
+constant count is not preserved. Candidates are filtered by
+:func:`isalhg.language.reach.compatible`, whose two conditions are stated to
+survive compaction; a sample with no compatible member contributes no fraction
+rather than a zero.
 """
 
 from __future__ import annotations
@@ -49,7 +51,7 @@ from isalhg.generation.incidence_baseline import flatten, strict_decode, strict_
 from isalhg.generation.ngram import TokenNGram
 from isalhg.iso_backends.isal_ordered import ordered_fingerprint
 from isalhg.language.alignment import alignment_path
-from isalhg.language.reach import RemainderIndex, reach
+from isalhg.language.reach import RemainderIndex, compatible, reach
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
 
 logger = logging.getLogger(__name__)
@@ -305,62 +307,66 @@ def build_context(name: str, config: Mapping[str, Any], root: Path | None) -> Co
 # ---------------------------------------------------------------------------
 
 
-def _shape(H: SparseHypergraph) -> tuple[int, tuple[int, ...]]:
-    """The reach precondition: constant count and sorted type multiset."""
-    return H.n_nodes, tuple(sorted(H.vertex_label(v) for v in range(H.n_nodes)))
-
-
 def _deletion_keys(H: SparseHypergraph) -> dict[Word, int]:
-    """``{canonical key: fewest deletions reaching it}`` for at most one deletion."""
+    """``{compacted remainder word: fewest deletions reaching it}``, at most one deletion."""
     return RemainderIndex(H, 1).min_deletions()
 
 
 class Reach1Index:
     """Answers "is this sample within reach 1 of some member?" exactly.
 
-    Members are bucketed by the reach precondition. Inside a bucket the question
-    reduces to three key comparisons, because ``|A| + |B| <= 1`` admits only
-    ``(0,0)``, ``(1,0)`` and ``(0,1)``; the surviving candidate is then confirmed
-    with :func:`isalhg.language.reach.reach` itself, so the recorded answer is
-    the library's, not this index's.
+    Candidates are filtered with :func:`isalhg.language.reach.compatible`, the
+    library's own necessary conditions, and the survivor is confirmed with
+    :func:`isalhg.language.reach.reach`, so the recorded answer is the library's
+    and not this index's.
+
+    Two earlier shortcuts were unsound under ``reach'`` (D-KBf5) and are gone:
+
+    * bucketing members by ``(constant count, type multiset)`` -- the *frozen*
+      precondition. A deletion under ``reach'`` compacts away newly isolated
+      constants, so the constant count is not preserved and equal-shape
+      bucketing withheld exactly the pairs the definition admits;
+    * a plausibility test mixing ``fact_word(sample)``, an **uncompacted** word,
+      with :class:`RemainderIndex` keys, which are **compacted**. The two are
+      not comparable, so the test could reject a genuine reach-1 pair.
+
+    The shared-remainder test that replaces them is not a heuristic: ``reach'``
+    is by definition the least ``|A| + |B|`` whose compacted remainders agree,
+    so a common word within budget *is* the answer.
     """
 
     def __init__(self, members: Sequence[SparseHypergraph]) -> None:
         self._members = list(members)
-        self._buckets: dict[tuple[int, tuple[int, ...]], list[int]] = {}
-        for index, H in enumerate(self._members):
-            self._buckets.setdefault(_shape(H), []).append(index)
         self._deletions: dict[int, dict[Word, int]] = {}
-        self._keys: dict[int, Word] = {}
 
     def _member_deletions(self, index: int) -> dict[Word, int]:
         if index not in self._deletions:
             self._deletions[index] = _deletion_keys(self._members[index])
         return self._deletions[index]
 
-    def _member_key(self, index: int) -> Word:
-        if index not in self._keys:
-            self._keys[index] = fact_word(self._members[index])
-        return self._keys[index]
-
     def within_one(self, sample: SparseHypergraph) -> bool | None:
-        """``True``/``False`` if the precondition holds for some member, else ``None``."""
-        bucket = self._buckets.get(_shape(sample))
-        if not bucket:
-            return None
+        """Whether some member is within ``reach' <= 1`` of ``sample``.
+
+        Returns
+        -------
+        bool or None
+            ``None`` when no member is even compatible with ``sample`` at
+            ``r_max = 1``, preserving the tri-state the callers expect: the
+            question was not answerable rather than answered "no".
+        """
         sample_deletions = _deletion_keys(sample)
-        sample_key = fact_word(sample)
-        for index in bucket:
+        answerable = False
+        for index, member in enumerate(self._members):
+            if not compatible(sample, member, 1):
+                continue
+            answerable = True
             member_deletions = self._member_deletions(index)
-            member_key = self._member_key(index)
-            plausible = (
-                sample_key in member_deletions
-                or member_key in sample_deletions
-                or sample_key == member_key
-            )
-            if plausible and reach(sample, self._members[index], r_max=1) is not None:
+            shared = sample_deletions.keys() & member_deletions.keys()
+            if any(sample_deletions[w] + member_deletions[w] <= 1 for w in shared) and (
+                reach(sample, member, r_max=1) is not None
+            ):
                 return True
-        return False
+        return False if answerable else None
 
 
 # ---------------------------------------------------------------------------

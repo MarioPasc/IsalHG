@@ -28,6 +28,7 @@ import csv
 from collections import Counter
 from collections.abc import Callable
 from pathlib import Path
+from statistics import median
 
 import yaml
 
@@ -57,18 +58,34 @@ def truth_present(config: dict[str, object], root: Path | None) -> dict[str, boo
         ``rows_natural.csv`` (``"<class_id>|run<run_index>"``), so the result
         joins directly onto the rows.
     """
+    return {cid: min(d) == 0 for cid, d in member_distances(config, root).items()}
+
+
+def member_distances(config: dict[str, object], root: Path | None) -> dict[str, list[int]]:
+    """Per unit, every member's identity-fact distance to the held-out truth.
+
+    This is the object the three derived quantities are read off:
+
+    * ``min`` is the **oracle bound** -- the score of the best member any rule
+      could pick, selected using the truth. No method restricted to returning an
+      input can beat it, so it replaces a row-per-arm comparison with one
+      structural baseline valid on both corpora;
+    * ``min == 0`` is the truth-in-members flag;
+    * the spread bounds how far apart any two representations' medoids can score,
+      because a medoid can only return a member.
+    """
     block = config["corpus_b"]
     name = str(block["collection"])  # type: ignore[index]
     collection = corpora.load_collection(name, root)
     by_id = corpora.records_by_id(collection)
-    out: dict[str, bool] = {}
+    out: dict[str, list[int]] = {}
     for unit in enumerate_units_b(config, root):
         records = [by_id[kb_id] for kb_id in unit.kb_ids]
         members, truth = records[:-1], records[-1]
         truth_facts = identity_facts_of_record(truth)
-        out[f"{unit.class_id}|run{unit.run_index}"] = any(
-            fact_distance(identity_facts_of_record(m), truth_facts) == 0 for m in members
-        )
+        out[f"{unit.class_id}|run{unit.run_index}"] = [
+            fact_distance(identity_facts_of_record(m), truth_facts) for m in members
+        ]
     return out
 
 
@@ -147,8 +164,10 @@ def _stratum_distance(
     print()
     # `hard` counts UNITS; a unit whose coverage row is censored contributes no
     # pair, so the printed n comes from the pair list, never from len(hard).
-    print(f"EXPLORATORY -- paired fact_dist on the TRUTH_ABSENT stratum"
-          f" ({len(hard)} units, censored rows excluded per arm below)")
+    print(
+        f"EXPLORATORY -- paired fact_dist on the TRUTH_ABSENT stratum"
+        f" ({len(hard)} units, censored rows excluded per arm below)"
+    )
     print("   (defined post hoc after the full-set null; cannot move D-KBf5a)")
     for arm in arms:
         pairs = [
@@ -185,11 +204,107 @@ def main() -> int:
 
     with args.config.open() as handle:
         config = yaml.safe_load(handle)
-    present = truth_present(config, args.data_root)
+    dists = member_distances(config, args.data_root)
+    present = {c: min(d) == 0 for c, d in dists.items()}
     n_present = sum(1 for v in present.values() if v)
     print(f"Corpus B units: {len(present)} | truth already among members: {n_present}")
     report(args.rows, present)
+    oracle_report(args.rows, dists)
     return 0
+
+
+def oracle_report(
+    rows_path: Path,
+    dists: dict[str, list[int]],
+) -> None:
+    """Consensus against the best-achievable-input bound, by shape not by mean.
+
+    Three readings, in the order they answer a reviewer:
+
+    1. **The oracle bound.** ``min_i fact_dist(K_i, truth)`` is the score of the
+       best member any selection rule could pick, chosen with knowledge of the
+       truth. It upper-bounds every method restricted to returning an input, so
+       it replaces one comparison per arm with a single structural baseline --
+       and it is the same object as Corpus A's floor, where all members sit at
+       ``t`` and the bound *is* ``t``.
+    2. **Mass at zero, not the mean.** On the hard stratum the consensus can
+       score exactly zero and no member-returning method can, so the capability
+       lives in the shape of the distribution. A mean hides it. Reported as the
+       fraction at zero beside the median of the nonzero remainder.
+    3. **The within-collection spread.** A medoid can only return a member, so
+       every arm's achievable mean lies between the best-input and worst-input
+       means. That interval is the room the arms *had*; comparing it against the
+       spread the arms actually show decides whether a cross-arm null is imposed
+       by the corpus or is a fact about the representations.
+
+       Measured on Corpus B, it is **not** imposed: on the TRUTH_ABSENT stratum
+       the interval is ``[2.050, 4.225]`` (width 2.175) and the eleven arms span
+       ``2.800-3.150`` (width 0.35) -- 16 % of the available room. The
+       hypothesis that the corpus floors the medoid axis the way it does on
+       Corpus A is therefore falsified here, and the arms' agreement is a
+       property of the representations.
+    """
+
+    def num(value: str | None) -> float | None:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return None
+
+    with rows_path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+    cons = {
+        r["collection_id"]: num(r.get("fact_dist"))
+        for r in rows
+        if r.get("method") == "coverage" and num(r.get("censored")) != 1.0
+    }
+    hard = [c for c, d in dists.items() if min(d) > 0 and c in cons and cons[c] is not None]
+    allu = [c for c in dists if c in cons and cons[c] is not None]
+
+    for label, units in (("all runs", allu), ("TRUTH_ABSENT stratum", hard)):
+        c_vals = [cons[c] for c in units]
+        o_vals = [float(min(dists[c])) for c in units]
+        print()
+        print(f"-- {label}: n = {len(units)} --")
+        w_vals = [float(max(dists[c])) for c in units]
+        for name, vals in (
+            ("consensus", c_vals),
+            ("oracle bound (best input)", o_vals),
+            ("worst input", w_vals),
+        ):
+            zero = sum(1 for v in vals if v == 0)
+            nz = sorted(v for v in vals if v > 0)
+            med = median(nz) if nz else float("nan")
+            print(
+                f"   {name:26s} mean {sum(vals) / len(vals):5.3f}"
+                f" | at zero {zero:3d}/{len(vals)} ({zero / len(vals):.3f})"
+                f" | median of nonzero {med:5.2f}"
+            )
+        better = sum(1 for c, o in zip(c_vals, o_vals, strict=True) if c < o)
+        worse = sum(1 for c, o in zip(c_vals, o_vals, strict=True) if c > o)
+        print(f"   consensus below the bound in {better}/{len(units)}, above in {worse}")
+        # Any arm's mean must lie between these two, because a medoid returns a
+        # member. If the arms cluster far inside the interval, their agreement is
+        # a fact about the representations, NOT a corpus-imposed floor.
+        lo = sum(o_vals) / len(o_vals)
+        hi = sum(w_vals) / len(w_vals)
+        print(
+            f"   any input-returning arm's mean must lie in [{lo:.3f}, {hi:.3f}]"
+            f"  (width {hi - lo:.3f})"
+        )
+
+    spreads = [max(d) - min(d) for c, d in dists.items() if c in cons and len(d) > 1]
+    if spreads:
+        print()
+        print("-- within-unit spread of member-to-truth distance --")
+        print(
+            f"   range over members: median {median(spreads):.2f}"
+            f" | mean {sum(spreads) / len(spreads):.2f} | max {max(spreads)}"
+            f" | zero-spread units {sum(1 for s in spreads if s == 0)}/{len(spreads)}"
+        )
+        print("   every arm's medoid scores inside this range. Compare it against the")
+        print("   observed cross-arm spread before concluding the corpus forced the null:")
+        print("   a wide within-unit range means the arms HAD room to differ and did not.")
 
 
 if __name__ == "__main__":

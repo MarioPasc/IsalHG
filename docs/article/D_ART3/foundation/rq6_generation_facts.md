@@ -286,7 +286,7 @@ definition (`prose.md` §2.1, *"A knowledge base `K` is a finite set of facts"*)
 says why: *a knowledge base is a finite set of
 facts*, and a disconnected set of facts is still a finite set of facts. What
 those samples fail is **connectivity**, which is *this representation's* domain
-condition (R3, `DECISIONS.md:331` — "connected only; isolated constants not
+condition (R3 in `DECISIONS.md`, D-ART4 — "connected only; isolated constants not
 representable"), and which Prop. C.4 makes automatic for us. The accurate version
 is no weaker: a disconnected sample cannot be encoded, hence cannot be
 canonicalised, compared, or added to the collection.

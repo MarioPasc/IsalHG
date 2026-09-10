@@ -24,7 +24,12 @@ from isalhg.core.canonical import canonical_string
 from isalhg.core.sparse_hypergraph import SparseHypergraph, permute
 from isalhg.core.string_to_hypergraph import string_to_hypergraph
 from isalhg.iso_backends.canonical_order import nauty_certificate_bytes
-from isalhg.language.consensus import ConsensusError, ConsensusResult, coverage_consensus
+from isalhg.language.consensus import (
+    ConsensusError,
+    ConsensusResult,
+    coverage_consensus,
+    in_language_domain,
+)
 from isalhg.language.reach import compact_constants, fact_key_of, reach, remove_facts
 from tests.unit.language._builders import (
     facts_of,
@@ -137,6 +142,19 @@ class TestDegenerateInputs:
             coverage_consensus([random_kb(rng)], r=2, alignment_budget="both")  # type: ignore[arg-type]
 
 
+def source_is_writable(source: SparseHypergraph) -> bool:
+    """True when the source is something the consensus is allowed to return.
+
+    The candidate set admits only knowledge bases with an Isal string (R3,
+    Prop. C.4), so a source whose compaction is disconnected cannot be
+    recovered however good the objective is --- ``random_kb`` produces one about
+    one time in eight, and the recovery rates below are about the objective, not
+    about the generator.  Corpus A enforces the same restriction.
+    """
+    core, _ = compact_constants(source)
+    return in_language_domain(core)
+
+
 class TestRecoversTheSource:
     def test_insertion_only_t1(self) -> None:
         rng = random.Random(211)
@@ -145,7 +163,7 @@ class TestRecoversTheSource:
         for _ in range(8):
             source = random_kb(rng, n_lo=6, n_hi=8, m_lo=5, m_hi=7, arity_hi=3)
             members = insertion_collection(rng, source, 5, 1)
-            if members is None:
+            if members is None or not source_is_writable(source):
                 continue
             trials += 1
             result = coverage_consensus(members, r=2)
@@ -160,7 +178,7 @@ class TestRecoversTheSource:
         for _ in range(8):
             source = random_kb(rng, n_lo=6, n_hi=8, m_lo=5, m_hi=7, arity_hi=3)
             members = insertion_collection(rng, source, 5, 2)
-            if members is None:
+            if members is None or not source_is_writable(source):
                 continue
             trials += 1
             result = coverage_consensus(members, r=2)
@@ -175,7 +193,7 @@ class TestRecoversTheSource:
         for _ in range(8):
             source = random_kb(rng, n_lo=6, n_hi=8, m_lo=6, m_hi=8, arity_hi=3)
             members = deletion_collection(rng, source, 5, 1)
-            if members is None:
+            if members is None or not source_is_writable(source):
                 continue
             trials += 1
             result = coverage_consensus(members, r=2)

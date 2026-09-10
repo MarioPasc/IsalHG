@@ -13,7 +13,7 @@ knowledge bases:
 * **the ball is a ball** --- every word it yields is within the radius, no word
   is yielded twice, and the centre is inside;
 * **the consensus is deterministic and self-consistent** --- repeated calls
-  agree, and the reported winner is the argmax of the reported candidate
+  agree, and the reported winner attains the optimum of the reported candidate
   scores.
 """
 
@@ -224,7 +224,17 @@ class TestConsensus:
         members = [source, *(neighbour(rng, source) for _ in range(3))]
         first = coverage_consensus(members, r=2)
         assert first.candidates == coverage_consensus(members, r=2).candidates
-        best = min((-score.coverage, score.sum_reach, score.word) for score in first.candidates)
-        assert (-first.coverage, first.sum_reach, first.word) == best
+        # The reported winner attains the optimum of the first two criteria and
+        # is one of the candidates that attain it. Which of them it is, is the
+        # tie break's business and is pinned in
+        # ``tests/unit/language/test_consensus_domain_tiebreak.py``: the winner
+        # is not the fact-word minimum, so asserting that here would re-assert
+        # the retired representation.
+        best = min((-score.coverage, score.sum_reach) for score in first.candidates)
+        tied = [score for score in first.candidates if (-score.coverage, score.sum_reach) == best]
+        assert (-first.coverage, first.sum_reach) == best
+        assert first.word in {score.word for score in tied}
+        assert first.n_ties == len(tied) - 1
         assert fact_key_of(first.kb) == first.word
         assert first.n_candidates == len(first.candidates)
+        assert first.connected is True

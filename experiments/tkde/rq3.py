@@ -69,6 +69,25 @@ MEDOID_ARMS: tuple[str, ...] = (
 )
 ZERO_TOLERANCE = 1e-9
 
+#: Columns only a coverage row fills. ``winner_origin`` and ``winner_connected``
+#: say what the consensus returned -- an input or an object no member wrote, and
+#: whether it lies in the language's domain -- and the two counts say what the
+#: candidate set contained and what the domain exclusion dropped. All four are
+#: computed inside the consensus; before they were persisted, "how often does the
+#: consensus return an input?" and "how many winners had no Isal string?" could
+#: only be answered by re-running the campaign.
+CONSENSUS_COLUMNS: tuple[str, ...] = (
+    "n_candidates",
+    "n_ties",
+    "winner_origin",
+    "winner_connected",
+    "n_disconnected_candidates",
+    "n_excluded_candidates",
+)
+
+#: The blanks a row that is not a coverage row writes for :data:`CONSENSUS_COLUMNS`.
+NO_CONSENSUS: dict[str, str] = dict.fromkeys(CONSENSUS_COLUMNS, "")
+
 VARIANT_COLUMNS: tuple[str, ...] = (
     "rq",
     "experiment",
@@ -95,8 +114,7 @@ VARIANT_COLUMNS: tuple[str, ...] = (
     "LB",
     "ratio",
     "n_censored_members",
-    "n_candidates",
-    "n_ties",
+    *CONSENSUS_COLUMNS,
 )
 
 NATURAL_COLUMNS: tuple[str, ...] = (
@@ -124,8 +142,7 @@ NATURAL_COLUMNS: tuple[str, ...] = (
     "LB",
     "ratio",
     "n_censored_members",
-    "n_candidates",
-    "n_ties",
+    *CONSENSUS_COLUMNS,
 )
 
 CERTIFICATE_COLUMNS: tuple[str, ...] = (
@@ -311,14 +328,25 @@ def run_guarded(
     such a call returns ``("timeout", None)`` without having computed anything
     -- a censoring indistinguishable, in the rows, from a real one.
 
-    ``cpp_engine`` defaults to False because the consensus this guards
-    canonicalizes hundreds of candidates per cell with
+    ``cpp_engine`` defaulted to False while the consensus canonicalized only with
     :func:`isalhg.core.fact_word.fact_key_of`, which is pure Python: a forked
     child computes it correctly in a poisoned process, and guarding it would
-    refuse work that would have succeeded. The medoid loop above, which does
-    reach the engine through ``wstar_rank``, poisons this process before these
-    calls -- so the flag must be set the day a consensus key becomes an Isal
-    word, and is a lie any other day.
+    refuse work that would have succeeded. That day has come. The objective's
+    tie break is now the Isal fingerprint
+    (:func:`isalhg.language.consensus.isal_fingerprint`), which runs the C++
+    engine, so a consensus call must declare ``cpp_engine=True``.
+
+    The parent is not poisoned by the medoid loop above, contrary to what this
+    docstring said before: ``medoid_matrix`` runs an engine arm's build in a
+    child that then dies, and ``censored_members`` screens in children too, so
+    nothing canonicalizes in this process. The hazard the change introduces is
+    the *unguarded* consensus path: with no budget the tie break canonicalizes
+    here, and every later guarded fork -- the ``wstar_orbit`` medoid builds
+    among them -- deadlocks and is reported censored without having run
+    (measured 2026-09-10: one in-parent ``isal_fingerprint`` takes
+    ``cpp_fork_is_healthy`` from True to False). Corpus A therefore no longer
+    asks for an unguarded consensus; ``consensus_budget_s: null`` is unsafe in
+    any process that also forks for the engine.
 
     Parameters
     ----------
@@ -354,13 +382,40 @@ def run_guarded(
 
 @dataclass(frozen=True)
 class ConsensusOutcome:
-    """What one coverage-consensus call contributes to a row."""
+    """What one coverage-consensus call contributes to a row.
+
+    Parameters
+    ----------
+    fact_dist : int
+        Identity-addressed fact distance from the consensus to the truth.
+    coverage, sum_reach : int
+        The winning objective values.
+    n_candidates : int
+        Size of the deduplicated, in-domain candidate set.
+    n_ties : int
+        Candidates the first two criteria could not separate from the winner.
+    winner_origin : str
+        ``"member:<i>"`` when the consensus returned an input,
+        ``"transfer:<i>,<j>"`` when it returned an object no member wrote ---
+        which is the claim RQ3 makes, so the row states it rather than leaving
+        it to be inferred from the fact distance.
+    winner_connected : bool
+        Whether the representative lies in the language's domain. Always True
+        under the domain exclusion; carried as the audit of that invariant.
+    n_disconnected, n_excluded : int
+        Candidate classes generated outside the domain, and how many of those
+        the candidate set dropped.
+    """
 
     fact_dist: int
     coverage: int
     sum_reach: int
     n_candidates: int
     n_ties: int
+    winner_origin: str
+    winner_connected: bool
+    n_disconnected: int
+    n_excluded: int
 
 
 def consensus_identities(
@@ -439,6 +494,10 @@ def consensus_outcome(
         sum_reach=result.sum_reach,
         n_candidates=result.n_candidates,
         n_ties=result.n_ties,
+        winner_origin=result.origin,
+        winner_connected=result.connected,
+        n_disconnected=result.n_disconnected,
+        n_excluded=result.n_excluded,
     )
 
 
@@ -639,8 +698,7 @@ def survivor_medoid_row(
         "medoid_cost": result.cost,
         "LB": "",
         "ratio": "",
-        "n_candidates": "",
-        "n_ties": "",
+        **NO_CONSENSUS,
     }
 
 
@@ -687,7 +745,9 @@ def evaluate_collection(
     alignment_budget : str
         Candidate-generation budget passed to the consensus.
     consensus_budget_s : float or None
-        Wall-clock budget per consensus call; ``None`` runs it unguarded.
+        Wall-clock budget per consensus call; ``None`` runs it unguarded, which
+        is safe only in a process that never forks for the C++ engine, since the
+        objective's tie break canonicalizes with it. See :func:`run_guarded`.
     fingerprint_budget_s : float or None, optional
         Per-member wall-clock budget for the arms of ``BUDGETED_MATRIX_ARMS``.
         An arm that fails to canonicalize *any* member of the collection reports
@@ -749,8 +809,7 @@ def evaluate_collection(
                     "medoid_cost": "",
                     "LB": "",
                     "ratio": "",
-                    "n_candidates": "",
-                    "n_ties": "",
+                    **NO_CONSENSUS,
                 }
             )
             supplement = survivor_medoid_row(
@@ -785,8 +844,7 @@ def evaluate_collection(
                     "medoid_cost": result.cost,
                     "LB": result.lower_bound,
                     "ratio": result.ratio,
-                    "n_candidates": "",
-                    "n_ties": "",
+                    **NO_CONSENSUS,
                 }
             )
             certificate_rows.append(
@@ -823,8 +881,7 @@ def evaluate_collection(
                     "medoid_cost": "",
                     "LB": "",
                     "ratio": "",
-                    "n_candidates": "",
-                    "n_ties": "",
+                    **NO_CONSENSUS,
                 }
             )
 
@@ -854,6 +911,7 @@ def evaluate_collection(
                         alignment_budget=alignment_budget,
                     ),
                     consensus_budget_s,
+                    cpp_engine=True,
                 )
                 if status == "ok":
                     outcome = value
@@ -876,8 +934,7 @@ def evaluate_collection(
                     "medoid_cost": "",
                     "LB": "",
                     "ratio": "",
-                    "n_candidates": "",
-                    "n_ties": "",
+                    **NO_CONSENSUS,
                 }
             )
             continue
@@ -896,6 +953,10 @@ def evaluate_collection(
                 "ratio": "",
                 "n_candidates": outcome.n_candidates,
                 "n_ties": outcome.n_ties,
+                "winner_origin": outcome.winner_origin,
+                "winner_connected": int(outcome.winner_connected),
+                "n_disconnected_candidates": outcome.n_disconnected,
+                "n_excluded_candidates": outcome.n_excluded,
             }
         )
 
@@ -915,8 +976,7 @@ def evaluate_collection(
                 "medoid_cost": "",
                 "LB": "",
                 "ratio": "",
-                "n_candidates": "",
-                "n_ties": "",
+                **NO_CONSENSUS,
             }
         )
     except Exception as exc:  # noqa: BLE001
@@ -934,8 +994,7 @@ def evaluate_collection(
                 "medoid_cost": "",
                 "LB": "",
                 "ratio": "",
-                "n_candidates": "",
-                "n_ties": "",
+                **NO_CONSENSUS,
             }
         )
     return rows, certificate_rows

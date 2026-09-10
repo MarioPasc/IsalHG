@@ -62,9 +62,16 @@ corpus_a:
   # triangle family is complete for the objective. "per_side" and "sum" are
   # recorded variants only and are never run here.
   alignment_budget: triangle
-  # Corpus A collections are N <= 9 over m <= 12; the consensus is measured at
-  # ~1.6 s and runs unguarded so that `secs` is the method's own time.
-  consensus_budget_s: null
+  # Corpus A collections are N <= 9 over m <= 12 and the consensus was measured
+  # at ~1.6 s, which is why this ran unguarded: `secs` was then the method's own
+  # time. It cannot stay unguarded. The objective's tie break is now the Isal
+  # fingerprint, so the consensus reaches the C++ canonicalizer, and an in-parent
+  # canonicalization leaves every later forked child deadlocking on it --
+  # including the guarded `wstar_orbit` medoid builds, which would be recorded
+  # censored without having run (measured 2026-09-10). The consensus therefore
+  # runs in a child, at Corpus B's budget; the fork costs milliseconds against a
+  # ~1.6 s method.
+  consensus_budget_s: 1800
 
 corpus_b:
   collection: ndc_classes

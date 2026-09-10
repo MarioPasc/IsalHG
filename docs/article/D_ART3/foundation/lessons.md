@@ -228,3 +228,16 @@ the episode that taught it (provenance in `measured_facts.md`).*
   `tests/experiments_tkde/test_rowsio_guards.py`, including the two silent
   failures themselves. Habits failed twice in one session; the collision error
   is what worked.
+
+  **A silenced error plus an unconditional next step is the same defect in
+  shell form.** `git stash push <path>` on an *already-committed* file is a
+  no-op; `2>/dev/null` hid the message saying so; and the unconditional `git
+  stash pop` that followed then reached for whatever was on top of the stack —
+  a three-month-old stash, which landed on the branch with conflict markers in
+  fifteen tracked files including the canonical encoder. Nothing was lost
+  (a conflicted pop keeps the stash entry, and the work was committed), but the
+  failure was silent at exactly the point where it should have raised, which is
+  this lesson's subject in a different language. Two guards worked: the
+  permission layer refused `git reset --hard`, and a peer session checked the
+  tree rather than trusting the report. Never discard stderr on a command whose
+  success you are about to depend on.

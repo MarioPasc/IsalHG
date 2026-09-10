@@ -1965,3 +1965,58 @@ the gate's null directly. The overall Corpus B recovery rate of 0.279 is
 **mostly measuring how often an NDC drug class is static between quarters**, a
 property of the data and not of any method. → to be stated where Corpus B is
 described (`DATA.md` / DESIGN §3), not only where the result is.
+
+### The oracle bound replaces eleven arm tests — and falsifies the corpus explanation
+
+Raised by `[IsalHG-Fable]`: eleven pairwise coin-flips is the weakest way to
+present a null. The structural comparator is
+`min_i fact_dist(K_i, truth)` — the **best achievable input**, selected with
+knowledge of the truth. It upper-bounds every method restricted to returning an
+input, needs no arm, and is the *same object* as Corpus A's floor (there all
+members sit at `t`, so the bound **is** `t`).
+
+| Corpus B, TRUTH_ABSENT stratum (n = 40) | mean | at zero | median of nonzero |
+|---|---|---|---|
+| consensus | 2.875 | **3/40 (0.075)** | 3.00 |
+| oracle bound (best input) | **2.050** | 0/40 | 2.00 |
+| worst input | 4.225 | 0/40 | 4.00 |
+
+| all 68 runs | mean | at zero | median of nonzero |
+|---|---|---|---|
+| consensus | 1.912 | 19/68 (0.279) | 2.00 |
+| oracle bound | **1.206** | 28/68 (0.412) | 2.00 |
+
+**The consensus loses to the bound on the mean and on the bulk.** It is below the
+bound in 3 of 40 — and since the bound is strictly positive on this stratum,
+scoring zero *is* scoring below it, so those 3 are exactly the 3 exact hits:
+
+> **The consensus beats the best achievable input on exactly the runs where it
+> lands exactly on the truth, and never otherwise.**
+
+The capability is **mass at a point that is structurally unreachable for every
+input-returning method**; everywhere else the consensus is the worse choice. That
+is the honest characterisation, it needs no mean, and it is what the table says.
+
+**The corpus explanation for the cross-arm null is FALSIFIED.** The pre-stated
+reading was that a small within-unit spread would floor Corpus B's medoid axis
+the way Corpus A's is. Measured, it is not small:
+
+| | |
+|---|---|
+| within-unit range of member-to-truth distance | median 2.00, mean 2.03, max 5 |
+| units with zero spread | **4 / 68** |
+| interval any input-returning arm's mean must occupy (hard stratum) | **[2.050, 4.225]**, width **2.175** |
+| interval the eleven arms actually span | 2.800–3.150, width **0.35** |
+
+The arms use **16% of the room they have**. The corpus does not force them
+together; they had space to disagree and did not. **Corpus A and Corpus B do not
+unify:** on A the medoid axis is pinned at `t` and the arms are provably one
+number; on B the axis is wide open and the arms cluster anyway. The second is a
+property of the representations, not of the corpus, and is the more interesting
+statement.
+
+**Process note.** The script's own summary line asserted the corpus explanation
+before the number existed — I had written the expected reading into the output
+text. It now reports the two widths and tells the reader to compare them. Same
+failure mode as the rest of the session: the conclusion written ahead of the
+measurement.

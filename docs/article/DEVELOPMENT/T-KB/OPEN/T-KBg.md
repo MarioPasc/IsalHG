@@ -45,3 +45,89 @@ insertion — the regime, not the edit kind. See T-KBe for the tables and for th
 naming ("pendant" = the edit changed the constant inventory; "interior" = it
 did not; `add_constant`/`remove_constant` are arity widening/narrowing of one
 fact, not inventory changes).
+
+---
+
+## The corrections this campaign forces — compiled 2026-09-10
+
+Assembled while RQ4/RQ7/RQ3 were still running, so it lists **only items that do
+not depend on their numbers**. Each is measured and recorded in
+`T-KBf.md`; this is the work list, not the evidence.
+
+### Retractions — statements currently in the docs that are false
+
+1. **"The consensus is worse than the medoids and than the majority merge"**
+   (`RESULTS_WALKTHROUGH.md`, Corpus B). Measured under `reach′`: the consensus
+   is better in point estimate than **all eleven** medoid arms and best-equal on
+   recovery. The sentence and its causal story — *"a natural series is not a set
+   of variants of one source, so there is nothing for a consensus to converge
+   to"* — must be **retracted in print**, not dropped. Corpus B still goes to
+   the supplement, but by the pre-registered gate, not by that reason.
+   Supersession notes are already in place at both sites.
+
+2. **`prose.md` §2.3's "the one locality the Isal walk owns outright,
+   deletions"** — already flagged in this file; the axis is **pendant vs
+   interior**, not deletion vs insertion.
+
+3. **"H3d fails"**, if written unqualified. Prop 3's *proved* bound holds on
+   **all 4,457 certificates, zero violations**; only the empirical "max ≤ 1.7"
+   expectation fails, at 1.7778. Reporting the failure without the theorem is
+   the misleading half.
+
+4. **RQ6's headline, if taken from `summary.json`.** The analyzer names the
+   **retired** alphabet as ours (`MODEL_OURS = "fact_ngram"`), whose validity is
+   1.000 but whose **connectivity is 0.271**. Σ_HG is 1.000 on both.
+   `prose.md` §2.2 already quotes the right numbers; the code and the analyzer
+   must be brought into line so a cold reader cannot quote the weaker result.
+
+### Statements that must be added
+
+5. **H3a's deletion clause demanded what no method achieves.** It required
+   ≥ 0.95; `majority_merge`, the identity-using reference the design itself
+   names, scores **0.208** on ndc `del t=2`. Say the threshold was
+   mis-specified, on the merge's own number — this locates our 0.130 rather
+   than excusing it.
+
+6. **The consensus reaches the identity-using ceiling on insertions** — 1.000
+   against the merge's 0.995 on ndc `ins t=2`, 1.000 on both wd50k insertion
+   cells, while **every medoid arm recovers 0.000 in every cell**. This is
+   RQ3's claim in its cleanest form and is currently understated.
+
+7. **Two readings that go against us**, both measured, both required by the
+   author's standing rule: `wl_l1` merges nothing on these three corpora, so
+   Prop 9's incompleteness does not materialise on this data; and
+   `bipartite_ged_path` fails exactness in the *other* direction, splitting 557
+   true classes into 574 — "0 false merges" is not "exact at zero".
+
+8. **RQ5 is not merely a null.** The naive degree-sequence floor beats us
+   significantly on all four comparisons, with rank-biserial **−1.000** on both
+   corpora — it wins on every seed. The metric-space article's S7 found the same
+   on different corpora. One sentence, stated once: degree structure dominates
+   clustering and the canonical string does not capture it.
+
+9. **The Corpus B gate is underpowered**, and the caption must say so: MDE
+   ≈ 0.40 fact-tokens against observed differences of 0.03–0.11, and only 8 of
+   63 pairs informative on the recovery axis. "No difference was detected at
+   n = 63", never "no better".
+
+10. **The division of labour on invariants**, one clause, framed as design not
+    defect: the fact word is the right *internal* key for remainders because it
+    keys disconnected inputs; the Isal word is the right *representation*
+    because it decodes only to knowledge bases. `RemainderIndex` must be
+    described as "any complete invariant", never as `F°`.
+
+11. **The methods sentence the defect pattern earns.** Every defect this
+    campaign found sat where the pipeline still used the retired representation
+    or touched objects outside the representation's domain — both fact-rank-era
+    residue. Worth one sentence, because it is also the reason the reader should
+    trust the arm set now.
+
+### Housekeeping already known
+
+12. `START_HERE.md` §0/§0.1/§6.0 and `DESIGN.md` G1 still carry the fact-rank
+    narrative (predates D-ART4).
+13. The caption clause on the per-comparison interval beside the Holm-corrected
+    p, and the rank-biserial replacing the difference-of-means for median rows.
+14. Name the regimes in words — **pendant** = the edit changed the constant
+    inventory, **interior** = it did not — and state once that
+    `add_constant`/`remove_constant` are arity widening/narrowing of one fact.

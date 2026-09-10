@@ -1242,3 +1242,50 @@ violates `LB ≤ cost` 27 times, which is the pre-stated consequence of its not
 being a metric. So the RQ2 step-4 gap is narrower than recorded — the
 certificate-validity verdict exists under `reach′`; what still needs the final
 RQ2 pass is the identity-timing section, which waits on RQ7.
+
+### The per-cell recovery table — and H3a's deletion clause was unachievable by construction
+
+`coverage_r2` against `majority_merge`, the identity-using reference, per cell
+(every medoid arm is 0.000 in every cell, so the floor is omitted):
+
+| collection | kind | t | consensus | merge (identities) |
+|---|---|---|---|---|
+| ndc | ins | 1 | 0.991 | 1.000 |
+| ndc | ins | 2 | **1.000** | **0.995** |
+| wd50k | ins | 1 | **1.000** | 1.000 |
+| wd50k | ins | 2 | **1.000** | 1.000 |
+| ndc | mix | 1 | 0.944 | 1.000 |
+| ndc | mix | 2 | 0.854 | 0.803 |
+| wd50k | mix | 1 | 0.898 | 1.000 |
+| wd50k | mix | 2 | 0.757 | 0.850 |
+| ndc | del | 1 | 0.792 | 1.000 |
+| ndc | del | 2 | **0.130** | **0.208** |
+| wd50k | del | 1 | 0.905 | 1.000 |
+| wd50k | del | 2 | 0.359 | 0.607 |
+
+**On insertions the consensus reaches the identity-using ceiling and once
+exceeds it** — 1.000 against the merge's 0.995 on ndc `ins t=2`, and 1.000 on
+both wd50k insertion cells. A method denied constant identities matches a method
+given them. That is the cleanest statement of RQ3's claim in the campaign.
+
+**H3a's deletion clause asked for something no method achieves.** It required
+≥ 0.95 exact recovery on deletion cells; the identity-using merge itself scores
+**0.208** on ndc `del t=2` and 0.607 on wd50k. So the threshold was not merely
+missed, it was **unachievable by the oracle the design itself names as the
+reference**. The honest report is that the pre-registration was mis-specified on
+that clause, not that the method failed a reachable bar — and the evidence is
+the merge's own number, not ours. This does not rescue our 0.130; it locates it.
+
+**The deletion boundary is a property of the task at `t = 2`.** Both methods
+collapse together (0.130/0.208 on ndc, 0.359/0.607 on wd50k) while both are
+near-perfect at `t = 1` (0.792/1.000, 0.905/1.000). Two deletions from a small
+source destroy the information, which is what the *original* explanation said
+before the audit's §3.3 disputed it — §3.3 disputed it for **Corpus A under the
+old generator**, where the objective's tie-break was implicated. Under `reach′`,
+with the merge's numbers beside ours, the information-loss reading is supported
+for `t = 2` specifically. §3.3 remains on the re-measurement list; this is
+evidence for it, not a substitute.
+
+Note the `mix` minimum the analyzer reports (0.722) is below the lowest cell
+here (0.757) because H3a is scored over both consensus labels, `coverage_r2`
+and `coverage_rt`; 0.722 is a `coverage_rt` cell.

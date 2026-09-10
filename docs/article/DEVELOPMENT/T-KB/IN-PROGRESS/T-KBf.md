@@ -1858,3 +1858,62 @@ and no floor to expect — the code was inventing a failure. It now says so.
 **Not re-running for the winner id.** It would only answer the mechanism
 question, and the mechanism no longer carries a claim; plumb it through the next
 instrumented run, where it is nearly free.
+
+### The natural-series floor — the Corpus B statement RQ3 can actually make
+
+`scripts/diagnostics/rq3_corpus_b_truth_in_members.py`, on the corrected
+consensus rows. The subset is defined **from the data** — does the held-out
+quarter equal any earlier one? — not from the winner's origin, so it is
+pre-statable and carries none of the confounding that conditioning on the
+method's own output would.
+
+**The predicate is fact equality, not isomorphism.** `exact_recovery` is
+`fact_distance(identity_facts_of_record(x), truth_facts) == 0`, so the subset
+uses exactly that. A floor stated over isomorphism would be a claim about a
+different relation than the one being floored — and it happens to be far
+cheaper: one pass over the corpus, no iso test.
+
+| Corpus B, 69 units / 68 uncensored coverage runs (join complete 68/68) | |
+|---|---|
+| truth already equals some member | **28 units** |
+| truth matches **no** member | **40 runs** |
+
+| subset | winner | recovered | not |
+|---|---|---|---|
+| **TRUTH_ABSENT** | member | **0** | 17 |
+| **TRUTH_ABSENT** | transfer | **3** | 20 |
+| truth_in_members | member | 16 | 9 |
+| truth_in_members | transfer | 0 | 3 |
+
+**The statement.** On the 40 natural runs where the held-out quarter equals no
+earlier quarter, **every method restricted to returning an input recovers it zero
+times by construction, and the coverage consensus recovers it three times.** This
+is the natural-series analogue of Corpus A's structural floor, and it needs no
+power argument — it is an existence result against a provable zero.
+
+**The table validates itself.** All 16 member-recoveries fall in
+`truth_in_members`; there are **zero** member-recoveries under `TRUTH_ABSENT`. A
+member cannot recover a truth equal to no member, so that cell had to be empty
+and is. The predicate therefore matches the measurement's.
+
+**The ratio a reader would otherwise compute.** Raw, transfer winners recover
+3/26 and member winners 16/42 — 11% against 38%, which reads as the capability
+underperforming. Conditioned on the hard subset it inverts:
+
+| on the 40 TRUTH_ABSENT runs | recovered |
+|---|---|
+| member winners | **0 of 17** |
+| transfer winners | **3 of 23** |
+
+Member winners recover **only where recovery is free**. The 16 sit entirely in
+the subset where the truth was already in the collection. The sentence is not
+"11% against 38% with a regime caveat"; it is that on the runs where recovery is
+not free, input-returning methods recover nothing and the consensus recovers
+three.
+
+**Corpus A's `member, recovered = 0 of 594` is H3b passing**, not an empty cell,
+and will be named as a check that passed.
+
+**Still to do:** pull the 3 natural runs by class id and quarter as a worked
+figure — a capability claim with one instance shown reads differently from the
+same claim as a count.

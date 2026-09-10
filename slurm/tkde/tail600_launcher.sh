@@ -56,6 +56,27 @@ MAX_CONCURRENT="${MAX_CONCURRENT:-16}"
 WALL="${WALL:-0-04:00:00}"
 START_CUTOFF_S="${START_CUTOFF_S:-12600}"
 
+# The roots are resolved HERE and exported by name, as every RQ launcher does.
+# Relying on `--export=ALL` to carry them is what makes a wrong census silent:
+# common.sh defaults ISALHG_RESULTS_ROOT to results/IEEETKDE, whose M3 census
+# carries no `wstar_rank` arm at all, so a submission from a shell that had not
+# exported the merged root would measure a different population under this
+# job's name and never say so.
+RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE_isal_merged}"
+DATA_ROOT="${ISALHG_DATA_ROOT:-${TKDE_USER_ROOT}/fscratch/datasets/isalhg_tkde}"
+CORPORA_ROOT="${TKDE_CORPORA_ROOT:-${DATA_ROOT}}"
+
+# Fail at submit time, not on sixteen nodes: assert the census this job is named
+# after actually resolves, and that both arms are present in it.
+CENSUS_EXP="$(sed -n 's/^census_experiment:[[:space:]]*//p' "${CONFIG}" | tr -d '[:space:]')"
+CENSUS_N=$(ls "${RESULTS_ROOT}"/RQ1_*/"${CENSUS_EXP}"/rows_m3__*.csv 2>/dev/null | wc -l)
+if (( CENSUS_N == 0 )); then
+    echo "FATAL: no M3 census at ${RESULTS_ROOT}/RQ1_*/${CENSUS_EXP}/rows_m3__*.csv" >&2
+    echo "       set ISALHG_RESULTS_ROOT to the merged root, or fix census_experiment" >&2
+    exit 1
+fi
+echo "census: ${CENSUS_N} M3 files under ${RESULTS_ROOT}/RQ1_*/${CENSUS_EXP}/"
+
 # sbatch --parsable can emit ANSI colour on this cluster, so the id is stripped
 # to digits before it is used as a dependency (RQ7 launcher, same guard).
 _clean_job_id() {
@@ -80,6 +101,10 @@ NO_SWEEP=0
 [[ "${1:-}" == "--no-sweep" || "${2:-}" == "--no-sweep" ]] && NO_SWEEP=1
 
 COMMON_EXPORT="ALL,REPO_DIR=${REPO_DIR}"
+COMMON_EXPORT="${COMMON_EXPORT},ISALHG_RESULTS_ROOT=${RESULTS_ROOT}"
+COMMON_EXPORT="${COMMON_EXPORT},ISALHG_DATA_ROOT=${DATA_ROOT}"
+COMMON_EXPORT="${COMMON_EXPORT},TKDE_CORPORA_ROOT=${CORPORA_ROOT}"
+COMMON_EXPORT="${COMMON_EXPORT},TKDE_LOGS_DIR=${LOGS_DIR}"
 
 if [[ "${MODE}" == "smoke" ]]; then
     JOB_ID=$(submit \
@@ -97,7 +122,9 @@ fi
 # The runner is a package module of the DEPLOYED tree, not of slurm/tkde, so
 # --count must run from REPO_DIR or it dies with ModuleNotFoundError and the
 # array size is never derived (RQ7 launcher, same failure).
-N_SHARDS=$(cd "${REPO_DIR}" && "${PY}" -m experiments.tkde.tail600 --config "${CONFIG}" --count)
+N_SHARDS=$(cd "${REPO_DIR}" && ISALHG_RESULTS_ROOT="${RESULTS_ROOT}" \
+    ISALHG_DATA_ROOT="${DATA_ROOT}" "${PY}" -m experiments.tkde.tail600 \
+    --config "${CONFIG}" --census-root "${RESULTS_ROOT}" --count)
 [[ "${N_SHARDS}" =~ ^[0-9]+$ ]] || { echo "FATAL: --count returned ${N_SHARDS@Q}" >&2; exit 1; }
 N_TASKS=$(( (N_SHARDS + BUNDLE - 1) / BUNDLE ))
 (( MAX_CONCURRENT > N_TASKS )) && MAX_CONCURRENT="${N_TASKS}"

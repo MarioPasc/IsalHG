@@ -332,3 +332,32 @@ four decimals (0.4157) and WD50K did not (0.1563 vs 0.1260). With the roles map
 both columns match exactly. **A reproduction that does not reproduce the
 configuration is not a reproduction**, and the only thing that revealed it was a
 redundant comparison against a number already on disk.
+
+---
+
+## Quoted forms — every transformation the prose prints, beside its stored value
+
+The fold turns stored figures into prose, and prose does not use stored forms. A
+reader checking the paper greps for **what the paper prints**, not for what the
+analyzer wrote, so each transformed form is recorded here beside the value it
+came from. Audited against `prose.md` 2026-09-10; the fold adds a line per new
+form as it writes it (T-KBg obligation).
+
+| the prose prints | stored value | where |
+|---|---|---|
+| "270,000/270,000" (valid, and connected) | validity 1.0000, connectivity 1.0000 × 270,000 drawn | `prose.md:173` |
+| "reject **98.10 %** (NDC)" | `incidence_ngram` rejection 0.9810 | `:177`, `:423` |
+| "**98.98 %** (WD50K)" | rejection 0.9898 | `:178`, `:423` |
+| "a usable knowledge base **every time**" | joint valid∧connected 1.000000 | `:181` |
+| "**one time in two**" (NDC) | 0.415748 | `:181` |
+| "**one in eight**" (WD50K) | 0.125959 | `:182` |
+| "**one in 578**" (NDC) | 0.001730 | `:183` |
+| "**one in 11,739**" (WD50K) | 0.000085 | `:183` |
+| "**7.3 %** are connected" | P(connected \| novel) 0.0726 | `:188` |
+| "of ours, **100 %**" | 1.0000, Prop. C.4 + 270,000/270,000 | `:189`, `:216` |
+| "disconnected **58 %** of the time on NDC" | 1 − 0.4157 = 0.5843 | `:566` |
+| "**87 %** on WD50K" | 1 − 0.1260 = 0.8740 | `:567` |
+
+Two of these are reciprocals ("one in 578" from 0.001730) and two are
+complements ("58 %" from 0.4157) — the forms a grep for the stored value will
+never find, which is the point of the table.

@@ -194,3 +194,21 @@ Like the "reproduce a campaign quantity alongside the new one" rule, this is a
 **second opinion** rather than a second check, and it catches what looking harder
 at what is there cannot.
 
+**Obligation: a transformed form goes into the entry as it is written.** The
+fold's job is to turn stored figures into prose, and prose does not use stored
+forms. Today's prose already prints "one in 578", "one in 11,739", "58 %",
+"87 %", "7.3 %" and "270,000/270,000" — reciprocals, complements, percentages
+and ratios of values the fact base stores as 0.001730, 0.000085, 0.4157, 0.1260,
+0.0726 and 1.0000. **A grep for the stored value finds none of them**, and a
+reader checking the paper greps for what the paper prints.
+
+So this is a fold obligation, not a sweep afterwards: **when the fold writes a
+number in a transformed form, that form goes into its `foundation/` entry beside
+the stored one, in the same edit.** One line per number, no judgement required.
+Stated before the fold begins because the fold produces one such gap per
+sentence, and repairing a batch afterwards is what the precondition exists to
+avoid.
+
+The first table is `foundation/rq6_generation_facts.md` §"Quoted forms", which
+back-fills the twelve forms the prose already carries.
+

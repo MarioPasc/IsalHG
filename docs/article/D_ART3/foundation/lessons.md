@@ -282,3 +282,12 @@ the episode that taught it (provenance in `measured_facts.md`).*
   halves of one output contradicting each other**. A single check that can be
   wrong in the reassuring direction is not enough on its own, so the checks are
   worth making redundant as well as structural.
+
+  **A write is not verified by its exit status, only by reading back what it
+  wrote.** Two of the session's six silent failures were writes, not reads: an
+  anchor-patch script whose anchor did not match because a heredoc had escaped
+  the backticks differently, and which returned zero either way. `classify()`
+  and `reduced()` guard the data path; the edit path has no equivalent, so
+  prefer the tool that **fails when its anchor is absent** over the hand-rolled
+  script that succeeds vacuously — and when a script must be used, grep for the
+  result rather than trusting the exit code.

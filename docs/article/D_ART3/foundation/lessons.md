@@ -291,3 +291,21 @@ the episode that taught it (provenance in `measured_facts.md`).*
   prefer the tool that **fails when its anchor is absent** over the hand-rolled
   script that succeeds vacuously — and when a script must be used, grep for the
   result rather than trusting the exit code.
+
+  **A reproduction that does not reproduce the *configuration* is not a
+  reproduction.** Recomputing RQ6's joint yield on WD50K gave 0.0903, then
+  0.0886, then — with the roles map the campaign actually uses — **0.0685**. The
+  first two were faithful to a pipeline that does not exist: `wd50k66` sets
+  `roles: true`, so the model is fitted on role-aware words, and a script that
+  fits role-free words samples from a different model. Nothing in the script was
+  wrong.
+
+  **No guard in `rowsio.py` would have caught this one.** The rows were read
+  correctly, the keys were total, nothing matched nothing, and no reduction
+  collapsed. The only thing that exposed it was a **number already on disk**: the
+  reproduction matched the campaign's NDC connectivity to four decimals (0.4157)
+  and missed WD50K's (0.1563 against 0.1260). So the rule is to reproduce a
+  quantity the campaign already reports *alongside* the new one, and to treat a
+  mismatch there as disqualifying the new number — a second recorded opinion
+  rather than a second check, which is a different kind of redundancy from the
+  structural guards and catches a different class.

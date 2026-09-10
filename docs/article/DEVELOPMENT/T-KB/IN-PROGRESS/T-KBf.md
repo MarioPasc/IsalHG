@@ -991,3 +991,30 @@ is unchanged; the reason for it is not the reason previously given.
 This is what the pre-registration was for. Had the gate been applied after
 seeing these numbers, "better on all eleven arms but not significantly" could
 have been written up either way.
+
+### The gate is badly underpowered — "no better" is the wrong sentence
+
+Measured on the same 63 paired runs, minimum detectable effect at 80 % power,
+two-sided 0.05:
+
+| comparison | observed Δ | paired SD | MDE | observed / MDE | informative pairs |
+|---|---|---|---|---|---|
+| fact distance vs `wl_l1` | −0.032 | 1.126 | **0.397** | **0.08** | 29 of 63 |
+| fact distance vs `wstar_orbit` | −0.111 | 0.910 | 0.321 | 0.35 | 29 of 63 |
+| recovery vs `wl_l1` | +0.032 | 0.355 | 0.125 | 0.25 | **8 of 63** |
+| recovery vs `wstar_orbit` | ±0.000 | 0.356 | 0.126 | 0.00 | **8 of 63** |
+
+The study can detect a fact-distance difference of about **0.40 tokens**; the
+differences in play are **0.03–0.11**, an eighth to a third of that. On the
+recovery axis only **8 of 63 pairs differ at all** — the other 55 are ties, so
+that axis is close to uninformative at this corpus size.
+
+**Consequence for the wording.** "The consensus is no better than the medoid" is
+not what was measured. What was measured is: *no difference was detected on 63
+paired runs, where the smallest detectable difference is an order of magnitude
+larger than the one observed.* The pre-registered placement rule fires on the
+null and Corpus B goes to the supplement — the rule is honoured — but the
+supplement's text must state the power, or a reader will take a null for a
+finding. This is a defect in how D-KBf5a was written (it treats a
+non-rejection as evidence of no effect) and it is recorded as such rather than
+patched after the fact.

@@ -403,3 +403,18 @@ the episode that taught it (provenance in `measured_facts.md`).*
   comments is cheaper than measuring and faster than reasoning, and it is the
   right first move whenever the question is about **behaviour** rather than about
   a number the behaviour produced.
+
+  **Ask about the uncertainty; being right about it is a lower bar than it
+  looks.** Two of the peer session's sharpest interventions tonight rested on
+  premises that did not survive: a guess that two matched pairs of counts were
+  the same members (they overlapped six of eight), and a claim that the missing
+  units were cost-selected (they were selected by task start delay). Both were
+  withdrawn. **Both produced the measurement that changed what the paper will
+  say** — the arity × symmetry cross-tab, and the per-cell profile that found the
+  `iso_twin` depletion.
+
+  A wrong question aimed at a real uncertainty still produces the measurement.
+  So the standard for raising something is not "I think this is wrong" but
+  "nothing here has been measured" — which is a lower bar, and a far more useful
+  one, because a correct challenge and an incorrect one are equally good at
+  forcing a number into existence.

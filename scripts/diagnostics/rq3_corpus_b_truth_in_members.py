@@ -152,13 +152,36 @@ def _stratum_distance(
     """
     from math import comb
 
-    by: dict[tuple[str, str, str], float | None] = {}
-    for r in rows:
-        if num(r.get("censored")) == 1.0 or r.get("method") == "medoid_survivors":
-            continue
-        by[(r.get("collection_id", ""), r.get("method", ""), r.get("arm", ""))] = num(
-            r.get("fact_dist")
+    # `radius` belongs in the key even though Corpus B carries a single one:
+    # Corpus A writes two coverage rows per unit, and a key without it drops one
+    # of them by last-wins. The guard below is what makes that impossible rather
+    # than merely unlikely -- a check that silently compares half its rows still
+    # passes, which is the failure mode this campaign keeps producing.
+    eligible = [
+        r
+        for r in rows
+        if num(r.get("censored")) != 1.0 and r.get("method") != "medoid_survivors"
+    ]
+    by: dict[tuple[str, str, str, str], float | None] = {}
+    for r in eligible:
+        by[
+            (
+                r.get("collection_id", ""),
+                r.get("method", ""),
+                r.get("arm", ""),
+                r.get("radius", ""),
+            )
+        ] = num(r.get("fact_dist"))
+    if len(by) != len(eligible):
+        raise SystemExit(
+            f"FATAL: {len(eligible)} eligible rows collapse onto {len(by)} keys; "
+            f"{len(eligible) - len(by)} would be dropped silently"
         )
+    radii = sorted({k[3] for k in by if k[1] == "coverage"})
+    if len(radii) != 1:
+        raise SystemExit(f"expected one coverage radius on this corpus, found {radii}")
+    radius = radii[0]
+    print(f"   (consumed {len(eligible)} eligible rows; coverage radius {radius!r})")
     hard = sorted(u for u, absent in present.items() if not absent)
     arms = sorted({k[2] for k in by if k[1] == "medoid" and k[2]})
     print()
@@ -171,10 +194,10 @@ def _stratum_distance(
     print("   (defined post hoc after the full-set null; cannot move D-KBf5a)")
     for arm in arms:
         pairs = [
-            (by[(u, "coverage", "fact_rank")], by[(u, "medoid", arm)])
+            (by[(u, "coverage", "fact_rank", radius)], by[(u, "medoid", arm, "")])
             for u in hard
-            if by.get((u, "coverage", "fact_rank")) is not None
-            and by.get((u, "medoid", arm)) is not None
+            if by.get((u, "coverage", "fact_rank", radius)) is not None
+            and by.get((u, "medoid", arm, "")) is not None
         ]
         if not pairs:
             continue

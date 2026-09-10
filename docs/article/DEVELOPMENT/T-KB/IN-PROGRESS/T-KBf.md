@@ -1018,3 +1018,54 @@ supplement's text must state the power, or a reader will take a null for a
 finding. This is a defect in how D-KBf5a was written (it treats a
 non-rejection as evidence of no effect) and it is recorded as such rather than
 patched after the fact.
+
+### The forensics — Corpus A carries RQ3, and the tie-break barely fires
+
+Five questions put by `[IsalHG-Fable]` against the gate, answered from rows on
+disk (`scripts/diagnostics/rq3_consensus_forensics.py`).
+
+**Corpus A is the result the paper wants, and it is overwhelming** (4,457 common
+units, `reach′`):
+
+| axis | consensus | medoid (`wl_l1`, `wstar_orbit` alike) | discordant | rank-biserial |
+|---|---|---|---|---|
+| fact distance | **0.269** | 1.521 | 3,901 better / 37 worse of 3,938 | **+0.981** |
+| exact recovery | **0.835** | **0.000** | 3,723 better / **0 worse** of 3,723 | **+1.000** |
+
+The medoid recovers the source **never** — which is H3b holding exactly as
+written ("the medoid's distance to the source is ≥ t by construction, since it
+returns a member"). The consensus recovers it in 83.5 % of runs and is never
+once worse on recovery. So RQ3's claim — *a representative that is a decoded
+object no member wrote does what no method returning an input can* — is
+confirmed at scale on the controlled corpus. The Corpus B tie is a statement
+about the natural series, not about the method.
+
+**The tie-break barely fires**, which bounds what the retired-word defect can
+have cost:
+
+| | consensus rows | `n_ties = 0` (tie-break never fired) |
+|---|---|---|
+| Corpus A | 8,914 | **8,442 (94.7 %)** |
+| Corpus B | 69 | **54 (78.3 %)** |
+
+A run with `n_ties = 0` is invariant-neutral: no candidate was separated by the
+word rule, so its result stands unchanged under any complete invariant. The
+defect can therefore have touched at most 5.3 % of Corpus A runs and 21.7 % of
+Corpus B's — and touching is not the same as changing, since a different word
+may pick the same candidate. Candidates per run: median 118 (max 1,330) on
+Corpus A, median 40 (max 319) on Corpus B.
+
+**The medoid has no tie-break of its own** — `medoid.py` is `int(np.argmin(costs))`
+with no lexicographic fallback, so ties there resolve by member index. Arbitrary,
+but representation-neutral, so the medoid rows are unaffected by any of this.
+
+**Two of the five are not answerable from the rows**: the winner's origin
+(`member:` vs `transfer:`) and the disconnected-candidate count are computed
+inside `consensus.py` and never persisted. They need an instrumented re-run of
+the consensus, not a query. Filed rather than guessed.
+
+**A near-miss recorded.** The first version of this script labelled the sign of
+the recovery axis as though lower were better, and printed "consensus worse in
+3,723 of 3,723 pairs" for what is in fact "better in 3,723 of 3,723". Caught
+before it reached the ledger by checking the printed means against the signs;
+the axis-direction is now explicit per axis in the code.

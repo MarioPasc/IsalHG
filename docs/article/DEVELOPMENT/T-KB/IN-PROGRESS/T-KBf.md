@@ -1490,3 +1490,38 @@ collections in play, and a count materially above that is poisoning rather than
 cost. That is a cheap in-run assertion and catches the class, not the case.
 Folded into T-KBm's acceptance, which already covers censoring that reports
 success it did not earn.
+
+### Pre-registered validity check on `winner_origin` — committed before the re-run lands
+
+Proposed by `[IsalHG-Fable]` and recorded here **before any value of the new
+field has been looked at**, so it can fail.
+
+**The prediction.** On Corpus A, `winner_origin` must read `transfer` on **at
+least 83.5 %** of runs.
+
+**Why it is forced, not expected.** `variant_collection` builds members that are
+pairwise non-isomorphic *and* non-isomorphic to the source (`ladders.py`:
+`fingerprints = {source_fingerprint}`, and a candidate whose fingerprint is
+already present is rejected). So no member lies in the source's isomorphism
+class. Exact recovery is `|F(out) △ F(truth)| = 0`, i.e. the winner *is* the
+source — stronger than isomorphic. And `origin` labels a class by how it was
+first produced, keeping `member` only for a class first produced as a member,
+which the source's class cannot be. Therefore **exact recovery implies a
+transfer winner**, and the transfer fraction is bounded below by the measured
+recovery rate of 0.835. Plausibly higher, since a transfer candidate that is not
+the source can also win.
+
+**What a failure would mean.** A transfer fraction materially below 0.835 does
+not describe the corpus — it means either the new field is wrong or the recovery
+number is. Either way the distribution must not be used to write the Corpus B
+supplement until it is resolved.
+
+**Why this is a test of the instrument and not a finding.** Corpus A's answer is
+derivable from what is already measured, which is exactly what makes it a
+validity check. **Corpus B is where the measurement is informative**, because
+nothing there predicts it: whether the consensus returns an input or a decoded
+object no member wrote is the question that decides what the supplement can
+claim, and D-KBf5a's gate result — a tie against the best medoid — reads very
+differently depending on the answer. A tie achieved by returning inputs is a
+medoid with extra steps; a tie achieved by returning decoded objects is the
+capability claim holding on real data.

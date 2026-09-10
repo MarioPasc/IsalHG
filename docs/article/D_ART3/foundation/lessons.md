@@ -241,3 +241,21 @@ the episode that taught it (provenance in `measured_facts.md`).*
   permission layer refused `git reset --hard`, and a peer session checked the
   tree rather than trusting the report. Never discard stderr on a command whose
   success you are about to depend on.
+
+  **When the data supports three states, a binary hides one of them — and it is
+  never the harmless one.** Three verdicts in a single session collapsed a
+  distinction the measurement could actually make:
+
+  | collapsed | should have been | what the collapse did |
+  |---|---|---|
+  | `None` for "no member in the fact-count window" | `False` — a failed *necessary* condition is a proof of "no" | dropped those samples from the denominator, overstating one arm **2.18×** |
+  | a blank `reach1` folded to `0` by `fillna` | "not computed", excluded from the denominator | counted an unmeasured value as a measured failure |
+  | `REFUTED` for a non-significant differential | `INDETERMINATE` when the estimate favours the claim | would have retired a **true** claim, rewriting three downstream ones |
+
+  The shape is the same each time: a binary where the data supports a trinary.
+  And in all three the collapsed state was the one that flattered whichever
+  claim was under test, which is why none of them looked wrong while being
+  written. The check is mechanical — for any reported rate, ask what the
+  denominator excludes and whether "cannot tell" is distinguishable from "no".
+  If it is, the verdict has three states and the report carries an interval, not
+  just a label.

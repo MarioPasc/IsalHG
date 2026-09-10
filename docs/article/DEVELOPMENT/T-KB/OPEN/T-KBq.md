@@ -246,3 +246,47 @@ that most favours the paper's method.**
    ones and hit budgets) or deadline-driven is **not established**, and this task
    does not need it to be: the reporting obligation is discharged by the profile
    itself.
+
+---
+
+## 2026-09-11 — this task's title is wrong: the skip EXISTS and is inert
+
+RQ4 **does** have an idempotent skip, and it has had one since the runner's first
+commit (`c83d212`):
+
+```python
+if not args.force and _unit_done(rows_paths, unit):
+    logger.info("unit %d (%s) already done; skipping", unit_index, unit.unit_id)
+```
+
+**It fired zero times across all nine tasks of job 2273337.** Not rarely — never.
+
+The reason is the same class as everything else tonight: `_unit_done` checks
+`rows_paths.dir / f"rows_auc__{unit.unit_id}.csv"`, and the worker runs with
+`--out "${OUT_DIR}"` where `OUT_DIR` is **node-local staging**, confirmed from
+the live log: `out=/localscratch/users/mpascual/2279519_6/out`. That directory is
+per-task and starts empty, and results are copied to the durable root only at
+teardown. **So the predicate is evaluated against a directory that cannot contain
+prior results.** A correct operation on the wrong object, for the fourth time
+today.
+
+**So the observation that opened this task is right and its diagnosis is wrong.**
+Resubmission genuinely does not advance — but not because no skip exists. It is
+because the skip is asked a question the staging directory can never answer yes
+to.
+
+**The fix changes accordingly:** point the skip at the **durable results root**,
+not at `--out`. That is a smaller change than writing a resume, and it makes the
+existing `--force` flag meaningful (today it guards a branch that is already
+always taken).
+
+**Relationship to T-KBv.** Two independent defects, both required for the
+observed damage:
+
+| defect | effect |
+|---|---|
+| **T-KBv** — deadline from the array's submit time | late tasks defer everything after their first unit |
+| **this task** — skip evaluated against empty staging | a resubmission re-runs the reachable prefix instead of advancing past it |
+
+Fixing either alone leaves RQ4 incomplete: without T-KBv late tasks still defer;
+without this, a resubmission still cannot reach what they deferred.

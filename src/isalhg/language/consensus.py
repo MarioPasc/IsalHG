@@ -14,10 +14,46 @@ Over a candidate set ``C``, return the lexicographic argmax of
 * ``cov_r(c) = #{ i : reach_F(c, K_i) <= r }`` --- maximised;
 * ``sum_i min(reach_F(c, K_i), r + 1)`` --- minimised, with an unreachable
   member charged ``r + 1``;
-* the word of ``c`` in tuple order --- minimised, as the final tie break.
+* the Isal fingerprint ``F(c) = (seed label, w*_c(c))`` --- minimised, as the
+  final tie break.
 
 Nothing here is tuned: the objective is fixed in advance and the measured
 recovery rate is whatever it is.
+
+Why the tie break is the Isal string and the dedup key is not
+-------------------------------------------------------------
+Deduplicating the candidate set by a canonical key is *invariant-neutral*: any
+complete isomorphism invariant induces the same classes, so the fact word (which
+is cheap, total, and already computed for every remainder) decides nothing.  A
+tie break is a different act --- it **selects among candidates the objective
+cannot distinguish**, so whichever word orders them is the representation the
+returned object is chosen by.  D-ART4 (3) rules that representation to be the
+Isal instruction string, and D-ART5 fixes which Isal word: the family's frozen
+``w*_c``.  The key is therefore the fact word and the tie break is
+:func:`isal_fingerprint`; the two must not be confused.
+
+Because the tie break is evaluated only over the candidates that survive the
+first two criteria, a run whose top ``(cov_r, sum reach)`` is attained once
+(``n_ties == 0``) never canonicalizes anything with the Isal engine, and its
+result does not depend on which complete invariant orders words.
+
+The domain: a candidate must be a word
+--------------------------------------
+``K_i - A' + pi(B')`` can be disconnected --- deleting facts splits a knowledge
+base --- and it can be empty, when ``A'`` takes every fact.  Neither has an Isal
+string: R3 and Prop. C.4 fix the language's domain to connected knowledge bases
+with at least one constant, and ``canonical_string`` raises on both
+(``DisconnectedHypergraphError``, ``DegenerateHypergraphError``).  Such a
+candidate is therefore excluded from the candidate set, since a representative
+that is not a decoded Isal program is not a result this method can report.
+Removing *losing* candidates from an argmax is a no-op, so the exclusion moves a
+result only where the winner was out of domain --- and there the previous winner
+was already invalid.  :attr:`ConsensusResult.n_excluded` counts the classes
+dropped.
+
+Remainders are keyed by the fact word for the opposite reason and that is not an
+oversight: :mod:`isalhg.language.reach` compares *remainders*, which may
+legitimately be disconnected, and needs only a complete invariant there.
 
 The candidate set
 -----------------
@@ -72,10 +108,11 @@ from __future__ import annotations
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from itertools import combinations
-from typing import Literal
+from typing import Literal, TypeAlias
 
 from isalhg.core.fact_word import Word
 from isalhg.core.sparse_hypergraph import SparseHypergraph
+from isalhg.iso_backends.orbit_oracle import canonical_fingerprint_orbit
 from isalhg.language.majority import majority_merge
 from isalhg.language.reach import (
     Alignment,
@@ -88,9 +125,13 @@ from isalhg.language.reach import (
     node_map_from_remainders,
     remove_facts,
 )
+from isalhg.types import VertexLabel
 
 AlignmentBudget = Literal["triangle", "per_side", "sum"]
 BUDGETS: tuple[AlignmentBudget, ...] = ("triangle", "per_side", "sum")
+
+IsalKey: TypeAlias = tuple[VertexLabel, str]
+"""The Isal fingerprint ``F(H) = (seed label, w*_c(H))``, ordered as a tuple."""
 
 
 def _index_radius(r: int, budget: AlignmentBudget) -> int:
@@ -102,6 +143,65 @@ class ConsensusError(LanguageError):
     """Raised when a consensus cannot be computed as asked."""
 
 
+class ConsensusDomainError(ConsensusError):
+    """Raised when no candidate lies in the domain the Isal language fixes."""
+
+
+def in_language_domain(H: SparseHypergraph) -> bool:
+    """True when ``H`` has an Isal string.
+
+    The two conditions are exactly the ones
+    :func:`isalhg.core.canonical.canonical_string` enforces: a knowledge base
+    with no constant produces the empty string, which collides with the
+    one-constant case (``DegenerateHypergraphError``), and a disconnected one is
+    outside R3 / Prop. C.4 (``DisconnectedHypergraphError``).
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        The candidate knowledge base.
+
+    Returns
+    -------
+    bool
+        Whether ``H`` can be canonicalized as an Isal program.
+    """
+    return H.n_nodes >= 1 and H.is_connected()
+
+
+def isal_fingerprint(H: SparseHypergraph) -> IsalKey:
+    """Return ``F(H) = (seed label, w*_c(H))`` --- the objective's tie-break value.
+
+    ``w*_c`` is computed through the stabiliser-orbit-pruned tie-complete search,
+    which is value-preserving (Prop. 6.0) and therefore returns the frozen
+    canonical string of D-TA2, the article's representation under D-ART5.  The
+    seed label is paired with it because it is the one label ``w*_c`` never
+    emits, so the pair --- not the string --- is the complete invariant on a
+    non-trivial vertex vocabulary (Theorem A).  A complete invariant orders the
+    candidate classes totally, so the tie break is decisive.
+
+    Parameters
+    ----------
+    H : SparseHypergraph
+        A candidate in the language's domain; see :func:`in_language_domain`.
+
+    Returns
+    -------
+    IsalKey
+        The seed vertex label and the canonical string.
+
+    Raises
+    ------
+    isalhg.errors.DisconnectedHypergraphError
+        If ``H`` is disconnected.
+    isalhg.errors.DegenerateHypergraphError
+        If ``H`` has no constant.
+    isalhg.errors.BackendUnavailableError
+        If ``pynauty`` is not installed.
+    """
+    return canonical_fingerprint_orbit(H)
+
+
 @dataclass(frozen=True)
 class CandidateScore:
     """One candidate's score under the frozen objective.
@@ -109,7 +209,8 @@ class CandidateScore:
     Parameters
     ----------
     word : Word
-        The candidate's canonical key; also the final tie-break value.
+        The candidate's canonical key --- what the candidate set is deduplicated
+        by.  It is *not* the tie-break value; that is :func:`isal_fingerprint`.
     coverage : int
         Number of members within reach ``r``.
     sum_reach : int
@@ -153,13 +254,31 @@ class ConsensusResult:
         ``kb``'s canonical key.
     coverage, sum_reach : int
         The winning objective values.
+    origin : str
+        The winner's :attr:`CandidateScore.origin` --- ``"member:<i>"`` when the
+        consensus returned an input, ``"transfer:<i>,<j>"`` when it returned an
+        object no member wrote.  RQ3's claim is about the second case, so the
+        rows carry which one occurred rather than inferring it.
+    connected : bool
+        Whether the winner lies in the language's domain
+        (:func:`in_language_domain`).  Always True, because the candidate set
+        admits nothing else; persisted as the audit of that invariant.
     n_candidates : int
-        Size of the deduplicated candidate set.
+        Size of the deduplicated, in-domain candidate set.
+    n_disconnected : int
+        Deduplicated candidate classes that were generated but lie outside the
+        language's domain.
+    n_excluded : int
+        How many of those were dropped from the candidate set.  Equal to
+        :attr:`n_disconnected`; the two are separate fields so that a change of
+        exclusion policy shows up as a divergence rather than silently.
     n_ties : int
         How many other candidates matched the winner on
-        ``(coverage, sum_reach)`` and were separated only by the word rule.
+        ``(coverage, sum_reach)`` and were separated only by the tie break.
+        ``0`` means the tie break never fired, so the result does not depend on
+        which complete invariant orders words.
     candidates : tuple[CandidateScore, ...]
-        Every candidate's score, in generation order.
+        Every in-domain candidate's score, in generation order.
     """
 
     kb: SparseHypergraph
@@ -169,7 +288,11 @@ class ConsensusResult:
     word: Word
     coverage: int
     sum_reach: int
+    origin: str
+    connected: bool
     n_candidates: int
+    n_disconnected: int
+    n_excluded: int
     n_ties: int
     candidates: tuple[CandidateScore, ...]
 
@@ -401,20 +524,55 @@ class _PoolEntry:
     origin: str
 
 
+@dataclass(frozen=True)
+class _Pool:
+    """The candidate set, with the census of what generation produced and dropped.
+
+    Parameters
+    ----------
+    entries : dict[Word, _PoolEntry]
+        The in-domain classes, keyed by canonical key, in generation order.
+    out_of_domain : frozenset[Word]
+        The keys of the classes that were generated but have no Isal string.
+    """
+
+    entries: dict[Word, _PoolEntry]
+    out_of_domain: frozenset[Word]
+
+
 def _candidate_pool(
     members: Sequence[SparseHypergraph],
     r: int,
     budget: AlignmentBudget,
     scorer: _Scorer,
-) -> dict[Word, _PoolEntry]:
-    """Build the deduplicated candidate set: the members, then the alignment transfers."""
+) -> _Pool:
+    """Build the deduplicated candidate set: the members, then the alignment transfers.
+
+    A generated class that has no Isal string is counted and not admitted; see
+    the module docstring for why the exclusion is a correctness fix rather than
+    a perturbation of the objective.
+    """
     pool: dict[Word, _PoolEntry] = {}
+    rejected: set[Word] = set()
+
+    def offer(
+        kb: SparseHypergraph,
+        anchor: int,
+        constant_origin: tuple[tuple[int, int], ...],
+        origin: str,
+    ) -> None:
+        """Admit one generated candidate class, or record it as out of domain."""
+        key = scorer.key(kb)
+        if key in pool:
+            return
+        if not in_language_domain(kb):
+            rejected.add(key)
+            return
+        pool[key] = _PoolEntry(kb, anchor, constant_origin, origin)
+
     for i, H in enumerate(members):
         core, survivors = compact_constants(H)
-        pool.setdefault(
-            scorer.key(core),
-            _PoolEntry(core, i, tuple((i, v) for v in survivors), f"member:{i}"),
-        )
+        offer(core, i, tuple((i, v) for v in survivors), f"member:{i}")
 
     indices = [RemainderIndex(H, _index_radius(r, budget)) for H in members]
     for i, host in enumerate(members):
@@ -426,11 +584,8 @@ def _candidate_pool(
                 for drop in _subsets_up_to(alignment.deleted_from_k, r):
                     for take in _subsets_up_to(alignment.deleted_from_k2, r - len(drop)):
                         built = _transfer(host, drop, donor, take, alignment.node_map)
-                        pool.setdefault(
-                            scorer.key(built.kb),
-                            _PoolEntry(built.kb, i, _provenance(built, i, j), origin),
-                        )
-    return pool
+                        offer(built.kb, i, _provenance(built, i, j), origin)
+    return _Pool(entries=pool, out_of_domain=frozenset(rejected))
 
 
 def coverage_consensus(
@@ -468,6 +623,9 @@ def coverage_consensus(
     ConsensusError
         If ``members`` is empty, ``r`` is negative, or ``alignment_budget`` is
         not one of the three readings.
+    ConsensusDomainError
+        If every generated candidate class is outside the language's domain, so
+        that no representative decodes to an Isal program.
     isalhg.errors.BackendUnavailableError
         If ``pynauty`` is not installed.
     """
@@ -480,25 +638,30 @@ def coverage_consensus(
 
     scorer = _Scorer(members, r)
     pool = _candidate_pool(members, r, alignment_budget, scorer)
+    if not pool.entries:
+        raise ConsensusDomainError(
+            f"every one of the {len(pool.out_of_domain)} candidate classes is outside the "
+            "language's domain, so no representative decodes to an Isal program"
+        )
 
     scores: list[CandidateScore] = []
-    ranked: list[tuple[tuple[int, int, Word], Word]] = []
-    for word, entry in pool.items():
+    for word, entry in pool.entries.items():
         coverage, sum_reach = scorer.score(entry.kb)
         scores.append(CandidateScore(word, coverage, sum_reach, entry.origin))
-        ranked.append(((-coverage, sum_reach, word), word))
 
-    ranked.sort(key=lambda item: item[0])
-    (best_neg_coverage, best_sum_reach, _), winner_word = ranked[0]
-    winner = pool[winner_word]
-    n_ties = (
-        sum(
-            1
-            for score in scores
-            if score.coverage == -best_neg_coverage and score.sum_reach == best_sum_reach
-        )
-        - 1
+    best_neg_coverage, best_sum_reach = min((-s.coverage, s.sum_reach) for s in scores)
+    tied = [
+        score.word
+        for score in scores
+        if score.coverage == -best_neg_coverage and score.sum_reach == best_sum_reach
+    ]
+    # The tie break is evaluated only here, so a uniquely-optimal candidate is
+    # never canonicalized with the Isal engine -- which is what keeps the common
+    # case as cheap as it was, and makes it invariant-neutral by construction.
+    winner_word = (
+        tied[0] if len(tied) == 1 else min(tied, key=lambda w: isal_fingerprint(pool.entries[w].kb))
     )
+    winner = pool.entries[winner_word]
 
     return ConsensusResult(
         kb=winner.kb,
@@ -511,8 +674,12 @@ def coverage_consensus(
         word=winner_word,
         coverage=-best_neg_coverage,
         sum_reach=best_sum_reach,
-        n_candidates=len(pool),
-        n_ties=n_ties,
+        origin=winner.origin,
+        connected=in_language_domain(winner.kb),
+        n_candidates=len(pool.entries),
+        n_disconnected=len(pool.out_of_domain),
+        n_excluded=len(pool.out_of_domain),
+        n_ties=len(tied) - 1,
         candidates=tuple(scores),
     )
 
@@ -521,8 +688,12 @@ __all__ = [
     "BUDGETS",
     "AlignmentBudget",
     "CandidateScore",
+    "ConsensusDomainError",
     "ConsensusError",
     "ConsensusResult",
+    "IsalKey",
     "coverage_consensus",
+    "in_language_domain",
+    "isal_fingerprint",
     "majority_merge",
 ]

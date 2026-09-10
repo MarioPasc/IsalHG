@@ -26,8 +26,8 @@ from __future__ import annotations
 import argparse
 import csv
 from collections import Counter
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any
 
 import yaml
 
@@ -39,7 +39,7 @@ from experiments.tkde.rq3 import (
 )
 
 
-def truth_present(config: dict[str, Any], root: Path | None) -> dict[str, bool]:
+def truth_present(config: dict[str, object], root: Path | None) -> dict[str, bool]:
     """For each Corpus B unit, whether any member equals the held-out truth.
 
     Parameters
@@ -57,7 +57,8 @@ def truth_present(config: dict[str, Any], root: Path | None) -> dict[str, bool]:
         ``rows_natural.csv`` (``"<class_id>|run<run_index>"``), so the result
         joins directly onto the rows.
     """
-    name = str(config["corpus_b"]["collection"])
+    block = config["corpus_b"]
+    name = str(block["collection"])  # type: ignore[index]
     collection = corpora.load_collection(name, root)
     by_id = corpora.records_by_id(collection)
     out: dict[str, bool] = {}
@@ -105,10 +106,74 @@ def report(rows_path: Path, present: dict[str, bool]) -> None:
     absent_rec = sum(v for k, v in tab.items() if k[0] == "TRUTH_ABSENT" and k[2] == "recovered")
     print()
     print(f"runs where the truth matches NO member: {absent}")
-    print(f"   any input-returning method recovers: 0 of {absent} (by construction)")
-    print(f"   the coverage consensus recovers:     {absent_rec} of {absent}")
+    print(f"   any input-returning method recovers: 0 of {absent} BY CONSTRUCTION")
+    print("      (that zero is the definition of the stratum, not a measurement:")
+    print("       a member cannot equal a truth that equals no member)")
+    print(f"   the coverage consensus recovers:     {absent_rec} of {absent}  <- measured")
     if absent_rec:
-        print("   -> the floor argument holds on the natural series")
+        print("   -> the claim is the asymmetry: the constraint binds one method, not the other")
+    _stratum_distance(rows, present, num)
+
+
+def _stratum_distance(
+    rows: list[dict[str, str]],
+    present: dict[str, bool],
+    num: Callable[[str | None], float | None],
+) -> None:
+    """Paired ``fact_dist``, consensus vs each medoid arm, on the hard stratum.
+
+    On the TRUTH_ABSENT runs both methods emit an output at nonzero fact
+    distance, so comparing them there has no structural constraint doing the
+    work -- unlike the recovery axis, where the stratum's definition forces the
+    medoid to zero. This is the one non-tautological comparison the stratum
+    makes available.
+
+    **Exploratory.** The stratum is defined from the data and is pre-statable in
+    principle, but it was defined after the full-set null was seen. It cannot
+    move D-KBf5a, whose gate is committed on the full set and stays there
+    whatever this shows.
+    """
+    from math import comb
+
+    by: dict[tuple[str, str, str], float | None] = {}
+    for r in rows:
+        if num(r.get("censored")) == 1.0 or r.get("method") == "medoid_survivors":
+            continue
+        by[(r.get("collection_id", ""), r.get("method", ""), r.get("arm", ""))] = num(
+            r.get("fact_dist")
+        )
+    hard = sorted(u for u, absent in present.items() if not absent)
+    arms = sorted({k[2] for k in by if k[1] == "medoid" and k[2]})
+    print()
+    # `hard` counts UNITS; a unit whose coverage row is censored contributes no
+    # pair, so the printed n comes from the pair list, never from len(hard).
+    print(f"EXPLORATORY -- paired fact_dist on the TRUTH_ABSENT stratum"
+          f" ({len(hard)} units, censored rows excluded per arm below)")
+    print("   (defined post hoc after the full-set null; cannot move D-KBf5a)")
+    for arm in arms:
+        pairs = [
+            (by[(u, "coverage", "fact_rank")], by[(u, "medoid", arm)])
+            for u in hard
+            if by.get((u, "coverage", "fact_rank")) is not None
+            and by.get((u, "medoid", arm)) is not None
+        ]
+        if not pairs:
+            continue
+        better = sum(1 for c, m in pairs if c < m)
+        worse = sum(1 for c, m in pairs if c > m)
+        disc = better + worse
+        p = 1.0
+        if disc:
+            tail = min(better, disc - better)
+            p = min(1.0, 2 * sum(comb(disc, i) for i in range(tail + 1)) / 2**disc)
+        c_mean = sum(c for c, _ in pairs) / len(pairs)
+        m_mean = sum(m for _, m in pairs) / len(pairs)
+        mark = "*" if p < 0.05 else " "
+        print(
+            f"   {arm:22s} consensus {c_mean:5.3f} vs medoid {m_mean:5.3f}"
+            f" | discordant {disc:3d}/{len(pairs)} ({better} better, {worse} worse)"
+            f"  p = {p:.3g} {mark}"
+        )
 
 
 def main() -> int:

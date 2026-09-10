@@ -144,3 +144,34 @@ the episode that taught it (provenance in `measured_facts.md`).*
   marked the non-metricity of bipartite GED as verified on the strength of a
   sketch and unverified citations. This re-scope re-checked it computationally
   (`probes_2026-09.md`). Treat every prior verification tag the same way.
+- **L26 — Declare and assert the inputs that decide what a measurement is
+  *about*; never let them be inferred.** Three separate defects in one week,
+  all the same shape, all producing a confident wrong number, none raising:
+
+  | inferred value | inferred from | what it produced |
+  |---|---|---|
+  | a results column's dtype | whether any unit in that corpus censored | `'0'`/`'1'` in one corpus and `'0.0'`/`'1.0'` in another; a reader validated on one silently matched nothing on the other and reported a recovery rate of 0.0000 whose true value was 0.279 |
+  | a collection's member count | a row count | the 922 figure |
+  | the results root a job reads | an unexported environment default | `tail600` would have measured a census carrying no `wstar_rank` arm at all, under the name of the job that is *about* `wstar_rank` |
+
+  Each failed **toward silence** — no match, no error — which is why review did
+  not catch any of them. The common cause is not carelessness at the call site;
+  it is that the value was never declared anywhere, so there was nothing to
+  check against.
+
+  The rule has two halves, and the second is the one that was missing:
+  1. declare the input (dtype, count, root) explicitly, and
+  2. make the assertion a **precondition**, not a check afterwards.
+
+  Worked example — the `tail600` launcher fix. It previously exported only
+  `REPO_DIR` and left the census root to whatever `--export=ALL` happened to
+  carry, with `common.sh` defaulting it to a tree whose census lacks the arm
+  being measured. It now resolves `RESULTS_ROOT` / `DATA_ROOT` / `CORPORA_ROOT`
+  itself, exports them by name, and **fails at submit time** if the census does
+  not resolve — rather than on sixteen nodes, or worse, not at all.
+
+  Corollary for readers of data already written: rows on disk keep whatever
+  spelling they were written with, so normalise at **read** (coerce the
+  known-numeric columns in the loader) as well as fixing the writer. Fixing only
+  the call sites that are currently wrong leaves the next one to be discovered
+  the same way.

@@ -1124,3 +1124,51 @@ exactly those runs the current deliverable is already wrong, since the reported
 representative has no Isal string. The blast radius equals the count of
 currently-invalid rows. That count is not persisted and is the first thing the
 instrumented re-run must measure.
+
+### RQ5 analysed — negative on every clause, as pre-stated, and worse than "no claim"
+
+The RQ5 job completed but its analyzer had never been run (its 144 row files had
+no `tables.md`). Run now against `IEEETKDE_isal`:
+
+**H5a — not supported, and the two halves must not be reported together.**
+`ν = 0.1015` with 1,553 negative eigenvalues, so the space **is** non-Euclidean
+and the licence it exists to grant — PAM over centroid methods, metric MDS over
+classical — **holds**. What fails is the hubness clause: `k = 10` occurrence
+skewness **5.408 against a ceiling of 1.5**. The analyzer's own note draws the
+line correctly: a failure of the hubness half does not withdraw the PAM licence.
+The prose must keep them apart or it will report a licence as revoked.
+
+This is also a **standing prediction for RQ4**: hubness that severe is the kNN
+precondition failing, so RQ4's screen should be degraded. RQ4 is running; the
+link is testable rather than asserted.
+
+**H5b — not supported, and the naive floors beat us significantly on all four
+comparisons**, which is stronger than "no claim":
+
+| corpus | floor | ours ARI | floor ARI | rank-biserial |
+|---|---|---|---|---|
+| wd50k100 | `degree_seq_l1` | 0.030 | **0.089** | **−1.000** |
+| wd50k100 | `size_l1` | 0.030 | 0.040 | −0.878 |
+| wd50k66 | `degree_seq_l1` | 0.042 | **0.053** | **−1.000** |
+| wd50k66 | `size_l1` | 0.042 | 0.049 | −0.952 |
+
+A rank-biserial of −1.000 means the degree-sequence floor wins on **every
+seed**, both corpora. D-ART4 (3) pre-stated "expected negative for every arm";
+the measured outcome is that a naive baseline is significantly *better*, and
+that is what goes in the table.
+
+**H5c — not supported.** Best competitor `hpd_jsd` at ARI 0.064
+[0.061, 0.068] against ours 0.030 [0.025, 0.036]; the intervals do not overlap.
+
+**H5d — not evaluable, not null.** The analyzer reports "no `fact_rank_roles`
+comparison" because that arm was disqualified at the M0 gate (247 false splits,
+2,104 invariance violations). The verdict must be printed as *not evaluable
+because the arm failed acceptance*, never as an inconclusive result — those are
+different statements.
+
+**Cross-project consistency worth one sentence.** The metric-space article's S7
+sweep found degree-seq and NetLSD leading A2-ARI over `d_I` on planted families;
+RQ5 finds the degree-sequence floor leading over `wstar_orbit` on knowledge
+bases. Two independent campaigns, different corpora, same conclusion: degree
+structure is the dominant clustering signal and the canonical string does not
+capture it. That is a limitation to state once, plainly, not to rediscover.

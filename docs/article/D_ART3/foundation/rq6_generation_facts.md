@@ -178,3 +178,41 @@ The 2,378,890 pre-fix rows carry one of four shas, all dated **2026-09-05** (the
 first wave), and sit only in `IEEETKDE` (1,314,688) and `IEEETKDE_isal`
 (1,064,202). Those two roots are marked in place; **T-KBu** carries the schema
 split so the two states stop sharing a column.
+
+---
+
+## Normalisation: `novelty` and `reach1` do not use the same one
+
+Raised by `[IsalHG-Fable]`. `novelty` compares `fact_word(H)` of the decoded
+sample **as decoded**; `reach1` is `reach′` on **compacted** remainders. They
+therefore disagree on any sample carrying an isolated constant, which could be
+counted novel while sitting at reach 0 of the member it compacts onto.
+
+**Measured, not argued** (`ndc_classes`, order-3 model, seed 60000):
+
+| | |
+|---|---|
+| decoded `fact_ngram` samples carrying an **isolated constant** | **303 / 500 (60.6 %)** |
+| collection members carrying one | **0 / 1,381** |
+| does `fact_word` encode it? | **yes** — adding one isolated constant to a member changes its word |
+
+So such a sample can never equal a member's word and is counted novel
+*automatically*. `ow_ngram` cannot be affected: Prop. C.4 gives every decoded
+word a connected knowledge base with no isolated constant, so compaction is the
+identity there. **The two arms are therefore measured on different
+normalisations, and the difference runs in the retired arm's favour.**
+
+**The magnitude is small** (2,000 samples, 1,997 decoded):
+
+| `ndc_classes` / `fact_ngram` novelty | |
+|---|---|
+| as computed (uncompacted) | **0.9895** |
+| on `reach1`'s normalisation (compacted) | **0.9775** |
+| novel *only* because of an isolated constant | **24 samples, 1.2 %** |
+
+**Consequence: state the normalisation per column; change nothing.** Novelty and
+reach1 answer different questions and either normalisation is defensible so long
+as the paper says which. The 1.2-point gap moves no conclusion — novelty is 0.98
+either way — but the figure is **not** cross-arm comparable at finer resolution
+than that, and the paper contrasts the arms, so the sentence must not lean on a
+0.99-vs-0.94 gap of the same order as the artefact.

@@ -263,9 +263,37 @@ censorings split cleanly:
 
 - **16 extra at k = 10** — branching *amplifying* a displacement cost that is
   already high;
-- **8 below k = 10** — members displacement alone handles and branching does
-  not. **Branching-only casualties**, and the reason arity alone cannot be the
-  whole story.
+- **8 below k = 10** — members displacement alone handles and branching does not.
+
+**CORRECTED: those 8 are not all branching-only.** `[IsalHG-Fable]` noticed that
+the census reports **8** at `|Aut|` 10³–10⁶ and **8** below k = 10, and **69**
+below 10³ and **69** at k = 10 — two matched pairs — and asked whether they are
+the same members. Cross-tabbed:
+
+| k | `\|Aut\|` 10³–10⁶ | `\|Aut\|` < 10³ | total |
+|---|---|---|---|
+| 7 | 5 | 1 | 6 |
+| 8 | 1 | 0 | 1 |
+| 9 | 0 | 1 | 1 |
+| **10** | 2 | **67** | **69** |
+
+**The two eights overlap in six.** Six of the eight sub-arity-10 members sit at
+`|Aut|` 10³–10⁶, so **residual symmetry after pruning is a live alternative
+explanation for them** — a member with `|Aut|` in the millions can retain enough
+branches after orbit pruning to exhaust the budget at modest arity.
+
+**Only 2 of 77 are low arity *and* low symmetry** (k = 7 and k = 9, both at
+`|Aut|` < 10³). Those two are the genuinely branching-only casualties: neither
+displacement (k < 10) nor residual symmetry (`|Aut|` < 10³) explains them.
+
+**So the paragraph may not lean on "eight".** At n = 2 the branching-only set
+establishes *existence* and nothing more — the same discipline as the three
+transfer-and-recovered runs on Corpus B. The multiplication reading keeps its
+strong evidence, which was never the eight: the **16 extra at k = 10**, and the
+**24.7 % vs 50.9 %** recovery differential with its two tests. And one clause of
+the surviving half needs care: *"pruning cannot touch it, the members are
+asymmetric"* is true of the 67 at k = 10 and **false of six of the eight**, which
+are precisely the members the earlier draft leaned on.
 
 **Every number fits**: displacement is why both arms censor at arity 10 and
 essentially nowhere else; branching is why one recovers a quarter of its tail at

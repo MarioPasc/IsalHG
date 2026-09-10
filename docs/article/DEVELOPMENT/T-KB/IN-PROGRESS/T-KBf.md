@@ -1069,3 +1069,58 @@ the recovery axis as though lower were better, and printed "consensus worse in
 3,723 of 3,723 pairs" for what is in fact "better in 3,723 of 3,723". Caught
 before it reached the ledger by checking the printed means against the signs;
 the axis-direction is now explicit per axis in the code.
+
+### The pre-registered hypotheses, measured under `reach′` — H3a's deletion clause fails
+
+**H3a** (≥ 95 % exact recovery on insertion-only and deletion-only, ≥ 80 % on
+mixed, at `r = 2`, `t ∈ {1,2}`), on Corpus A. The deletion cells are scored here
+for the first time on in-domain members:
+
+| kind | t | recovery | n | pre-registered | verdict |
+|---|---|---|---|---|---|
+| `ins` | 1 | 0.995 | 864 | ≥ 0.95 | **pass** |
+| `ins` | 2 | **1.000** | 864 | ≥ 0.95 | **pass** |
+| `mix` | 1 | 0.921 | 864 | ≥ 0.80 | pass |
+| `mix` | 2 | 0.806 | 864 | ≥ 0.80 | pass, barely |
+| `del` | 1 | 0.845 | 406 | ≥ 0.95 | **fail** |
+| `del` | 2 | **0.276** | 595 | ≥ 0.95 | **fail badly** |
+
+**The deletion boundary survives `reach′`.** The audit's §3.3 recorded it at
+0.23–0.81 at two deletions and argued the stated mechanism ("the information is
+gone") was wrong; under `reach′`, with every member in-domain, `del` `t=2` is
+0.276. So the boundary is not an artefact of stranded constants either. Its
+mechanism remains §3.3's — the objective's summed-reach criterion or the word
+tie-break — and §3.3 is on the re-measurement list for exactly that reason.
+
+**H3c** (the consensus matches `majority_merge` on recovery within 5 points):
+majority 0.894 against consensus 0.835 — **5.9 points, so H3c marginally
+fails**. On fact distance the identity-using reference leads 0.116 to 0.269.
+Reported as measured; `majority_merge` uses constant identities every other
+method is denied, which is why it is the ceiling and not a competitor.
+
+**The 37 Corpus A losses, by cell** — `[IsalHG-Fable]` predicted deletion and
+mixed cells before seeing them:
+
+| kind | losses | of | rate |
+|---|---|---|---|
+| `del` | 27 | 1,001 | **2.70 %** |
+| `mix` | 6 | 1,728 | 0.35 % |
+| `ins` | 4 | 1,728 | 0.23 % |
+
+Deletion cells lose **twelve times more often** than insertion cells, and the
+losses split evenly across corpora (ndc 18, wd50k 19). The prediction holds and
+the losses are the same regime as the H3a failure, not a separate phenomenon.
+
+**Scope of the pending consensus change (Fable's item 4):** only `rq3.py`
+imports the consensus objective. RQ6 imports `alignment` and `reach`, not
+`consensus`, so it is touched by `reach′` (already landed; `Reach1Index` filed
+as T-KBo) and not by the tie-break or the disconnected-candidate exclusion.
+
+**A correction I accept.** I argued the disconnected-candidate exclusion "changes
+the candidate set on 100 % of runs" and was therefore a large perturbation.
+Wrong twice: removing *losing* candidates from an argmax is a no-op, so the
+exclusion changes a result only where the **winner** is disconnected — and on
+exactly those runs the current deliverable is already wrong, since the reported
+representative has no Isal string. The blast radius equals the count of
+currently-invalid rows. That count is not persisted and is the first thing the
+instrumented re-run must measure.

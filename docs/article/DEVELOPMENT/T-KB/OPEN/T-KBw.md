@@ -27,13 +27,41 @@ So the mechanism sentence rests on two differentials agreeing, which is real
 evidence but indirect, and a reviewer asking "how much branching?" gets an
 inference rather than a number.
 
-**Acceptance:** the canonical-string entry points expose a cheap counter — tie
-sets entered and branches explored are the two that matter — and the runs that
-sweep cost record it beside `secs`. It must be **cheap enough not to perturb
-the wall-clock it sits beside**, since those runs are budget-censored and the
-counter must not change what censors. A test asserts the counter is zero for the
-ordered walk (no branching by construction) and positive for the tie-complete
-search on an instance with a known non-trivial tie set.
+**Acceptance.** The canonical-string entry points expose a counter — tie sets
+entered and branches explored are the two that matter — under three design
+constraints, all raised by `[IsalHG-Fable]` against a weaker first draft.
+
+**1. Separate the counted run from the timed one.** The first draft required a
+counter "cheap enough not to perturb the budget-censored wall-clock it sits
+beside". That constraint is **unfalsifiable by construction**: verifying "cheap
+enough" needs the uninstrumented run it was supposed to replace. Design it away
+instead — **cost is measured in one run with no counter, branch count in a second
+run whose timings nobody uses.** Branch count is a *structural* quantity, so the
+counted run does not need to be time-faithful and nothing about it has to match
+the census.
+
+**2. The instrumented run is characterisation, never a published row.** It is a
+different pipeline from the frozen one, so it cannot supply a census row — the
+same ruling as the 600 s tail (D-ART5 decision 2), for the same reason.
+
+**3. Target the *completing* members, not the tail.** On a censored member the
+search never finishes, so "branches explored" is bounded by the budget and
+**measures the budget rather than the instance**. On completing members both cost
+and branch count are fully observed, and their relation states the mechanism
+**directly** instead of differentially:
+
+> If cost tracks branch count × a displacement term growing with arity across the
+> completing range, the multiplication reading becomes a **fitted relation on
+> observed data**, and the censored tail becomes *extrapolation from it* rather
+> than an inference from two rate differentials. A reviewer asking "how much
+> branching?" then gets a **coefficient**, not a comparison.
+
+**Tests:**
+- zero for the ordered walk — no branching by construction;
+- positive for the tie-complete search on an instance with a known non-trivial
+  tie set;
+- **identical across repeated runs of the same member.** Branch count is
+  structural; if it varies, the counter is measuring **scheduling**, not search.
 
 **Out of scope here:** re-running anything; the mechanism claim itself, which
 stands on the differentials meanwhile.

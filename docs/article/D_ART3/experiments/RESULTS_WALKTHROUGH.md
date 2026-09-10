@@ -274,6 +274,36 @@ flat incidence serialization with a strict decoder; 27 seeds × 10,000 samples o
 | decodability (H6c) | 86 / 86 interior words of 20 real-pair alignment paths decode (fact alphabet, 68.6 % connected; pointer alphabet 100 % connected) |
 | conditional completion | 300 / 300 valid; isomorphic to the original 68.3 % (NDC) / 14.0 % (WD50K); within reach 1 75.3 % / 21.0 % |
 
+> **SUPERSEDED / LINEAGE-UNPINNED (2026-09-10, T-KBo).** Three numbers in this
+> block are not from the lineage the campaign has adopted, and three different
+> "connectivity" figures for the same generator are in circulation one sentence
+> apart. Pinned against the rows on disk:
+>
+> | quoted here | quantity | status |
+> |---|---|---|
+> | completion "within reach 1 **75.3 % / 21.0 %**" | `rows_completion.reach1`, `reach()` called directly | **pre-`reach′`**. Under `reach′` (D-KBf5) the same rows give **76.7 % / 21.3 %** (`IEEETKDE_isal_consensus`, `_reachprime`). `reach′` is more permissive, so both rose, as expected. |
+> | fidelity "within reach 1 of a member **4.7 % / 9.6 %**" | `rows_samples.reach1_frac`, via `Reach1Index` | **stale and being re-derived** by job 2279064: the index was gated on the frozen precondition (T-KBo). Campaign rows currently read 4.36 % (NDC) / 7.13 % (WD50K) for `fact_ngram`; neither matches the quoted pair, so the quoted lineage is unidentified. Do not quote until 2279064 lands. |
+> | decodability "fact alphabet, **68.6 % connected**" | connectivity of **alignment-path interiors** | a *different quantity* from sample connectivity below; keep the two apart in prose. |
+>
+> **Sample connectivity, measured on the campaign rows** (27 seeds x 10,000
+> samples, `IEEETKDE_isal_consensus`) — this is the third quantity, and it is the
+> one that carries D-ART5's rationale:
+>
+> | collection | model | validity | connectivity |
+> |---|---|---|---|
+> | ndc_classes | `ow_ngram` | **1.0000** | **1.0000** |
+> | ndc_classes | `fact_ngram` | 1.0000 | 0.4157 |
+> | ndc_classes | `incidence_ngram` | 0.0190 | 0.0907 |
+> | wd50k66 | `ow_ngram` | **1.0000** | **1.0000** |
+> | wd50k66 | `fact_ngram` | 1.0000 | 0.1260 |
+> | wd50k66 | `incidence_ngram` | 0.0102 | 0.0081 |
+>
+> The ordered walk is **1.0000 validity and 1.0000 connectivity on both
+> collections** — Theorem C / Prop. 5.1 measured, not asserted. The storyline's
+> "1,000 / 1,000 connected vs 256 / 1,000" does **not** match any row above
+> (`fact_ngram` is 0.4157 / 0.1260), so that pair is from an unidentified run and
+> must not be folded by T-KBg until its provenance is established.
+
 **Decision.** Everything to the main text; the WD50K size-histogram divergence,
 the connectedness of fact-alphabet interiors and the rejection-cause table to
 the supplement. (Operational finding on the way: the n-gram's per-context memo

@@ -20,9 +20,8 @@ Four exhibits are produced:
 The reach-1 fraction is computed exactly, under ``reach'`` (D-KBf5): reach on
 *compacted* remainders, so a deletion that isolates a constant removes it and the
 constant count is not preserved. Candidates are filtered by
-:func:`isalhg.language.reach.compatible`, whose two conditions are stated to
-survive compaction; a sample with no compatible member contributes no fraction
-rather than a zero.
+an inverted index over compacted remainder words; a sample with no member
+inside the fact-count budget contributes no fraction rather than a zero.
 """
 
 from __future__ import annotations
@@ -51,7 +50,7 @@ from isalhg.generation.incidence_baseline import flatten, strict_decode, strict_
 from isalhg.generation.ngram import TokenNGram
 from isalhg.iso_backends.isal_ordered import ordered_fingerprint
 from isalhg.language.alignment import alignment_path
-from isalhg.language.reach import RemainderIndex, compatible, reach
+from isalhg.language.reach import RemainderIndex, reach
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
 
 logger = logging.getLogger(__name__)
@@ -315,10 +314,9 @@ def _deletion_keys(H: SparseHypergraph) -> dict[Word, int]:
 class Reach1Index:
     """Answers "is this sample within reach 1 of some member?" exactly.
 
-    Candidates are filtered with :func:`isalhg.language.reach.compatible`, the
-    library's own necessary conditions, and the survivor is confirmed with
-    :func:`isalhg.language.reach.reach`, so the recorded answer is the library's
-    and not this index's.
+    Candidates come from an inverted index over compacted remainder words and
+    the survivor is confirmed with :func:`isalhg.language.reach.reach`, so the
+    recorded answer is the library's and not this index's.
 
     Two earlier shortcuts were unsound under ``reach'`` (D-KBf5) and are gone:
 
@@ -342,27 +340,53 @@ class Reach1Index:
     three buckets ``m-1, m, m+1`` is therefore exact, and unlike the constant
     count the fact count *is* preserved up to the budget, because a deletion
     removes exactly one fact while compaction removes only constants.
+
+    A scan over that window is still too slow to run: measured on the campaign's
+    own collections the three buckets hold **1,112 of 1,381** members on
+    ``ndc_classes`` (a 1.2x reduction -- fact counts take only 14 distinct
+    values, so adjacent buckets hold nearly everything) and 1,502 of 3,988 on
+    ``wd50k66``. At 1,000 samples per unit that is still millions of pair tests.
+
+    So the lookup is inverted instead. Every member contributes its compacted
+    remainder words to one dictionary, keyed by word and valued by
+    ``(member, deletions)``. A sample is then answered with hash lookups over
+    its own ``1 + m`` remainder words, independent of the number of members.
+
+    The budget test stays ``ds + dm <= 1`` on a **shared** word, and that is
+    load-bearing: testing whether the two level-1 *sets* intersect would admit
+    ``K - a ~ K2 - b``, which is ``reach' = 2``. Since each ``d`` is 0 or 1, the
+    sum rule admits exactly ``(0,0)``, ``(1,0)`` and ``(0,1)`` -- the three cases
+    of ``reach' <= 1`` -- and nothing else.
     """
 
     def __init__(self, members: Sequence[SparseHypergraph]) -> None:
         self._members = list(members)
-        self._by_facts: dict[int, list[int]] = {}
-        for index, H in enumerate(self._members):
-            self._by_facts.setdefault(H.n_edges, []).append(index)
-        self._deletions: dict[int, dict[Word, int]] = {}
+        self._by_facts: dict[int, int] = {}
+        for H in self._members:
+            self._by_facts[H.n_edges] = self._by_facts.get(H.n_edges, 0) + 1
+        self._word_index: dict[Word, list[tuple[int, int]]] | None = None
 
-    def _member_deletions(self, index: int) -> dict[Word, int]:
-        if index not in self._deletions:
-            self._deletions[index] = _deletion_keys(self._members[index])
-        return self._deletions[index]
+    def _index(self) -> dict[Word, list[tuple[int, int]]]:
+        """Build, once, the word -> ``[(member, deletions)]`` map."""
+        if self._word_index is None:
+            index: dict[Word, list[tuple[int, int]]] = {}
+            for member, H in enumerate(self._members):
+                for word, deletions in _deletion_keys(H).items():
+                    index.setdefault(word, []).append((member, deletions))
+            self._word_index = index
+        return self._word_index
 
-    def _candidates(self, sample: SparseHypergraph) -> list[int]:
-        """Member indices whose fact count is within the budget of ``sample``'s."""
+    def _eligible(self, sample: SparseHypergraph) -> bool:
+        """Whether any member is inside the fact-count budget of ``sample``.
+
+        The cheap, compaction-sound eligibility gate that replaces the frozen
+        precondition: ``|m - m2| <= 1`` is necessary for ``reach' <= 1``, so a
+        sample with no member in the window is genuinely incomparable and
+        contributes no fraction. It is strictly more permissive than the old
+        gate, which is the direction T-KBo requires.
+        """
         m = sample.n_edges
-        out: list[int] = []
-        for delta in (-1, 0, 1):
-            out.extend(self._by_facts.get(m + delta, ()))
-        return out
+        return any(self._by_facts.get(m + delta) for delta in (-1, 0, 1))
 
     def within_one(self, sample: SparseHypergraph) -> bool | None:
         """Whether some member is within ``reach' <= 1`` of ``sample``.
@@ -370,26 +394,18 @@ class Reach1Index:
         Returns
         -------
         bool or None
-            ``None`` when no member is even compatible with ``sample`` at
-            ``r_max = 1``, preserving the tri-state the callers expect: the
+            ``None`` when no member is within the fact-count budget of
+            ``sample``, preserving the tri-state the callers expect: the
             question was not answerable rather than answered "no".
         """
-        candidates = self._candidates(sample)
-        if not candidates:
+        if not self._eligible(sample):
             return None
-        sample_deletions = _deletion_keys(sample)
-        answerable = False
-        for index in candidates:
-            if not compatible(sample, self._members[index], 1):
-                continue
-            answerable = True
-            member_deletions = self._member_deletions(index)
-            shared = sample_deletions.keys() & member_deletions.keys()
-            if any(sample_deletions[w] + member_deletions[w] <= 1 for w in shared) and (
-                reach(sample, self._members[index], r_max=1) is not None
-            ):
-                return True
-        return False if answerable else None
+        index = self._index()
+        for word, ds in _deletion_keys(sample).items():
+            for member, dm in index.get(word, ()):
+                if ds + dm <= 1 and reach(sample, self._members[member], r_max=1) is not None:
+                    return True
+        return False
 
 
 # ---------------------------------------------------------------------------

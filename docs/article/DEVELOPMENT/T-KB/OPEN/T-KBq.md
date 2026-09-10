@@ -202,3 +202,47 @@ this task stands and is now the way to settle it: report the missing set's
 `(m, max arity, |Aut|)` profile beside the censored set, and let the profile say
 whether it is random. Three explanations in twenty minutes is the signal to stop
 theorising and measure the thing the obligation already asks for.
+
+## The profile obligation, discharged: the missing set is NOT random
+
+RQ4's array is complete (9/9), so the missing set is final at **217 units**.
+Profiled by cell — each `(collection, corruption kind)` should appear once per
+seed, i.e. **27 times**:
+
+**Baseline:** 43 of the 49 cells are missing **exactly 4** (23 of 27) — the
+uniform loss of ~4 seeds to the late tasks (T-KBv). That component *is* flat.
+
+**Six cells deviate, and the deviation is structured:**
+
+| cell | present | missing |
+|---|---|---|
+| `wd50k66_Q3624078__iso_twin_b1` | 13 | **14** |
+| `wd50k66_Q202866__iso_twin_b1` | 14 | **13** |
+| `wd50k66_Q1549591__iso_twin_b1` | 19 | **8** |
+| `wd50k66_Q5398426__iso_twin_b1` | 19 | **8** |
+| `ndc_classes__spurious_fact_b1` | 26 | 1 |
+| `ndc_classes__spurious_fact_b2` | 26 | 1 |
+
+**Every over-loss cell is `iso_twin_b1`** — four of the seven collections carry
+excess loss on that corruption kind and nothing else does. Excess over the
+baseline-4 totals **27 units**, all of it `iso_twin`.
+
+**This is the validity concern, confirmed — by corruption kind rather than by
+cost.** `iso_twin` is the corruption an isomorphism-complete representation
+should detect *best*; it is the discriminating case for RQ4's claim, and it is
+the cell the campaign is missing most of. A detection score computed over the
+survivors is computed over a sample **depleted in exactly the corruption type
+that most favours the paper's method.**
+
+**Consequences, and none of them is a fourth explanation of the cause:**
+
+1. The AUC **carries the caveat**, per L15 and the obligation as written: the
+   missing count is reported **per cell**, not pooled, so the `iso_twin`
+   depletion is visible rather than averaged away.
+2. The direction is **against** the paper on its face — fewer `iso_twin` units
+   means less of the case the method wins — but it is a *sampling* change, not a
+   measured effect, and must not be reported as either a penalty or a bonus.
+3. Whether the `iso_twin` excess is cost-driven (those units are the expensive
+   ones and hit budgets) or deadline-driven is **not established**, and this task
+   does not need it to be: the reporting obligation is discharged by the profile
+   itself.

@@ -2192,3 +2192,55 @@ one, and the eligibility gate is strictly more permissive. Therefore:
 The analyzer's derived outputs (`fidelity_table` rows for `reach1_frac`,
 `completion_table`'s `reach1_*`) move as a consequence and are not part of the
 bit-identity check.
+
+### Applying the N-consumed rule to my own scripts — and a finding it produced
+
+`[IsalHG-Fable]`'s rule ("every check reports the rows it consumed, and a check
+whose N differs from the expected N fails") applied to
+`rq3_consensus_forensics.py` found the same defect it was written for.
+
+**The defect.** `recovery_forensics` keyed on `(collection_id, method, arm)`.
+Corpus A writes **two** coverage rows per unit — `radius="2"` and `radius="t"` —
+so 62,398 eligible rows collapsed onto 57,941 keys and **4,457 were dropped by
+last-wins**, one per unit. Corpus B has a single radius, which is exactly why the
+defect was invisible there. Separately, `winner_origin_report` counted 8,914
+uncensored coverage rows and reported a rate over **rows**, silently pooling two
+radii into one number.
+
+**Every reported value is unchanged.** Re-derived per radius from all 62,398
+rows:
+
+| | radius `2` | radius `t` |
+|---|---|---|
+| uncensored coverage rows | 4,457 | 4,457 |
+| transfer / member | 4,160 / 297 | 4,160 / 297 |
+| transfer fraction | 0.9334 | 0.9334 |
+| exact recovery | 0.8378 | 0.8378 |
+| consensus vs medoid, `fact_dist` | 0.264 vs 1.521, 3,951 discordant | identical |
+| consensus vs medoid, recovery | 0.838 vs 0.000, 3,734 discordant | identical |
+
+So the denominator label was wrong (a per-row rate presented as a per-unit rate)
+while every number was right. The script now keys on `radius`, refuses to run if
+rows would collapse, and reports each radius alone.
+
+**The finding.** The two radii are not duplicates — they differ where the corpus
+says they should:
+
+| | |
+|---|---|
+| units where `n_candidates` and `secs` are identical across radii | **2,323** |
+| units with `cell_t = 2` | **2,323** |
+| units with `cell_t = 1` | 2,134 |
+| units where `fact_dist`, `exact_recovery`, `winner_origin`, `n_ties`, `medoid_cost` are identical | **4,457 / 4,457** |
+
+For the 2,323 `t = 2` units radius `t` *is* radius 2, so the work is literally
+the same. For the 2,134 `t = 1` units the radii genuinely differ — different
+candidate pools, different runtimes — **and the outcome is identical anyway**.
+
+> **On Corpus A the consensus is insensitive to the search radius: the larger
+> radius examines more candidates, takes longer, and returns the same winner in
+> every one of the 4,457 units.**
+
+That is a result about the method, not about the bug, and it fell out of the bug
+hunt. It also means the radius column can be collapsed in the paper's table with
+a measured justification rather than an assumption.

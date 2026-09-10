@@ -108,35 +108,67 @@ def n_ties_report(rows: list[dict[str, str]], label: str) -> None:
 
 def recovery_forensics(rows: list[dict[str, str]], label: str) -> None:
     """Paired discordance, SD and rank-biserial for consensus vs each medoid arm."""
-    by: dict[tuple[str, str, str], tuple[float | None, float | None]] = {}
-    for r in rows:
-        if r.get("censored") == "1" or r.get("method") == "medoid_survivors":
-            continue
-        by[(r.get("collection_id", ""), r.get("method", ""), r.get("arm", ""))] = (
-            _num(r.get("fact_dist")),
-            _num(r.get("exact_recovery")),
+    # `radius` is load-bearing in the key. Corpus A carries TWO coverage rows per
+    # unit -- radius "2" and radius "t" -- so a key without it silently keeps
+    # whichever appeared last in the file and drops 4,457 rows. Corpus B has one
+    # radius, which is why the defect was invisible there.
+    eligible = [
+        r
+        for r in rows
+        if r.get("censored") != "1" and r.get("method") != "medoid_survivors"
+    ]
+    by: dict[tuple[str, str, str, str], tuple[float | None, float | None]] = {}
+    for r in eligible:
+        by[
+            (
+                r.get("collection_id", ""),
+                r.get("method", ""),
+                r.get("arm", ""),
+                r.get("radius", ""),
+            )
+        ] = (_num(r.get("fact_dist")), _num(r.get("exact_recovery")))
+    if len(by) != len(eligible):
+        raise SystemExit(
+            f"[{label}] FATAL: {len(eligible)} eligible rows collapse onto "
+            f"{len(by)} keys; {len(eligible) - len(by)} would be dropped silently"
         )
     units = sorted({k[0] for k in by})
     arms = sorted({r["arm"] for r in rows if r.get("method") == "medoid" and r.get("arm")})
+    radii = sorted({k[3] for k in by if k[1] == "coverage"})
+    print(f"[{label}] coverage radii present: {radii}  ({len(eligible)} eligible rows)")
+    for radius in radii:
+        _forensics_at_radius(by, units, arms, radius, label)
+
+
+def _forensics_at_radius(
+    by: dict[tuple[str, str, str, str], tuple[float | None, float | None]],
+    units: list[str],
+    arms: list[str],
+    radius: str,
+    label: str,
+) -> None:
+    """The paired comparison at one coverage radius, never pooled across radii."""
     common = [
         u
         for u in units
-        if by.get((u, "coverage", "fact_rank"))
-        and by[(u, "coverage", "fact_rank")][0] is not None
-        and all(by.get((u, "medoid", a)) and by[(u, "medoid", a)][0] is not None for a in arms)
+        if by.get((u, "coverage", "fact_rank", radius))
+        and by[(u, "coverage", "fact_rank", radius)][0] is not None
+        and all(
+            by.get((u, "medoid", a, "")) and by[(u, "medoid", a, "")][0] is not None for a in arms
+        )
     ]
     if not common:
-        print(f"[{label}] no common units")
+        print(f"[{label}] radius {radius!r}: no common units")
         return
-    print(f"[{label}] common units: {len(common)}")
+    print(f"[{label}] radius {radius!r}: common units {len(common)}")
     for arm in ("wl_l1", "wstar_orbit"):
         if arm not in arms:
             continue
         # fact distance: lower is better. recovery: higher is better. The sign
         # convention differs per axis and getting it wrong inverts the reading.
         for idx, name, lower_is_better in ((0, "fact_dist", True), (1, "recovery", False)):
-            cons = [by[(u, "coverage", "fact_rank")][idx] for u in common]
-            med = [by[(u, "medoid", arm)][idx] for u in common]
+            cons = [by[(u, "coverage", "fact_rank", radius)][idx] for u in common]
+            med = [by[(u, "medoid", arm, "")][idx] for u in common]
             diffs = [c - m for c, m in zip(cons, med, strict=True)]
             better = sum(1 for d in diffs if (d < 0) is lower_is_better and d != 0)
             worse = sum(1 for d in diffs if d != 0) - better
@@ -211,6 +243,21 @@ def winner_origin_report(rows: list[dict[str, str]], label: str) -> None:
     if not cov:
         print(f"[{label}] no uncensored coverage rows")
         return
+    radii = sorted({str(r.get("radius", "")) for r in cov})
+    if len(radii) > 1:
+        # Corpus A runs the consensus at two radii and writes one row for each.
+        # Pooling them reports a rate over ROWS, mixing two different methods
+        # into one number without saying so. Each radius is reported alone.
+        print(f"[{label}] {len(radii)} coverage radii {radii}: reported separately, never pooled")
+        for radius in radii:
+            subset = [r for r in cov if str(r.get("radius", "")) == radius]
+            _origin_block(subset, f"{label} r={radius}")
+        return
+    _origin_block(cov, label)
+
+
+def _origin_block(cov: list[dict[str, str]], label: str) -> None:
+    """Winner-origin counts for one coverage radius."""
     origins = Counter(str(r.get("winner_origin", "")).split(":")[0] for r in cov)
     n = len(cov)
     transfer = origins.get("transfer", 0) / n

@@ -189,7 +189,20 @@ def alignment_table(alignment: pd.DataFrame) -> pd.DataFrame:
 
 
 def completion_table(completion: pd.DataFrame) -> pd.DataFrame:
-    """Validity, isomorphism to the original and reach-1 of the completions."""
+    """Validity, isomorphism to the original and reach-1 of the completions.
+
+    Each rate is computed over the completions where that quantity was actually
+    computed, and the per-quantity denominator is reported beside it.
+
+    This previously read ``successes = group[name].fillna(0).sum()`` against a
+    denominator of ``len(group)``, which silently counted a **blank** -- a value
+    the runner never computed -- as a measured failure. ``reach1`` is blank
+    whenever the completion was not decodable, and under ``reach'`` it is also
+    three-state at the source: the index answers ``None`` when no member lies
+    within the fact-count budget, meaning *not answerable* rather than *not
+    within reach 1*. Folding either into the failure count reports a clean rate
+    the pipeline did not earn (lessons L15, L26).
+    """
     if completion.empty:
         return pd.DataFrame()
     frame = _numeric(completion, ["valid", "iso_original", "reach1"])
@@ -198,8 +211,16 @@ def completion_table(completion: pd.DataFrame) -> pd.DataFrame:
         total = int(len(group))
         entry: dict[str, Any] = {"collection": collection, "n": total}
         for name in ("valid", "iso_original", "reach1"):
-            successes = int(group[name].fillna(0).sum())
-            interval = stats.wilson_ci(successes, total)
+            answered = group[name].dropna()
+            denominator = int(len(answered))
+            entry[f"{name}_n"] = denominator
+            entry[f"{name}_not_computed"] = total - denominator
+            if denominator == 0:
+                entry[f"{name}_rate"] = float("nan")
+                entry[f"{name}_ci_low"] = float("nan")
+                entry[f"{name}_ci_high"] = float("nan")
+                continue
+            interval = stats.wilson_ci(int(answered.sum()), denominator)
             entry[f"{name}_rate"] = interval.point
             entry[f"{name}_ci_low"] = interval.low
             entry[f"{name}_ci_high"] = interval.high

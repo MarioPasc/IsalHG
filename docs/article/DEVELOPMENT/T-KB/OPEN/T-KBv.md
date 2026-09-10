@@ -65,8 +65,23 @@ this second route.
    whichever keeps the single-task and multi-task paths identical.
 2. A test asserts that two tasks of the same array starting an hour apart compute
    deadlines an hour apart.
-3. The other four launchers are left alone; they are correct today **by accident
-   of not sourcing `common.sh`**, so the fix must not depend on that.
+3. **Remove the accident rather than patch RQ4.** The four other launchers are
+   correct today only because nobody has yet added a `source` line -- correctness
+   resting on a **negative**, with nothing marking it load-bearing. The next
+   person who wants a helper from `common.sh` in `rq7_launcher.sh` silently makes
+   RQ7 defer its late tasks, and the failure will look exactly like this one.
+
+   So make inheritance **impossible**, not merely absent: the deadline is a
+   per-task quantity, so it must come from something the task itself knows -- its
+   own wall-clock at entry -- set **unconditionally** in the worker's context
+   rather than with `:-`. If a caller genuinely needs to override it, that
+   override takes a **differently named** variable so the two intents cannot
+   collide. Then no launcher's sourcing habits can reach it, and the four that
+   are safe today are safe by construction.
+
+   Belt-and-braces alternatives -- `unset` before `sbatch`, or `--export` with an
+   explicit list -- still depend on someone remembering, which is precisely the
+   property that failed here.
 
 **Out of scope here:** the missing idempotent skip (T-KBq); whether the deferred
 set is cost-biased (T-KBq's profile obligation); re-running RQ4.

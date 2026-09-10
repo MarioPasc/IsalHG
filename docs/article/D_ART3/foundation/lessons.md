@@ -259,3 +259,26 @@ the episode that taught it (provenance in `measured_facts.md`).*
   denominator excludes and whether "cannot tell" is distinguishable from "no".
   If it is, the verdict has three states and the report carries an interval, not
   just a label.
+
+  **Guard the shape, not the spelling — and make the checks redundant.** By the
+  end of the session the count was five: a filter comparing `"1"` to `'1.0'`, a
+  key that collapsed 600 rows onto 6, a `fillna(0)` folding blanks into
+  failures, a dtype that changed with censoring, and a membership set built from
+  *truncated* sha display strings while the rows carried 40-char values. In
+  three of the five the empty result was the **comfortable** answer, and twice
+  the artefact that broke a rule was the one written to enforce it.
+
+  A helper per spelling — a short-vs-long sha comparator, say — fixes one and
+  leaves the sixth. All five share one signature: **an operation silently
+  produced fewer results than its input warranted.** So
+  `scripts/diagnostics/rowsio.py` guards that shape:
+  `classify()` requires a **total** partition (a row matching no bucket raises;
+  a bucket receiving nothing raises unless declared empty-able) and `reduced()`
+  refuses to return an empty result unless the caller asked for one. The
+  truncated-sha audit fails at its first row under that rule instead of
+  reporting a comfortable zero across every results root.
+
+  And note what actually caught the fifth: not review, not attention, but **two
+  halves of one output contradicting each other**. A single check that can be
+  wrong in the reassuring direction is not enough on its own, so the checks are
+  worth making redundant as well as structural.

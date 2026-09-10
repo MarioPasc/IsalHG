@@ -27,7 +27,7 @@ The rules, enforced rather than documented:
 from __future__ import annotations
 
 import csv
-from collections.abc import Iterable, Sequence
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 
 
@@ -127,3 +127,104 @@ def expect_rows(rows: Sequence[object], expected: int, *, label: str = "rows") -
     """
     if len(rows) != expected:
         raise RowsError(f"{label}: expected {expected} rows, consumed {len(rows)}")
+
+
+def classify(
+    rows: Sequence[dict[str, str]],
+    buckets: dict[str, Callable[[dict[str, str]], bool]],
+    *,
+    label: str = "rows",
+    may_be_empty: Sequence[str] = (),
+) -> dict[str, list[dict[str, str]]]:
+    """Partition rows into named buckets, **totally**.
+
+    Five defects in one session had a single signature: *an operation silently
+    produced fewer results than its input warranted*, and in three of them the
+    empty result was the comfortable answer. Adding a helper per spelling
+    (a short-vs-long sha comparator, say) fixes one and leaves the sixth, so the
+    guard is on the shape instead.
+
+    Two conditions, both raising:
+
+    1. **totality** -- every row lands in exactly one bucket, and a row landing
+       in none raises rather than being dropped;
+    2. **non-emptiness** -- a bucket receiving no rows raises unless the caller
+       declared it may be empty.
+
+    The truncated-sha audit fails under this at the very first row that matches
+    no bucket, instead of reporting a comfortable zero across every results
+    root. The dtype mismatch, the key collision and the filter that matched
+    nothing are the same event through different APIs, and fail here too.
+
+    Parameters
+    ----------
+    rows : sequence of dict
+        The rows to partition.
+    buckets : dict
+        ``{name: predicate}``. Predicates are tried in order; the first match
+        wins, and a row matching more than one is a caller error the order
+        silently resolves, so make them disjoint.
+    label : str
+        Name used in error messages.
+    may_be_empty : sequence of str
+        Bucket names permitted to receive no rows.
+
+    Returns
+    -------
+    dict
+        ``{name: [rows]}``, every input row present exactly once.
+
+    Raises
+    ------
+    RowsError
+        If any row matches no bucket, or a bucket not declared empty-able
+        receives nothing.
+    """
+    out: dict[str, list[dict[str, str]]] = {name: [] for name in buckets}
+    unmatched: list[dict[str, str]] = []
+    for row in rows:
+        for name, predicate in buckets.items():
+            if predicate(row):
+                out[name].append(row)
+                break
+        else:
+            unmatched.append(row)
+    if unmatched:
+        sample = {k: unmatched[0].get(k) for k in list(unmatched[0])[:6]}
+        raise RowsError(
+            f"{label}: {len(unmatched)} of {len(rows)} rows matched no bucket "
+            f"{tuple(buckets)}; the classification is not total. First: {sample}"
+        )
+    empty = [n for n, got in out.items() if not got and n not in may_be_empty]
+    if empty:
+        raise RowsError(
+            f"{label}: bucket(s) {tuple(empty)} received no rows out of {len(rows)}. "
+            "Declare them in may_be_empty if that is expected; otherwise the "
+            "predicate is matching nothing."
+        )
+    return out
+
+
+def reduced(
+    values: Sequence[object],
+    result: Sequence[object],
+    *,
+    label: str = "reduction",
+    allow_empty: bool = False,
+) -> Sequence[object]:
+    """Report what a reduction consumed and produced, refusing a silent zero.
+
+    Raises
+    ------
+    RowsError
+        If ``result`` is empty and ``allow_empty`` is False. An empty reduction
+        is the comfortable answer often enough that it must be asked for.
+    """
+    if not result and not allow_empty:
+        raise RowsError(
+            f"{label}: {len(values)} inputs reduced to 0 results. Pass "
+            "allow_empty=True if that is a real outcome rather than a filter "
+            "that matched nothing."
+        )
+    print(f"[rows] {label}: {len(values)} in -> {len(result)} out")
+    return result

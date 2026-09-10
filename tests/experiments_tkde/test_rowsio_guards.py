@@ -96,3 +96,73 @@ class TestLoadRows:
         rows = rowsio.load_rows(path, label="probe")
         assert len(rows) == 2
         assert "consumed 2 rows" in capsys.readouterr().out
+
+
+class TestClassifyIsTotal:
+    """Five defects shared one signature: fewer results than the input warranted.
+
+    ``classify`` guards the shape rather than any one spelling, so the
+    truncated-sha audit, the dtype mismatch, the key collision and the filter
+    that matched nothing all fail at it. Raised by ``[IsalHG-Fable]``, who
+    argued against adding a sha-specific helper.
+    """
+
+    @staticmethod
+    def _sha_rows() -> list[dict[str, str]]:
+        # The real shape: rows carry FULL 40-char shas.
+        return [
+            {"git_sha": "554dbe093b3773bb3da180204c214d480b5f6868"},
+            {"git_sha": "ee7c8c4ed7a7402e9a3f1decf2c027b07dfc3e72"},
+        ]
+
+    def test_the_truncated_sha_bug_raises_instead_of_reporting_zero(self) -> None:
+        """The exact defect: a membership set built from 12-char display strings."""
+        truncated = {"554dbe093b37", "ee7c8c4ed7a7"}
+        with pytest.raises(rowsio.RowsError, match="matched no bucket"):
+            rowsio.classify(
+                self._sha_rows(),
+                {
+                    "pre_fix": lambda r: r["git_sha"] in truncated,
+                    "post_fix": lambda r: r["git_sha"] in {"bfaaad7"},
+                },
+                label="provenance",
+            )
+
+    def test_a_total_classification_passes(self) -> None:
+        full = {"554dbe093b3773bb3da180204c214d480b5f6868"}
+        out = rowsio.classify(
+            self._sha_rows(),
+            {"pre_fix": lambda r: r["git_sha"] in full, "post_fix": lambda r: True},
+            label="provenance",
+        )
+        assert len(out["pre_fix"]) == 1
+        assert len(out["post_fix"]) == 1
+
+    def test_an_empty_bucket_raises_unless_declared(self) -> None:
+        with pytest.raises(rowsio.RowsError, match="received no rows"):
+            rowsio.classify(
+                self._sha_rows(),
+                {"pre_fix": lambda r: True, "post_fix": lambda r: True},
+                label="provenance",
+            )
+
+    def test_a_declared_empty_bucket_is_allowed(self) -> None:
+        out = rowsio.classify(
+            self._sha_rows(),
+            {"pre_fix": lambda r: True, "post_fix": lambda r: True},
+            label="provenance",
+            may_be_empty=("post_fix",),
+        )
+        assert out["post_fix"] == []
+
+
+class TestReducedRefusesASilentZero:
+    def test_an_empty_reduction_raises(self) -> None:
+        with pytest.raises(rowsio.RowsError, match="reduced to 0 results"):
+            rowsio.reduced([1, 2, 3], [], label="filter")
+
+    def test_a_declared_empty_reduction_is_allowed(self) -> None:
+        assert rowsio.reduced([1, 2, 3], [], label="filter", allow_empty=True) == []
+
+    def test_a_nonempty_reduction_passes(self) -> None:
+        assert rowsio.reduced([1, 2, 3], [1], label="filter") == [1]

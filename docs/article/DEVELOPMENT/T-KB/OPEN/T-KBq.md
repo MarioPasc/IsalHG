@@ -139,3 +139,66 @@ set is reported with its `(m, max arity, |Aut|)` profile beside the censored set
 and if that profile is non-random the AUC carries the caveat. **Deferral must not
 enter the pipeline as absence** — it is a third variety of the state that looks
 like nothing happened, alongside `censored` (T-KBu) and a blank column.
+
+---
+
+## 2026-09-11 — the deferral mechanism, measured (and two of my explanations withdrawn)
+
+Job 2273337 finished. **574 units deferred**, and the cause is neither of the two
+things I wrote earlier.
+
+### The cause: the deadline is measured from SUBMIT, not from task start
+
+| task | started | delay after submit (15:56) | deferred |
+|---|---|---|---|
+| 0, 1, 2 | 15:58–16:04 | ~0 h | **0** |
+| 3 | 20:00 | 4 h 04 | 42 |
+| 4, 5 | 20:18 | 4 h 22 | 47, 47 |
+| 6 | 23:30 | 7 h 34 | **146** |
+| 7, 8 | 23:33 | 7 h 37 | **146, 146** |
+
+**Perfectly monotonic in start delay.** `common.sh:128` reads
+`TKDE_START_TIME="${TKDE_START_TIME:-$(date +%s)}"` — it **inherits** an existing
+value, and the launcher exports the submitting shell's environment. So every
+array task computes `DEADLINE = TKDE_START_TIME + WALL_S − TEARDOWN_S`
+(`rq4_worker.sh:68`) from the **array's submission time**. A throttled task that
+starts 7½ h late gets ~0 usable wall and defers everything after its first unit.
+
+**This is a distinct defect from this task's subject** (no idempotent skip) and
+it is the *proximate* cause of the deferrals; the missing skip is what makes them
+unrecoverable.
+
+### WITHDRAWN, again: "deferral tracks per-unit cost"
+
+That premise was mine, and `[IsalHG-Fable]` built the validity argument on it —
+that the deferred set is the *expensive* half, correlated with corruption
+detectability. **It is not**: deferral tracks *start delay*, and within a task it
+truncates a contiguous slice. Cost is not the selector.
+
+(My earlier "no bundle size fixes it" was withdrawn before this for the same
+reason — an unmeasured causal claim. This is the second explanation of the same
+observation that I asserted and had to retract.)
+
+### What is actually missing — measured, not explained
+
+Slices are **seed-major**: 27 seeds × 49 units = 1,323. But the loss is **not**
+clean whole seeds either:
+
+| | |
+|---|---|
+| distinct seeds with any rows | **26 of 27** |
+| seeds with the **full 49** units | **7** |
+| seeds with 45–47 units | most of the remainder |
+| seeds with **2** units | **3** (40014, 40017, 40025) |
+| total rows | 1,106 of 1,323 — **217 missing** |
+
+So the missing set is *ragged*: three nearly-empty seeds from the late tasks, plus
+one to four units absent from most other seeds. **The second component could
+still be cost-selected** — those are units missing from otherwise-complete seeds —
+and nothing measured so far decides that.
+
+**I am not offering a third explanation.** The analysis obligation already in
+this task stands and is now the way to settle it: report the missing set's
+`(m, max arity, |Aut|)` profile beside the censored set, and let the profile say
+whether it is random. Three explanations in twenty minutes is the signal to stop
+theorising and measure the thing the obligation already asks for.

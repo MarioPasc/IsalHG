@@ -2256,6 +2256,22 @@ radii differ in pool *and* in the coverage objective's threshold:
 > (The remaining 2,323 units are identical by construction and are named, not
 > counted.)
 
+**Verified on the honest subset, not inferred from the pooled 4,457** — and it
+is non-vacuous in every unit:
+
+| on the 2,134 units with `t = 1` | |
+|---|---|
+| `n_candidates` **differs** across the radii | **2,134 / 2,134** |
+| `fact_dist` identical | 2,134 / 2,134 |
+| `exact_recovery` identical | 2,134 / 2,134 |
+| `winner_origin` identical | 2,134 / 2,134 |
+| `n_ties` identical | 2,134 / 2,134 |
+| `medoid_cost` identical | 2,134 / 2,134 |
+
+So on every one of the genuine-comparison units the two settings really did
+search different candidate pools, and returned the same winner anyway. The
+comparison is non-vacuous in all 2,134 and unanimous in all 2,134.
+
 Quoting 4,457 would have inflated the evidence by more than a factor of two with
 a number that had to come out that way — the same discipline as the empty
 `TRUTH_ABSENT × member × recovered` cell and the oracle's 28 zeros.

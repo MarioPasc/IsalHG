@@ -85,3 +85,57 @@ the only way RQ4 completes. Sizing the bundle differently cannot fix it, because
 the deferral is caused by per-unit cost variance within a slice rather than by
 the slice being too long on average — tasks 0–2 finished 147 units in the same
 wall in which tasks 3–5 managed ~105.
+
+### WITHDRAWN: "no choice of bundle size fixes it"
+
+That claim, written above an hour earlier, was **asserted without measurement**
+and is wrong. `[IsalHG-Fable]` challenged it; measured from the row files:
+
+| per-unit cost, 1,106 completed units | |
+|---|---|
+| median | 4.3 s |
+| mean | 62.7 s |
+| p90 / p99 | 221.3 s / **271.1 s** |
+| max | **513.2 s** |
+
+| bundle | slice cost at p99 | fits the 8 h wall? |
+|---|---|---|
+| **147** (current) | **11.07 h** | **no** — this is the deferral |
+| 100 | 7.53 h | yes |
+| 75 | 5.65 h | yes, with margin |
+| 50 | 3.77 h | yes |
+
+**No single unit can exhaust the wall** (max 513 s ≈ 8.5 min), so nothing
+structurally defeats a resize. A bundle of 75 would fit at p99 with 2.3 h spare.
+
+**But the estimate is from a biased sample, and the bias runs the wrong way.**
+These are the *completed* units. Deferral tracks per-unit cost, so the deferred
+217 are disproportionately the expensive ones and the true p99 is **higher than
+271 s**. A bundle chosen from this distribution is chosen from the cheap half.
+
+**The resume remains the fix, for a better reason than the one I gave.** Not
+because a resize cannot work — it can — but because a resize requires guessing a
+bundle against a distribution we cannot observe without first completing the
+units we are trying to reach, and it costs a full re-run to use. The resume is
+robust without guessing. The decisive argument is the one already in this task:
+resubmission restarts each task at the head of its slice and defers the same
+tail, so the deferred units are unreachable by any number of resubmissions.
+
+### The deferred set is a VALIDITY problem, not only a throughput one
+
+Raised by `[IsalHG-Fable]`, and it reframes this task. Deferral tracks per-unit
+cost; cost tracks size, arity and symmetry; and in RQ4 those are the same
+properties that decide **how detectable a structural corruption is**. So a screen
+analysed with 217 units absent is not analysed on a random subsample — it is
+analysed on the **cheap half**, conditioned on a property correlated with the
+thing being measured.
+
+This is L15's clause arriving by a second route: the earlier concern was
+censoring correlated with the corrupted-vs-clean label; this is the same defect
+produced by wall-clock **deferral** instead of a per-unit budget.
+
+**Analysis obligation, whatever is done about completing the run:** the deferred
+set is reported with its `(m, max arity, |Aut|)` profile beside the censored set,
+and if that profile is non-random the AUC carries the caveat. **Deferral must not
+enter the pipeline as absence** — it is a third variety of the state that looks
+like nothing happened, alongside `censored` (T-KBu) and a blank column.

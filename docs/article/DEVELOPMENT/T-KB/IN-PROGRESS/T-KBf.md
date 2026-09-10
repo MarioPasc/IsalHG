@@ -2429,3 +2429,19 @@ One shard of 16 has landed: 8 rows, 4 per arm. One of the two recoveries is
 rows that is noise and no direction is claimed — it is written down now precisely
 so that, when all 16 land, the sentence is evaluated as written rather than
 softened to fit.
+
+### Suite: no regression from the day's changes
+
+Full run, 33 minutes under load: **3,063 passed / 8 failed / 30 skipped**,
+against the session-opening baseline of 3,038 / 8. **+25 tests, same eight
+failures** — the failure set is the documented one, unchanged:
+
+| failing test | task |
+|---|---|
+| `test_rq36_smoke.py` ×5 (`CollectionContext`, deploy stamps) | **T-KBt** |
+| `test_rq45_smoke.py::test_deploy_stamps_name_both_trees` | deploy stamps |
+| `test_cpp_orbit_corpus.py` ×2 | **T-KBr** — load-sensitive, and this run *was* the load |
+
+T-KBr predicted exactly this: the orbit contract test fails inside a loaded full
+suite and passes alone. Its verdict depending on machine load is the defect
+T-KBr exists to fix; the claim it guards is not at risk.

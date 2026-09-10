@@ -240,3 +240,77 @@ of ours, and the honest sentence says which normalisation produced it.
 
 (`incidence_ngram` at 1.0000 is not a result: its validity is 0.0190 / 0.0102, so
 the handful of samples that decode at all are all novel.)
+
+---
+
+## The joint yield: valid **and** connected **and** novel
+
+`novelty` is conditional on validity, exactly as `connectivity` and `reach1` are —
+`incidence_ngram`'s 1.0000 on 1.9 % validity is the proof, since every sample
+that decodes at all is novel because almost nothing decodes. So report the
+standalone figure **and** the joint: the fraction of *drawn* samples that are
+valid, connected and novel, which is the generator's actual yield of new usable
+knowledge bases.
+
+**Computed as a genuine three-way count, never as a product of the factors** —
+they are not independent, and on WD50K the product overstates by **73 %**.
+
+| collection | arm | validity | connectivity (of valid) | novelty (of valid) | **JOINT** |
+|---|---|---|---|---|---|
+| ndc_classes | **`ow_ngram`** | 1.0000 | 1.0000 | 0.9172 | **0.9172** |
+| ndc_classes | `fact_ngram` | 1.0000 | 0.4157 | 0.9883 | 0.4040 |
+| ndc_classes | `incidence_ngram` | 0.0190 | 0.0909 | 1.0000 | 0.00173 |
+| wd50k66 | **`ow_ngram`** | 1.0000 | 1.0000 | 0.9138 | **0.9138** |
+| wd50k66 | `fact_ngram` | 1.0000 | 0.1260 | 0.9425 | 0.0685 |
+| wd50k66 | `incidence_ngram` | 0.0102 | 0.0083 | 1.0000 | 0.000085 |
+
+**`ow_ngram`'s joint *equals* its novelty, exactly, and that identity is the
+result.** Validity and connectivity are both 1.0000 by theorem (Prop. C.4), so
+there is no third factor to pay. Every other generator buys novelty by leaving
+the domain; ours has nothing to pay with, because there is nowhere outside the
+domain to go.
+
+**The dependence, which is the mechanism** (WD50K, `fact_ngram`):
+
+| | |
+|---|---|
+| novelty overall | 0.9425 |
+| **P(novel \| connected)** | **0.5435** |
+| P(connected \| novel) | 0.0726 |
+
+A connected sample is only about **half** as likely to be novel as one drawn at
+random, and only 7 % of its novel samples are connected. Plainly: *it produces
+something connected, which is then usually a near-copy of a member, or something
+novel, which is then usually not a knowledge base at all — rarely both.* On NDC
+the dependence is mild (joint 0.4040 against a product of 0.4109, +1.7 %).
+
+**Standalone novelty is where the comparator wins and it is stated as such**
+(0.9883 / 0.9425 against 0.9172 / 0.9138). The joint is where the closed language
+shows. Both rows go in.
+
+### Roles: the four evaluation columns are uniform
+
+`wd50k66` sets `roles: true`, so the model is **fitted and sampled** on
+role-aware words (`fact_word(H, rm)`). Every **evaluation** column is role-free:
+
+| column | uses the roles map? |
+|---|---|
+| validity | no — decode success |
+| connectivity | no — `SparseHypergraph` carries no role attribute at all |
+| novelty | no — **deliberately**: the docstring states *"pass role-free keys so that a sample reproducing a member up to argument roles still counts as a reproduction"* |
+| reach1 | no — `Reach1Index(context.hypergraphs)` |
+
+So the asymmetry is a single, documented one between the **generative** space and
+the **evaluation** space, not four disagreeing normalisations, and it runs in the
+conservative direction: a sample matching a member up to roles counts as a
+reproduction, which makes novelty harder to earn rather than easier. The joint
+may therefore be quoted across these columns.
+
+**Two withdrawn attempts, recorded because the reason generalises.** Reproducing
+this on WD50K with a role-*free* model gave joint 0.0903 (3 seeds) and 0.0886
+(27 seeds) — both wrong, from a model the campaign never fitted. Caught by
+checking the reproduction against the campaign's own connectivity: NDC matched to
+four decimals (0.4157) and WD50K did not (0.1563 vs 0.1260). With the roles map
+both columns match exactly. **A reproduction that does not reproduce the
+configuration is not a reproduction**, and the only thing that revealed it was a
+redundant comparison against a number already on disk.

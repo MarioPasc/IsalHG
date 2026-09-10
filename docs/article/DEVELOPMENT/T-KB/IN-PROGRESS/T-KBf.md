@@ -2611,3 +2611,38 @@ nodes visited. So the branch factor stays an **inference from a cost
 differential** rather than a direct measurement. Filed as **T-KBw**; it is a
 small addition, and the point of filing it now is not to discover later that the
 one number that would have settled the mechanism was never written down.
+
+### The recovery sweep is replicating tail600, and so far exactly
+
+`2279007` — the `afterany` recovery sweep — is a **second full pass over the same
+16 shards**, and tail600 has no skip, so it re-runs and **overwrites** the rows
+the verdict was computed from. Checked rather than assumed, because a result
+whose inputs change under it is worth catching before someone else finds the
+mismatch.
+
+| | as evaluated | on disk now |
+|---|---|---|
+| `wstar_orbit` completed | 19 / 77 | **19 / 77** |
+| `wstar_rank` completed | 27 / 53 | **27 / 53** |
+| rows | 130 | 130 |
+
+One shard (002) has been rewritten so far. Diffed **per member**, not by
+aggregate — matching totals would not prove matching outcomes:
+
+| | |
+|---|---|
+| key set (`collection`, `member_id`, `arm`) | **identical** |
+| columns that differ | **`secs` only**, in 4 of 8 rows |
+| outcome columns (`censored`, value, error) | **none differ** |
+
+So the sweep reproduces the censoring outcome of **every member**, on different
+nodes at a different hour, with only wall-clock varying. That is what a 600 s
+budget on an exponential search should do — a member far from the boundary lands
+the same side of it every time — and it is a **replication** of the measurement
+rather than a re-run of the job.
+
+**Worth re-checking when the sweep finishes** (8 running, 1 pending at the time
+of writing): if all 16 shards reproduce, the tail600 verdict carries an
+independent replication on top of its two tests, which is more than the
+pre-registration asked for. If any shard's outcomes move, that is a boundary
+member and it is worth naming.

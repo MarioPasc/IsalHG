@@ -2074,3 +2074,82 @@ exact precisely when the truth is among the members — and it is. Together with
 the empty `TRUTH_ABSENT × member × recovered` cell, that is two cells which had
 to come out a particular way and did; they are what make the rest of the table
 credible.
+
+### T-KBo closed — `reach1` re-derived, and a pre-registered check on the re-run
+
+**The fix.** `Reach1Index` bucketed on the *frozen* precondition (constant count
++ type multiset). Under `reach′` a deletion compacts away constants it isolates,
+so the count is not preserved and the gate withheld exactly the pairs the
+definition admits. Verified on the regression pair: `reach′ = 1` while the old
+bucket lookup returns `None`. It also compared `fact_word(sample)` — an
+**uncompacted** word — against `RemainderIndex` keys, which are **compacted**.
+
+**The one-line reason the old gate was wrong:** *the fact count survives
+compaction because compaction removes only constants; the constant count does
+not.*
+
+**The predicate.** `reach′` is by definition the least `|A| + |B|` whose
+compacted remainders agree, so a shared remainder word within budget *is* the
+answer — not a heuristic. The test is `ds + dm ≤ 1` on a **shared** word, and the
+arithmetic is load-bearing: testing whether the two level-1 *sets* intersect
+would admit `K−a ≅ K2−b`, i.e. `reach′ = 2`. Since each `d` is 0 or 1 the sum
+rule admits exactly `(0,0)`, `(1,0)`, `(0,1)`. Documented so a later reader does
+not "simplify" it into a set intersection.
+
+**Performance — measured before queueing, not after.** The obvious fact-count
+bucket is sound but *not selective*:
+
+| | 3-bucket window | reduction |
+|---|---|---|
+| `ndc_classes` (N=1,381) | median 6, max 1,302, expected **1,112** | **1.2×** |
+| `wd50k66` (N=3,988) | median 158, max 2,458, expected 1,502 | 2.7× |
+
+`ndc_classes` has only 14 distinct fact counts, so three adjacent buckets hold
+nearly the whole collection. No proof about the bucket's *correctness* would have
+revealed this. Replaced with an inverted index over compacted remainder words:
+**build 0.2 s / 1.3 s, 0.3–0.4 ms per call** on perturbed non-member probes
+returning a real mix of True/False/None — ~0.4 s per 1,000-sample unit.
+
+**A worthless first timing, caught:** my initial probe used *members* as samples,
+so every call hit the exact-match path and returned True 200/200. The number was
+right for the wrong reason.
+
+**`None` semantics, named before the run** (raised by `[IsalHG-Fable]`): `None`
+means *no member lies within the fact-count budget of this sample* — out of the
+comparison domain, a **censoring category**, reported as a census
+(`reach1_eligible` / `reach1_hits`), never coerced. The samples path already did
+this correctly. The **completion** path did not: `analyze_rq6.completion_table`
+counted a blank `reach1` as a measured failure via `fillna(0)` against a
+denominator of `len(group)`. Fixed; each rate is now over the completions where
+the quantity was computed, with `<name>_n` and `<name>_not_computed` beside it.
+
+**PRE-REGISTERED CHECK on job 2279064** (root `IEEETKDE_isal_reach1/`), recorded
+before the rows exist. RQ6 persists no per-sample data, but sampling is
+deterministic — **verified**, not assumed: refitting from scratch and resampling
+at the same seed gives byte-identical output, and a different seed differs, so
+the seed is genuinely wired. The re-run is therefore a **re-derivation over the
+same samples**. Therefore:
+
+> **Every non-`reach1` column must come back bit-identical to the superseded
+> rows.** If `validity`, `connectivity`, the JSD columns or `novelty` move, the
+> change touched something it should not have and this is not a column swap.
+
+**The pointer-word alarm was a false one, and checking it prevented a real
+error.** A smoke timeout on the alignment pairs looked like the decodability
+exhibit losing the paper's own representation. Measured:
+
+| | |
+|---|---|
+| `wd50k66` alignment window (n≤10, m≤8) | 2,736 of 3,988 members |
+| censored `wd50k66` members in the frozen M3 census | 7 |
+| **censored members inside the window** | **0 of 2,736** (max arity in window: 8) |
+
+The window excludes every censored member by construction. The timeouts came
+from the *smoke*, whose alignment block is `ndc_classes` at `pointer_budget_s:
+20` and whose config comment says in advance that it exists "to prove the guard
+fires and the row is censored". **And the proposed remedy — drawing pairs from
+the uncensored set — is the move D-ART5 item 2 forbids**, which rules that the
+budget is the pre-registration precisely so a published row is not "a property of
+a budget rather than of the representation". Rule 10's grep caught it: the fifth
+already-ruled item this campaign, and the first where the check prevented an
+*action* rather than an escalation.

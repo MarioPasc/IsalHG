@@ -2445,3 +2445,59 @@ failures** — the failure set is the documented one, unchanged:
 T-KBr predicted exactly this: the orbit contract test fails inside a loaded full
 suite and passes alone. Its verdict depending on machine load is the defect
 T-KBr exists to fix; the claim it guards is not at risk.
+
+## tail600 COMPLETE — the pre-registration is refuted on all four clauses
+
+Job **2279006**, all 16 shards, **130 rows = 130 distinct (member, arm) calls =
+the pre-registered work list exactly** (77 orbit + 53 rank). Evaluated **once**,
+on the complete set, with `analyze_tail600`; the interim set was never scored.
+
+| arm | re-run | completed at 600 s | still censored | completion |
+|---|---|---|---|---|
+| `wstar_orbit` | 77 | 19 | 58 | **24.7 %** |
+| `wstar_rank` | 53 | **27** | 26 | **50.9 %** |
+
+**The rank engine recovers 2.1× as often as the orbit engine — the opposite of
+the prediction.**
+
+| clause | verdict | |
+|---|---|---|
+| material fraction (orbit ≥ 25 %) | **REFUTED** | 24.7 %; **by exactly one member** — 20/77 = 25.97 % would have passed |
+| most still censored (rank > 50 %) | **REFUTED** | 49.1 % censored, i.e. most *completed* |
+| displacement-not-budget | **REFUTED** | 50.9 % completed |
+| **differential** | **REFUTED — INVERTED** | −26.3 %, 95 % CI **[−41.6 %, −9.4 %]**, Fisher p = **0.00279** |
+
+**The differential is the load-bearing one and it is significant in the wrong
+direction.** This is not an underpowered null: the interval excludes zero and
+sits entirely on the inverted side. The three-state verdict earns its keep here —
+had it been the two-state version this would still read REFUTED, but the interval
+is what shows it is a *reversal* rather than an absence.
+
+### What this rewrites
+
+T-KBe and T-KBp pre-stated the consequence, so this is the refutable clause
+firing, not a surprise:
+
+> *"If most of the 53 complete at 600 s, the bimodality is an artefact of the
+> budget rather than of the mechanism, and D-ART5's claim that the residual tail
+> is **displacement rather than symmetry** needs rewriting."*
+
+Most of the 53 completed. **So the `wstar_rank` tail is not arity-10 displacement
+enumeration that a tenfold budget cannot touch — it is a slow tail of a feasible
+search.** The bimodality at 60 s (zero completions in [30, 60) with 53 censored)
+was a property of where the budget fell, not of the mechanism.
+
+Propagates to: **D-ART5's R2 rationale**, and RQ7's envelope sentence.
+
+**What is *not* affected.** The published rows stay at 60 s — D-ART5 decision 2
+rules the budget is the pre-registration, and this run is characterisation,
+never a row (`kind = tail_characterisation`, outside every RQ tree). The
+censoring counts themselves (77 / 53) are unchanged; what changes is the
+*explanation* offered for the residual tail.
+
+**Honest note on clause 1.** It failed by **one member**. 19 of 77 is 24.68 %
+against a 25 % threshold committed in code before any shard was read. It is
+refuted as written and I am not softening it — but a reader should know the
+margin is a single member, because "orbit does not recover materially" and
+"orbit recovers 24.7 % against a 25 % bar" are different sentences and only the
+second is honest at this margin.

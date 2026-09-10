@@ -282,7 +282,7 @@ flat incidence serialization with a strict decoder; 27 seeds × 10,000 samples o
 > | quoted here | quantity | status |
 > |---|---|---|
 > | completion "within reach 1 **75.3 % / 21.0 %**" | `rows_completion.reach1`, `reach()` called directly | **pre-`reach′`**. Under `reach′` (D-KBf5) the same rows give **76.7 % / 21.3 %** (`IEEETKDE_isal_consensus`, `_reachprime`). `reach′` is more permissive, so both rose, as expected. |
-> | fidelity "within reach 1 of a member **4.7 % / 9.6 %**" | `rows_samples.reach1_frac`, via `Reach1Index` | **stale and being re-derived** by job 2279064: the index was gated on the frozen precondition (T-KBo). Campaign rows currently read 4.36 % (NDC) / 7.13 % (WD50K) for `fact_ngram`; neither matches the quoted pair, so the quoted lineage is unidentified. Do not quote until 2279064 lands. |
+> | fidelity "within reach 1 of a member **4.7 % / 9.6 %**" | `rows_samples.reach1_frac`, via `Reach1Index` | **RESOLVED (T-KBo, job 2279079, root `IEEETKDE_isal_reach1b/`).** The quoted pair matches no run and is struck. Sourced values, *given valid*: `ow_ngram` **0.1623** (NDC) / **0.2711** (WD50K); `fact_ngram` 0.0459 / 0.2800; `incidence_ngram` 0.0171 / 0.0275. Conditional on validity like `connectivity`, so quote the joint too (`validity × reach1_frac`). Full table: `foundation/rq6_generation_facts.md`. |
 > | decodability "fact alphabet, **68.6 % connected**" | connectivity of **alignment-path interiors** | a *different quantity* from sample connectivity below; keep the two apart in prose. |
 >
 > **Sample connectivity, measured on the campaign rows** (27 seeds x 10,000

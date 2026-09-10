@@ -87,9 +87,42 @@ They sit one sentence apart in `RESULTS_WALKTHROUGH.md` §RQ6:
    2279064) and `rows_completion.reach1` (via `reach()` directly; pre-`reach′`
    0.753 / 0.210, under `reach′` **0.767 / 0.213**).
 
-## Pending
+## Reach-1 neighbourhood — SOURCED (job 2279079, root `IEEETKDE_isal_reach1b/`)
 
-`rows_samples.reach1_frac` is **do-not-quote** until job 2279064 lands and passes
-`scripts/diagnostics/rq6_reach1_rederivation_check.py`. The quoted
-"4.7 % / 9.6 %" matches no run (campaign rows read 4.36 % / 7.13 %) and is struck
-under the rule above.
+Superseded twice before landing, so the lineage matters:
+
+| lineage | status |
+|---|---|
+| the quoted "4.7 % / 9.6 %" | **struck** — matches no run |
+| `IEEETKDE_isal_consensus` (frozen `Reach1Index`) | superseded: the index was gated on the *frozen* reach precondition (T-KBo) |
+| `IEEETKDE_isal_reach1` (job 2279064) | superseded: `None` for an empty fact-count window dropped samples from the denominator, overstating one arm **2.18×** |
+| **`IEEETKDE_isal_reach1b` (job 2279079)** | **the derivation of record** |
+
+`reach1_frac` counts over the **valid** subset, so it is conditional on validity
+in exactly the way `connectivity` is. Report all three columns; the joint
+factorises as `validity × reach1_frac`.
+
+| collection | model | `reach1_eligible` | `reach1_hits` | reach1 given valid | **joint** |
+|---|---|---|---|---|---|
+| ndc_classes | `ow_ngram` | 27,000 | 4,382 | 0.1623 | **0.01623** |
+| ndc_classes | `fact_ngram` | 27,000 | 1,238 | 0.0459 | 0.00459 |
+| ndc_classes | `incidence_ngram` | 5,135 | 88 | 0.0171 | 0.00033 |
+| wd50k66 | `ow_ngram` | 27,000 | 7,321 | 0.2711 | **0.02711** |
+| wd50k66 | `fact_ngram` | 27,000 | 7,560 | 0.2800 | 0.02800 |
+| wd50k66 | `incidence_ngram` | 2,764 | 76 | 0.0275 | 0.00028 |
+
+**`reach1_eligible` is the decoded subset**: 27 seeds × the 1,000-sample
+`reach1_subset` for the arms at validity 1.0000, and `n_valid` for the incidence
+arm, whose decoded totals fall below the subset size. Every one of the six
+matched its **pre-registered** value exactly.
+
+**Read it honestly:** on WD50K the fact list is *marginally ahead* of the ordered
+walk on this axis (0.2800 against 0.2711) and on NDC it is well behind (0.0459
+against 0.1623). No single direction covers both, and the WD50K cell is one the
+comparator wins.
+
+**Verification.** `scripts/diagnostics/rq6_reach1_rederivation_check.py`,
+committed before the rows existed: `rows_completion` (600), `rows_alignment`
+(60) and `rows_rejections` (358) came back **bit-identical**, only the three
+`reach1_*` columns moved, and neither `reach1_eligible` nor `reach1_hits` fell in
+any unit.

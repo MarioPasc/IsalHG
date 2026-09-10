@@ -151,6 +151,6 @@ Already known to be stale or unsourceable, and **do-not-quote** until re-derived
 
 | number | status |
 |---|---|
-| `rows_samples.reach1_frac` "4.7 % / 9.6 %" | matches no run (campaign rows: 4.36 % / 7.13 %); being re-derived by job **2279064**, gated on `scripts/diagnostics/rq6_reach1_rederivation_check.py` |
+| `rows_samples.reach1_frac` "4.7 % / 9.6 %" | ~~do-not-quote~~ **RESOLVED**: struck; the sourced values are in `foundation/rq6_generation_facts.md` from job **2279079**, which passed the pre-registered check with all six eligible counts exact. Quote the three-column form (validity, reach1-given-valid, joint), never `reach1_frac` alone. |
 | completion "within reach 1 75.3 % / 21.0 %" | pre-`reach′`; under `reach′` **76.7 % / 21.3 %** |
 | "256 / 1,000" and "disconnected three times in four" | struck; the sourced values are 0.4157 (NDC) / 0.1260 (WD50K), and no single ratio describes both |

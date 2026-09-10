@@ -235,10 +235,8 @@ class TestTieBreak:
 
         assert result.n_candidates == 2
         assert result.n_ties == 1
-        assert result.word == min(
-            (fact_key_of(left), fact_key_of(right)),
-            key=lambda w: isal_fingerprint(left if w == fact_key_of(left) else right),
-        )
+        expected = min((left, right), key=isal_fingerprint)
+        assert result.word == fact_key_of(expected)
 
     def test_no_tie_means_no_change(self) -> None:
         """A run with ``n_ties == 0`` is bit-identical to the pre-change result.

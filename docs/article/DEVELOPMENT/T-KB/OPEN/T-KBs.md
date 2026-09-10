@@ -50,3 +50,47 @@ on the drive and must remain readable.
 **Out of scope here:** RQ3's measurements, which are unaffected — the values are
 correct in both corpora and only their spelling differs; the censoring mechanism
 itself; T-KBn's stale-row skip.
+
+---
+
+## Extension (2026-09-10): the guard belongs in the analyzers, not only the diagnostics
+
+Raised by `[IsalHG-Fable]` and folded here rather than opened as a new task,
+because it is the same fix one layer up.
+
+`scripts/diagnostics/rowsio.py` now makes the row-reading rules structural for
+**diagnostics** — `num()` coerces instead of string-comparing, `key_by()` raises
+on key collision instead of dropping by last-wins, `load_rows()` announces the
+row count consumed, `expect_rows()` fails when it is not the expected one
+(19 tests, `tests/experiments_tkde/test_rowsio_guards.py`).
+
+**But one of the two silent failures lived in an *analyzer*.** The `fillna(0)`
+that counted a blank as a measured failure was
+`analyze_rq6.completion_table`, and the analyzers are what write `tables.md`,
+which is what the prose folds from. So the guards currently protect the ad-hoc
+scripts and **not** the pipeline that produces publishable numbers.
+
+The pandas path is less exposed to the collision mode — a `groupby` aggregates
+rather than overwriting — but fully exposed to the other two, **both of which
+have now fired in this campaign**:
+
+1. a filter that silently matches nothing (the `== "1"` against `'1.0'`);
+2. a rate whose denominator is `len(group)` rather than the count of rows where
+   the quantity exists (`completion_table`, fixed).
+
+**Surveyed 2026-09-10.** Several analyzer tables already carry their
+denominators — `analyze_rq7` reports `n_instances`, `n_members`, `n_reps`,
+`n_censored`, `n_skipped`; `analyze_rq6.validity_table` reports `n_seeds` and
+sums `n_samples`/`n_valid`/`n_rejected` explicitly. So the convention exists and
+is followed unevenly rather than absent, which is the cheap case to finish.
+
+**Acceptance (extension):** every analyzer table announces the number of rows it
+consumed and the denominator of every rate it prints, and **fails** when either
+differs from what the join manifest says it should be. The manifest already
+carries the expected unit counts, so the expectation exists and is simply not
+being asserted against — one assertion per table. A test feeds an analyzer a
+frame with a deliberately missing unit and asserts the table refuses to emit
+rather than emitting a rate over the survivors.
+
+That is the difference between a wrong number being caught by whoever
+re-derives it by hand and being caught by the run that produced it.

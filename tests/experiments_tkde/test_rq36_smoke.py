@@ -23,6 +23,7 @@ from experiments.tkde.config import TkdeConfigError
 from isalhg.datasets.kb.base import make_record
 from isalhg.generation.incidence_baseline import flatten
 from isalhg.language.consensus import coverage_consensus
+from isalhg.language.reach import reach
 from isalhg.metric_space.distances.fact_levenshtein import fact_word
 from isalhg.metric_space.toolkit.matrix import build_matrix
 from isalhg.metric_space.toolkit.medoid import medoid
@@ -276,10 +277,31 @@ class TestReach1Index:
         index = rq6.Reach1Index(hypergraphs)
         assert index.within_one(hypergraphs[0]) is True
 
-    def test_a_different_constant_count_fails_the_precondition(self, members):
-        index = rq6.Reach1Index([record.to_hypergraph() for record in members])
-        other = _record("wider", ((0, (0, 1)), (0, (1, 2)), (0, (2, 3)), (0, (3, 4))), n=5)
-        assert index.within_one(other.to_hypergraph()) is None
+    def test_a_different_constant_count_does_not_decide_the_answer(self, members):
+        """A differing constant count must not short-circuit the index (T-KBo).
+
+        This test previously asserted ``is None`` here, encoding the *frozen*
+        reach precondition: equal constant count plus type multiset. Under
+        ``reach'`` (D-KBf5) a deletion compacts away constants it isolates, so
+        the count is not preserved across a reach-1 step and that gate withheld
+        exactly the pairs the definition admits.
+
+        The contract is now stated against ``reach`` itself rather than against
+        any gate, so it cannot go stale the same way again.
+        """
+        hypergraphs = [record.to_hypergraph() for record in members]
+        index = rq6.Reach1Index(hypergraphs)
+        other = _record(
+            "wider", ((0, (0, 1)), (0, (1, 2)), (0, (2, 3)), (0, (3, 4))), n=5
+        ).to_hypergraph()
+        assert any(H.n_nodes != other.n_nodes for H in hypergraphs), (
+            "the fixture must actually differ in constant count for this to test anything"
+        )
+        expected = any(reach(other, H, r_max=1) is not None for H in hypergraphs)
+        answer = index.within_one(other)
+        assert answer is expected or (answer is None and not expected), (
+            f"index said {answer!r}; reach says a reach-1 member exists: {expected}"
+        )
 
     def test_a_distant_knowledge_base_is_not_within_reach_one(self, members):
         index = rq6.Reach1Index([record.to_hypergraph() for record in members])

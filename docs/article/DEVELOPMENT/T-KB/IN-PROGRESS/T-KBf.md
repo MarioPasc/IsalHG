@@ -2580,3 +2580,34 @@ moment it was written with a fixed cut and no power consideration. It stands
 **REFUTED as written** — a pre-registered threshold is not softened after the
 fact — and the interval is printed beside it so nobody leans on the verdict in
 either direction.
+
+### RQ7, pre-registered against the CORRECTED mechanism — written before the sweep lands
+
+`[IsalHG-Fable]`, and recorded now so it can be **evaluated rather than fitted**.
+
+**RQ7's pre-stated reading predates tonight's correction.** It says the envelope
+moves from `|Aut|` to `(m, k)` — written when the residual tail was attributed to
+**displacement alone**. The corrected mechanism is **displacement × branch
+factor**. So RQ7 must be read against the corrected explanation, or the envelope
+paragraph and the R2 paragraph will say different things about the same cost —
+the exact inheritance drift the coherence pass caught in the manuscript tonight.
+
+**And RQ7 can *test* the mechanism rather than inherit it.** The sweep runs the
+search-based arm and the ordered walk side by side over arity and size — which is
+*the search against no search at all*. Pre-stated, refutably:
+
+| if the corrected mechanism holds | if it does not |
+|---|---|
+| the two arms' costs **diverge with increasing `k`**, in a way no polynomial fit captures for the search arm while the walk stays essentially linear | the two **track each other up to a constant** |
+| the divergence tracks **arity**, not `|Aut|` — the tail sits at low symmetry (69 of 77 below 10³) | the divergence tracks `\|Aut\|` |
+
+**If they track each other up to a constant, the multiplication reading is in
+trouble and the paragraph needs revisiting *before* it is written.**
+
+**Instrumentation gap — checked, and it is absent.** RQ7's schema records `secs`,
+`tokens_or_bytes`, `m`, `k`, `n`, `aut_bucket`, `censored`: wall-clock and size,
+and **no proxy for search work** — no branches explored, tie sets entered or
+nodes visited. So the branch factor stays an **inference from a cost
+differential** rather than a direct measurement. Filed as **T-KBw**; it is a
+small addition, and the point of filing it now is not to discover later that the
+one number that would have settled the mechanism was never written down.

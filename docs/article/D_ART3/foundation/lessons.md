@@ -175,3 +175,23 @@ the episode that taught it (provenance in `measured_facts.md`).*
   known-numeric columns in the loader) as well as fixing the writer. Fixing only
   the call sites that are currently wrong leaves the next one to be discovered
   the same way.
+
+  **Why these are mandatory rather than advisable.** On the alignment-exhibit
+  scare, two careful readers reasoned their way to the same wrong conclusion —
+  one of them the reader who had written the rule against it four exchanges
+  earlier. What settled it was a grep (the pre-registration already forbade the
+  proposed fix) and a measurement (0 of 2,736 members in the window were
+  censored, so there was nothing to fix). Neither reader caught it by thinking
+  harder. Two mechanical checks beat two careful readers on the same item, which
+  is the argument for running them by default rather than when something feels
+  wrong — the feeling is exactly what was unreliable.
+
+  **A number without a source is not evidence, whichever way it points.** Three
+  figures for one generator's connectivity were circulating one sentence apart
+  in the prose and one matched no run on disk. When it was re-sourced it moved
+  *against* us on one collection — the fact-list generator is better than we had
+  been claiming — which is the case that makes the rule stick: the reflex is to
+  scrutinise numbers that flatter the competitor and wave through the ones that
+  flatter us. Every quoted number gets a `foundation/` entry naming its run root
+  and table; anything unsourceable is struck, not kept.
+

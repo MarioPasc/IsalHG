@@ -131,3 +131,26 @@ not depend on their numbers**. Each is measured and recorded in
 14. Name the regimes in words — **pendant** = the edit changed the constant
     inventory, **interior** = it did not — and state once that
     `add_constant`/`remove_constant` are arity widening/narrowing of one fact.
+
+---
+
+**2026-09-10 — PRECONDITION added (not a step inside the fold).** The fold does
+**not start** until every number it would carry has an entry in
+`docs/article/D_ART3/foundation/` naming its run root, job and table. Anything
+unsourceable is **struck, not kept**.
+
+Reason, measured rather than anticipated: three different figures for the
+fact-list generator's connectivity were circulating one sentence apart in
+`prose.md`, and one of them (`256/1,000`) matched no run on disk. Re-sourced, it
+moved **against us** on NDC — the real value is 0.4157, better for the
+comparator than the number we were quoting. The first RQ6 fact base is
+`foundation/rq6_generation_facts.md`; the rest of the campaign's numbers need
+the same treatment before the fold.
+
+Already known to be stale or unsourceable, and **do-not-quote** until re-derived:
+
+| number | status |
+|---|---|
+| `rows_samples.reach1_frac` "4.7 % / 9.6 %" | matches no run (campaign rows: 4.36 % / 7.13 %); being re-derived by job **2279064**, gated on `scripts/diagnostics/rq6_reach1_rederivation_check.py` |
+| completion "within reach 1 75.3 % / 21.0 %" | pre-`reach′`; under `reach′` **76.7 % / 21.3 %** |
+| "256 / 1,000" and "disconnected three times in four" | struck; the sourced values are 0.4157 (NDC) / 0.1260 (WD50K), and no single ratio describes both |

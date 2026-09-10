@@ -1289,3 +1289,29 @@ evidence for it, not a substitute.
 Note the `mix` minimum the analyzer reports (0.722) is below the lowest cell
 here (0.757) because H3a is scored over both consensus labels, `coverage_r2`
 and `coverage_rt`; 0.722 is a `coverage_rt` cell.
+
+### RQ4's L15 disclosure is live on real data (interim, machinery only)
+
+Verified on 819 completed units — **the machinery, not the science**; RQ4 is
+incomplete (T-KBq) and no conclusion is drawn from a partial corpus.
+
+All nine census columns are present and populated: `censored`,
+`n_censored_members`, `n_censored_anomaly`, `n_censored_clean`,
+`censor_rate_anomaly`, `censor_rate_clean`, `n_censored_word_anomaly`,
+`n_censored_word_clean`, `word_censored_arms`. All eleven D-ART5 arms are
+present, `wstar_orbit` among them, and `censored = 0` on every sampled row (no
+unit lost).
+
+The pair that answers Fable's L15 concern — *are corrupted members
+preferentially censored, so that the AUC is computed on a set whose positives
+were removed?* — is now measurable rather than assumed. Interim shape only:
+`censor_rate_clean` sits tightly around **0.049–0.055** across units while
+`censor_rate_anomaly` ranges **0.029–0.101**, straddling it in both directions.
+The wider spread is expected from the denominators alone (≈ 69 anomalies against
+≈ 1,300 clean members per unit), so nothing here suggests a systematic bias —
+**but that is a shape, not a test.** The paired comparison over the full corpus
+is what the caption will carry, and it is deferred until RQ4 completes.
+
+Recorded now because the columns being *populated* is the thing that could have
+silently failed; the disclosure was pre-registered before the run and is not
+retrofittable.

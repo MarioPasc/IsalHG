@@ -1205,3 +1205,40 @@ a redundant arm.
 Caveat carried: RQ6's **`reach1` column** still needs re-deriving (T-KBo) —
 `Reach1Index` buckets on the frozen precondition. Nothing above depends on it;
 validity, fidelity and the interiors do not use that index.
+
+### RQ3's analyzer verdicts — and a correction to my own H3a reading
+
+The analyzer scores H3a **per cell**, which is how it was pre-registered
+("exact recovery ≥ 0.95 **in every cell**"). My earlier entry aggregated by
+`(kind, t)` and reported *mix* as "pass, barely" at 0.806. **That was wrong** —
+the same pooling error this campaign keeps finding, made by me one level down.
+Per cell:
+
+| hypothesis | claim | measured | holds |
+|---|---|---|---|
+| H3a `ins` | ≥ 0.95 in every cell | min over 8 cells = **0.991** | **yes** |
+| H3a `del` | ≥ 0.95 in every cell | min over 6 cells = **0.130** | no |
+| H3a `mix` | ≥ 0.80 in every cell | min over 8 cells = **0.722** | **no** |
+| H3b | a medoid returns an input, so its distance to the source is ≥ t | fraction of medoid rows with `fact_dist ≥ t` = **1.0000** | **yes** |
+| H3c | recovery within 0.05 of the identity merge | gap **0.0606** | no |
+| H3d | every ratio ≤ 2 − 2/N, and max ≤ 1.7 | **0 of 4,457 exceed the bound**; max **1.7778** | no |
+| H2d | LB ≤ cost under a metric; a non-metric arm may violate | `bipartite_ged_path` = **27** violations | yes |
+
+Three readings worth keeping distinct.
+
+**H3b holds exactly, on every row.** The medoid's distance to the source is
+≥ t in 4,457 of 4,457 — the floor is not a tendency, it is structural, and it
+is what makes the Corpus A consensus result meaningful rather than a better
+score on the same task.
+
+**H3d fails only on its tightness clause.** Prop 3's *theorem* — ratio
+≤ 2 − 2/N — holds on **all 4,457 certificates, zero violations**. What fails is
+the empirical expectation that the measured max would stay under 1.7; it is
+1.7778. The prose must not report "H3d fails" without saying the proved bound
+never broke.
+
+**H2d is RQ2 step 4, already computed here**, and it holds: `bipartite_ged_path`
+violates `LB ≤ cost` 27 times, which is the pre-stated consequence of its not
+being a metric. So the RQ2 step-4 gap is narrower than recorded — the
+certificate-validity verdict exists under `reach′`; what still needs the final
+RQ2 pass is the identity-timing section, which waits on RQ7.

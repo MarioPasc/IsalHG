@@ -237,3 +237,43 @@ the list below. Homes verified by grep, not from memory:
 | **the Corpus B "collapse" retraction** | `T-KBf`, `STATE` §10 |
 
 Cheap, once, and **at** the fold rather than after it.
+
+### The replacement sentence for the residual-tail paragraph
+
+The QUALIFIED marker in `prose.md` says what fails; the fold needs what to write
+instead, and it is a **mechanism** rather than a negation (`[IsalHG-Fable]`).
+
+**Both engines run the displacement search.** The rank arm is the family's greedy
+walk with displacement enumeration and the seven-rung cascade; the orbit arm adds
+**tie-complete branching over that same enumeration**. So the cost on this tail is
+neither the displacement search *instead of* the branching nor the branching
+alone — it is the **displacement enumeration multiplied by the branch factor**,
+and only the multiplier is specific to the search-based program.
+
+**Measured decomposition** (M3 census, `IEEETKDE_isal_merged`), which is stronger
+than the argument alone:
+
+| arm | censored | arity |
+|---|---|---|
+| `wstar_rank` | 53 | **all 53 at k = 10** — not one below |
+| `wstar_orbit` | 77 | 69 at k = 10, **plus 6 at k=7, 1 at k=8, 1 at k=9** |
+
+`rank ⊆ orbit` (zero rank-only censorings, T-KBe), so the **24 orbit-only**
+censorings split cleanly:
+
+- **16 extra at k = 10** — branching *amplifying* a displacement cost that is
+  already high;
+- **8 below k = 10** — members displacement alone handles and branching does
+  not. **Branching-only casualties**, and the reason arity alone cannot be the
+  whole story.
+
+**Every number fits**: displacement is why both arms censor at arity 10 and
+essentially nowhere else; branching is why one recovers a quarter of its tail at
+a tenfold budget and the other half; and it is the same complexity split, because
+multiplying a polynomial enumeration by an exponential branch factor is exactly
+what makes ten times the time buy almost nothing.
+
+**Both surviving halves keep their evidence.** *Pruning cannot touch it* —
+the members are asymmetric, so there is no orbit to prune. *The residual cost is
+the branching* — the same enumeration without it clears half the tail.
+

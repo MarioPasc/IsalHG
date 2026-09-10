@@ -386,3 +386,20 @@ the episode that taught it (provenance in `measured_facts.md`).*
   pre-register the *reporting* of its profile rather than an explanation of its
   cause — the explanation can be wrong three times over and the obligation still
   does its work.
+
+  **When the objection is about what a pipeline *does*, grep the code's own prose
+  first.** Twice in one session a question was already answered, in as many
+  words, by whoever wrote the code:
+
+  - *does novelty's role-free key make a role-differing sample count as novel?*
+    — the `novelty` docstring says it passes role-free keys deliberately, *"so
+    that a sample reproducing a member up to argument roles still counts as a
+    reproduction"*;
+  - *can a task past its deadline run a unit on a trimmed budget and record a
+    censoring?* — `rq4.py` says *"NEVER trim its budget to make it fit: a unit
+    that got a fraction of its time is not comparable with its paired units."*
+
+  Both objections were sound and both had been anticipated. Searching the code's
+  comments is cheaper than measuring and faster than reasoning, and it is the
+  right first move whenever the question is about **behaviour** rather than about
+  a number the behaviour produced.

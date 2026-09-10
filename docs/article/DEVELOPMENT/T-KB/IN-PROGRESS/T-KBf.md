@@ -2153,3 +2153,42 @@ budget is the pre-registration precisely so a published row is not "a property o
 a budget rather than of the representation". Rule 10's grep caught it: the fifth
 already-ruled item this campaign, and the first where the check prevented an
 *action* rather than an escalation.
+
+#### The exception list for 2279064, enumerated before the rows exist
+
+`[IsalHG-Fable]`: "every non-`reach1` column bit-identical" needs its exception
+list written *first*, or a difference gets adjudicated after the fact.
+
+**Exactly three columns may move,** all in `rows_samples`:
+
+| may move | why |
+|---|---|
+| `reach1_frac` | the quantity being re-derived |
+| `reach1_eligible` | the eligibility gate changed (fact-count window, not the frozen precondition) |
+| `reach1_hits` | the index changed |
+
+**Everything else must be bit-identical**, including two things worth naming
+because they look like they should move and must not:
+
+- **`rows_completion.reach1`** — it calls `reach()` **directly**
+  (`rq6.py:833`), never `Reach1Index`. My change cannot touch it. If it moves,
+  something else did.
+- **`rows_alignment`** in its entirety — the alignment path does not use the
+  index.
+
+Also fixed: `n_samples`, `n_valid`, `n_rejected`, `n_connected`, `validity`,
+`connectivity`, `rejection_rate`, `jsd_*`, `novelty`, and in `rows_completion`
+`valid`, `iso_original`, `n_prefix`, `n_removed`.
+
+**The direction is predicted, not just the identity.** The old index was
+*strictly more restrictive* than the definition: it only ever considered members
+of identical `(constant count, type multiset)`, and the new one answers exactly
+"does some member sit at `reach′ ≤ 1`". So the new answer set contains the old
+one, and the eligibility gate is strictly more permissive. Therefore:
+
+> `reach1_eligible` **≥** old, and no sample's answer flips `True → False`.
+> Hits may only be gained. A decrease in either falsifies the fix.
+
+The analyzer's derived outputs (`fidelity_table` rows for `reach1_frac`,
+`completion_table`'s `reach1_*`) move as a consequence and are not part of the
+bit-identity check.

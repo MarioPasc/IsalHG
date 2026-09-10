@@ -1686,3 +1686,93 @@ across 15 shards.
 
 Suite: 2,942 passed / 8 failed at base → **3,038 passed / 8 failed**, failure
 sets identical by `diff`, +96 exactly the new test file.
+
+---
+
+## RQ3 consensus 2276107 — the winner_origin check, and my own third and fourth misreads
+
+**The reported Corpus B "recovery collapse to 0.0000" was my bug.** It is
+withdrawn. True Corpus B consensus recovery is **0.2794** (19 of 68), against
+0.286 before the objective correction — the corrected objective moved Corpus B
+recovery by **one run**, not to zero.
+
+**The root cause is a defect in the rows, not only in my one-liner.** The two
+corpora serialise the same column with different dtypes:
+
+| column | Corpus A | Corpus B |
+|---|---|---|
+| `exact_recovery` | `'0'` / `'1'` | `'0.0'` / `'1.0'` |
+| `censored` | `'0'` only | `'0'` / `'1'` |
+
+Corpus B has 7 censored units whose `exact_recovery` is blank, so the column is
+inferred `float64`; Corpus A censors nothing, so it stays `int64`. **The dtype of
+a results column depends on whether any unit in that corpus happened to be
+censored** — a property of wall-clock, not of the experiment. A `== "1"` test is
+therefore correct on one corpus and silently empty on the other, which is exactly
+how this passed review. Filed as **T-KBs**.
+
+**Both corpora pass the pre-registered `winner_origin` check** (D-KBf1a,
+committed before the field was read; re-derived from
+`scripts/diagnostics/rq3_consensus_forensics.py`, not inline):
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| uncensored coverage runs | 8,914 | 68 |
+| winner_origin transfer / member | 8,320 / 594 | 26 / 42 |
+| transfer fraction | 0.9334 | 0.3824 |
+| exact recovery | 0.8378 | 0.2794 |
+| **transfer ≥ recovery** | **PASSES** | **PASSES** |
+| `n_ties == 0` | 8,442 / 8,914 | 54 / 68 |
+| `winner_connected` | 1.0 everywhere | 1.0 everywhere |
+
+The tie-break never fires in 95% (A) and 79% (B) of runs, so most runs are
+invariant-neutral and stand unchanged under any complete invariant.
+
+**Consensus vs medoid, with the significance the design demands.** Design §9
+item 8 forbids reading a direction off a point estimate, so the script now
+reports an exact two-sided sign test on the discordant pairs (verified against
+`scipy.stats.binomtest`, 0 mismatches over every `disc ≤ 59`; summed in log
+space because at Corpus A's counts the direct ratio underflows and "p = 0" would
+be a false statement):
+
+| corpus | arm | axis | discordant | rank-biserial | p | verdict |
+|---|---|---|---|---|---|---|
+| A | wl_l1 | recovery | 3734/4457 (3734–0) | +1.000 | ~1e-1124 | directional |
+| A | wl_l1 | fact_dist | 3951/4457 (3913–38) | +0.981 | ~1e-1097 | directional |
+| A | wstar_orbit | recovery | 3734/4457 | +1.000 | ~1e-1124 | directional |
+| A | wstar_orbit | fact_dist | 3951/4457 | +0.981 | ~1e-1097 | directional |
+| B | wl_l1 | fact_dist | 29/63 (13–16) | −0.103 | 0.711 | **null** |
+| B | wl_l1 | recovery | 7/63 (4–3) | +0.143 | 1 | **null** |
+| B | wstar_orbit | fact_dist | 31/63 (15–16) | −0.032 | 1 | **null** |
+| B | wstar_orbit | recovery | 9/63 (4–5) | −0.111 | 1 | **null** |
+
+**No direction is asserted on Corpus B in either sense.** The widest CI is
+[0.189, 0.733].
+
+**Corpus A's medoid axis may not discriminate between representations at all.**
+On every arm-independent measure the two Isal-relevant medoid arms agree:
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| `medoid_cost` identical | **0 / 4,457** | 3 / 63 |
+| `fact_dist` identical | **4,457 / 4,457** | 41 / 63 |
+| `exact_recovery` identical | **4,457 / 4,457** | 57 / 63 |
+
+`medoid_cost` differing everywhere shows the arms genuinely ran different
+metrics; `fact_dist` and `exact_recovery` agreeing everywhere shows they landed
+on fact-indistinguishable objects anyway. If that reading survives, Corpus A's
+entire signal is consensus-vs-medoid and none of it is arm-vs-arm — which would
+mean the Corpus B tie is not evidence against the capability claim, because
+Corpus A never tested it. **Not yet assertable:** the rows carry no column naming
+the selected member (`source_id` / `collection_id` only), so "fact-equivalent" is
+measured and "identical" is not. With Fable.
+
+**Fourth instance of the same failure mode, caught before it was reported.** My
+first version of that arm check fell back to `winner_id`/`medoid_id`/
+`representative_id`, none of which exist, compared `"?"` to `"?"`, and
+"confirmed" agreement in 4457/4457 units for an entirely vacuous reason. The
+number above is a different measurement on fields that exist. The rule I wrote
+after the first instance — re-derive from a committed script anything that would
+change a conclusion — did not prevent instances two, three or four, because all
+four were checks of *my own* reasoning rather than campaign outputs. The check
+now lives in the committed script with the coercion documented as its purpose.

@@ -1608,3 +1608,33 @@ full four-cell nauty ablation of D-ART4 (3b) on the cost axis, which is where
 D-ART5's claim that the envelope moves *from `|Aut|` to `(m, k)`* gets tested.
 Censoring is 494 of 8,100 (6.1 %), expected since the sweep deliberately
 includes cells past the frontier.
+
+### D-ART5 arm-set audit across every RQ — one apparent gap, checked and defensible
+
+D-ART5 requires one Isal row per table and both certificate tokenisations riding
+along everywhere. Audited across all configs:
+
+| config | `wstar_orbit` | `nauty_cert` | `nauty_cert_rows` |
+|---|---|---|---|
+| rq1, rq1_cpp | ✔ | ✔ | ✔ |
+| rq2 (`exact0_arms`, `census_arms`) | ✔ | ✔ | ✔ |
+| rq3 (`medoid_arms`) | ✔ | ✔ | ✔ |
+| rq4 (`arms`) | ✔ | ✔ | ✔ |
+| rq7 (`nscaling_arms`) | ✔ | ✔ | ✔ |
+| **rq7 (`sweep_arms`)** | ✔ | ✔ | **absent** |
+
+**rq5** and **rq6** list no distance arms and are correct as they stand: RQ5
+takes its arms from the shared matrices (its rows carry all eleven, verified),
+and RQ6's arms are *generative models* — a certificate does not generate, so
+the question does not arise.
+
+**The rq7 sweep gap is defensible, and recorded so it is not re-discovered as a
+defect.** The sweep measures **per-instance canonicalisation cost and
+feasibility**, and the two tokenisations share the same nauty call — they differ
+only in how its output is written, which is a *pairwise* cost (measured 51 µs
+against 57 µs in `matrices.yaml`), not a canonicalisation one. The place the
+tokenisation genuinely matters is the locality and compactness comparison
+(D-ART4 (1)'s "the bytes-only comparison is a tokenisation confound", and
+Prop 1's "12 rows of the canonical adjacency certificate"), and that is measured
+in **RQ1**, which carries both. Adding `nauty_cert_rows` to the sweep would buy
+a near-duplicate cost curve.

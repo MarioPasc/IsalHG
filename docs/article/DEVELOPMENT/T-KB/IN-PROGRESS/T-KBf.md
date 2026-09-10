@@ -1908,8 +1908,16 @@ underperforming. Conditioned on the hard subset it inverts:
 Member winners recover **only where recovery is free**. The 16 sit entirely in
 the subset where the truth was already in the collection. The sentence is not
 "11% against 38% with a regime caveat"; it is that on the runs where recovery is
-not free, input-returning methods recover nothing and the consensus recovers
-three.
+not free, input-returning methods recover nothing **by construction** and the
+consensus recovers three.
+
+**The "by construction" must survive every restatement.** The zero is the
+stratum's *definition*, not a measurement — a member cannot equal a truth that
+equals no member. Only the 3 is measured. Dropped, the sentence invites the
+obvious reply that we defined a subset where one method must fail and then
+reported that it failed. The claim lives entirely in the **asymmetry**: the
+constraint binds one method and not the other. (I dropped it once already in a
+restatement; Fable caught it.)
 
 **Corpus A's `member, recovered = 0 of 594` is H3b passing**, not an empty cell,
 and will be named as a check that passed.
@@ -1917,3 +1925,43 @@ and will be named as a check that passed.
 **Still to do:** pull the 3 natural runs by class id and quarter as a worked
 figure — a capability claim with one instance shown reads differently from the
 same claim as a count.
+
+**The one non-tautological comparison the stratum allows — and it is null.** On
+the TRUTH_ABSENT runs both methods emit an output at nonzero fact distance, so
+comparing them there has no structural constraint doing the work. Paired
+`fact_dist`, consensus vs every medoid arm, 40 pairs (37 for `wstar_orbit`, whose
+censored rows drop out):
+
+| arm | consensus | medoid | discordant | p |
+|---|---|---|---|---|
+| bipartite_ged_assign | 2.875 | 3.150 | 26/40 (13–13) | 1 |
+| bipartite_ged_path | 2.875 | 3.125 | 26/40 (13–13) | 1 |
+| degree_seq_l1 | 2.875 | 3.150 | 26/40 (13–13) | 1 |
+| fact_rank | 2.875 | 3.000 | 25/40 (12–13) | 1 |
+| hpd_jsd | 2.875 | 2.800 | 24/40 (11–13) | 0.839 |
+| nauty_cert | 2.875 | 3.075 | 27/40 (14–13) | 1 |
+| nauty_cert_rows | 2.875 | 3.050 | 26/40 (13–13) | 1 |
+| netlsd | 2.875 | 2.925 | 29/40 (15–14) | 1 |
+| size_l1 | 2.875 | 3.125 | 26/40 (13–13) | 1 |
+| wl_l1 | 2.875 | 2.825 | 25/40 (11–14) | 0.690 |
+| **wstar_orbit** | 2.865 | 3.081 | 23/37 (13–10) | 0.678 |
+
+**All eleven null.** So the honest reading, per rule 7: on the hard runs the
+consensus buys **exactly the three recoveries and nothing else** — no
+fact-distance advantage over any medoid arm, including its own. The means favour
+the consensus on 9 of 11 arms, but every discordant split is within noise and no
+direction is claimed.
+
+**Exploratory, and it does not move D-KBf5a.** The stratum is defined from the
+data and is pre-statable in principle, but it was defined *after* the full-set
+null was seen. That is on the record here. D-KBf5a's gate is committed on the
+full set and stays where it is regardless of this table.
+
+**A corpus finding that belongs in the data description, not only here.** In
+**28 of 69 units (41%)** the held-out quarter already equals an earlier one. Two
+runs in five can therefore be won by any method that returns a member, without
+doing anything — which compresses every difference between methods and explains
+the gate's null directly. The overall Corpus B recovery rate of 0.279 is
+**mostly measuring how often an NDC drug class is static between quarters**, a
+property of the data and not of any method. → to be stated where Corpus B is
+described (`DATA.md` / DESIGN §3), not only where the result is.

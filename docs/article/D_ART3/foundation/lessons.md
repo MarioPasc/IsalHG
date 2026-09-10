@@ -195,3 +195,23 @@ the episode that taught it (provenance in `measured_facts.md`).*
   flatter us. Every quoted number gets a `foundation/` entry naming its run root
   and table; anything unsourceable is struck, not kept.
 
+  **Every check reports the number of rows it consumed, and a check whose N
+  differs from the expected N fails rather than passes.** A check that passes by
+  comparing almost nothing is invisible precisely because passing looks like
+  success. Worked example, from the script written to enforce this very lesson:
+  its row key omitted `member_id`, so 600 completion rows collapsed onto 6 by
+  dict overwrite and it reported *"every column bit-identical (6 rows)"* —
+  green, and comparing 1 % of the data. It now raises on key collision rather
+  than warning, and the self-test compares 600/60/358 rows where it had reported
+  6/3/54. Any check that silently loses rows is reporting an answer it did not
+  earn, which is this lesson's own subject.
+
+  **A rate is only quotable beside another rate when both share a denominator.**
+  RQ6 writes `connectivity = n_connected / n_valid`, conditional on validity. For
+  the arms at validity 1.0000 conditional and unconditional coincide, so the
+  distinction is invisible — until an arm at validity 0.0190 reports
+  connectivity 0.0909, i.e. *above* its own validity, which is coherent only
+  because the denominator is the 1.9 % that decoded. Three such figures quoted
+  side by side sit on two different denominators. Report the **joint** rate as
+  the headline (valid *and* connected, over samples drawn) and give validity and
+  connectivity as its factors.

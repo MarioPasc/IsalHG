@@ -174,8 +174,13 @@ collection): every sample of the Isal generator is valid **and** connected —
 connectivity 1.0000 on both. The fact-list generator's samples are all valid
 but connected only 41.6 % of the time on NDC and 12.6 % on WD50K; no single
 ratio describes both collections. The sharper contrast is the third generator:
-an incidence-list serialisation with a strict decoder must **reject 98.1 %
+an incidence-list serialisation with a strict decoder must **reject 98.10 %
 (NDC) and 98.98 % (WD50K) of its own output**, against validity 1 by theorem.
+Put on a single denominator — the fraction of *drawn* samples that are valid
+**and** connected, which is what a user of a generator actually gets — the Isal
+generator returns a usable knowledge base **every time**, the fact list **one
+time in two** (NDC) and **one in eight** (WD50K), and the incidence list **one
+in 578** and **one in 11,739**.
 
 **Compactness** rides along: `|w| ≤ m(1+kn)` (proved); measured medians of 6
 (WD50K) and 8 (NDC) instructions per member against 12 rows of the canonical

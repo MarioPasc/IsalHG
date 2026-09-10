@@ -1559,3 +1559,26 @@ trusting the summary — which is the only reason neither reached the ledger as 
 finding. Ad-hoc analysis one-liners are the least-reviewed code in this campaign
 and have now been wrong twice; anything they produce that would change a
 conclusion gets re-derived from a committed script.
+
+### RQ6's `reach1` is a lower bound, not a measurement — and it cannot be re-derived
+
+RQ6 runs **bundled inside RQ3**, so job 2276107 is producing RQ6 rows now with
+T-KBo unfixed. Two facts settle what to do.
+
+**It cannot be repaired from disk.** `rows_samples.csv` carries only aggregates —
+`reach1_frac`, `reach1_eligible`, `reach1_hits` — and the sampled hypergraphs
+are not persisted. Re-deriving the column needs generation re-run.
+
+**The current value is a lower bound.** `Reach1Index` buckets members by the
+frozen precondition (constant count + type multiset) and so **withholds exactly
+the pairs `reach′` admits**, which can only suppress hits. The measured
+`reach1_frac = 0.0508` (45 hits of 885 eligible) is therefore a floor: the true
+value under `reach′` is **≥ 0.0508**. Reported that way it is honest; reported
+as a measurement it is not.
+
+**The fix does not cost an RQ3 re-run.** `slurm/tkde/rq6_launcher.sh` runs RQ6
+standalone, so T-KBo can be fixed and RQ6 re-run on its own — the RQ3 rows from
+2276107 stand regardless, since nothing in RQ3 reads `reach1`.
+
+Nothing else in RQ6 is implicated: validity 1.000, connectivity, fidelity and
+the alignment interiors do not use the index. The headline results are unchanged.

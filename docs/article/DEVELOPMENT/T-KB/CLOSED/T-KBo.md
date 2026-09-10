@@ -1,6 +1,6 @@
 # T-KBo — `rq6.Reach1Index` is unsound under `reach′`
 **Declared:** 2026-09-09 16:05 CEST
-**Status:** IN-PROGRESS
+**Status:** DONE
 **Depends on:** D-KBf5 (merged) — this is its one unfixed consequence
 **Delegation:** agent
 **Why out of scope:** found by the `reach′` implementer while it held
@@ -61,3 +61,37 @@ Two unrelated failures in the same file filed as **T-KBt**.
 land and pass its pre-registered check — every non-`reach1` column bit-identical
 to the superseded rows, sampling having been verified deterministic — after which
 the old `reach1` is marked superseded wherever quoted.
+
+---
+
+**2026-09-10 22:30 — CLOSED. Job 2279079 passes the pre-registered check.**
+
+`scripts/diagnostics/rq6_reach1_rederivation_check.py`, committed before any of
+these rows existed, returns **PASS**:
+
+- `rows_completion` **600 rows bit-identical**, `rows_alignment` **60**,
+  `rows_rejections` **358** — so sampling is deterministic, the re-run was a
+  re-derivation over the same samples, and the change touched only the index;
+- only `reach1_frac`, `reach1_eligible` and `reach1_hits` moved;
+- direction holds: `reach1_eligible` fell in **0** units, `reach1_hits` in **0**.
+
+**The numeric prediction matched in all six cells**, exactly:
+
+| collection | model | predicted | actual | `reach1_frac` | joint |
+|---|---|---|---|---|---|
+| ndc_classes | fact_ngram | 27,000 | **27,000** | 0.0459 | 0.00459 |
+| ndc_classes | incidence_ngram | 5,135 | **5,135** | 0.0171 | 0.00033 |
+| ndc_classes | ow_ngram | 27,000 | **27,000** | 0.1623 | 0.01623 |
+| wd50k66 | fact_ngram | 27,000 | **27,000** | 0.2800 | 0.02800 |
+| wd50k66 | incidence_ngram | 2,764 | **2,764** | **0.0275** | 0.00028 |
+| wd50k66 | ow_ngram | 27,000 | **27,000** | 0.2711 | 0.02711 |
+
+`wd50k66/incidence_ngram` lands at **0.0275**, the corrected value, against the
+**0.0600** the `None` semantics reported — the 2.18× overstatement is gone, and
+the joint rate 0.00028 matches the factorisation `validity × reach1_frac`.
+
+**The superseded roots and what each was for.** `IEEETKDE_isal_reach1` is kept:
+its entire value was failing the check and exposing the denominator defect.
+`IEEETKDE_isal_reach1b` is the derivation of record. The pre-`reach′` `reach1`
+values are superseded wherever quoted — `RESULTS_WALKTHROUGH.md` carries the
+supersession note and `T-KBg` carries the do-not-quote list.

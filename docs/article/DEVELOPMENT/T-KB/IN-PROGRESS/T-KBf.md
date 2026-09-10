@@ -1358,3 +1358,57 @@ canonical form, so any Σ_HG word model inherits validity and connectivity — b
 if the paper wants its one Isal row to be `w*_c` throughout, RQ6's model should
 be fitted on `w*_c` words. The measurement would not change (both are Σ_HG);
 only the label would.
+
+### The consensus change landed — the audit number is zero, and the fix nearly broke the medoids
+
+Merged. Three parts, in the order that made each measurable: persist the
+winner's origin, connectivity and out-of-domain counts; exclude candidates
+outside the representation's domain; move the objective's final tie break off
+the retired fact word onto `w*_c`, evaluated lazily over the tied set only. The
+dedup key stays the fact word — deduplication is invariant-neutral, a tie break
+is not.
+
+**The audit answers the question nobody could answer.** Over **323 real Corpus A
+collections across all 24 cells, zero out-of-domain winners** on either corpus:
+731 out-of-domain candidate classes were generated and **every one lost**. So
+the exclusion is a guarantee costing nothing here, not a repair — which is what
+"removing losing candidates from an argmax is a no-op" predicts, now measured
+rather than argued.
+
+| | exclusion | tie break |
+|---|---|---|
+| ndc_classes | 0 | 7 / 160 |
+| wd50k66 | 0 | 6 / 163 |
+| **pooled** | **0** | **13 / 323 (4.0 %)** |
+
+`n_ties` histogram unchanged; **221 of 221 tie-free collections bit-identical**
+— invariant-neutrality holding in the data. Of the 13 movers, 3 land closer to
+truth, 1 further, 9 the same (+3 exact recoveries, none lost). Recorded as
+provenance; **n = 13 supports no claim** and must not be quoted as one.
+
+**Two corrections that changed the work.**
+
+*The domain has two walls, not one.* The empty knowledge base is reachable when
+`A′` takes every fact, and it **wins outright** — it covers every member at
+`r = 2`. Excluding only disconnected candidates would have left the worse defect
+standing. Neither this session nor `[IsalHG-Fable]` saw it.
+
+*The change reintroduced the fork-poisoning hazard.* With `w*_c` in the tie
+break the consensus reaches the C++ engine; Corpus A ran it **unguarded in the
+parent** (`consensus_budget_s: null`), and one in-parent fingerprint flips
+`cpp_fork_is_healthy` to False, after which **every later guarded build is
+written `censored=1` without running** — silent corruption of the medoid rows,
+caused by my own brief. Fixed with `cpp_engine=True` and a Corpus A budget of
+1800 s. The agent also found `run_guarded`'s docstring claim that the medoid
+loop poisons the parent is **false**: `medoid_matrix` forks.
+
+**Flagged for the author, not decided:** D-ART4 (3) says "candidate key = the
+Isal string"; this brief narrowed that to the tie break alone. Nothing is wrong
+— the dedup key is invariant-neutral — but it is a narrower reading than the
+ruling's words, and the agent followed the brief rather than widening scope
+silently.
+
+**Consequence:** RQ3 re-runs under the corrected objective once the suite
+confirms. At 4.0 % movement over 4,457 Corpus A collections, roughly 180
+collections change, so the published numbers move slightly and the re-run is not
+optional.

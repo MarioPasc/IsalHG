@@ -274,7 +274,7 @@ domain to go.
 
 | | |
 |---|---|
-| **P(connected \| novel)** — `fact_ngram` | **0.0726** |
+| **P(connected \| novel)** — `fact_ngram` | **0.0726**, i.e. **7.3 %** — the form the prose quotes |
 | **P(connected \| novel)** — `ow_ngram` | **1.0000**, by Prop. C.4 (and 270,000/270,000 measured) |
 | P(novel \| connected) — `fact_ngram` | 0.5435, against 0.9425 overall |
 

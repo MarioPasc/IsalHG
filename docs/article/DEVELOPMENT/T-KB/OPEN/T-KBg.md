@@ -165,3 +165,32 @@ any it does not, whether that is a deliberate cut or an omission. A result
 present in the fact base and absent from the prose is as much a defect as a
 number in the prose absent from the fact base.
 
+**A predicate pass, because provenance cannot check the noun.** A `foundation/`
+entry records a number, a run and a table. It cannot record whether the **noun**
+attached to the number is the right noun, and neither direction of the
+bidirectional audit above would catch it: a sentence claiming every novel sample
+of ours is a *hypergraph*, or a *canonical form*, or a *knowledge base*, sources
+identically to the true one. `rowsio` cannot see it either — nothing about it is
+a row.
+
+This already fired once: "of the fact list's genuinely new samples, 7.3 % are
+**knowledge bases at all**" was wrong, because §2.1 defines a knowledge base as a
+finite set of facts and a disconnected fact set is one. The correct noun is
+**connected** (R3). The quantity had been verified from two independent
+directions; the predicate had never been checked.
+
+So the fold runs one pass over the folded prose checking, for each quoted number,
+the **noun and the qualifier** against the document that defines them — cheap,
+because they are all written down:
+
+| term | defining source |
+|---|---|
+| knowledge base | `prose.md` §2.1 ("a finite set of facts") |
+| connected / domain | R3 (`DECISIONS.md`), Prop. C.4 |
+| reach, coverage | design §4 |
+| `w*_c` | D-TA2 |
+
+Like the "reproduce a campaign quantity alongside the new one" rule, this is a
+**second opinion** rather than a second check, and it catches what looking harder
+at what is there cannot.
+

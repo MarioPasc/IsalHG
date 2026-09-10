@@ -270,7 +270,7 @@ flat incidence serialization with a strict decoder; 27 seeds × 10,000 samples o
 | claim | measured |
 |---|---|
 | validity by theorem (H6a) | 540,000 / 540,000 samples decode; the flat baseline is rejected on 98.10 % (NDC) and 98.98 % (WD50K) of samples, mostly out-of-range constant ids and type-count violations |
-| fidelity (H6b) | JSD to the collection's histograms: size 0.07 / 0.21, facts 0.05 / 0.07, arity < 0.001, predicate ≤ 0.002, type ≤ 0.006; novelty 0.99 / 0.94; within reach 1 of a member 4.7 % / 9.6 %; closer than the baseline's accepted 1–2 % on facts, arity and predicates (Holm p ≤ 1e-7), the baseline's survivors closer on size |
+| fidelity (H6b) **[reach1 + novelty SUPERSEDED — see the note below this table]** | JSD to the collection's histograms: size 0.07 / 0.21, facts 0.05 / 0.07, arity < 0.001, predicate ≤ 0.002, type ≤ 0.006; novelty 0.99 / 0.94; within reach 1 of a member 4.7 % / 9.6 %; closer than the baseline's accepted 1–2 % on facts, arity and predicates (Holm p ≤ 1e-7), the baseline's survivors closer on size |
 | decodability (H6c) | 86 / 86 interior words of 20 real-pair alignment paths decode (fact alphabet, 68.6 % connected; pointer alphabet 100 % connected) |
 | conditional completion | 300 / 300 valid; isomorphic to the original 68.3 % (NDC) / 14.0 % (WD50K); within reach 1 75.3 % / 21.0 % |
 

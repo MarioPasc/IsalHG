@@ -832,10 +832,33 @@ the episode that taught it (provenance in `measured_facts.md`).*
   | tail600 | **absent** | re-ran all 16 shards and overwrote the rows its verdict came from |
   | RQ4 | present but **inert** — checks node-local staging (T-KBq) | re-ran completed work |
 
-  Three experiments, one pattern, three outcomes. So the question before reading
-  from a live tree is not "is a job still running" but **"does this experiment
-  have a skip, and does it check the durable root"** — and the second half is
-  where RQ4's fails, which is why a skip cannot be taken on sight.
+  Three experiments, one pattern, three outcomes. Whether an experiment has a
+  skip, and whether it checks the durable root, is what says how alarmed to be —
+  and the second half is where RQ4's fails, which is why a skip cannot be taken
+  on sight.
+
+  **But that is a post-hoc diagnosis, not a pre-flight licence, and an earlier
+  draft of this entry made it one.** A skip prevents a job from *re-running work
+  already done*; it does nothing about a job writing rows that are legitimately
+  **new**. The counterexample is in this campaign's own record:
+  `RQ1_addressing/addressing` held **two campaigns** under different launch tags
+  (`c3fb21de`, job 2215137; `47c8a42c`, jobs 2247394+95), and concatenating the
+  directory double-counted **904,442 of 2,506,837 `(unit, arm)` rows**. Every one
+  of those rows was correct new work, and a skip would have permitted all of it,
+  because **a second campaign is not a resumption**.
+
+  So the ordering is unchanged and unconditional: **freeze first, then read.**
+  The skip question converts "saved by luck" into "saved by a mechanism" *after*
+  you discover you read first and froze second — which was the position twice in
+  one session — and that distinction is worth having, but it licenses nothing in
+  advance.
+
+  The pre-flight that covers both cases is one question rather than three:
+  **has anything been written to this root since the rows I am about to read were
+  produced?** A newest-mtime beside the file count answers it, which is the
+  convention this lesson file already adopted for progress reporting, and which
+  would have surfaced the second array *before* the reading instead of after.
+  (Qualification raised by `[IsalHG-Fable]` against this entry's first draft.)
 
   **And verify per row, not by aggregate, however strong the aggregate looks.**
   The first check that the second array had changed nothing compared *summary
@@ -857,3 +880,23 @@ the episode that taught it (provenance in `measured_facts.md`).*
   license "the campaign says this", and the obligation to re-verify at terminal
   has to be written **into** the artefact, since nobody reading it later will
   know a job was in flight.
+
+  **Of the three ways a re-read can disagree, the dangerous one is the one that
+  looks like growth.** A frozen-against-live diff has three outcomes and they are
+  not equally alarming:
+
+  | outcome | meaning | why |
+  |---|---|---|
+  | `differing` > 0 | rows moved | bad, and visible — recompute |
+  | **`only-live` > 0** | rows **added** | **worse**, and invisible — the reading was computed on a *subset* |
+  | `only-frozen` > 0 | rows vanished | a root problem, not a numbers problem |
+
+  The middle case is the one to name explicitly, because it defeats the guard
+  that would otherwise catch it: a completeness check asserting "7,776 per arm"
+  **passes** against an expectation that is itself too small, and nothing looks
+  wrong anywhere. That is the shape the `RQ1_addressing` double-count had —
+  904,442 extra rows that every per-file check accepted, because each file was
+  internally correct.
+
+  So a re-read reports all three counts, and `only-live` is never folded into a
+  summary line that says "no change".

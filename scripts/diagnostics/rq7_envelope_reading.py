@@ -299,50 +299,15 @@ def c3_envelope_moves(by_arm: dict[str, list[dict[str, str]]]) -> None:
         )
 
 
-def c4_nscaling(rows: list[dict[str, str]]) -> None:
-    """C4: withheld unless every N cell is present (a truncated fit is a different number)."""
-    print("\n== C4 (H7c): N-scaling ==")
-    by_arm: dict[str, dict[int, list[tuple[float, float]]]] = defaultdict(lambda: defaultdict(list))
-    for row in rows:
-        canon = rowsio.num(row["secs_canon_total"])
-        pairs = rowsio.num(row["secs_pairs_total"])
-        if canon is None or pairs is None:
-            continue
-        by_arm[row["arm"]][int(row["N"])].append((canon, pairs))
-    all_ns = sorted({n for arm in by_arm.values() for n in arm})
-    print(f"  N cells present overall: {all_ns}")
-    print(f"  {'arm':22s} {'N present':>28s} {'canon slope':>12s} {'pair slope':>11s}")
-    for arm in sorted(by_arm):
-        cells = by_arm[arm]
-        ns = sorted(cells)
-        if set(ns) != set(all_ns):
-            print(
-                f"  {arm:22s} {str(ns):>28s} {'WITHHELD':>12s} {'WITHHELD':>11s}"
-                "   <- truncated N range"
-            )
-            continue
-        xs = [math.log(n) for n in ns]
-        for label, index in (("canon", 0), ("pair", 1)):
-            ys = [math.log(statistics.median([v[index] for v in cells[n]])) for n in ns]
-            mx, my = statistics.fmean(xs), statistics.fmean(ys)
-            num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
-            den = sum((x - mx) ** 2 for x in xs)
-            slope = num / den if den else float("nan")
-            if label == "canon":
-                canon_slope = slope
-            else:
-                pair_slope = slope
-        print(f"  {arm:22s} {str(ns):>28s} {canon_slope:12.3f} {pair_slope:11.3f}")
-
-
 def yield_completeness(rows: list[dict[str, str]]) -> set[str]:
     """Which collections were read whole, and which are a partial slice?
 
     `run_yield` shards a collection by contiguous `block_slice`, and the records
     are **ordered descending in `m`** (measured: ndc_substances block medians run
-    6, 6, 5, 4, 4, 3). So a missing low-numbered block removes the collection's
-    largest members -- the ones an envelope claim is about. A rate over the
-    blocks that happen to be present is not a rate over the collection.
+    6, 6, 5, 4, 4, 3). So a missing block removes a known band of the size
+    distribution, and which band decides whether a resulting statistic is a floor
+    or is conservative. A rate over the blocks that happen to be present is not a
+    rate over the collection.
 
     Returns
     -------
@@ -369,23 +334,116 @@ def yield_completeness(rows: list[dict[str, str]]) -> set[str]:
         if got == expected:
             complete.add(collection)
             print(f"  {collection:16s} {got:5d} / {expected:5d}  complete")
-        else:
-            have = blocks.get(collection, set())
-            total = n_blocks.get(collection, 0)
-            missing = sorted(set(range(total)) - have)
-            where = (
-                "the larger-m end"
-                if missing and min(missing) == 0
-                else "the smaller-m end"
-                if missing
-                else "unknown"
-            )
-            print(
-                f"  {collection:16s} {got:5d} / {expected:5d}  PARTIAL "
-                f"({got / expected:.1%}) -- no yield claim; blocks present "
-                f"{sorted(have)}, missing {missing} = {where}"
-            )
+            continue
+        have = blocks.get(collection, set())
+        total = n_blocks.get(collection, 0)
+        missing = sorted(set(range(total)) - have)
+        # Records are ordered descending in m, so a block's index IS its rank.
+        # Naming only the two extremes mislabels a missing middle block, so the
+        # position is reported as a rank out of the total.
+        where = (
+            ", ".join(f"#{b + 1} of {total}" for b in missing) + " in descending-m order"
+            if missing
+            else "unknown"
+        )
+        print(
+            f"  {collection:16s} {got:5d} / {expected:5d}  PARTIAL "
+            f"({got / expected:.1%}) -- no yield claim; missing block {where}"
+        )
     return complete
+
+
+def c4_nscaling(rows: list[dict[str, str]]) -> None:
+    """C4: withheld unless every N cell is present, and named for what it holds.
+
+    ``secs_pairs_total`` is the **whole-matrix** time, not the pair phase --
+    ``_matrix_timing`` returns ``(canonicalization seconds, whole-matrix
+    seconds)``. Fitting an "N^2 pair slope" to it measures canonicalization
+    wherever canonicalization dominates, which for ``wstar_orbit`` is 1,736 s of
+    a 1,736 s total. The pair phase is the difference, and where that difference
+    falls below the run-to-run spread of the canon pass it is reported as
+    unresolvable rather than as a number.
+
+    Censored and skipped reps are excluded from every median and reported: a rep
+    that hit the one-hour cap records the cap, so including it would report a
+    budget as a measurement.
+    """
+    print("\n== C4 (H7c): N-scaling ==")
+    grouped: dict[str, dict[int, list[dict[str, str]]]] = defaultdict(lambda: defaultdict(list))
+    censored: dict[str, int] = defaultdict(int)
+    for row in rows:
+        if rowsio.num(row["censored"]) == 1.0 or rowsio.num(row["skipped"]) == 1.0:
+            censored[row["arm"]] += 1
+            continue
+        grouped[row["arm"]][int(row["N"])].append(row)
+
+    def med(reps: list[dict[str, str]], column: str) -> float | None:
+        values = [rowsio.num(r[column]) for r in reps]
+        present = [v for v in values if v is not None]
+        return statistics.median(present) if present else None
+
+    print("\n  the full 3,988 x 3,988 matrix on wd50k66 (H7c's actual claim):")
+    print(f"    {'arm':22s} {'whole matrix':>16s} {'canon':>10s} {'pair phase':>14s}")
+    table = []
+    for arm, cells in grouped.items():
+        if 3988 not in cells:
+            note = "CENSORED at the 1 h cap" if censored.get(arm) else "N=3988 absent"
+            table.append((float("inf"), arm, None, note))
+            continue
+        reps = cells[3988]
+        canon, whole = med(reps, "secs_canon_total"), med(reps, "secs_pairs_total")
+        if whole is None:
+            continue
+        spread = max(rowsio.num(r["secs_canon_total"]) or 0.0 for r in reps) - min(
+            rowsio.num(r["secs_canon_total"]) or 0.0 for r in reps
+        )
+        if canon is None:
+            pair = f"{whole:.3f} (no canon)"
+        elif whole - canon <= spread:
+            pair = "< noise"
+        else:
+            pair = f"{whole - canon:.3f}"
+        table.append((whole, arm, canon, pair))
+    for whole, arm, canon, pair in sorted(table):
+        if whole == float("inf"):
+            print(f"    {arm:22s} {'>= 60 min':>16s} {'--':>10s} {pair:>14s}")
+            continue
+        unit = (
+            f"{whole:.2f} s"
+            if whole < 600
+            else f"{whole / 3600:.2f} h"
+            if whole > 3600
+            else f"{whole / 60:.1f} min"
+        )
+        print(f"    {arm:22s} {unit:>16s} {(f'{canon:.3f}' if canon else '--'):>10s} {pair:>14s}")
+
+    all_ns = sorted({n for cells in grouped.values() for n in cells})
+    print(f"\n  log-log slopes over N in {all_ns} (withheld on a truncated range):")
+    print(f"    {'arm':22s} {'canon':>8s} {'whole':>8s}")
+    xs_all = [math.log(n) for n in all_ns]
+    for arm in sorted(grouped):
+        cells = grouped[arm]
+        ns = sorted(cells)
+        if set(ns) != set(all_ns):
+            reason = "censored" if censored.get(arm) else "truncated N range"
+            print(f"    {arm:22s} {'WITHHELD':>8s} {'WITHHELD':>8s}   <- {reason}, N={ns}")
+            continue
+        out = []
+        for column in ("secs_canon_total", "secs_pairs_total"):
+            values = [med(cells[n], column) for n in ns]
+            if any(v is None or v <= 0 for v in values):
+                out.append("--")
+                continue
+            ys = [math.log(v) for v in values]  # type: ignore[arg-type]
+            mx, my = statistics.fmean(xs_all), statistics.fmean(ys)
+            num = sum((x - mx) * (y - my) for x, y in zip(xs_all, ys, strict=True))
+            den = sum((x - mx) ** 2 for x in xs_all)
+            out.append(f"{num / den:.3f}")
+        print(f"    {arm:22s} {out[0]:>8s} {out[1]:>8s}")
+    if censored:
+        print("\n  censored/skipped reps excluded from every median above:")
+        for arm, count in sorted(censored.items()):
+            print(f"    {arm}: {count}")
 
 
 def main() -> None:

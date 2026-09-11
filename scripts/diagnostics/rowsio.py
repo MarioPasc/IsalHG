@@ -42,6 +42,10 @@ class KeyCollisionError(RowsError):
 def num(value: str | None) -> float | None:
     """Read a numeric field, or ``None`` when blank or unparsable.
 
+    ``None`` is returned for a blank, an unparsable string, **and a literal
+    ``nan``** -- all three mean "not computed", and a caller that must
+    distinguish them should read the raw field.
+
     Campaign CSVs spell the same logical value differently across corpora --
     ``'1'`` where nothing censored and ``'1.0'`` where something did, because a
     blank coerces the column to float (T-KBs). Comparing such a field against a
@@ -49,9 +53,15 @@ def num(value: str | None) -> float | None:
     ``num(row["exact_recovery"]) == 1.0``.
     """
     try:
-        return float(value)  # type: ignore[arg-type]
+        parsed = float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return None
+    # A literal "nan" in a results column means "not computed" -- an arm with no
+    # canonicalization phase writes it. float() parses it happily, and the result
+    # is truthy, formats as "nan", and propagates through every later arithmetic
+    # operation producing more nan without once raising. That is the silent
+    # failure this module exists to stop, so it is read as absent.
+    return None if parsed != parsed else parsed
 
 
 def load_rows(path: Path, *, label: str | None = None, quiet: bool = False) -> list[dict[str, str]]:

@@ -29,11 +29,23 @@ class TestNumericCoercion:
     def test_both_spellings_coerce_to_the_same_value(self, raw: str, expected: float) -> None:
         assert rowsio.num(raw) == expected
 
-    @pytest.mark.parametrize("raw", ["", None, "n/a", "NULL", "  "])
+    @pytest.mark.parametrize("raw", ["", None, "n/a", "NULL", "  ", "nan", "NaN", "-nan"])
     def test_unparsable_is_none_not_zero(self, raw: str | None) -> None:
         # None, never 0.0: a blank means "not computed", and folding it into a
         # zero reports a measured failure the pipeline never measured.
         assert rowsio.num(raw) is None
+
+    def test_nan_is_absent_not_a_number(self) -> None:
+        """A literal 'nan' parses, is truthy, and poisons every later operation."""
+        assert float("nan") != float("nan")  # the property that makes it silent
+        raw = float("nan")
+        assert raw, "a NaN is truthy, so `if value:` does not catch it"
+        assert f"{raw:.3f}" == "nan", "and it formats as a number"
+        assert rowsio.num("nan") is None, "so the loader reads it as absent"
+
+    def test_infinity_is_still_a_number(self) -> None:
+        """Only NaN is absent -- inf is a real measurement of an overflow."""
+        assert rowsio.num("inf") == float("inf")
 
     def test_the_bug_this_removes(self) -> None:
         """``'1.0' == "1"`` is False; the coercion is the whole point."""

@@ -209,7 +209,7 @@ Of the six, chased against *every* `foundation/` file:
 
 | figure | where it resolves |
 |---|---|
-| **1,300** | **nowhere** — genuinely unsourced |
+| **1,300** | **sourced** — see the correction below; *not* struck |
 | 74.8 % | `probes_2026-09.md` (a probe, not a campaign measurement) |
 | 0.49, 0.62, 0.96 | `measured_facts.md` + probes — **the other article's file** |
 | 6.1 | `measured_facts.md`, `proved_facts.md` |
@@ -228,10 +228,75 @@ to match the number **together with its noun and its run**, not the digits. The
 screen is still worth running first — it found 1,300 in seconds — but a figure it
 marks resolved must still pass the predicate pass before it is folded.
 
+#### Correction, same hour — 1,300 is sourced, and striking it would have been the worse error
+
+`[IsalHG-Fable]` placed it and the quote checks out. `HANDOFF_2026-09-07_isal.md`
+line 18, on the C++ ports:
+
+> each port bit-identical to its Python reference on every differential (both
+> full corpora for the ordered walk; **700 + 600 instances for the orbit path**;
+> 1,000 + 300 + 300 for the rank key)
+
+**700 + 600 = 1,300**, and `prose.md` uses it correctly — "implemented in C++,
+bit-identical on 1,300 differentials" is the *port* differential. (Distinct from
+the **7,013/7,013** at D-ART5, which verifies the same property — orbit pruning
+is value-preserving — by a different route. Both are real and they are not
+substitutes.)
+
+**So the general rule, which matters more than the instance: absence from
+`foundation/` is not absence of a source.** The wave records, the design
+document's §9, the decision record and the test suite are all sources, and a
+numeric sweep of `foundation/` searches none of them. A screen that reports
+"unsourced" is reporting **"not found in the files I looked at"**, which is a
+statement about the search, not about the number.
+
+Had the strike gone ahead it would have deleted a true, well-evidenced figure —
+**a worse outcome than the unsourced numbers the precondition exists to catch**,
+because a struck number leaves no trace to recover and the evidence for it stays
+exactly where it was, unread. So: **nothing is struck on a screen's say-so.** A
+strike requires a search of the wave notes, `DESIGN.md`, `DECISIONS.md` and the
+tests, and the screen's role is to produce the candidate list, not the verdict.
+
 **Consequence for the table above:** RQ6 and RQ7 move from *done* to
-**screened**, with 1,300 struck pending a source and five figures needing the
-predicate pass. No entry is *done* until the bidirectional walk plus the
+**screened**; 1,300 is sourced to the handoff and needs a `foundation/` entry
+citing it rather than a strike; five figures need the predicate pass. No entry is *done* until the bidirectional walk plus the
 predicate pass have both run against it.
+
+**2026-09-11 — a corpus correction propagates to every figure derived from it,
+and only the counts were checked.** `[IsalHG-Fable]` traced 74.8 % to the
+pre-freeze census. Verified against the built corpus's own `census.json`
+(`corpora/ndc_classes/`), which names the exact quantity:
+
+| | built corpus | pre-freeze |
+|---|---|---|
+| `n_consecutive_pairs` | **528** | 555 |
+| `n_pairs_constant_changing` | **400** | 415 |
+| changing / consecutive | **0.7576 → 75.8 %** | 0.7478 → 74.8 % |
+
+`prose.md` line 525 carried **74.8 %**. **Corrected to 75.8 % (400 of 528)** —
+the one figure where the census names the quantity outright, so the substitution
+is a lookup rather than an inference.
+
+**The sibling sweep found more, and they are flagged rather than corrected.**
+Line 502 describes the corpus as *"NDC-classes … (**1,432 members**, **21.6 %**
+of consecutive quarters one-edit variants …)"*:
+
+* **1,432** is the singleton-counting figure. `DESIGN.md` §corpora is explicit
+  that the built corpus is **1,381** and that 1,432 is "the supplement's figure".
+  The prose describes the corpus actually used, so it should say 1,381.
+* **21.6 %** is a ratio on the pre-freeze basis. The built corpus's nearest
+  named quantity is `delta_1 / n_consecutive_pairs = 117 / 528 = 22.2 %` — but
+  mapping "one-edit variants" onto `delta_1` is an **inference**, and a figure
+  whose definition has to be guessed is not corrected, it is **re-derived from
+  the code that computed it**. Flagged for the fold.
+
+**The general defect: the member-count reconciliation (1,432 → 1,381) was
+propagated to the counts and not to the ratios computed over them.** A
+member-count check cannot see it, because the exposed figure is a percentage.
+So the fold's checklist gains a step: **after any corpus correction, re-derive
+every figure computed *over* the corrected counts, not just the counts.** The
+screen for this is mechanical — any percentage in the prose whose denominator is
+a corpus quantity — and it is cheaper than discovering one at review.
 
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the

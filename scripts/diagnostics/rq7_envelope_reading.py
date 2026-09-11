@@ -40,7 +40,6 @@ INDETERMINATE, never REFUTED (lessons L26).
 from __future__ import annotations
 
 import math
-import random
 import statistics
 import sys
 from collections import defaultdict
@@ -68,8 +67,6 @@ EXPECTED_SWEEP_ROWS = {
     "nauty_cert": 7938,
 }
 MS_CEILING_S = 1.0
-N_BOOT = 2000
-BOOT_SEED = 70000
 
 
 def _wilson(successes: int, total: int, z: float = 1.959963985) -> tuple[float, float]:
@@ -81,18 +78,6 @@ def _wilson(successes: int, total: int, z: float = 1.959963985) -> tuple[float, 
     centre = (p + z * z / (2 * total)) / denom
     half = z * math.sqrt(p * (1 - p) / total + z * z / (4 * total * total)) / denom
     return (max(0.0, centre - half), min(1.0, centre + half))
-
-
-def _boot_median_ci(values: list[float], rng: random.Random) -> tuple[float, float]:
-    """Percentile bootstrap CI of the median (DESIGN §8: CIs, no tests)."""
-    if len(values) < 2:
-        return (float("nan"), float("nan"))
-    medians = []
-    n = len(values)
-    for _ in range(N_BOOT):
-        medians.append(statistics.median(rng.choices(values, k=n)))
-    medians.sort()
-    return (medians[int(0.025 * N_BOOT)], medians[int(0.975 * N_BOOT)])
 
 
 def _load(kind: str) -> list[dict[str, str]]:
@@ -146,27 +131,12 @@ def censoring_per_stratum(by_arm: dict[str, list[dict[str, str]]]) -> None:
             print(f"  {arm:22s} {bucket:12s} {cens:6d}/{len(group):<7d}  [{lo:.4f}, {hi:.4f}]")
 
 
-def _completed_secs(rows: list[dict[str, str]]) -> list[float]:
-    """Censored rows carry the budget, not a cost: they are excluded and counted."""
-    out = []
-    for row in rows:
-        if rowsio.num(row["censored"]) == 1.0:
-            continue
-        secs = rowsio.num(row["secs"])
-        if secs is not None and secs > 0:
-            out.append(secs)
-    return out
-
-
-def c1_frontier_is_m(by_arm: dict[str, list[dict[str, str]]], rng: random.Random) -> None:
+def c1_frontier_is_m(by_arm: dict[str, list[dict[str, str]]]) -> None:
     """C1: separate the `m` response from the `n` response at fixed `m`."""
     print("\n== C1 (H7a): is the frontier m, or n? ==")
     print("  the density step is a pure n move at fixed m; the m step doubles m.")
     for arm in ("isalhg_levenshtein", "isal_ow_struct", "wstar_orbit"):
         rows = by_arm[arm]
-        med: dict[tuple[str, str], float] = {}
-        for row in rows:
-            med.setdefault((row["m"], row["density"]), [])  # type: ignore[arg-type]
         grouped: dict[tuple[str, str], list[float]] = defaultdict(list)
         for row in rows:
             if rowsio.num(row["censored"]) == 1.0:
@@ -174,7 +144,9 @@ def c1_frontier_is_m(by_arm: dict[str, list[dict[str, str]]], rng: random.Random
             secs = rowsio.num(row["secs"])
             if secs is not None and secs > 0:
                 grouped[(row["m"], row["density"])].append(secs)
-        med = {key: statistics.median(v) for key, v in grouped.items() if v}
+        med: dict[tuple[str, str], float] = {
+            key: statistics.median(v) for key, v in grouped.items() if v
+        }
         ms = sorted({int(m) for m, _ in med}, key=int)
 
         density_ratios = []
@@ -186,7 +158,7 @@ def c1_frontier_is_m(by_arm: dict[str, list[dict[str, str]]], rng: random.Random
         m_ratios = []
         for density in ("sparse", "dense"):
             series = [(m, med[(str(m), density)]) for m in ms if (str(m), density) in med]
-            for (m0, v0), (m1, v1) in zip(series, series[1:]):
+            for (m0, v0), (m1, v1) in zip(series, series[1:], strict=False):
                 if v0 > 0 and v1 > 0 and m1 >= 2 * m0 * 0.9:
                     m_ratios.append(abs(math.log2(v1 / v0)))
 
@@ -203,7 +175,6 @@ def c1_frontier_is_m(by_arm: dict[str, list[dict[str, str]]], rng: random.Random
             f"  {arm:22s} |log2 ratio| median: m-step {m_med:.3f} vs "
             f"density-step {d_med:.3f}   {verdict}"
         )
-        _ = rng
 
 
 def c2_certificate_arms(by_arm: dict[str, list[dict[str, str]]]) -> None:
@@ -215,7 +186,10 @@ def c2_certificate_arms(by_arm: dict[str, list[dict[str, str]]]) -> None:
     failure of L26, so they are reported apart.
     """
     print("\n== C2 (H7b): fact_rank / nauty_cert -- one canonical-labelling call ==")
-    print(f"  {'arm':14s} {'stratum':12s} {'cells':>6s} {'worst cell median':>19s} {'cens':>5s}  verdict")
+    print(
+        f"  {'arm':14s} {'stratum':12s} {'cells':>6s} "
+        f"{'worst cell median':>19s} {'cens':>5s}  verdict"
+    )
     for arm in ("fact_rank", "nauty_cert"):
         rows = by_arm[arm]
         strata = {
@@ -339,7 +313,7 @@ def c4_nscaling(rows: list[dict[str, str]]) -> None:
         for label, index in (("canon", 0), ("pair", 1)):
             ys = [math.log(statistics.median([v[index] for v in cells[n]])) for n in ns]
             mx, my = statistics.fmean(xs), statistics.fmean(ys)
-            num = sum((x - mx) * (y - my) for x, y in zip(xs, ys))
+            num = sum((x - mx) * (y - my) for x, y in zip(xs, ys, strict=True))
             den = sum((x - mx) ** 2 for x in xs)
             slope = num / den if den else float("nan")
             if label == "canon":
@@ -362,11 +336,10 @@ def main() -> None:
     print(f"root: {ROOT}")
     print(f"files: {len(list(ROOT.glob('*.csv')))}, newest {stamp}")
 
-    rng = random.Random(BOOT_SEED)
     sweep = _load("sweep")
     by_arm = completeness(sweep)
     censoring_per_stratum(by_arm)
-    c1_frontier_is_m(by_arm, rng)
+    c1_frontier_is_m(by_arm)
     c1_censoring_frontier(by_arm)
     c2_certificate_arms(by_arm)
     c3_envelope_moves(by_arm)

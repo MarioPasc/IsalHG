@@ -98,6 +98,27 @@ LABELLED_HISTORY = {
     ("ndc_classes", "n_consecutive_pairs", 555): (
         "DESIGN.md L254 keeps '(555 pre-freeze; the built corpus has 528)'"
     ),
+    ("ndc_classes", "n_records", 1432): (
+        "CODE_PLAN L150 names n_encodable_counting_singleton_products, still 1,432; "
+        "DESIGN L136 labels it as the singleton-counting convention"
+    ),
+    ("ndc_substances", "n_records", 2222): (
+        "DESIGN L137: 'control (1,745; 2,222 counting singletons)'"
+    ),
+    ("wd50k66", "n_records", 3994): (
+        "DESIGN L133 '3,988 (3,994 without the m>=3 floor)' and L708 'the pre-floor count'"
+    ),
+    # Adjudicated collisions on small expected values -- the noun, read in context,
+    # shows each is a different quantity that happens to share the digits.
+    ("ndc_classes", "delta_1", 120): (
+        "the RQ7 sweep grid m in {10,20,40,80,120,160}; and 'from m = 120' in the walkthrough"
+    ),
+    ("ndc_classes", "delta_2", 134): (
+        "'n + m <= 134' (a size bound) and Pattern Recognition Letters **volume** 134"
+    ),
+    ("ndc_classes", "n_pairs_constant_preserving", 140): (
+        "ENCODINGS_WORKED_EXAMPLE: a 140-token certificate row, not a pair count"
+    ),
 }
 
 KNOWN_BENIGN = {**COLLISIONS, **LABELLED_HISTORY}
@@ -206,6 +227,16 @@ def main() -> int:
         help="basenames or suffixes to skip; repeatable",
     )
     parser.add_argument(
+        "--near-miss",
+        action="store_true",
+        help=(
+            "also run screen 2. Opt-in: its signal-to-noise collapses as the document "
+            "set grows (18 candidates over prose.md alone, 655 over 46 documents, none "
+            "of them stale), because the census fields sit closer together than the "
+            "window. Screen 1 is the gate."
+        ),
+    )
+    parser.add_argument(
         "--show-benign",
         action="store_true",
         help="also print the candidates already cleared by hand",
@@ -308,6 +339,18 @@ def main() -> int:
         )
         print("\n".join(below_floor))
     print()
+
+    if not args.near_miss:
+        if stale:
+            print(f"\n{len(stale)} stale value(s) from screen 1 must be corrected before the fold.")
+            return 1
+        print(
+            "screen 2 (near-miss) not run; pass --near-miss. It is a net for quantities "
+            "the\nfreeze audit never compared, and at this document count it returns "
+            "hundreds of\ncandidates and no stale values -- the window is wider than the "
+            "gaps between\ncensus fields, so it cannot discriminate here."
+        )
+        return 0
 
     open_candidates: list[str] = []
     benign_seen: list[str] = []

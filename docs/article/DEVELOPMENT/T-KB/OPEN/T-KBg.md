@@ -631,6 +631,39 @@ first.
 number it hides**, and the hidden ones are the ones nobody looks for, because the
 report says the document has been seen.
 
+**2026-09-11 — the predicate pass is COMPLETE over the located values: screen 1
+is clean, and seven live errors were fixed.** Every occurrence read in context;
+the noun decided each one.
+
+| document | text | verdict |
+|---|---|---|
+| `START_HERE.md` L280 | "WD50K(66) (**3,167** n-ary members" | **ERROR** → 3,162 |
+| `START_HERE.md` L282 | "NDC-classes (**1,432 members**, 21.6 %" | **ERROR** → 1,381 / 22.2 % |
+| `START_HERE.md` L376–7 | "(**140** constant-preserving pairs, **415** changing)" | **ERROR ×2** → 128 / 400 |
+| `DESIGN.md` L230 | "`ndc_classes` (1,432), `wd50k66` (3,994) — **all members**" | **ERROR ×2** → 1,381 / 3,988 |
+| `DESIGN.md` L514 | "`ndc_classes`, **all 1,432 members**" | **ERROR** → 1,381 |
+| `DESIGN.md` L708 | N-grid `{…, 3,994}` | **ERROR** → 3,988, checked against the frozen rows |
+| `CODE_PLAN.md` L150 | "1,432 **encodable class-quarters**" | correct — names a field still equal to 1,432 |
+| `DESIGN.md` L133/136/137 | labelled alternatives | correct |
+| `DESIGN.md` L695 · `RESULTS_WALKTHROUGH` L326 | the sweep grid's `m = 120`; "from m = 120" | **collision** with `delta_1` |
+| `DESIGN.md` L749 · `literature_verified` L77 | "`n + m ≤ 134`"; *Pattern Recognition Letters* **volume 134** | **collision** with `delta_2` |
+| `ENCODINGS_WORKED_EXAMPLE` L94 | a 140-token certificate row | **collision** with `n_pairs_constant_preserving` |
+
+**Screen 1 now reports clean and the script exits 0.** All adjudications are in
+`LABELLED_HISTORY` **with their reasons**, so the judgement is re-checkable.
+
+**A journal volume number colliding with `delta_2` is the clearest case for the
+predicate pass there will be**: `134` is a correct, sourced, meaningful number in
+a bibliography, and *no* string method distinguishes it from a stale pair count.
+
+**And screen 2 has been demoted from gate to opt-in (`--near-miss`).** Over
+`prose.md` alone its 6 % window gave 18 candidates; over 46 documents it gives
+**655, none of them stale**. Its window is wider than the gaps between census
+fields, so at this scale it cannot discriminate — a net whose mesh is larger than
+the fish. **Screen 1 scales because it is exact; screen 2 does not because it is
+approximate**, and a 655-item candidate list is indistinguishable from no check at
+all, since nobody will clear it.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

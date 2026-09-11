@@ -277,7 +277,7 @@ is adopted because it maximizes the fraction of edits that cost nothing.
 
 **Data** (`prose.md` §7; `supplementary_data.md`). Two real collections, one
 question each, each with a control in the supplement: entity knowledge bases
-of **WD50K(66)** (3,167 n-ary members; Wikidata types as class labels;
+of **WD50K(66)** (**3,162** n-ary members; Wikidata types as class labels;
 WD50K(100) as purity control) and the quarterly co-formulation knowledge
 bases of pharmacologic classes in **NDC-classes** (**1,381** members, **22.2 %** of
 consecutive quarters one-edit variants with exact fact-level truth;
@@ -373,8 +373,8 @@ findings came with it that the article now owns:
   survives 68–85 % of edits. The generalizable lesson, now a paper
   observation: **address symbols must be positional, not content-hashed.**
 - **The boundary is the constant set, and it is an inversion rather than a
-  caveat.** Split by regime on the real NDC series (140 constant-preserving
-  pairs, 415 changing): where constants are preserved the rank encoding gives
+  caveat.** Split by regime on the real NDC series (**128** constant-preserving
+  pairs, **400** changing): where constants are preserved the rank encoding gives
   **1 token** at Δ = 1 against the pointer alphabet's 5, and 77 % of pairs
   within two tokens against 17 %; where constants change it is **worse than
   the pointer alphabet** — 7 tokens against 4, 0 % within two tokens against

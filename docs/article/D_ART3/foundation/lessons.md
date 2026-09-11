@@ -760,3 +760,30 @@ the episode that taught it (provenance in `measured_facts.md`).*
   an explanation**, and it would have been adopted by anyone who fixed the units
   and stopped there. Fixing a confound is not the same as testing the claim the
   confound was hiding.
+
+  **Extra scrutiny for numbers that flatter us is worthless if it only runs one
+  way.** Having spent the night applying that rule, the author then accepted —
+  and committed — a reversal *against* our own representation ("the
+  row-tokenised certificate is 4.5× faster than the Isal word") drawn from
+  comparing a bare `cdist` on precomputed fingerprints against a full `matrix()`
+  call. Different operations. The like-for-like table **four lines above it in
+  the same section** already said 1.09×, i.e. parity, and the arithmetic
+  reconciles: the certificate figure matches its own `cdist` entry to 4 %, the
+  walk figure is 5× off because `matrix()` does work a bare `cdist` does not.
+
+  A self-damaging number felt like evidence of rigour and so was not checked
+  against the table it contradicted. **A claim against your own side is still a
+  claim, and the direction it points has no bearing on whether the two things
+  compared are the same kind of thing.** Caught by `[IsalHG-Fable]`, who pressed
+  the rule symmetrically and was right to.
+
+  The practical form: **when two measurements of the same pair of objects
+  disagree, one of them is not measuring what it appears to — find which before
+  choosing between them**, and the arithmetic usually says which (here, per-pair
+  seconds reconciling with one entry and not the other). Neither "it is more
+  recent" nor "it is less convenient for us" is a reason.
+
+  What the conclusion actually needed was **parity**, which both like-for-like
+  readings support. The claim it retires — a speed advantage over the certificate
+  — was already forbidden by L17, and a retraction does not require a reversal to
+  do its work.

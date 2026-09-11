@@ -25,17 +25,32 @@ one `Levenshtein.distance` call per pair.
 | `nauty_cert` | `process.cdist` |
 | **`nauty_cert_rows`** | **Python double loop** |
 
-Measured on `wd50k66`, 400 identical members, same machine:
+Measured on `wd50k66`, 400 identical members, same machine, min of 3 reps:
 
-| | matrix secs |
-|---|---|
-| `nauty_cert_rows.matrix()` as shipped | 0.104 |
-| the same fingerprints via `process.cdist` | **0.005** |
-| `isal_ow_struct.matrix()` | 0.024 |
+| | secs | s/pair |
+|---|---|---|
+| `nauty_cert_rows.matrix()` as shipped | 0.0561 | 3.51e-07 |
+| the same fingerprints via bare `cdist` | **0.0052** | 3.25e-08 |
+| `isal_ow_struct.matrix()` | 0.0236 | 1.47e-07 |
+| `isal_ow_struct` via bare `cdist` | 0.0044 | 2.73e-08 |
 
-**A 20× implementation penalty**, and it inverts the comparison: as shipped the
-walk looks 4.3× faster than the row-tokenised certificate; like-for-like the
-certificate is **4.5× faster than the walk** (rows/walk = 0.22×).
+**A 10.8× penalty** on the rows arm relative to a bare `cdist` over its own
+fingerprints, against the walk's 5.4×. As shipped the rows arm is **2.38×** the
+walk; at equal implementation the two are **at parity** (1.19× via bare `cdist`;
+1.09× in the wider tokenisation sweep).
+
+**It does not invert the comparison.** A first draft of this task said
+like-for-like the certificate is "4.5× faster than the walk" — that came from
+comparing a bare `cdist` on precomputed row fingerprints against a full
+`matrix()` call on the walk, which are different operations. `[IsalHG-Fable]`
+caught it. The defect is real and worth fixing; the reversal was an artefact of
+the comparison, and **parity is the finding**.
+
+A third, separate finding falls out of the same table: **`matrix()` costs 5.4×
+a bare `cdist` for the walk** (corpus `k` resolution, the augment flag, word
+recomputation). Every RQ matrix pays it. It cancels in any comparison where both
+sides go through `matrix()` — including the `wstar_orbit` one — but it is not
+zero and nothing currently records it.
 
 ## Why it matters beyond a benchmark
 
@@ -44,7 +59,7 @@ comparator — the bytes serialisation is a finer granularity than the
 representation's own symbols, so the row tokenisation is the one meant to carry
 any comparison. That comparator is the one with the slow matrix, so **the
 designated-fair arm is the one being timed unfairly**, in the direction that
-flatters us.
+flatters us — by 2.38× as shipped, against a true parity.
 
 Any published cost comparison against `nauty_cert_rows` is invalid until this is
 fixed. RQ7's has been struck (T-KBf, `rq7_envelope_facts.md` §8); **RQ1, RQ2 and

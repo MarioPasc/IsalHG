@@ -168,25 +168,38 @@ bipartite GED".** The ordering holds; two magnitudes do not. NetLSD is
 they are faster than predicted — so the measurement is reported and the
 hypothesis is not defended.
 
-**No speed claim against the certificate survives, in either tokenisation.**
-This was checked after `[IsalHG-Fable]` showed the granularity argument cuts
-both ways, and it reverses the earlier reading. Measured on `wd50k66`, identical
-members, same machine:
+**No speed claim against the certificate survives, in either tokenisation — and
+the reading is parity, not a reversal.** Measured on `wd50k66`, 400 identical
+members, same machine, min of 3 reps, 160,000 ordered pairs:
 
-| | matrix secs (n=400) |
-|---|---|
-| `nauty_cert_rows.matrix()` **as shipped** — a Python double loop | 0.104 |
-| the **same fingerprints** via `rapidfuzz.process.cdist` | **0.005** |
-| `isal_ow_struct.matrix()` — already `cdist` | 0.024 |
+| | secs | s/pair |
+|---|---|---|
+| `nauty_cert_rows` `matrix()` — **Python double loop** | 0.0561 | 3.51e-07 |
+| `isal_ow_struct` `matrix()` | 0.0236 | 1.47e-07 |
+| `nauty_cert_rows` bare `cdist` | 0.0052 | 3.25e-08 |
+| `isal_ow_struct` bare `cdist` | 0.0044 | 2.73e-08 |
 
-`nauty_cert_rows` carries a **20× implementation penalty**: its `matrix()` fills
-the upper triangle in a Python loop while `isal_ow_struct` and `nauty_cert` both
-call `process.cdist`. Put on the same footing, **rows/walk = 0.22× — the
-row-tokenised certificate is 4.5× *faster* than the Isal word.** The campaign's
-"10× faster than `nauty_cert_rows`" measured a Python loop.
+| comparison | ratio | what it measures |
+|---|---|---|
+| both bare `cdist` | rows **1.19×** | **parity** — the representations |
+| both `matrix()` | rows **2.38×** | the rows arm's Python loop |
+| rows `cdist` vs walk `matrix()` | 0.22× | **not a comparison** |
 
-And the byte figure is a granularity artefact in the other direction. Three
-tokenisations of the *same* canonical form, all via `cdist`, span **19.2×**:
+Two real findings and one retracted. **Real:** `nauty_cert_rows.matrix()` fills
+the upper triangle in a Python loop while `isal_ow_struct` and `nauty_cert` call
+`process.cdist` — a **10.8×** penalty over a bare `cdist` on its own
+fingerprints, against the walk's 5.4×, and it falls on the arm D-ART4 designates
+as the *non-confounded* comparator (→ T-KBy). **Also real:** every arm's
+`matrix()` carries substantial overhead above a bare `cdist` — 5.4× for the walk
+— which every RQ matrix pays. **Retracted:** an earlier revision of this section
+read "the row-tokenised certificate is 4.5× *faster* than the Isal word", from
+comparing a bare `cdist` on precomputed row fingerprints against a full
+`matrix()` call on the walk. Those are different operations. At equal
+implementation the two are **at parity**; `[IsalHG-Fable]` caught it against this
+section's own cdist table, which had said 1.09× four lines above.
+
+And the byte figure is an artefact in the other direction. Three tokenisations of
+the *same* canonical form, all via `cdist`, span **19.2×**:
 
 | handed to `rapidfuzz` as | mean L | s/pair | ratio to the walk |
 |---|---|---|---|
@@ -196,20 +209,22 @@ tokenisations of the *same* canonical form, all via `cdist`, span **19.2×**:
 | *(walk tokens)* | 13.7 | 2.98e-08 | 1× |
 
 So the pair-phase cost of this canonical form is **whatever its serialisation
-says it is**, and a multiplier against it states a tokenisation choice, not a
-property of either representation. **L17 already ruled this out** — *"concede
-identity and deduplication speed to nauty/bliss/Traces … never build a claim on
-canonicalization speed"* — and the headline had drifted into exactly the claim
-the lesson base forbids.
+says it is**, and a multiplier against it states a tokenisation choice rather
+than a property of either representation. **L17 already ruled this out** —
+*"concede identity and deduplication speed to nauty/bliss/Traces … never build a
+claim on canonicalization speed"* — and the headline had drifted into exactly the
+claim the lesson base forbids. It does not need a reversal to retire; parity
+retires it.
 
 **What survives, and it is the paper's actual claim.** `isal_ow_struct` 1.39 s
 against `wstar_orbit` **28.9 min — 1,252×**. Same alphabet, same tokenisation,
-same distance, same `cdist` path, same corpus: **the search is what costs, and
-the same language without it is three orders of magnitude cheaper.** Nothing in
-this correction touches it.
+same distance, same `matrix()` path — so the wrapper overhead appears on both
+sides and cancels — same corpus: **the search is what costs, and the same
+language without it is three orders of magnitude cheaper.** Nothing in this
+correction touches it.
 
 The certificate comparison is reported as a table of tokenisations with the
-implementation penalty named, and **carries no multiplier**.
+implementation penalty named, and **carries no multiplier in either direction**.
 
 *Mechanism: measured, and it is length — at the granularity the library
 actually sees.* The gap is in the pair phase (0.971 s against 23.960 s,

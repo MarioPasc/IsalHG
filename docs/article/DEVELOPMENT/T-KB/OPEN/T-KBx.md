@@ -29,24 +29,38 @@ does not appear anywhere in the file.
 Since a pairwise Levenshtein is `O(L₁ × L₂)`, the timing claim and the length
 claim are the same claim, so the unit objection disqualifies both.
 
-**2. The numbers disagree with the live campaign by 35×.** Against
-`IEEETKDE_isal/RQ7_envelope` (job 2271960, 74/74 COMPLETE, read 2026-09-11):
+**2. Two arms disagree with the live campaign; the rest are stable at matched N.**
 
-| quantity | walkthrough | RQ7 as measured |
-|---|---|---|
-| `nauty_cert`, whole matrix at N=3,988 | **864 s** | **24.19 s** |
-| `fact_rank` | 1.5 s pairs + 0.31 s canon | 0.889 pairs + 0.221 canon (1.11 s) |
-| `degree_seq_l1` | 43 s | 12.62 s |
-| `bipartite_ged_assign` | 525 s | 634.0 s |
-| `bipartite_ged_path` | 913 s | 952.5 s |
-| `hpd_jsd` | 1,670 s at N=2,000, censored at 3,988 | censored at 3,988 (1 h cap) |
-| `netlsd` | 2,724 s at N=1,000 | 40.61 s at N=3,988 |
+`[IsalHG-Fable]` challenged the first draft of this section for comparing
+whole-matrix times without establishing the `N` behind each one — the same defect
+one level up from the one this task is about. Checked: the paragraph **declares**
+`N = 3,988` for the sentence and annotates its two exceptions inline ("HPD
+1,670 s **at N = 2,000**", "NetLSD 2,724 s **at N = 1,000**"), so the `N` is
+recoverable per row. Compared at matched `N` against
+`IEEETKDE_isal/RQ7_envelope` (job 2271960, 74/74, read 2026-09-11):
 
-The two bipartite arms and HPD **agree closely**, which is what makes the rest
-diagnostic: this is not a wholesale re-run of everything. `nauty_cert` (35×) and
-`netlsd` (two orders, and at a *larger* N) moved; the arms nobody touched did
-not. So the walkthrough is very likely quoting a **superseded** lineage for those
-two, not a different machine.
+| arm | N | walkthrough | campaign | ratio |
+|---|---|---|---|---|
+| `bipartite_ged_assign` | 3,988 | 525 s | 634.0 s | 0.8× |
+| `bipartite_ged_path` | 3,988 | 913 s | 952.5 s | 1.0× |
+| `hpd_jsd` | 2,000 | 1,670 s | 1,485.6 s | 1.1× |
+| `degree_seq_l1` | 3,988 | 43 s | 12.6 s | 3.4× |
+| `nauty_cert` | 3,988 | 864 s | **24.2 s** | **35.7×** |
+| `netlsd` | 1,000 | 2,724 s | **4.1 s** | **661.6×** |
+
+**Three arms agree within ~20 % at matched `N`**, which rules out an engine-wide
+or corpus-wide change: a faster machine or a smaller corpus would have moved
+those too. So the reading is **partial supersession** — `nauty_cert` and
+`netlsd` moved, everything else did not.
+
+`netlsd` also changed **qualitatively**: the walkthrough says it was *censored
+above* `N = 1,000`, while the campaign completes `N = 3,988` in 40.61 s with
+**zero** censored or skipped reps. `hpd_jsd` is the control — censored at 3,988
+in both, and within 11 % at N = 2,000.
+
+*(The first draft of this task said "two orders" for `netlsd` by comparing
+2,724 s at N = 1,000 against 40.61 s at N = 3,988 — itself an unmatched
+comparison, and understating it. Matched, it is 662×.)*
 
 ## Acceptance
 

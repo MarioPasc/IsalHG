@@ -1016,3 +1016,28 @@ the episode that taught it (provenance in `measured_facts.md`).*
   *"nauty is an automorphism oracle only"* and `orbit_oracle.py` says
   *"Stabiliser orbits … via `pynauty.autgrp`"*. Third time tonight that the code's
   comments answered a question faster than measuring or reasoning would have.
+
+  **Ten of the eleven needed a mechanism; the eleventh needed a reader — and
+  that one is the whole case for the predicate pass.** The tempting summary of
+  this session is that reading caught nothing and only a grep, a census, a diff,
+  an arithmetic identity or a second session ever did. It is very nearly true and
+  it is **false in the one place that matters**.
+
+  The exception is the noun. A sentence said our generator's novel samples were
+  *knowledge bases*; the truth was that they were **connected** knowledge bases,
+  which is a stronger and different claim. The number was right. Its provenance
+  was right. Every mechanical check passed, and every one of them would pass
+  again — a figure with the wrong noun beside it **sources identically to the
+  true one**.
+
+  So the accurate tally is *ten mechanisms and one reader*, and the inaccurate
+  one is self-defeating: **the predicate pass is reading**, and a session that
+  concludes reading never works has argued away its own last line of defence
+  while still carrying eight located-but-unadjudicated figures that nothing else
+  can settle. (Correction raised by `[IsalHG-Fable]` against this file's own
+  closing claim.)
+
+  The rule that survives, in its exact form: **the mechanical checks are the
+  first nine-tenths and reading is the residual — but the residual is the class
+  no tool reaches, so it is never the part to skip.** A screen locates; only a
+  reader knows whether the word beside the number makes it history or error.

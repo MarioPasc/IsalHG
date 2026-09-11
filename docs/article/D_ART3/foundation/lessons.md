@@ -787,3 +787,35 @@ the episode that taught it (provenance in `measured_facts.md`).*
   readings support. The claim it retires — a speed advantage over the certificate
   — was already forbidden by L17, and a retraction does not require a reversal to
   do its work.
+
+  **The freeze rule earned its second save in one session, and again by luck.**
+  RQ7's reading was recorded against a live tree while a **second** array —
+  2271961, tasks 28–73, held behind 2271960 on a dependency — was writing to the
+  same root. It rewrote **66 files** after the reading. Re-reading over its output
+  moved **no** published figure: arm completeness, every collection's yield, every
+  N-scaling cell identical. Nothing was lost, exactly as with tail600, and for
+  exactly the same reason — the re-run agreed.
+
+  Twice in one session is not a coincidence, it is the default state of a
+  campaign: **jobs queued behind other jobs write to the same roots, so any tree
+  a campaign is still running against is live by default.** The tell is cheap and
+  was available both times — `sacct` shows a dependent array, and a newest-mtime
+  beside the file count shows writes after the read. The rows are now frozen at
+  `results/frozen/rq7_envelope_2271960_reading/`, 382 files, read-only.
+
+  **And a cross-machine comparison slipped in under the same argument.** An
+  objection that `matrix()` could not be recomputing its fingerprints rested on
+  the campaign's 0.600 ms per member against a local `matrix()` call of 0.0236 s.
+  On *this* machine canonicalisation is **0.045 ms** — a **13×** machine gap — so
+  400 fingerprints cost 0.018 s and fit inside the call, which measurement
+  confirms at **101.9 % accounted**. The attribution was right and the exclusion
+  was the error.
+
+  Both parties had spent the session catching exactly this shape in each other:
+  a correct operation on quantities from two different populations, here two
+  different machines. It is the seventh instance and the first where the two
+  populations were *hardware*. So the rule wants its widest statement: **before
+  comparing two numbers, ask what produced each one — not only which corpus, but
+  which machine, which code path, and which operation.** Any of the four
+  differing is enough to make the comparison meaningless, and none of them is
+  visible in the numbers themselves.

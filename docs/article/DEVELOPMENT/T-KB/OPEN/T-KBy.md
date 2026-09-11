@@ -46,11 +46,43 @@ comparing a bare `cdist` on precomputed row fingerprints against a full
 caught it. The defect is real and worth fixing; the reversal was an artefact of
 the comparison, and **parity is the finding**.
 
-A third, separate finding falls out of the same table: **`matrix()` costs 5.4×
-a bare `cdist` for the walk** (corpus `k` resolution, the augment flag, word
-recomputation). Every RQ matrix pays it. It cancels in any comparison where both
-sides go through `matrix()` — including the `wstar_orbit` one — but it is not
-zero and nothing currently records it.
+**A third finding, now accounted for.** `matrix()` costs 5.40× a bare `cdist`
+for the walk. A first draft attributed that to "corpus `k` resolution, the
+augment flag, word recomputation"; `[IsalHG-Fable]` objected that recomputation
+could not fit, since the campaign's yield puts a member's canonicalisation at
+0.600 ms and 400 of those would be 0.24 s against a whole `matrix()` call of
+0.0236 s.
+
+**Both of us were wrong, and for this thread's own reason: that argument compares
+a *cluster* per-member cost against a *local* matrix timing.** On this machine
+canonicalisation is **0.045 ms/member**, not 0.600 — a 13× machine difference
+(Xeon Gold 6230R against a local workstation) — so 400 fingerprints cost 0.018 s
+and fit inside the call comfortably. Measured, 400 members, min of 3:
+
+| arm | fingerprints | bare `cdist` | sum | `matrix()` | accounted |
+|---|---|---|---|---|---|
+| `isal_ow_struct` | 0.0178 | 0.0060 | 0.0238 | 0.0233 | **101.9 %** |
+| `nauty_cert_rows` | 0.0092 | 0.0067 | 0.0160 | 0.0555 | **28.7 %** |
+
+So the walk's `matrix()` **is** fingerprints + the pairwise table, accounted to
+within 2 %, and there is no unexplained wrapper overhead to chase: the
+"overhead" is the canonicalisation, which any honest whole-matrix timing must
+include. Word recomputation was the right attribution after all — it was
+excluded by an argument that mixed two machines.
+
+The rows arm is the one with a real gap: **28.7 % accounted**, leaving 0.0395 s
+unexplained by fingerprints plus a `cdist` it never calls. That residual **is**
+the Python loop — ~0.5 µs per pair over 80,000 pairs — which is this task's
+subject. Note this also disposes of the "per-call setup" reading: rows
+fingerprinting is *cheaper* than the walk's (0.0092 against 0.0178), so a larger
+multiple cannot come from fingerprint cost scaling.
+
+**Do not compare local micro-timings against campaign figures.** The 13× machine
+gap above is the reason; every number in `rq7_envelope_facts.md` is from the
+cluster, and the timings in this task are local and used only in ratios where
+both sides are local.
+
+
 
 ## Why it matters beyond a benchmark
 

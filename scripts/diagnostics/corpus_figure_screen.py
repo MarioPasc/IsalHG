@@ -193,11 +193,20 @@ def main() -> int:
     # -- screen 1: exact, against the freeze audit's own pre-freeze values --------
     stale: list[str] = []
     archival: list[str] = []
+    below_floor: list[str] = []
     compared = skipped_small = 0
     for census in censuses:
         collection = census.parent.name
         for quantity, expected, obtained in stale_expectations(census):
             if expected < MIN_VALUE:
+                # Named, never merely counted. These are small *because they are
+                # scarce*, and scarcity is what makes them load-bearing -- the
+                # run-length class counts are what decided Corpus B could not
+                # carry RQ3 alone. A floor that silently converts "unscreenable"
+                # into "clean" is the defect this whole screen exists against.
+                below_floor.append(
+                    f"  {collection:16s} {quantity:30s} {expected:g} -> {obtained:g}"
+                )
                 skipped_small += 1
                 continue
             compared += 1
@@ -228,6 +237,12 @@ def main() -> int:
     if archival:
         print(f"\n  and in dated records only ({len(archival)}) -- correct as history:")
         print("\n".join(archival))
+    if below_floor:
+        print(
+            f"\n  BELOW THE FLOOR ({len(below_floor)}) -- unscreenable, NOT clean. "
+            "Hand-check each:"
+        )
+        print("\n".join(below_floor))
     print()
 
     open_candidates: list[str] = []

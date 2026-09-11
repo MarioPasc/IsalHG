@@ -442,6 +442,44 @@ screen matches digits, not nouns, so each of the nine is *located*, not
 adjudicated. **Correcting them is fold work and belongs in the fold**, one
 document at a time, with the noun checked.
 
+**2026-09-11 — `DESIGN.md` adjudicated, and one figure was *used*, not quoted.**
+`[IsalHG-Fable]`: the nine are not equivalent. Six sit in documents that
+*describe*; three sit in `DESIGN.md`, which experiments are **specified from**, so
+a stale figure there may have sized a cell or set a sampling frame. Checked, one
+by one:
+
+| `DESIGN.md` site | verdict |
+|---|---|
+| §corpora L136–137 — "1,381 members and 528 pairs (1,432 / 555 when singletons are counted)"; "control (1,745; 2,222 counting singletons)" | **correct as written.** The built values lead; the pre-freeze ones are labelled as the other counting convention. |
+| L456 — "census: 42 classes with runs ≥ 3, 19 with ≥ 5" | **already built values** (not 45 / 20). The below-floor blind spot does not bite here. |
+| L254 — M2's frame: *"(a) the **555** NDC natural consecutive pairs"* | **STALE AND USED.** This is the *sampling frame* of a measurement: the design specified 555 pairs where 528 exist. **Corrected to 528**, with the pre-freeze value noted. |
+
+So Fable's distinction is the right one and it earned its keep on the first pass:
+**a specification document is exposed differently from a descriptive one**, and
+the one genuine error among the three was in the clause that sets what a
+measurement runs over.
+
+**The screen still flags that line, and it is right to.** The correction keeps
+"(555 pre-freeze; the built corpus has 528)" so the reconciliation is legible —
+and the screen cannot tell a labelled historical mention from a live use. That is
+the predicate-pass limit, now demonstrated rather than asserted: **screen 1
+locates every occurrence and adjudicates none.**
+
+**Below the floor: named, not counted.** `MIN_VALUE` excludes exactly the
+quantities that are small *because they are scarce*, and scarcity is what makes
+them load-bearing — `n_classes_run_ge5` (20 → 19) is what helped decide Corpus B
+could not carry RQ3 alone. The screen now **lists** them instead of reporting a
+count, so "unscreenable" cannot read as "clean":
+
+| corpus | quantity | pre-freeze → built |
+|---|---|---|
+| `ndc_classes` | `delta_0` | 85 → 77 |
+| `ndc_classes` | `n_classes_run_ge3` | 45 → 42 |
+| `ndc_classes` | `n_classes_run_ge5` | 20 → 19 |
+| `ndc_substances` | `delta_1` | 35 → 31 |
+
+Four, hand-checkable, and the first check (`DESIGN.md` L456) came back clean.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

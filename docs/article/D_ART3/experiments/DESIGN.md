@@ -251,8 +251,8 @@ maximum), `fact_rank` (B), `fact_rank_roles` (B′, WD50K only), `local_colour`
    The regime flag is stamped from the constant identities, not from the kind. Record `d(base, edited)` per arm, `|w(base)|`, `|w(edited)|`, the
    regime (`constant_set_preserved ∈ {0,1}`), and the *zero-shift* flag for
    `fact_rank` (canonical order of the surviving constants unchanged).
-3. *M2 — correlation with the known fact-level difference.* (a) the 555 NDC
-   natural consecutive pairs, `Δ = |F_t △ F_{t+1}|` from identities, regime
+3. *M2 — correlation with the known fact-level difference.* (a) the **528** NDC
+   natural consecutive pairs (555 pre-freeze; the built corpus has 528), `Δ = |F_t △ F_{t+1}|` from identities, regime
    flag; (b) 1,000 constant-preserving fact-edit ladders on `wd50k66` members,
    `t = 1..5`. Per arm: `d` per pair.
 4. *M3 — compactness and cost.* Tokens per member and canonicalization

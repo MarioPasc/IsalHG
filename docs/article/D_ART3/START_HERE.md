@@ -8,6 +8,31 @@ goes to the PI), then [`supplementary_data.md`](supplementary_data.md) and the
 Last updated 2026-09-04, after the PI ratified the scope (§6.0) and the
 addressing question was measured and closed (§0, RQ1).*
 
+> ## ⚠ This file predates D-ART4. Read this before §0.
+>
+> It is dated **2026-09-04**. **D-ART4 was ruled 2026-09-06** and changed what
+> the paper's representation *is*. Everything below written before that date —
+> §0's state of play, §6.0's ratification, the timeline's 2026-09-04 row —
+> describes the **pre-ruling** paper and is correct **as history**, not as the
+> current answer.
+>
+> **What changed.** Those sections say the adopted encoding is a *fact token
+> addressed by global canonical rank*. **It is not.** D-ART4 (1) makes the
+> paper's representation the **Isal instruction string**; the fact-addressed
+> word *left the article* with that ruling ("the rows simply do not appear"),
+> surviving only as a comparator named in prose and tabled in the supplement.
+> The alphabet `Σ_HG` did **not** change — what the campaign varied is the
+> **canonical program**, and **D-ART5** records which program carries §§3–7.
+>
+> **Where the current answer is:** `prose.md` §2.3 (the decision and the
+> four-cell ablation), `DECISIONS.md` D-ART4 and D-ART5, and the per-RQ fact
+> bases in `foundation/rq*_facts.md`.
+>
+> This banner exists rather than a rewrite because the dated sections are the
+> record of what was believed when, and that record is load-bearing —
+> §3 corrects *other* files in this folder and never corrected this one.
+> (Raised by `[IsalHG-Fable]` from the same defect in `prose.md`'s header.)
+
 **Standing instruction (author).** Prior results are *guidance*, not assets:
 every experiment may start from zero, designed for its own question, on its own
 corpora. What carries over is the experience (`foundation/lessons.md`), the

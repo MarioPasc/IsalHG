@@ -21,12 +21,16 @@ sentences; the logic program is the follow-up paper (§10).
 
 **The alphabet gate, and its answer.** The PI ratified changing the
 instruction alphabet and set the criterion: *similar knowledge bases must
-encode to strings at small Levenshtein distance*. It has been measured
-(§2.3, RQ1, `foundation/probes_2026-09.md` §9): fact tokens addressed by
-**global canonical rank** meet it — one token per fact insertion against half
-the word under the inherited pointer alphabet — local colour-based addressing
-is refuted, and the residual boundary is a change of the constant set. The
-adopted encoding carries §§3–7.
+encode to strings at small Levenshtein distance*. **The answer was not an
+alphabet change.** D-ART4 (2026-09-06) ruled that the paper's representation is
+the instruction string of the Isal machine; the fact-addressed word that had
+been measured against the criterion left the paper with that ruling and stays
+in the record as a comparator. What the campaign varied instead was the
+*canonical program* — the rule that picks one program per isomorphism class —
+with `Σ_HG` unchanged. **D-ART5 records the outcome**: the family's own `w*_c`,
+computed by the stabiliser-orbit-pruned engine, carries §§3–7. The criterion is
+met **conditionally**, and §2.3 states the condition rather than claiming it
+away.
 
 ---
 
@@ -46,11 +50,15 @@ distance. We write each knowledge base as a word over an instruction alphabet
 and give the first four by construction: exact identity, a metric with
 computable optimality certificates, polynomial pairwise cost after one
 canonicalization, and a language whose every prefix, edit and sample decodes
-to a knowledge base. The fifth is a design problem in the alphabet itself, and
-this paper's second contribution is to solve it: we show that the pointer-
-addressed alphabet of our earlier work is locally unstable — one fact rewrites
-half the word — and we design and measure fact-addressed alternatives against
-that criterion. On the resulting representation we build the operations a
+to a knowledge base. The fifth is a design problem, and this paper's second
+contribution is to locate it rather than to claim it solved: the instability of
+our earlier work belongs to the *search* that selects the canonical program and
+not to the alphabet — one fact rewrites half the word — and it is conditional on
+where the edit falls. An edit that changes the constant inventory costs our
+representation a constant number of instructions, where a canonical adjacency
+certificate rewrites every row after the change; an edit interior to the
+existing constants costs us more than it costs the certificate. We measure both
+and claim only the first. On that representation we build the operations a
 knowledge engineer actually performs on a collection — a representative
 record, a data-quality screen, a description-pattern hierarchy, a map, and a
 generator — each with the guarantee it needs, on two real collections:
@@ -694,10 +702,10 @@ identity speed.
 | Risk | Fallback |
 |---|---|
 | ~~No fact-addressed encoding is locally stable~~ | **resolved**: global-rank addressing gives one token per fact insertion (`foundation/probes_2026-09.md` §9) |
-| **Global-rank addressing won its regime and correlates with the certificate distance at ρ = 0.62–0.96** (materialized) | adopted for that regime under the pre-registered rule, and **said in the paper**: the distinctiveness is the closed language — total decoding, the ball-coverage representative, generation with validity 1 — carried by RQ3, RQ6 and the decodability figure; the certificate engine becomes a family member we cite rather than a competitor we beat. Losing encodings and their numbers are in the supplement |
+| **Global-rank addressing won its regime and correlates with the certificate distance at ρ = 0.62–0.96** (materialized) | **superseded by D-ART4**: it was adopted for that regime under the pre-registered rule and then retired, because it has no machine — the Isal instruction string carries the paper and the fact word stays in the record as a comparator. What survives unchanged is the consequence, **said in the paper**: the distinctiveness is the closed language — total decoding, the ball-coverage representative, generation with validity 1 — carried by RQ3, RQ6 and the decodability figure; the certificate engine becomes a family member we cite rather than a competitor we beat. Losing encodings and their numbers are in the supplement |
 | **The consensus substrate sits in the weak regime** (materialized and quantified): **75.8 %** of natural NDC consecutive pairs change the constant set (400 of 528), and restricting to the preserving regime leaves **15 drug classes with a run of ≥ 3 quarters and 2 with ≥ 5** — too small to carry RQ3 alone | RQ3 runs on constant-preserving ladders over *real* members (injected fact edits on real knowledge bases, constant set held) with the natural series reported beside them as the harder case; the alternative — moving the substrate — is an open scoping decision recorded in `foundation/probes_2026-09.md` §9 |
-| Roles cost stability under the adopted encoding (unmeasured — the roles arm was run only on the falsified encoding) | measure before the experiments; the fallback is to carry roles as an edge-label refinement instead of a token field |
-| A new alphabet costs more engineering than the schedule holds | the pointer alphabet remains available for every experiment except RQ1, whose comparison is the contribution either way |
+| Roles cost stability under the adopted encoding — **the Isal string** — and remain unmeasured there: the roles arm was run only on the retired fact word, where it failed relabelling invariance | measure before the experiments; the fallback is to carry roles as an edge-label refinement instead of a token field. Filed as T-KBa |
+| ~~A new alphabet costs more engineering than the schedule holds~~ | **moot**: `Σ_HG` is unchanged under D-ART4, so no alphabet was built; what varied was the canonical program, and RQ1's comparison is the contribution either way |
 | Entity types too imbalanced for RQ5 | per-class support with macro-averaging, or a super-class coarsening; the hierarchy remains an unsupervised exhibit |
 | Generation fidelity poor | validity 1 and the certificate impossibility still hold; the exhibit stays short |
 

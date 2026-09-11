@@ -566,6 +566,26 @@ whose purpose is to remove the need for warnings.
 **Why it needs the author rather than the ledger:** it changes a published
 artefact of the paper, and option 2 changes what `prose.md` §7 claims about it.
 
+**Second finding, 2026-09-11 — it is not only the numbers, it is the framing.**
+`supplementary_data.md` line 190 calls the fact-addressed word **"the adopted
+encoding"**. That is pre-**D-ART4** language: the fact word left the article with
+that ruling, and the paper's representation is the Isal instruction string. The
+file mentions **D-ART4 zero times**.
+
+So the decision is slightly larger than "correct the census or label it": under
+option 1 the framing is corrected with the counts; under option 2 the label has
+to cover **both** — that the supplement describes the pre-freeze corpora *and*
+names a representation the article no longer adopts. A reader who takes
+"the adopted encoding" at face value from a published supplement reaches the
+opposite conclusion from §2.3.
+
+*Not edited here, deliberately: this file's disposition is the decision, so
+changing it would pre-empt the ruling. Recorded instead.* (The sweep that found
+it was proposed by `[IsalHG-Fable]` on the basis that the test is not whether a
+number is stale but whether the sentence assumes the fact word is the paper's
+answer — the same sweep found `START_HERE.md`'s §0 and cleared `DESIGN.md` L47,
+which correctly *defines* the `fact_rank` arm rather than adopting it.)
+
 **Until it is ruled**, the screen excludes `supplementary_data.md` by default
 (`--exclude`), so the gate is not held by a file whose staleness may be
 deliberate — and that exclusion is **named in the output on every run** rather

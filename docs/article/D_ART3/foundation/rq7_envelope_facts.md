@@ -322,6 +322,29 @@ phase dominates; for `fact_rank` and `isal_ow_struct` the matrix is fast enough
 at N = 3,988 that fixed overhead still flattens the curve, so their sub-linear
 slopes are an artefact of the range, not evidence against an `N²` pair phase.
 
+## 9. Per-member canonicalisation — the L17 concession (feeds RQ2 step 5)
+
+`wd50k66`, N = 3,988, canonicalisation phase of the N-scaling pass: every arm on
+the same code path, machine and corpus.
+
+| arm | per member | vs `nauty_cert` |
+|---|---|---|
+| `fact_rank` | 0.0555 ms | 0.95× |
+| `nauty_cert` | 0.0587 ms | 1.00× |
+| `nauty_cert_rows` | 0.0823 ms | 1.40× |
+| **`isal_ow_struct`** | **0.1039 ms** | **1.77×** |
+| `netlsd` | 2.6974 ms | 45.9× |
+| **`wstar_orbit`** | **435.69 ms** | **7,420×** |
+
+The ordered walk is **1.77× one certificate call** — it makes that call and adds
+the walk, so this is one call plus 77 %. The tie-complete form is **7,420×**, and
+the two Isal arms differ by 4,193× on the same corpus and path.
+
+**Not to be mixed with the yield figures.** The yield rows measure the harness
+path (a forked budget guard per member): `fact_rank` 0.187 ms, `isal_ow_struct`
+0.654 ms on the same corpus — **3.4×** and **6.3×** the canon-loop values. The
+overhead is not constant across arms, so the two bases are not interchangeable.
+
 ### ⚠ Two collections were read partial, and the slice is not random
 
 Raised by `[IsalHG-Fable]`, who noticed the yield table gives `ndc_classes` at

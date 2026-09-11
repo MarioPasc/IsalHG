@@ -3112,3 +3112,60 @@ magnitude**. That is the measurement R6 anticipated ("no longer conceded for the
 ordered/greedy programs, whose cost is one nauty call"), and per
 `[IsalHG-Fable]` it belongs in the paragraph where the concession is made, not
 in a results table. → folded at T-KBg.
+
+### RQ2 step 5 — identity timing, the concession, measured
+
+The last outstanding RQ2 section (DESIGN §3 procedure 5, *"canonicalization time
+per member: `pynauty` certificate vs `fact_rank` vs `pointer`, from RQ7's
+pass"*). Unblocked now that RQ7's N-scaling has landed.
+
+**Basis.** `wd50k66`, N = 3,988, the **canonicalisation phase** of the N-scaling
+pass — every arm through the same tight loop, same machine, same corpus, same
+code path. Read from the frozen snapshot
+(`results/frozen/rq7_envelope_2271960_reading/`).
+
+| arm | canon total | per member | vs the certificate |
+|---|---|---|---|
+| `size_l1` | 0.004 s | 0.0010 ms | 0.02× |
+| `degree_seq_l1` | 0.019 s | 0.0047 ms | 0.08× |
+| `fact_rank` | 0.221 s | 0.0555 ms | 0.95× |
+| `nauty_cert` | 0.234 s | 0.0587 ms | **1.00×** |
+| `nauty_cert_rows` | 0.328 s | 0.0823 ms | 1.40× |
+| **`isal_ow_struct`** | 0.414 s | **0.1039 ms** | **1.77×** |
+| `netlsd` | 10.757 s | 2.6974 ms | 45.9× |
+| **`wstar_orbit`** | 1737.537 s | **435.69 ms** | **7,420×** |
+
+**The concession, stated as L17 requires and now with its number.** Identity and
+deduplication speed are conceded to nauty — and the ordered walk costs **1.77× a
+single certificate call per member**, the same order of magnitude. That is
+coherent with what the walk *is*: it makes a nauty call and adds the walk on top,
+so 1.77× is one call plus 77 %. R6 anticipated exactly this ("no longer conceded
+for the ordered/greedy programs, whose cost is one nauty call"); this is the
+anticipation met.
+
+**And the same table prices the search form.** `wstar_orbit` costs **7,420×** the
+certificate per member — which is the concession in its original, undiminished
+form, and the reason the paper's representation is the ordered walk rather than
+the tie-complete one. The two Isal arms differ by **4,193×** on the same corpus
+and code path.
+
+**A second basis exists and is not comparable across arms.** The RQ7 *yield* rows
+measure per-member time through the harness path (a forked budget guard per
+member) and give `fact_rank` 0.187 ms, `isal_ow_struct` 0.654 ms,
+`isalhg_levenshtein` 4.235 ms on the same corpus. Those are **3.4×** and **6.3×**
+their canon-loop values respectively — the overhead is *not constant across
+arms*, so it cannot be divided out, and the two bases must not be mixed in one
+comparison. The concession is quoted from the canon-loop table, where every arm
+shares a path; the yield table is quoted only for yield.
+
+**Provenance caveat (inherited).** These are RQ7 numbers, and RQ7's recovery
+array 2271961 was still running when the snapshot was frozen. The rows are
+per-row identical between frozen and live across 70,791 rows, and RQ7's skip
+(`rq7.py:606`) is why; but until 2271961 is terminal this is *"the rows the
+published numbers were computed from"*, not *"the campaign's final state"*. The
+three-way diff is re-run at terminal.
+
+**Scope.** `wd50k66` only — the N-scaling pass runs on that collection alone. The
+per-member yield across all four gated collections (0.600–0.696 ms for the walk,
+0.166–0.199 ms for `fact_rank`) is the harness-path figure and is reported as
+such.

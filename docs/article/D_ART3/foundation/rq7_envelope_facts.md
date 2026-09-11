@@ -74,22 +74,21 @@ because **every dense cell sits in `<1e3`**.
 
 | collection | n | median m | p90 | max | at `m ≥ 80` |
 |---|---|---|---|---|---|
-| `ndc_classes` | **828 of 1,381** | 3 | 5 | 30 | 0 — **partial, see below** |
+| `ndc_classes` | 1,381 | 3 | 5 | **30** | **0** |
 | `ndc_substances` | 1,745 | 4 | 16 | 41 | **0** |
-| `wd50k100` | **919 of 1,837** | 5 | 11 | 27 | 0 — **partial, see below** |
+| `wd50k100` | 1,837 | 5 | 11 | 27 | **0** |
 | `wd50k66` | 3,988 | 5 | 11 | 29 | **0** |
-| `wd50k66_full` | 4,554 | 5 | 18 | 303 | 41 (0.9 %) |
+| `wd50k66_full` | 4,554 | 5 | 18 | 303 | **39** (0.86 %) |
 
 **RQ1 (orbit pruning takes censoring at `|Aut| ≥ 1e7` from 36 to zero on real
 corpora) and RQ7 (orbit censors 392/427 in that bucket) are both correct and
 describe disjoint regions.** Every `≥1e7` sweep instance has `m ≥ 80`; **no
-member of `wd50k66` (3,988) or `ndc_substances` (1,745) — the two gated
-collections read whole — reaches it**; at the real median `m ≈ 5` the sweep
+member of any of the four gated collections — 8,951 members in all — reaches
+it**; at the real median `m ≈ 5` the sweep
 censors 0.000 at every arity.
 
-Two qualifications belong beside it, not in a footnote. `ndc_classes` and
-`wd50k100` are read partial (§ below) and are evidence neither way. And
-**`wd50k66_full` — the ungated variant of `wd50k66` — has 41 members (0.9 %) at
+Two qualifications belong beside it, not in a footnote. And
+**`wd50k66_full` — the ungated variant of `wd50k66` — has **39** members (0.86 %) at
 `m ≥ 80`**: the claim is about the *gated* collections, **not** about real
 knowledge bases in general, and the row four lines above says so. **The paper
 states this explicitly** — both numbers are going in, and unreconciled they are
@@ -99,9 +98,9 @@ a reviewer's gift.
 
 | collection | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` | status |
 |---|---|---|---|---|
-| `ndc_classes` ⚠ | 828/828 | 828/828 | 726/828 = 0.877 | *(60 % of 1,381 — no claim)* |
+| `ndc_classes` | 1381/1381 = 1.000 | **1381/1381 = 1.000** | 1263/1381 = 0.915 | complete |
 | `ndc_substances` | 1745/1745 = 1.000 | **1745/1745 = 1.000** | 1489/1745 = 0.853 | complete |
-| `wd50k100` ⚠ | 919/919 | 919/919 | 771/919 = 0.839 | *(50 % of 1,837 — no claim)* |
+| `wd50k100` | 1837/1837 = 1.000 | **1837/1837 = 1.000** | 1541/1837 = 0.839 | complete |
 | `wd50k66` | 3988/3988 = 1.000 | **3988/3988 = 1.000** | 3742/3988 = 0.938 | complete |
 | `wd50k66_full` | 4554/4554 = 1.000 | not run | not run |
 
@@ -142,17 +141,89 @@ Search/walk ratio **3.84×**. Quoted **only with its direction**: `wstar_orbit`'
 least — so the true spread is higher and 3.84× is a **lower bound**. The ordered
 walk sits level with both certificate arms (0.147 against 0.113 / 0.144).
 
-## 8. H7c — withheld
+## 8. H7c — measured (the last N cells landed 03:15)
 
-Two array tasks were still running at the time of reading (`isal_ow_struct` at
-N=250, `wstar_orbit` at N=3,988), so both Isal arms have a truncated `N` range
-and **no slope is fitted on it** — a slope over a truncated range is a different
-quantity and would have to be re-reported later under the same name.
+**The full 3,988 × 3,988 matrix on `wd50k66`.** Whole-matrix wall-clock, median
+of 3 reps, censored/skipped reps excluded:
 
-Competitors, complete over `N ∈ {250, 500, 1000, 2000, 3988}` (log-log slope of
-the pair phase on `N`): `bipartite_ged_assign` 1.913, `bipartite_ged_path`
-1.924, `wl_l1` 1.872, `nauty_cert` 1.706, `nauty_cert_rows` 1.638, `netlsd`
-1.494, `degree_seq_l1` 1.476, `size_l1` 1.149.
+| arm | whole matrix | canon phase | pair phase |
+|---|---|---|---|
+| `fact_rank` | **1.11 s** | 0.221 | 0.889 |
+| **`isal_ow_struct`** | **1.39 s** | 0.414 | 0.971 |
+| `size_l1` | 2.81 s | 0.004 | 2.804 |
+| `degree_seq_l1` | 12.62 s | 0.017 | 12.602 |
+| `nauty_cert_rows` | 13.87 s | 0.328 | 13.541 |
+| `nauty_cert` | 24.19 s | 0.234 | 23.960 |
+| `netlsd` | 40.61 s | 10.757 | 29.850 |
+| `wl_l1` | 564.21 s | none | 564.208 |
+| `bipartite_ged_assign` | 10.6 min | none | 634.016 |
+| `bipartite_ged_path` | 15.9 min | none | 952.501 |
+| `wstar_orbit` | 28.9 min | 1737.537 | *< noise* |
+| `hpd_jsd` | **≥ 60 min** | — | **censored at the 1 h cap** |
+
+**H7c said "seconds for `fact_rank`, minutes for the embeddings, hours for
+bipartite GED".** The ordering holds; two magnitudes do not. NetLSD is
+**seconds** (40.6 s), not minutes, and bipartite GED is **minutes** (10.6 /
+15.9), not hours. As with H7b, the misses run **in the competitors' favour** —
+they are faster than predicted — so the measurement is reported and the
+hypothesis is not defended.
+
+**The result the paper wants.** The ordered walk does the whole 3,988² matrix in
+**1.39 s** — second only to the fact-rank certificate (1.11 s), **17.4× faster
+than `nauty_cert`** (24.19 s), and **1,250× faster than the orbit-pruned
+tie-complete form** (28.9 min). Against the search-based program it is not a
+constant-factor win; it is the difference between interactive and overnight.
+
+*Mechanism not established.* The gap is in the **pair phase** (0.971 s against
+23.960 s, 24.7×), which invites "the Isal word is shorter than the certificate".
+The sweep's length column **cannot settle that**: `tokens_or_bytes` holds
+*tokens* for the walk and *bytes* for the certificate, so 3,886 against 11,692 at
+`m = 160` is a comparison across two units, not a length ratio. The timing gap is
+measured; its cause is not, and no length claim is made from that column.
+
+**Two arms' `censored` / `nan` handling matters here.** `hpd_jsd` recorded
+exactly 3600.000 s at N=3,988 with `censored=1` and its other two reps
+`skipped=1`: that is the cap, not a measurement, and it is reported as a lower
+bound. `wstar_orbit`'s canon pass (1737.5 s) slightly *exceeds* its whole-matrix
+pass (1736.4 s) in all three reps — two separate timing passes of the same
+~1,736 s work, so its pair phase is below run-to-run noise rather than negative.
+
+**`wstar_orbit` does not follow a power law, so no slope is quoted for it.**
+Canon totals against a constant doubling of `N`:
+
+| N | 250 | 500 | 1,000 | 2,000 | 3,988 |
+|---|---|---|---|---|---|
+| canon total | 16.4 s | 48.3 s | 292.0 s | 907.9 s | 1,737.5 s |
+| step | — | 2.95× | **6.04×** | 3.11× | 1.91× |
+
+A fitted exponent of 1.771 over that series is a summary that hides its
+structure: the cost is dominated by a few expensive members, so what matters is
+*which* members enter at each `N`, not `N` itself. The series is reported; the
+exponent is not.
+
+**Log-log slopes where a power law does hold** (N ∈ {250, 500, 1000, 2000,
+3988}; `canon` = canonicalization phase, `whole` = whole matrix — **not** a pair
+slope, since `secs_pairs_total` is the whole-matrix time):
+
+| arm | canon | whole |
+|---|---|---|
+| `bipartite_ged_assign` | — | 1.913 |
+| `bipartite_ged_path` | — | 1.924 |
+| `wl_l1` | — | 1.872 |
+| `nauty_cert` | 0.842 | 1.706 |
+| `nauty_cert_rows` | 0.876 | 1.638 |
+| `netlsd` | 0.906 | 1.494 |
+| `degree_seq_l1` | 0.871 | 1.476 |
+| `size_l1` | 1.034 | 1.149 |
+| `isal_ow_struct` | 0.798 | 0.837 |
+| `fact_rank` | 0.824 | 0.687 |
+| `hpd_jsd` | withheld | withheld (censored) |
+
+Canonicalization is ≈ linear across every arm that has one (0.80–1.03), as H7c
+predicted. The whole-matrix slope reaches ≈ 1.9 only for the arms whose pair
+phase dominates; for `fact_rank` and `isal_ow_struct` the matrix is fast enough
+at N = 3,988 that fixed overhead still flattens the curve, so their sub-linear
+slopes are an artefact of the range, not evidence against an `N²` pair phase.
 
 ### ⚠ Two collections were read partial, and the slice is not random
 
@@ -170,8 +241,8 @@ be stated per collection:
 
 | collection | read | blocks present | missing | which end |
 |---|---|---|---|---|
-| `ndc_classes` | 828 / 1,381 (60 %) | 2, 3, 4 | **0, 1** | its **largest** members |
-| `wd50k100` | 919 / 1,837 (50 %) | 0 | 1 | its smallest members |
+| `ndc_classes` | 1,105 / 1,381 (80 %) | 0, 2, 3, 4 | **1** | its **#2 of 5** band in descending-m order |
+| `wd50k100` | **1,837 / 1,837 — complete as of 03:15** | 0, 1 | — | — |
 
 So `ndc_classes`'s observed maximum of `m = 30` is a **floor**, and its
 `m ≥ 80` count of zero is **not yet established** — the unread blocks are
@@ -202,8 +273,30 @@ reader re-checks the rest of this document:
 Every affected figure draws on `rows_yield_members`; nothing in the sweep
 analysis touches those rows.
 
+**RESOLVED 2026-09-11 03:21 — array 2271960 is 74/74 COMPLETED.** All five
+collections are now whole (1,381 / 1,745 / 1,837 / 3,988 / 4,554), and the
+outcome is worth recording because it was **not** the safe assumption:
+
+| | partial read | complete |
+|---|---|---|
+| `ndc_classes` members | 828, then 1,105 | **1,381** |
+| its max `m` | 30 (a *floor*) | **30** |
+| its members at `m ≥ 80` | 0, unestablished | **0**, established |
+| `isal_ow_struct` yield | 828/828, no claim | **1381/1381** |
+
+The unread blocks were the large-`m` end, so the floor could have moved and did
+not. That is the reason the claim was held rather than shipped with a hedge: a
+hedge would have been indistinguishable from this result, and only the
+measurement separates them.
+
+One correction the completion also forced: `wd50k66_full` has **39** members at
+`m ≥ 80`, not the 41 stated earlier. The 41 was **reconstructed from a rounded
+rate** — 0.009 × 4,554 — rather than counted. A count derived from a displayed
+percentage is not a count, and the rounding that makes a rate readable is
+exactly what makes it unusable in the other direction.
+
 **The claim that survives unchanged.** The 0-of-7,776 sweep censoring is
 untouched: the sweep is complete and verified per arm. The real-corpus yield
 claim currently rests on `wd50k66` (3,988) and `ndc_substances` (1,745) read
-whole — 5,733 members, every one canonicalized by the ordered walk — and is
-restated to those two until the rest lands.
+whole at the time — 5,733 members — and is restated to all four (8,951) now
+that the rest has landed.

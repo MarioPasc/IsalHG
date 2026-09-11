@@ -571,3 +571,43 @@ the episode that taught it (provenance in `measured_facts.md`).*
   population must name it by the property that makes the claim true** — "read
   whole" was availability again, this time in the phrasing rather than in the
   guard.
+
+  **A column is named for what someone needed to call it, not for what it
+  holds.** `rows_nscaling.secs_pairs_total` is the **whole-matrix** time —
+  `_matrix_timing` returns `(canonicalization seconds, whole-matrix seconds)` —
+  and an "N² pair slope" fitted to it measures canonicalization wherever
+  canonicalization dominates. For `wstar_orbit` that is 1,736 s of a 1,736 s
+  total, so the fitted exponent described the wrong phase entirely. The
+  docstring saying so had been **read in the same session**, two hours earlier,
+  while chasing something else.
+
+  The tell was arithmetic, not suspicion: H7c's `N²` claim is a *count of
+  comparisons*, so a measured exponent near 0.7 is not a weak result, it is a
+  claim about a different quantity. **When a measurement contradicts something
+  that is true by construction, doubt the measurement's subject before its
+  value** — the pair phase is `whole − canon`, and where that difference falls
+  under the canon pass's own run-to-run spread it is unresolvable rather than
+  negative, which is what `wstar_orbit`'s −2.6 s actually was.
+
+  **A round number in a timing column is a budget until proven otherwise.**
+  `hpd_jsd` recorded exactly `3600.000` s at N = 3,988 — `censored=1`, and its
+  other two reps `skipped=1` — and was one step from being written into a
+  published table as "60 minutes". Sixty minutes is not a measurement of that
+  matrix; it is a measurement of the cap. The same reading error as reporting a
+  censored member's `secs` as its cost, which L15 already forbids for members and
+  nothing had yet forbidden for *cells*.
+
+  **A count reconstructed from a rounded rate is not a count.** `wd50k66_full`'s
+  members at `m ≥ 80` were reported as 41, from `0.009 × 4,554`. The true count
+  is **39**: the displayed 0.009 was a rounded 0.00856. Rounding is what makes a
+  rate readable and is exactly what makes it unusable in the other direction, so
+  a count is quoted from the count or not at all.
+
+  **And the outcome that justifies holding a claim rather than hedging it.**
+  `ndc_classes` was read at 60 % with its two *largest-`m`* blocks missing, so
+  its "max `m` = 30, zero at `m ≥ 80`" was a floor that could have moved. When
+  the blocks landed it had **not** moved — max 30, still zero. A hedge
+  ("probably zero") would have been indistinguishable from this result, and only
+  the measurement separates them. That is the argument for holding a number
+  until it is earned instead of shipping it with a qualifier: the qualifier
+  survives into the paper, the measurement replaces it.

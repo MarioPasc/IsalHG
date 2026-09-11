@@ -164,7 +164,7 @@ and a hazard the second time. Sequence by finality:
 
 | RQ | state | action | prose mentions |
 |---|---|---|---|
-| RQ1 | final (frozen deliverable, D-ART5) | **build now** | 19 |
+| RQ1 | **lineage unestablished — see below** | **blocked**, not "build now" | 19 |
 | RQ2 | closed 2026-09-11 | **build now** | 7 |
 | RQ6 | `rq6_generation_facts.md` | done | 10 |
 | RQ7 | `rq7_envelope_facts.md` | done; revisit at 2271961 terminal | 6 |
@@ -521,6 +521,49 @@ re-checking the conditional ones.
 
 **Standing: 8 stale values in live documents**, located and awaiting the fold's
 predicate pass.
+
+**2026-09-11 — RQ1 is NOT ready, and the row above said it was because I did not
+check.** The sequencing table was written from `[IsalHG-Fable]`'s summary, which
+gave RQ1 as *"final (frozen deliverable, D-ART5 recorded)"*. I copied that into a
+planning table without opening the results tree — the session's own recurring
+defect, committed one exchange after both parties called the thread closed, in
+the artefact that schedules the work.
+
+**What the filesystem says.** There is **no RQ1 deliverable under
+`results/frozen/`** (which holds only tonight's two freezes). Instead there are
+**five** candidate directories across four roots, all last written 2026-09-08:
+
+| directory | csv files |
+|---|---|
+| `IEEETKDE/RQ1_addressing` | 661 |
+| `IEEETKDE/RQ1_isal` | 466 |
+| `IEEETKDE_isal/RQ1_addressing` | 630 |
+| `IEEETKDE_isal_preview/RQ1_addressing` | 464 |
+| `IEEETKDE_isal_merged/RQ1_addressing` | 466 |
+
+**This is the worst possible shape for the most-cited RQ.** `RQ1_addressing` is
+*the* directory that held two campaigns under different launch tags and
+double-counted **904,442 of 2,506,837** rows when concatenated (T-KBe, T-KBh,
+T-KBn); the counts above differ by up to 197 files; and the campaign has a live
+precedent for reading the wrong root, which cost a whole set of RQ4 progress
+figures earlier in this session.
+
+**So RQ1's fact base cannot start with the numbers — it starts with the
+lineage**, exactly like T-KBx:
+
+0. establish **which root and which launch tags** are the record, from the wave
+   notes and `DECISIONS.md`, before a single figure is read;
+1. confirm the `--only-tags` selection and the duplicate audit (`314b4a3`) apply,
+   since a bare concatenation is known to double-count;
+2. only then walk the 19 prose mentions.
+
+**RQ2 is unaffected and remains "build now"** — it closed tonight against rows
+whose root and job are named in this session's own record.
+
+**And the lesson is the one already at the top of L26, arriving again:** a
+summary from a careful peer is not a check, and a planning table is exactly where
+an unverified premise does the most damage, because everything scheduled after it
+inherits the error silently.
 
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the

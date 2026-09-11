@@ -603,14 +603,32 @@ generative model definable*. The **locally stable** column is new and is what
 RQ1 fills; the last three are where the certificate member differs from us,
 and RQ3 and RQ6 are the experiments that make the difference visible.
 
-**That column cannot be a tick, and the measurement is why.** Our locality is
-**conditional on the edit's position**: pendant against the certificate (which
-scores 0.000 on all three pendant kinds), **but not interior against the fact
-list**, which beats us 57.8 % to 13.9 % there. A binary column resolves that to
-either an unearned tick or an unearned blank, and both misdescribe the result —
-the same binary-hiding-a-trinary shape the campaign has had to correct three
-times elsewhere. **The column carries the axis** (*pendant* / *interior*) or the
-matrix carries two columns; it does not carry a tick.
+**That column must be two columns — *pendant* and *interior* — and not because
+our entry is awkward.** Run the test down every row of §2.3's locality table and
+**no row is uniform**:
+
+| | strongest | weakest |
+|---|---|---|
+| ordered walk | the **pendant** kinds — delete a fact (0.43–0.61), remove an argument (0.51) | interior insertion (0.00–0.02) |
+| fact list | **interior** — add an argument (0.32–0.66), add a fact over existing constants (0.49–0.52) | delete a fact (0.12–0.20) |
+| certificate rows | its only non-zero cells are **interior** widening (0.18–0.32) | 0.000 on three kinds outright |
+
+So a single *locally stable* column does not exist for **any** representation,
+and ours is not the exception — it is the row where the absence happened to be
+noticed. The three are **complementary, not ordered**: each owns an axis the
+others lose, which is what the campaign measured and what no binary column can
+say.
+
+**Two columns state the concession structurally instead of in a sentence.**
+§2.3 already concedes in prose that where the certificate's or the fact list's
+locality is better the article does not claim otherwise. A reviewer who meets
+that in the *table* — a column the paper does not win, scored and printed — reads
+the rest differently from one who meets a qualified tick, which is the version
+that looks like it is protecting something. It also gives RQ1 a clean job:
+the matrix poses the question per axis and RQ1 answers it per axis, rather than
+filling a cell whose definition it has to renegotiate. (Raised by
+`[IsalHG-Fable]`; the per-row profiles above are the §2.3 preview, 60 members
+per corpus, and are replaced when the 27-seed locality figures land.)
 
 **Nauty's role, stated once.** The canonical order of the constants is
 computed by nauty's individualisation–refinement on the coloured incidence

@@ -62,6 +62,58 @@ in both, and within 11 % at N = 2,000.
 2,724 s at N = 1,000 against 40.61 s at N = 3,988 — itself an unmatched
 comparison, and understating it. Matched, it is 662×.)*
 
+### The discrepancy is per arm, not shared — and NetLSD is solved
+
+`[IsalHG-Fable]` observed that `degree_seq_l1`'s 3.4× belongs to neither
+category, and proposed that the discrepancies might order inversely with each
+arm's intrinsic per-pair work — the signature of a **shared** change (a faster
+matrix loop or edit-distance primitive) rather than per-arm re-runs. Tested,
+because it is cheap:
+
+| arm | ratio | old s/pair | new s/pair |
+|---|---|---|---|
+| `netlsd` | 661.6× | 2.724e-03 | 4.118e-06 |
+| `nauty_cert` | 35.7× | 5.433e-05 | 1.521e-06 |
+| `degree_seq_l1` | 3.4× | 2.704e-06 | 7.934e-07 |
+| `hpd_jsd` | 1.1× | 4.175e-04 | 3.714e-04 |
+| `bipartite_ged_path` | 1.0× | 5.741e-05 | 5.989e-05 |
+| `bipartite_ged_assign` | 0.8× | 3.301e-05 | 3.986e-05 |
+
+**Refuted, by a direct counterexample.** `bipartite_ged_path` and `nauty_cert`
+have the same old per-pair cost to within 6 % — 5.741e-05 against 5.433e-05 —
+and ratios of **1.0× and 35.7×**. No single shared change produces both. The
+ordering is not monotone in per-pair cost either (3.4×, 0.8×, 35.7×, 1.0×, 1.1×,
+662× as cost rises). So the lineage question stays *"which arms were re-run"*,
+not *"which commit replaced the shared path"*.
+
+**NetLSD's 662× is explained, and it is not a re-run.** The old per-pair cost and
+the campaign's per-**item** descriptor cost are the same number:
+
+| | |
+|---|---|
+| campaign canon phase, N=3,988 | 10.757 s over 3,988 items → **2.697e-03 s per item** |
+| walkthrough, 2,724 s at N=1,000 | over 1,000,000 pairs → **2.724e-03 s per pair** |
+| ratio | **1.010** |
+
+The old run computed **one full NetLSD descriptor per pair** where the campaign
+computes `N` of them and reuses them — an `N²` → `N` change in the descriptor
+phase. That predicts a speedup of order `N`, which at `N = 1,000` is the observed
+662× (the model `N·d/(d + N·c)` with the measured `d` and `c` gives ≈ 590), and it
+explains the qualitative flip from *censored above N = 1,000* to completing
+N = 3,988 in 40.61 s. The campaign's own pair phase, 1.877e-06 s per pair, is a
+cheap vector op — exactly what remains once the descriptor is hoisted.
+
+So **`netlsd`'s walkthrough figure measures a missing cache, not a slower
+machine and not a different corpus.** It should not be quoted at all.
+
+**Still open: `nauty_cert` (35.7×) and `degree_seq_l1` (3.4×).** Neither is
+explained by the shared-path account, and an explanation that covers 662× while
+leaving 3.4× unmentioned is the one a reader tests first. `nauty_cert`'s new
+figure implies 1.52e-06 s per pair over certificates of ~11,692 bytes, which is
+fast enough to want checking on its own — a length-difference early exit, a
+dedupe of equal certificates, or a shorter certificate would each explain it, and
+they are distinguishable.
+
 ## Acceptance
 
 0. **Confirm the `N` behind every row on both sides, before anything else.** Done

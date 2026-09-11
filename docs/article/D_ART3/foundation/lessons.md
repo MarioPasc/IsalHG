@@ -686,3 +686,42 @@ the episode that taught it (provenance in `measured_facts.md`).*
   Third occurrence tonight of a commit message asserting something the commit did
   not contain. The other two were anchors that did not match; this one was an
   anchor that did not match **and said so**.
+
+  **A check that cannot stop the thing it checks is not a check.** The `&&`
+  chaining is one way to strip a verification's authority; `[IsalHG-Fable]`
+  named three more, and they are the same defect wearing different clothes:
+  printing a result nobody consumes; computing a condition without asserting it;
+  and writing an acceptance criterion whose verification needs the very artefact
+  it was meant to replace — which is the unfalsifiable instrumentation constraint
+  that had to be designed away in T-KBw, two hours earlier, by the same author.
+
+  All four keep the *appearance* of verification and none keep the moment where
+  the answer could change what happens next. So "verify before you commit" is not
+  the rule. **The rule is that the verification must hold the write hostage**, and
+  of the two fixes it is the second that generalises — make the check exit
+  non-zero, *and never put the write in the same invocation as the check meant to
+  authorise it* — because an exit code only helps if something is waiting on it.
+
+  **Test a proposed mechanism before adopting it; a cheap test can refute a
+  plausible story and solve a different one in the same pass.** The six-arm
+  discrepancy table looked like it ordered inversely with each arm's per-pair
+  work, which would have meant one shared change (a faster matrix loop) rather
+  than per-arm re-runs. One arithmetic pass killed it: `bipartite_ged_path` and
+  `nauty_cert` have the same old per-pair cost to within 6 % — 5.741e-05 against
+  5.433e-05 — and moved by **1.0× and 35.7×**. No single shared change gives
+  both.
+
+  The same pass *solved* a different row. NetLSD's old per-pair cost
+  (2.724e-03 s) equals the current run's per-**item** descriptor cost
+  (2.697e-03 s) to a **ratio of 1.010**: the old run computed one full descriptor
+  per pair where the new one computes `N` and reuses them. An `N²` → `N` change,
+  which predicts a speedup of order `N` — 662× observed at `N = 1,000` — and
+  explains the flip from *censored* to completing. That is a **mechanism with an
+  arithmetic identity behind it**, not a story that fits; the difference is that
+  it made a numerical prediction which could have failed.
+
+  **And an account that explains the extremes and skips the middle is the one a
+  reader tests first.** `degree_seq_l1`'s 3.4× sat between "stable" and "moved"
+  and had no home in the first diagnosis — not because it was hard, but because
+  the two dramatic rows had absorbed the attention. A residual category of one is
+  a category.

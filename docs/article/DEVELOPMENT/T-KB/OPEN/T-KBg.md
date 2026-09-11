@@ -284,19 +284,49 @@ of consecutive quarters one-edit variants …)"*:
 * **1,432** is the singleton-counting figure. `DESIGN.md` §corpora is explicit
   that the built corpus is **1,381** and that 1,432 is "the supplement's figure".
   The prose describes the corpus actually used, so it should say 1,381.
-* **21.6 %** is a ratio on the pre-freeze basis. The built corpus's nearest
-  named quantity is `delta_1 / n_consecutive_pairs = 117 / 528 = 22.2 %` — but
-  mapping "one-edit variants" onto `delta_1` is an **inference**, and a figure
-  whose definition has to be guessed is not corrected, it is **re-derived from
-  the code that computed it**. Flagged for the fold.
+* **21.6 %** — resolved, and the method generalises. `[IsalHG-Fable]`:
+  **reproduce the stale figure from the stale census.** `probes_2026-09.md`
+  records the pre-freeze Δ histogram as **85 / 120 / 134 / 191 / 25** over
+  **555** pairs (sums exactly), and `120 / 555 = 0.21622` → **21.6 %**, the
+  prose's figure to three digits. A three-digit reproduction under the proposed
+  reading is not coincidence, so *"one-edit variants"* **is** `delta_1`,
+  established by construction with no code read. Corrected to
+  `117 / 528` = **22.2 %**.
+
+  **The general method: when a stale figure's definition is unclear, try to
+  regenerate it from the superseded inputs.** If they reproduce it, the
+  definition is settled and the correction is a lookup; if nothing reproduces
+  it, *that is the finding* and the number goes to the predicate pass or to a
+  strike under the condition above. It is cheaper than reading the code, it is
+  checkable by anyone, and it inverts the usual difficulty — a stale number is
+  normally a liability, and here **its staleness is the evidence**, because only
+  the superseded inputs regenerate it.
 
 **The general defect: the member-count reconciliation (1,432 → 1,381) was
 propagated to the counts and not to the ratios computed over them.** A
 member-count check cannot see it, because the exposed figure is a percentage.
 So the fold's checklist gains a step: **after any corpus correction, re-derive
-every figure computed *over* the corrected counts, not just the counts.** The
-screen for this is mechanical — any percentage in the prose whose denominator is
-a corpus quantity — and it is cheaper than discovering one at review.
+every figure computed *over* the corrected counts, not just the counts.**
+
+**And the screen is a closed list, not a heuristic.** "Any percentage whose
+denominator is a corpus quantity" both misses cases ("12 of 100" phrasings,
+medians, per-member rates) and chases percentages unrelated to the corpus. The
+bounded form: **the census's own fields are the complete set of exposed
+quantities**, so for each field, find its value *and every ratio over it* in the
+prose and check both against the built census. Run over `ndc_classes`'
+twenty fields:
+
+| | |
+|---|---|
+| stale values found in `prose.md` | **2** — `1,432` members, `21.6 %` |
+| both corrected | 1,381 and 22.2 % |
+| remaining flags | **2, both false positives**: `415` occurs inside another figure on the Prop 2 row, and `delta_gt5` is 25 in *both* censuses |
+
+It found both of today's in **one pass**, where the sibling sweep found them one
+after the other. The residual weakness is unchanged and must be stated: it
+matches **digit strings**, so it yields candidates and the two flags above had to
+be checked by hand. Bounded and complete beats unbounded and heuristic; neither
+is an audit. (Raised by `[IsalHG-Fable]`.)
 
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the

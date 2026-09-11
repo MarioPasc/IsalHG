@@ -499,8 +499,8 @@ Unchanged from the ratified plan and documented in full in
 [`supplementary_data.md`](supplementary_data.md): **WD50K(66)** entity
 knowledge bases (3,167 genuinely n-ary members in the envelope; Wikidata types
 as class labels, imbalance stated; WD50K(100) as purity control) and
-**NDC-classes** quarterly co-formulation knowledge bases (1,432 members, 21.6 %
-of consecutive quarters one-edit variants with exact fact-level truth;
+**NDC-classes** quarterly co-formulation knowledge bases (**1,381** members,
+**22.2 %** of consecutive quarters one-edit variants with exact fact-level truth;
 NDC-substances as control); controlled corruptions of real members for RQ4;
 one synthetic envelope sweep for RQ7. Retired after probing: the planted
 families and size-controlled strata of the previous iteration, the contact

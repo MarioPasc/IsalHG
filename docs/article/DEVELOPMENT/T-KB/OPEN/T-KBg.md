@@ -164,7 +164,7 @@ and a hazard the second time. Sequence by finality:
 
 | RQ | state | action | prose mentions |
 |---|---|---|---|
-| RQ1 | **lineage unestablished — see below** | **blocked**, not "build now" | 19 |
+| RQ1 | **lineage verified from `merge_manifest.json`** | **build now** | 19 |
 | RQ2 | closed 2026-09-11 | **build now** | 7 |
 | RQ6 | `rq6_generation_facts.md` | done | 10 |
 | RQ7 | `rq7_envelope_facts.md` | done; revisit at 2271961 terminal | 6 |
@@ -522,8 +522,40 @@ re-checking the conditional ones.
 **Standing: 8 stale values in live documents**, located and awaiting the fold's
 predicate pass.
 
-**2026-09-11 — RQ1 is NOT ready, and the row above said it was because I did not
-check.** The sequencing table was written from `[IsalHG-Fable]`'s summary, which
+**2026-09-11 — RESOLVED: RQ1 *is* ready; the alarm below was raised by a check
+that could not have found the deliverable.** Kept in full because the sequence of
+errors is the point.
+
+`[IsalHG-Fable]` named the path from the handoff and it is exactly there:
+`results/IEEETKDE/RQ1_isal/merged/` — 483 files, `465` row files plus the
+deliverable set (`merge_manifest.json`, `manifest.json`, `config.json`,
+`published_tables.md`, `m1_instructions_by_kind.md`, …). I had searched
+`results/frozen/` — **tonight's convention, which postdates RQ1 by three days** —
+and globbed `*.csv`, so a `merged/` subdirectory could not have appeared. **The
+absence I found was evidence about the convention's coverage, not about RQ1.**
+
+**And the lineage was already recorded, in the artefact built for it.**
+`merge_manifest.json` answers both checks Fable named:
+
+| | |
+|---|---|
+| `source_tags_used.addressing` | **`["47c8a42c"]`** — the Isal campaign tag alone |
+| tags *available* under `addressing` | `47c8a42c` **and** `c3fb21de`, 155 files each — **both campaigns present, one selected** |
+| `duplicate_audit` | **0 duplicate rows** in all five tables (m0items 88,428 · m1 1,673,904 · m2 66,336 · m3 88,428 · m4 36,000), each with its key named and `rows == unique_observations` |
+| per-arm provenance | Isal arms from `addressing_cpp` (`ebda0b71`); `wstar_rank` from `addressing_rank` (`28536068`); the rest from `addressing` (`47c8a42c`); `fact_rank_roles` dropped |
+
+So the 904,442-row double-count is **provably absent here** — the merge saw both
+campaigns and took one, which is what `--only-tags` and the duplicate audit were
+built for at T-KBe. RQ1's fact base is a **walk of `published_tables.md` against
+the 19 prose mentions**, not an investigation.
+
+*(One imprecision, recorded rather than propagated: the handoff says "17 files";
+the deliverable set is 18 non-row files beside 465 row files. Immaterial to the
+lineage, but it is the kind of count that becomes a citation.)*
+
+---
+
+**The superseded alarm, kept because the error chain is the lesson.** The sequencing table was written from `[IsalHG-Fable]`'s summary, which
 gave RQ1 as *"final (frozen deliverable, D-ART5 recorded)"*. I copied that into a
 planning table without opening the results tree — the session's own recurring
 defect, committed one exchange after both parties called the thread closed, in

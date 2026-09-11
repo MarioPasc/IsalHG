@@ -165,7 +165,7 @@ and a hazard the second time. Sequence by finality:
 | RQ | state | action | prose mentions |
 |---|---|---|---|
 | RQ1 | **fact base written** — `rq1_addressing_facts.md`; 33/33 figures sourced, 0 unsourced | **screened**, awaiting predicate pass | 19 |
-| RQ2 | closed 2026-09-11 | **build now** | 7 |
+| RQ2 | **fact base written** — `rq2_wellposedness_facts.md`; the fold here is a **fill**, not an audit | **screened** | 7 |
 | RQ6 | `rq6_generation_facts.md` | done | 10 |
 | RQ7 | `rq7_envelope_facts.md` | done; revisit at 2271961 terminal | 6 |
 | RQ3 | re-run landed, readings still settling | build when they settle | 11 |

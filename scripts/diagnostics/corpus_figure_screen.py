@@ -103,6 +103,23 @@ LABELLED_HISTORY = {
 KNOWN_BENIGN = {**COLLISIONS, **LABELLED_HISTORY}
 
 
+def flatten(text: str) -> str:
+    """Collapse all whitespace to single spaces before matching.
+
+    Line breaks have defeated prose matching twice: a quoted-forms table missed
+    "one time in two" and "one in 578" because the prose wrapped them, and an edit
+    verification returned a **false zero** across a line break. Both were caught
+    by a count failing to match, which is luck rather than a check.
+
+    Any tool that searches prose for a phrase must flatten first, so a wrapped
+    occurrence and an unwrapped one are the same string. (Raised by
+    ``[IsalHG-Fable]``.) Numbers rarely wrap mid-token, so this changes nothing
+    for the numeric screens here — it is applied anyway because the next
+    prose-matching tool will be written by copying this one.
+    """
+    return " ".join(text.split())
+
+
 def prose_integers(text: str) -> set[int]:
     """Every integer >= MIN_VALUE appearing in the prose, comma-formatting allowed."""
     out = set()
@@ -200,7 +217,7 @@ def main() -> int:
         print(f"no census.json under {args.corpora}", file=sys.stderr)
         return 2
 
-    per_doc = {d: d.read_text() for d in docs}
+    per_doc = {d: flatten(d.read_text()) for d in docs}
     numbers = {n for t in per_doc.values() for n in prose_integers(t)}
     every = {n for t in per_doc.values() for n in prose_numbers(t)}
     print(f"documents: {len(docs)} under {args.docs}  ({len(numbers)} integers >= {MIN_VALUE})")
@@ -253,7 +270,8 @@ def main() -> int:
             elif old:
                 archival.append(f"{head} only in dated records: {', '.join(old)}")
     print(
-        f"screen 1 (exact): {compared} mismatched quantities >= {MIN_VALUE} "
+        f"screen 1 (exact, digit-string match on flattened text): "
+        f"{compared} mismatched quantities >= {MIN_VALUE} "
         f"({skipped_small} smaller ones skipped -- they collide with everything)"
     )
     if stale:
@@ -302,9 +320,18 @@ def main() -> int:
         return 1
 
     if not open_candidates:
+        # Name what was looked FOR as well as where: a negative result's implicit
+        # clause covers the property as much as the search space, and "clean" that
+        # does not state its property cannot be found too narrow by a reader.
         print(
-            f"CLEAN: no prose integer sits within {TOLERANCE:.0%} of a census value "
-            "without equalling it."
+            f"CLEAN. Claim, stated so its reach can be judged: *no integer >= {MIN_VALUE}, "
+            f"by digit-string match after whitespace flattening, sits within "
+            f"{TOLERANCE:.0%} of an obtained census value without equalling it, across "
+            f"{len(docs)} documents under {args.docs} (excluding {', '.join(args.exclude)}).*"
+        )
+        print(
+            "  This proves no value STALE by that test. It cannot prove one correct, "
+            "and it does not read the noun beside any number."
         )
         print(
             f"({len(benign_seen)} suppressed: {len(COLLISIONS)} collisions "

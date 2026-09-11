@@ -1141,6 +1141,33 @@ the episode that taught it (provenance in `measured_facts.md`).*
   would have been true and irrelevant. Choosing the property is the part of a
   sweep that cannot be mechanised.
 
+  **So the property belongs inside the implicit clause, next to the search
+  space.** If every negative result carries an unstated *"…in what I looked at"*,
+  then **what I looked *for*** sits in that clause as much as **where I looked**.
+  The two rules are one, and the statable form of a clean sweep names both:
+
+  > not *"no stale values in 44 documents"* — but *"no integer ≥ 100, by
+  > digit-string match after whitespace flattening, sits within 6 % of an obtained
+  > census value without equalling it, across 44 live documents, excluding X and
+  > Y."*
+
+  The first is a claim. The second is a claim **a reader can find too narrow** —
+  which is exactly what happened when the first version of that screen searched
+  *built* values and therefore could not, by construction, detect staleness. Put
+  that way the unmechanisable part is visible **in the result**, at the moment
+  someone uses the number, rather than in a docstring nobody opens then.
+  `corpus_figure_screen.py` now prints its claim in that form instead of the word
+  "clean". (Formulated by `[IsalHG-Fable]`.)
+
+  **And one class of false negative closed rather than caught a third time.**
+  Line breaks defeated prose matching twice — a quoted-forms table missed "one
+  time in two" and "one in 578" because the prose wrapped them, and an edit
+  verification returned a **false zero** across a line break. Both were noticed
+  only because a count failed to match, which is luck. Any tool searching prose
+  for a phrase now flattens whitespace first, so a wrapped occurrence and an
+  unwrapped one are the same string. It costs one line and it is cheaper than
+  catching the same defect a third time.
+
   **The sweep's own limit, stated so it is not over-read.** *Counting* `sys.exit`
   and `return 1` shows a failure path **exists**, not that the **relevant** one is
   wired to it — a screen, not an audit. Only the RQ1 chain was traced link by

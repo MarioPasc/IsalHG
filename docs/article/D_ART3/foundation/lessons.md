@@ -819,3 +819,41 @@ the episode that taught it (provenance in `measured_facts.md`).*
   which machine, which code path, and which operation.** Any of the four
   differing is enough to make the comparison meaningless, and none of them is
   visible in the numbers themselves.
+
+  **The launcher pattern is not the defect; a recovery sweep without a working
+  skip is.** Every RQ launcher submits a recovery sweep behind
+  `--dependency=afterany`, so a second array writing to a root that already has
+  results is the *normal* end of a campaign rather than an anomaly. What decides
+  whether that is harmless is one thing:
+
+  | experiment | skip | consequence |
+  |---|---|---|
+  | RQ7 | **works** (`rq7.py:606`, `unit_is_done`) | re-submission is a no-op; 14 recovery tasks changed **0** of 39,204 rows |
+  | tail600 | **absent** | re-ran all 16 shards and overwrote the rows its verdict came from |
+  | RQ4 | present but **inert** — checks node-local staging (T-KBq) | re-ran completed work |
+
+  Three experiments, one pattern, three outcomes. So the question before reading
+  from a live tree is not "is a job still running" but **"does this experiment
+  have a skip, and does it check the durable root"** — and the second half is
+  where RQ4's fails, which is why a skip cannot be taken on sight.
+
+  **And verify per row, not by aggregate, however strong the aggregate looks.**
+  The first check that the second array had changed nothing compared *summary
+  figures* — arm completeness, per-collection yield, per-N cells — and found them
+  identical. That is the marginal-versus-join error wearing a third costume:
+  sixty-six rewritten files with identical totals can still carry a moved `secs`,
+  a censoring flag that flipped where another flipped back, or a member landing
+  in a different `(m, k, aut_bucket)` cell — and the readings that took a whole
+  session to get right are precisely the per-cell ones. Redone per row, keyed on
+  the identifying columns: **0 of 39,204, 0 of 31,407, 0 of 180**. Same
+  conclusion, and for the first time it is entitled to it. (Raised by
+  `[IsalHG-Fable]`, who noted the tail600 check *had* been per member and asked
+  why this one was not.)
+
+  **A snapshot taken while a job is still running is provenance, not a final
+  state.** The freeze was called final while the recovery array stood at 14
+  COMPLETED, 1 PENDING, 15 RUNNING. It is a correct and useful artefact — it is
+  exactly the rows the published numbers were computed from — but it does not
+  license "the campaign says this", and the obligation to re-verify at terminal
+  has to be written **into** the artefact, since nobody reading it later will
+  know a job was in flight.

@@ -418,3 +418,29 @@ the episode that taught it (provenance in `measured_facts.md`).*
   "nothing here has been measured" — which is a lower bar, and a far more useful
   one, because a correct challenge and an incorrect one are equally good at
   forcing a number into existence.
+
+  **A result whose inputs remain writable cannot be audited later, however
+  stable the numbers turn out to be.** The tail600 verdict — four refuted
+  clauses, an inverted differential, three downstream sentences rewritten — was
+  computed from rows sitting in the live results tree. tail600 has no idempotent
+  skip, so its `afterany` recovery sweep re-ran all sixteen shards and
+  **overwrote those rows**. It agreed: zero censoring flips, `secs` the only
+  differing column. Had it disagreed, the inputs to the recorded verdict would
+  simply have been gone, and no amount of care afterwards could have said which
+  run produced the number in the ledger.
+
+  Note what the stability does *not* buy. "It agreed" is a fact about this
+  sweep; it is not a property of the artefact, because the next writer need not
+  agree and there would again be no record. The fix is cheap and structural —
+  copy the rows to a read-only path and name the job that produced them at the
+  moment the number is recorded, which is what RQ1's deliverable already does
+  and what the tail600 rows now do. **A published number is computed from a
+  frozen snapshot, not from a live tree.**
+
+  The same reasoning upgrades the replication claim itself. Zero flips across
+  two runs is an observation about two runs; the **distance to the boundary** is
+  a property of the distribution. Measured: the slowest orbit completion leaves
+  244 s of the 600 s budget unused (41 %), the slowest rank completion 390 s
+  (65 %), and **no completion sits within 120 s of the cutoff**. That converts
+  "nothing flipped" into "nothing is close enough to flip" — a reason instead of
+  a coincidence, and one that does not depend on having happened to run twice.

@@ -187,6 +187,52 @@ This is an engineering precondition (it is not in `DECISIONS.md`), so the
 sequencing is recorded here with its reasoning rather than referred upward.
 Raised by `[IsalHG-Fable]`.
 
+**2026-09-11 — "entry exists" was an aggregate, and the walk finds gaps.**
+`[IsalHG-Fable]`: marking RQ6 *done against 10 mentions* and RQ7 *done against 6*
+is an aggregate statement about a **per-number** requirement. Neither entry was
+built by walking that RQ's prose mentions; each was built around the numbers
+under discussion when it was written. Run rather than argued — every distinct
+figure within ±1 line of an RQ6/RQ7 mention in `prose.md`, resolved against the
+campaign fact bases:
+
+| | |
+|---|---|
+| distinct figures near those mentions | **25** |
+| resolve to a campaign `rq*_facts.md` | 19 |
+| resolve to **none** | **6** |
+
+So the precondition passes at RQ granularity and fails at number granularity —
+the same aggregate-over-rows shape as everything else in this session, and the
+worse case, because **a row marked done is one nobody re-checks**.
+
+Of the six, chased against *every* `foundation/` file:
+
+| figure | where it resolves |
+|---|---|
+| **1,300** | **nowhere** — genuinely unsourced |
+| 74.8 % | `probes_2026-09.md` (a probe, not a campaign measurement) |
+| 0.49, 0.62, 0.96 | `measured_facts.md` + probes — **the other article's file** |
+| 6.1 | `measured_facts.md`, `proved_facts.md` |
+
+**And the audit method is itself unsound, which is the more useful finding.**
+Matching a figure as a *digit substring* over-reports: a bare `0.62` appears in
+many documents by coincidence, so "resolves to `measured_facts.md`" is more
+likely a collision than a provenance — and `measured_facts.md` is the **other
+article's** fact base, the hazard flagged the same day. A numeric-substring sweep
+is therefore a **screen, not an audit**: it can prove a number *unsourced*
+(1,300 is, definitively) and cannot prove one *sourced*.
+
+That is precisely what the **predicate pass** below exists for, and this
+measurement is its justification rather than an alternative to it: provenance has
+to match the number **together with its noun and its run**, not the digits. The
+screen is still worth running first — it found 1,300 in seconds — but a figure it
+marks resolved must still pass the predicate pass before it is folded.
+
+**Consequence for the table above:** RQ6 and RQ7 move from *done* to
+**screened**, with 1,300 struck pending a source and five figures needing the
+predicate pass. No entry is *done* until the bidirectional walk plus the
+predicate pass have both run against it.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

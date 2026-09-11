@@ -597,6 +597,40 @@ summary from a careful peer is not a check, and a planning table is exactly wher
 an unverified premise does the most damage, because everything scheduled after it
 inherits the error silently.
 
+**2026-09-11 — the predicate pass run on the located values: four live errors,
+three correct, and the screen was under-reporting.**
+
+The screen located 8 stale values but **adjudicates none** — a document may quote
+a pre-freeze value *as* a pre-freeze value. Read in context, the noun decides,
+and it split them cleanly:
+
+| site | text | verdict |
+|---|---|---|
+| `CODE_PLAN.md` L150 | "reproducing S2: **1,432 encodable class-quarters**" | **correct** — names `n_encodable_counting_singleton_products`, which *is still 1,432* |
+| `DESIGN.md` L133/136/137 | "3,988 (3,994 without the `m ≥ 3` floor)"; "(1,432 / 555 when singletons are counted)"; "control (1,745; 2,222 counting singletons)" | **correct** — built value leads, pre-freeze labelled |
+| `START_HERE.md` L282 | "NDC-classes (**1,432 members**, 21.6 % …)" | **ERROR** → 1,381 / 22.2 % |
+| `DESIGN.md` L230 | "`ndc_classes` (1,432), `wd50k66` (3,994) — **all members**" | **ERROR ×2** → 1,381 / 3,988 |
+| `DESIGN.md` L514 | "`ndc_classes`, **all 1,432 members**" | **ERROR** → 1,381 |
+| `DESIGN.md` L708 | N-scaling grid `N ∈ {…, 3,994}` | **ERROR** → 3,988, **verified against the frozen RQ7 rows** (`[250, 500, 1000, 2000, 3988]`) |
+
+**Three of the four errors are in `DESIGN.md` and three of those are
+specifications** — a corpora list, a corpus for an experiment, and an `N` grid.
+That is the describe-versus-specify distinction holding for a second time, and
+the fourth instance of a *population written as a literal*: with L254's sampling
+frame, `DESIGN.md` has now had four.
+
+**And the screen was under-reporting, which is why L708 was nearly missed.** It
+reported *documents*, not *occurrences*: "1,432 in `DESIGN.md`" was **one line
+covering three sites with three different verdicts**, so a document could read as
+adjudicated after one of them was checked. It now counts occurrences
+(`DESIGN.md x2`), and that change surfaced L708 **within a minute of being
+made** — a second `3,994` that the document-level report had hidden behind the
+first.
+
+**A screen that collapses occurrences under-reports the work by exactly the
+number it hides**, and the hidden ones are the ones nobody looks for, because the
+report says the document has been seen.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

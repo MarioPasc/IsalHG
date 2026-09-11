@@ -120,6 +120,14 @@ def flatten(text: str) -> str:
     return " ".join(text.split())
 
 
+def occurrences(text: str, value: float) -> int:
+    """How many times ``value`` appears as a standalone number in ``text``."""
+    target = f"{int(value):,}" if float(value).is_integer() else str(value)
+    bare = target.replace(",", "")
+    pattern = rf"(?<![\d.])(?:{re.escape(target)}|{re.escape(bare)})(?![\d.])"
+    return len(re.findall(pattern, text))
+
+
 def prose_integers(text: str) -> set[int]:
     """Every integer >= MIN_VALUE appearing in the prose, comma-formatting allowed."""
     out = set()
@@ -250,9 +258,17 @@ def main() -> int:
             labelled = LABELLED_HISTORY.get((collection, quantity, expected))
             live, old = [], []
             for doc, text in per_doc.items():
-                if float(expected) not in prose_numbers(text):
+                # Count OCCURRENCES, not documents. Reporting "1,432 in
+                # DESIGN.md" once covered three sites with three different
+                # verdicts -- one correct and labelled, two live errors -- so a
+                # document could read as adjudicated after one of them was
+                # checked. A screen that collapses occurrences under-reports the
+                # work by exactly the number it hides.
+                hits = occurrences(text, expected)
+                if not hits:
                     continue
-                (old if any(k in doc.name for k in ARCHIVAL) else live).append(doc.name)
+                label = f"{doc.name}" + (f" x{hits}" if hits > 1 else "")
+                (old if any(k in doc.name for k in ARCHIVAL) else live).append(label)
             if labelled and live:
                 # Deliberately retained AND labelled as pre-freeze, so the
                 # reconciliation stays legible. Not stale; not re-validated.

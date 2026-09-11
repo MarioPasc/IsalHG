@@ -279,7 +279,7 @@ is adopted because it maximizes the fraction of edits that cost nothing.
 question each, each with a control in the supplement: entity knowledge bases
 of **WD50K(66)** (3,167 n-ary members; Wikidata types as class labels;
 WD50K(100) as purity control) and the quarterly co-formulation knowledge
-bases of pharmacologic classes in **NDC-classes** (1,432 members, 21.6 % of
+bases of pharmacologic classes in **NDC-classes** (**1,381** members, **22.2 %** of
 consecutive quarters one-edit variants with exact fact-level truth;
 NDC-substances as control); controlled corruptions of real members for RQ4;
 a synthetic envelope sweep for RQ7 only. Retired after probing: planted

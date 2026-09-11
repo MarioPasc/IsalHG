@@ -227,8 +227,8 @@ land within two tokens of a one-edit neighbour more often than `fact_rank`
 (the frontier proposition's measured basis). H1d: the roles field costs
 `fact_rank` at most +0.02 in normalized median response on WD50K.
 
-**Corpora.** `synthetic_rq1` (2,000), `ndc_classes` (1,432), `wd50k66`
-(3,994) — all members.
+**Corpora.** `synthetic_rq1` (2,000), `ndc_classes` (**1,381**), `wd50k66`
+(**3,988**) — all members.
 
 **Arms.** `pointer` (A; C++ `w*_c`, per-instance budget 60 s, `k` = pair
 maximum), `fact_rank` (B), `fact_rank_roles` (B′, WD50K only), `local_colour`
@@ -511,7 +511,7 @@ twin is indistinguishable from the original for them), while `fact_rank` and
 corruptions, `fact_rank`'s AUC is within the 95 % CI of the best competitor's
 on each collection — competitiveness, not superiority, is claimed.
 
-**Corpora.** (a) `ndc_classes`, all 1,432 members (structural repetition:
+**Corpora.** (a) `ndc_classes`, all **1,381** members (structural repetition:
 ≈ 7 members per unlabelled class); (b) `wd50k66` per-type sub-collections for
 the six types with ≥ 47 members (human, film, big city, television series,
 animated film, sovereign state) — anomalies must be judged against their own
@@ -705,7 +705,8 @@ canonicalization time (from the corpus pass); yield per collection and size
 bucket, including `wd50k66_full` under the fact alphabet.
 
 **`N`-scaling.** Wall-clock of the full `N × N` matrix on `wd50k66` for
-`N ∈ {250, 500, 1,000, 2,000, 3,994}` for every representation of G3 that runs
+`N ∈ {250, 500, 1,000, 2,000, **3,988**}` (the full `wd50k66`; 3,994 is the
+pre-floor count) for every representation of G3 that runs
 on it (3 repetitions).
 
 **Evaluation.** Median and p90 wall-clock, time-out fraction, tokens (bytes

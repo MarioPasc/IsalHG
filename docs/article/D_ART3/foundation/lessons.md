@@ -913,9 +913,23 @@ the episode that taught it (provenance in `measured_facts.md`).*
 
   | experiment | skip | consequence |
   |---|---|---|
-  | RQ7 | **works** (`rq7.py:606`, `unit_is_done`) | re-submission is a no-op; 14 recovery tasks changed **0** of 39,204 rows |
+  | RQ7 | present (`rq7.py:606`) but **did not prevent the re-run** — see the correction below | at 74/74, **22,939 of 39,204** sweep rows re-ran |
   | tail600 | **absent** | re-ran all 16 shards and overwrote the rows its verdict came from |
   | RQ4 | present but **inert** — checks node-local staging (T-KBq) | re-ran completed work |
+
+  **Correction, 2026-09-11 at terminal.** The RQ7 row above originally read
+  *"re-submission is a no-op; 14 recovery tasks changed 0 of 39,204 rows"*. That
+  was a **mid-flight sample**. At 74/74 the sweep had re-run **22,939 of 39,204**
+  sweep rows and **30,455 of 31,407** yield rows, flipping **66 censoring values**
+  — and in one cell it destroyed a measurement outright: `wstar_orbit` at
+  `N = 3,988` completed three reps at ~1,735 s in the frozen snapshot and, in the
+  live tree, is **censored at the 1 h cap with two reps skipped**. The published
+  28.9 min figure and the 1,252× comparison exist **only** in the snapshot.
+
+  So a skip's presence in the source is not evidence it fired, and **a re-run
+  observed part-way through is not evidence about the whole**. The claim was made
+  from 14 of 74 tasks, which is the same error as reading a rate off a partial
+  harvest — committed while writing the lesson against it.
 
   Three experiments, one pattern, three outcomes. Whether an experiment has a
   skip, and whether it checks the durable root, is what says how alarmed to be —
@@ -1197,3 +1211,17 @@ the episode that taught it (provenance in `measured_facts.md`).*
   and `return 1` shows a failure path **exists**, not that the **relevant** one is
   wired to it — a screen, not an audit. Only the RQ1 chain was traced link by
   link.
+
+  **A column-diff must count every differing column, never the first.** The check
+  written to be decisive about whether a frozen snapshot still matched the live
+  tree `break`-ed out of its column loop on the first mismatch. `secs` precedes
+  `censored` in the row schema, so it reported *"only `secs` differs"* — a
+  timing-only change, reassuring and wrong — while **66 censoring flips** sat one
+  column further along, invisible.
+
+  The bug is one word. What it cost was the correct reading of the one check the
+  whole freeze convention exists to support, and it survived because *"only
+  timings differ"* is exactly the answer one hopes for. **An early exit in a
+  comparison is a silent filter on what the comparison can find**, and it filters
+  in the direction of agreement, because the columns that differ most often are
+  the ones that differ most harmlessly.

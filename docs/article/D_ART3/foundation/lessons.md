@@ -167,6 +167,17 @@ the episode that taught it (provenance in `measured_facts.md`).*
   The consequence is structural and is the whole argument for the guards in
   `scripts/diagnostics/rowsio.py`: **a rule that must be remembered at each call
   site will not be, and its author is the least likely person to remember it.**
+
+  **And the distinction every tool below eventually needs: a screen is not an
+  audit.** It arose three times in one session, in three unrelated tools — the
+  numeric figure screen (proves a value stale, never proves one correct), the
+  frozen-rows diff (its `only-live` count is the dangerous one, not `differing`),
+  and the check-authority sweep (shows a failure path exists, not that the
+  relevant one is wired). Each time the temptation was to report the clean result
+  and move on. **A screen narrows the candidate set; only a reader or a trace
+  closes it** — and a tool that reports "clean" is asserting something about its
+  own reach, which is a claim that has to be stated before the result can be
+  used.
   Every rule below should be read as a candidate for becoming a function, a
   failing test, or a tool that refuses — and where it cannot be, as something to
   be checked by someone who did not write it. (Formulated by `[IsalHG-Fable]`,
@@ -1097,10 +1108,40 @@ the episode that taught it (provenance in `measured_facts.md`).*
   guard that also fired. Worth having established *before* 19 fact-base entries
   are built on it rather than after. (Sweep proposed by `[IsalHG-Fable]`.)
 
-  **The sweep's own limit, stated so it is not over-read.** Five further scripts
-  (`rq1_extra_checks`, `rq3_consensus_forensics`, `rq7_envelope_reading`,
-  `corpus_figure_screen`, `rq6_reach1_rederivation_check`) all carry non-zero exit
-  paths — but *counting* `sys.exit` and `return 1` shows a failure path **exists**,
-  not that the **relevant** one is wired to it. That is a screen, not an audit, and
-  by the rule two entries above it is a negative result whose implicit clause is
-  "…in what I grepped for". Only the RQ1 chain was traced link by link.
+  **Where the authority lived is the transferable part.** `set -e` in the shell
+  and `return 1` in the Python: **both required, neither visible from the other
+  file.** The gate would be worthless if `verify_rq1_join.py` printed "JOIN NOT
+  SOUND" and returned 0, and equally worthless if the shell lacked `set -e` — and
+  each file reads as correct on its own in either case. **A check whose authority
+  is split across files cannot be verified by reading either of them**, which is
+  why the fix is *tracing* and not inspection, and why the `&&` failure looked
+  fine from where it was written too.
+
+  **Gates and reports are different things and want different treatment.** The
+  first version of this sweep asked all five remaining scripts for exit codes,
+  which is the wrong question for three of them (raised by `[IsalHG-Fable]`, who
+  had set the sweep going):
+
+  | kind | what can go wrong | what to do |
+  |---|---|---|
+  | **gate** — must stop a pipeline | its failure path is not wired | **trace the authority end to end**, every link, before anything rests on the output |
+  | **report** — a human reads the number | it computed the *wrong quantity* | **verify the computation**: re-derive, cross-check against a second source, pin as a regression |
+
+  `rq1_extra_checks` is a *report* — its common-set output is what D-ART5's
+  rationale quotes (7,013/7,013 words, 130,788/130,788 units, 5,174/5,174 pairs)
+  and nothing downstream was gated on it. An exit code would have changed nothing
+  there, and its real failure mode is the marginal-versus-join class.
+  `rq3_consensus_forensics` and `rq7_envelope_reading` are reports too, and have
+  had the second treatment repeatedly — mostly by someone finding they computed
+  something *adjacent* to what was asked. `corpus_figure_screen` and
+  `rq6_reach1_rederivation_check` are closer to gates and are owed the first.
+
+  **A sweep pointed at the wrong property returns "clean" about something that
+  does not matter**, which is the negative-result clause once more: the answer
+  would have been true and irrelevant. Choosing the property is the part of a
+  sweep that cannot be mechanised.
+
+  **The sweep's own limit, stated so it is not over-read.** *Counting* `sys.exit`
+  and `return 1` shows a failure path **exists**, not that the **relevant** one is
+  wired to it — a screen, not an audit. Only the RQ1 chain was traced link by
+  link.

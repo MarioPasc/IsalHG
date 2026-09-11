@@ -1041,3 +1041,39 @@ the episode that taught it (provenance in `measured_facts.md`).*
   first nine-tenths and reading is the residual — but the residual is the class
   no tool reaches, so it is never the part to skip.** A screen locates; only a
   reader knows whether the word beside the number makes it history or error.
+
+  **An absence is only evidence if the search could have found the thing.** The
+  RQ1 deliverable was declared missing on the strength of a search of
+  `results/frozen/` — a convention that **postdates that deliverable by three
+  days** — with a `*.csv` glob that could not see a `merged/` subdirectory of
+  non-csv files. The artefact was exactly where the handoff said. What the search
+  established was the **convention's coverage**, not the artefact's existence,
+  and the two are not the same statement.
+
+  The same sentence one level up covers the numeric screen: reporting a figure
+  "unsourced" when the search never opened the wave notes, `DESIGN.md`,
+  `DECISIONS.md` or the tests is a statement about the files consulted. **Every
+  negative result carries an implicit "…in what I looked at", and the rule is to
+  make that clause explicit and then ask whether it is wide enough.**
+
+  Two cheap habits follow. State the search space in the finding itself — *"no
+  pre-freeze value appears in the 44 live documents, excluding X and Y"* rather
+  than *"clean"*. And when a convention is introduced, **leave a pointer where the
+  convention says to look**, for everything that predates it: the reason RQ1 was
+  invisible is that it was frozen before there was a place to record freezing, and
+  a one-line pointer costs less than remembering that fact forever.
+
+  **Neither a peer's summary nor a prior session's handoff is a check.** The RQ1
+  row reached a planning table through four links — the handoff's sentence, a peer
+  repeating it, this file's own table, and then a verification that looked where
+  the thing could not be — with **no check in any of them**. A summary is a
+  compression written by someone with different context; a handoff is a summary
+  that has also aged. Both are leads. (Formulated with `[IsalHG-Fable]`, whose
+  link in that chain was the second.)
+
+  **And the artefact most worth protecting was the least protected**, purely
+  because the convention arrived after it: RQ1 is the paper's most-cited
+  experiment, 19 `prose.md` mentions, and was **483 of 483 files writable** until
+  2026-09-11 while two lesser artefacts frozen the same night were read-only. When
+  a protective convention is adopted, **sweep what predates it** — the ordering of
+  the calendar is not a statement about what deserves protecting.

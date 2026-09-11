@@ -168,6 +168,31 @@ the episode that taught it (provenance in `measured_facts.md`).*
   `scripts/diagnostics/rowsio.py`: **a rule that must be remembered at each call
   site will not be, and its author is the least likely person to remember it.**
 
+  **The same mechanism has a second face, and it is the more dangerous one: a
+  limitation you filed constrains you most.** Writing a rule makes you feel you
+  have applied it; **writing a limitation converts an open question into a settled
+  fact** — and then nothing downstream ever contradicts it. Three in one session,
+  each dissolved by someone asking what the thing was *for*:
+
+  | filed as | actually |
+  |---|---|
+  | *"no run records the branch factor"* (T-KBw) | `orbit_oracle.py` already carried `autgrp_calls`, diagnostic-only, in the timed path |
+  | *"the near-miss window cannot be tuned"* | a **coverage** gap: extend the freeze audit's compared set and the exact screen becomes complete |
+  | *"the counter must not perturb the wall-clock"* (T-KBw) | a **design choice**: branch count is structural, so the counted run needs no time fidelity — run it separately and the constraint does not exist |
+
+  **A wrong limitation produces no failing test, no mismatched count, no
+  arithmetic that does not close.** A defect has consequences that accumulate
+  until something breaks; a false limitation has none at all — it silently
+  removes work from the plan and **looks like rigour while doing it**. That is
+  precisely why *"this cannot be fixed"* and *"this is not fixed yet"* are
+  indistinguishable from inside the tool.
+
+  The remedy is the one already stated and needs no addition: where a rule cannot
+  become a function or a failing test, it must be checked by someone who did not
+  write it. **A filed limitation is exactly such a rule, and it is the one least
+  likely to be revisited, because the file says it is closed.** (Formulated by
+  `[IsalHG-Fable]`, who dissolved all three.)
+
   **And the distinction every tool below eventually needs: a screen is not an
   audit.** It arose three times in one session, in three unrelated tools — the
   numeric figure screen (proves a value stale, never proves one correct), the

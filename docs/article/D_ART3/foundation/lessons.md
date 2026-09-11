@@ -611,3 +611,53 @@ the episode that taught it (provenance in `measured_facts.md`).*
   the measurement separates them. That is the argument for holding a number
   until it is earned instead of shipping it with a qualifier: the qualifier
   survives into the paper, the measurement replaces it.
+
+  **A unit objection that disqualifies a measurement disqualifies everything the
+  cost model derives from it.** Within one message I declined to say the Isal
+  word is shorter than the nauty certificate — `tokens_or_bytes` holds *tokens*
+  for one arm and *bytes* for the other, so 3,886 against 11,692 compares two
+  units — and then headlined "17.4× faster than the nauty certificate". But a
+  pairwise Levenshtein is `O(L₁ × L₂)`: **the matrix time is quadratic in exactly
+  the lengths whose units had just been ruled incomparable.** Declining the
+  length claim and keeping the timing claim is holding both sides of the same
+  fact.
+
+  The rule generalises past this instance: when a quantity is disqualified on
+  units, trace what the cost model computes *from* it before keeping any
+  downstream number. The arms that are not Levenshtein over a serialisation —
+  NetLSD, WL, bipartite GED, HPD — inherit nothing and need no qualification,
+  which is what makes the affected set findable rather than a matter of judgement.
+
+  **And the comparison that has no unit problem was available the whole time.**
+  `isal_ow_struct` 1.39 s against `wstar_orbit` 28.9 min — same alphabet, same
+  tokenisation, same distance, **1,252×** — is the paper's actual claim: the
+  search is what costs, and the same language without it is three orders of
+  magnitude cheaper. Reaching past it for a cross-representation multiplier
+  bought a bigger-sounding number at the price of a confound.
+
+  **A ruling that names a required comparator is checkable, so check it.** D-ART4
+  requires the certificate baseline in **two tokenisations** — bytes and one
+  symbol per canonical adjacency row — because "the bytes-only comparison is a
+  tokenisation confound". `nauty_cert_rows` had **already run** (13.87 s, in the
+  same table two files away) and the headline omitted it, quoting the bytes arm
+  alone: 17.5× where the row tokenisation gives **10.0×**. The confound the
+  ruling exists to prevent, reproduced in the direction that flatters us, in the
+  one comparison where the author had already named the comparator. Both are now
+  reported and neither is quoted bare. (Caught by `[IsalHG-Fable]`.)
+
+  **L15 extends from members to cells: a round number in a timing column is a
+  budget until proven otherwise.** L15 says a censored *member's* recorded time is
+  the budget and not a cost. Nothing said it for an aggregate *cell*, and
+  `hpd_jsd`'s whole-matrix entry at N = 3,988 read exactly `3600.000` with
+  `censored=1` and its other two reps `skipped=1` — one step from a table
+  reporting "60 minutes" as the measured cost of that matrix. It is the
+  measurement of a cap. Filed as the extension of L15 rather than as a new
+  lesson, because the reading error is identical and only the granularity moved.
+
+  **A number you repeat is a number you have asserted.** The 41 that was really
+  39 was written by one session and cited back twice by the other as evidence
+  from the first one's own table. *"It came from your table"* is not a check —
+  both parties had reconstructed a count from a rounded rate and neither counted
+  it. Provenance establishes where a number came from, never whether it is right,
+  and a figure that has been through a display transform has to be re-derived
+  from the source rather than read back out of the rendering.

@@ -168,18 +168,32 @@ bipartite GED".** The ordering holds; two magnitudes do not. NetLSD is
 they are faster than predicted — so the measurement is reported and the
 hypothesis is not defended.
 
-**The result the paper wants.** The ordered walk does the whole 3,988² matrix in
-**1.39 s** — second only to the fact-rank certificate (1.11 s), **17.4× faster
-than `nauty_cert`** (24.19 s), and **1,250× faster than the orbit-pruned
-tie-complete form** (28.9 min). Against the search-based program it is not a
-constant-factor win; it is the difference between interactive and overnight.
+**The result the paper wants, stated where it carries no unit problem.** The
+ordered walk does the whole 3,988² matrix in **1.39 s** against the orbit-pruned
+tie-complete form's **28.9 min — 1,252×**. Both arms are Isal words, both
+token-granular, same alphabet and same Levenshtein, so nothing about the
+comparison depends on a serialisation choice: **the search is what costs, and the
+same language without it is three orders of magnitude cheaper.**
 
-*Mechanism not established.* The gap is in the **pair phase** (0.971 s against
-23.960 s, 24.7×), which invites "the Isal word is shorter than the certificate".
-The sweep's length column **cannot settle that**: `tokens_or_bytes` holds
-*tokens* for the walk and *bytes* for the certificate, so 3,886 against 11,692 at
-`m = 160` is a comparison across two units, not a length ratio. The timing gap is
-measured; its cause is not, and no length claim is made from that column.
+**The certificate multipliers are tokenisation-dependent and are never quoted
+bare.** Against `nauty_cert_rows` — one symbol per canonical adjacency row, the
+standard tokenisation — the ratio is **10.0×** (13.87 s); against `nauty_cert`,
+raw bytes, **17.5×** (24.19 s). **Both are reported.** D-ART4 requires the
+certificate baseline in two tokenisations precisely because "the bytes-only
+comparison is a tokenisation confound (audit §1.2 item 2)", and quoting the
+bytes figure alone reproduces the confound the ruling exists to prevent, in the
+direction that flatters us.
+
+*Mechanism not established, and the same objection reaches the timing.* The gap
+is in the **pair phase** (0.971 s against 23.960 s), which invites "the Isal word
+is shorter than the certificate". The length column cannot settle that:
+`tokens_or_bytes` holds *tokens* for the walk and *bytes* for the certificate, so
+3,886 against 11,692 at `m = 160` compares two units. **And a pairwise
+Levenshtein is `O(L₁ × L₂)`** — the matrix time is quadratic in exactly those
+lengths, so a unit objection that disqualifies the length claim disqualifies the
+derived timing claim too. Raised by `[IsalHG-Fable]`. The arms that are not
+Levenshtein over a serialisation — NetLSD, WL, bipartite GED, HPD — carry no such
+qualification.
 
 **Two arms' `censored` / `nan` handling matters here.** `hpd_jsd` recorded
 exactly 3600.000 s at N=3,988 with `censored=1` and its other two reps

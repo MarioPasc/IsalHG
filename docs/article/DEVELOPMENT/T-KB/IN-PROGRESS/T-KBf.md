@@ -2951,22 +2951,45 @@ Array 2271960 finished 74/74 at 03:21. The withheld N-scaling cells landed.
 **The full 3,988 × 3,988 matrix on `wd50k66`** (median of 3 reps; censored and
 skipped reps excluded, not averaged in):
 
-| arm | whole matrix | canon | pair phase |
-|---|---|---|---|
-| `fact_rank` | **1.11 s** | 0.221 | 0.889 |
-| **`isal_ow_struct`** | **1.39 s** | 0.414 | 0.971 |
-| `nauty_cert` | 24.19 s | 0.234 | 23.960 |
-| `netlsd` | 40.61 s | 10.757 | 29.850 |
-| `wl_l1` | 564.21 s | none | 564.208 |
-| `bipartite_ged_assign` | 10.6 min | none | 634.016 |
-| `bipartite_ged_path` | 15.9 min | none | 952.501 |
-| `wstar_orbit` | 28.9 min | 1737.537 | *< noise* |
-| `hpd_jsd` | **≥ 60 min** | — | **censored at the 1 h cap** |
+| arm | whole matrix | canon | pair phase | serialisation |
+|---|---|---|---|---|
+| `fact_rank` | **1.11 s** | 0.221 | 0.889 | fact-rank word |
+| **`isal_ow_struct`** | **1.39 s** | 0.414 | 0.971 | Isal tokens |
+| `size_l1` | 2.81 s | 0.004 | 2.804 | — (scalar) |
+| `degree_seq_l1` | 12.62 s | 0.017 | 12.602 | — (vector) |
+| `nauty_cert_rows` | **13.87 s** | 0.328 | 13.541 | **certificate, one symbol per row** |
+| `nauty_cert` | 24.19 s | 0.234 | 23.960 | **certificate, bytes** |
+| `netlsd` | 40.61 s | 10.757 | 29.850 | — (vector) |
+| `wl_l1` | 564.21 s | none | 564.208 | — (histogram) |
+| `bipartite_ged_assign` | 10.6 min | none | 634.016 | — (assignment) |
+| `bipartite_ged_path` | 15.9 min | none | 952.501 | — (search) |
+| `wstar_orbit` | 28.9 min | 1737.537 | *< noise* | Isal tokens |
+| `hpd_jsd` | **≥ 60 min** | — | **censored at the 1 h cap** | — (divergence) |
 
-The ordered walk is **17.4× faster than the nauty certificate** and **1,250×
-faster than the orbit-pruned tie-complete form** — against the search-based
-program that is the difference between interactive and overnight. Second only to
-`fact_rank`, which the paper no longer claims (D-ART4).
+**The claim to lead with, because it carries no unit problem.**
+`isal_ow_struct` 1.39 s against `wstar_orbit` **28.9 min — 1,252×**. Both are
+Isal words, both token-granular, same alphabet, same Levenshtein: **the search is
+what costs, and the same language without it is three orders of magnitude
+cheaper.** That is the paper's actual claim.
+
+**The certificate multipliers are tokenisation-dependent and are never quoted
+bare.** Against `nauty_cert_rows` (one symbol per canonical adjacency row, the
+standard tokenisation) the ratio is **10.0×**; against `nauty_cert` (raw bytes)
+it is **17.5×**. Both must appear — D-ART4 requires the certificate baseline in
+**two tokenisations** precisely because "the bytes-only comparison is a
+tokenisation confound (audit §1.2 item 2)", and `nauty_cert_rows` is already run
+in RQ2/5/7.
+
+**Raised by `[IsalHG-Fable]`, and the reasoning is one I had already applied and
+failed to carry forward.** I declined the length claim because `tokens_or_bytes`
+mixes tokens and bytes — then headlined a *timing* claim that rests on the same
+lengths, since a pairwise Levenshtein is `O(L₁ × L₂)` and the matrix time is
+quadratic in exactly those units. **A unit objection that disqualifies a length
+claim disqualifies every claim the cost model derives from those lengths.** The
+competitor arms that are not Levenshtein over a serialisation — NetLSD, WL,
+bipartite GED, HPD — carry no such qualification.
+
+Second only to `fact_rank`, which the paper no longer claims (D-ART4).
 
 **H7c's ordering holds; two of its magnitudes do not.** It predicted "seconds for
 `fact_rank`, minutes for the embeddings, hours for bipartite GED". NetLSD is

@@ -145,7 +145,33 @@ the episode that taught it (provenance in `measured_facts.md`).*
   sketch and unverified citations. This re-scope re-checked it computationally
   (`probes_2026-09.md`). Treat every prior verification tag the same way.
 - **L26 — Declare and assert the inputs that decide what a measurement is
-  *about*; never let them be inferred.** Three separate defects in one week,
+  *about*; never let them be inferred.**
+
+  **Read this first, because it explains why the rest of this entry keeps
+  happening inside the artefacts written to prevent it.** Across one session the
+  same pattern appeared four times and each time the author was the person who
+  had filed the governing rule, usually hours earlier:
+
+  | the rule | how it was broken |
+  |---|---|
+  | *declare the expected count* | declared for the sweep, not for the yield forty lines below |
+  | *grep for the result, do not trust the exit code* | a check printed `False` and the commit ran anyway, chained by `&&` |
+  | *grep the code's own prose first* | a task declared on "no counter exists" against an oracle carrying one |
+  | *a number in support of a claim must be from its population* | sweep lengths quoted beside a `wd50k66` timing |
+
+  **A rule you wrote protects you least, because writing it is what makes you
+  feel you have already applied it.** That is not irony, it is the mechanism:
+  authorship converts a rule from something to *run* into something you *know*,
+  and knowing it is exactly what a precondition is supposed to make unnecessary.
+
+  The consequence is structural and is the whole argument for the guards in
+  `scripts/diagnostics/rowsio.py`: **a rule that must be remembered at each call
+  site will not be, and its author is the least likely person to remember it.**
+  Every rule below should be read as a candidate for becoming a function, a
+  failing test, or a tool that refuses — and where it cannot be, as something to
+  be checked by someone who did not write it. (Formulated by `[IsalHG-Fable]`,
+  2026-09-11.)
+ Three separate defects in one week,
   all the same shape, all producing a confident wrong number, none raising:
 
   | inferred value | inferred from | what it produced |

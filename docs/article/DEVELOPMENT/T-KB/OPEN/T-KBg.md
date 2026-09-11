@@ -155,6 +155,38 @@ Already known to be stale or unsourceable, and **do-not-quote** until re-derived
 | completion "within reach 1 75.3 % / 21.0 %" | pre-`reach′`; under `reach′` **76.7 % / 21.3 %** |
 | "256 / 1,000" and "disconnected three times in four" | struck; the sourced values are 0.4157 (NDC) / 0.1260 (WD50K), and no single ratio describes both |
 
+**2026-09-11 — sequencing, not relaxation.** The precondition gates **each
+number at the moment it is folded**; it does not require all seven fact bases to
+exist before any folding begins. The distinction matters because **a stale entry
+is worse than a missing one — a missing entry blocks, a stale one passes** — so
+an entry built for an experiment whose numbers can still move is work done twice
+and a hazard the second time. Sequence by finality:
+
+| RQ | state | action | prose mentions |
+|---|---|---|---|
+| RQ1 | final (frozen deliverable, D-ART5) | **build now** | 19 |
+| RQ2 | closed 2026-09-11 | **build now** | 7 |
+| RQ6 | `rq6_generation_facts.md` | done | 10 |
+| RQ7 | `rq7_envelope_facts.md` | done; revisit at 2271961 terminal | 6 |
+| RQ3 | re-run landed, readings still settling | build when they settle | 11 |
+| RQ4 | depleted `iso_twin` cell awaiting the author | premature | 4 |
+| RQ5 | status unchecked | check before building | 2 |
+
+**RQ1 first, and not as clerical work.** It is the most cited and the most
+settled, and its frozen deliverable makes sourcing a lookup rather than a
+re-derivation — the seventeen files include the tables the numbers came from.
+But all three of the 2026-09-11 corrections (a count reconstructed from a rounded
+rate; sweep lengths quoted beside a `wd50k66` timing; a mean quoted as a
+per-member cost) came out of exactly this exercise on RQ7's six mentions.
+Nineteen mentions against a frozen deliverable is the largest single opportunity
+for the same class, so **budget for it to find things**, and hold the rule when
+it does: a number that cannot be sourced is **struck, not investigated into the
+prose**.
+
+This is an engineering precondition (it is not in `DECISIONS.md`), so the
+sequencing is recorded here with its reasoning rather than referred upward.
+Raised by `[IsalHG-Fable]`.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

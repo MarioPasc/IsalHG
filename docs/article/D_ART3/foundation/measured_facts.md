@@ -1,5 +1,13 @@
 # Measured facts — what the previous iteration actually established
 
+> ⚠ **This is NOT the TKDE campaign's fact base.** These numbers belong to the
+> *metric-space article* (D-ART2 scope): a different corpus, a different
+> representation, a different paper. They are correct **about that work** and
+> will answer a lookup as though sourced, which is exactly what makes the file a
+> hazard — the population trap in filing-system form. The TKDE campaign's
+> entries are `rq<N>_*_facts.md`; a number folded into `prose.md` must come from
+> one of those. (Raised by `[IsalHG-Fable]`, 2026-09-11.)
+
 *Foundation fact sheet for the D-ART3 re-scope. Produced 2026-09-03 by a
 read-only survey of the drive results tree
 (`/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/`) and the ledger

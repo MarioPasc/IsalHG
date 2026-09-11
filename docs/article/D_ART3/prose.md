@@ -226,12 +226,27 @@ class — and separates the two limits.
 what a canonical-labelling engine (nauty) contributes — the ablation the
 author asked for:
 
-| cell | canonical program | nauty's job | exact by | cost | locality |
+| cell | canonical program | nauty's job | exact by | cost (measured, per member) | locality |
 |---|---|---|---|---|---|
 | no nauty | `w*_c`: tie-complete shortlex minimum over walks | none | Theorem A | exponential on symmetric inputs | the search's |
-| oracle only | the same `w*_c`, one branch per stabiliser orbit | automorphism oracle at ties and seeds | Theorem A, value preserved (Prop. C.7) | polynomial oracle calls; measured below | the search's |
-| order only | `w°`, the ordered walk: a deterministic emission along the canonical labelling | supplies the order | Theorem C | one nauty call + linear emission (0.08 ms/member) | the emission's |
+| oracle only | the same `w*_c`, one branch per stabiliser orbit | **`autgrp` only** — an automorphism-group oracle at ties and seeds, never a labelling | Theorem A, value preserved (Prop. C.7) | **median 0.36 ms, mean 436 ms** — a 790× divergence; the mean is the tail | the search's |
+| order only | `w°`, the ordered walk: a deterministic emission along the canonical labelling | supplies the order | Theorem C | **0.098 ms** = one 0.040 ms labelling call **+ 0.058 ms emission** | the emission's |
 | both | `w*_ρ`, the family's greedy walk with the labelling as its residual tie key | the order, used inside the search as the tie key | Theorem C | one greedy run (0.5 ms/member, C++) | the greedy walk's |
+
+Costs are cluster medians over 200 `wd50k66` members
+(`foundation/rq7_envelope_facts.md` §9). **The oracle-only cell is deliberately
+not decomposed**: it takes `autgrp` of the prefix-individualised Levi graph at
+every residual tie and **never a canonical labelling**, so subtracting the
+labelling call that the other cells share would subtract work it does not do.
+That is also why Prop. C.7 can license orbit pruning as value-preserving while a
+rank-refined tie set is forbidden — **the pruned search never consults an
+order.**
+
+**The mean/median split in the oracle-only row is the finding, not an artefact.**
+Reporting that cell as a mean — which a total-over-N naturally produces — gives
+436 ms and describes a corpus; the median gives 0.36 ms and describes a member.
+The paper quotes the median for per-member cost and the mean only where an
+`N`-member corpus is what is being priced.
 
 **What is proved** (`theorem_c_ordered_walk.tex`). Theorem C and Corollary
 C (above). Prop. C.4: closed *and connected* language. Prop. C.5 (star
@@ -245,9 +260,12 @@ rewrites every row that names a re-ranked constant. Prop. C.7: orbit pruning
 returns `w*_c` bit for bit.
 
 **What is measured so far** (a local preview, 60 members per corpus, one
-replication, instruction granularity; the campaign run on Picasso with 27
-seeds, BCa intervals and Holm-corrected paired tests is pending at the time
-of writing — the table below is to be replaced by it):
+replication, instruction granularity). **The campaign has since run** — RQ1's
+deliverable is frozen at `results/IEEETKDE/RQ1_isal/merged/` and RQ7 completed
+2026-09-11 — so the locality table below is the preview and is **superseded on
+cost by §2.3's measured row and by the sweep result that follows it**. It is
+retained until the 27-seed locality figures are folded, and is marked as the
+preview wherever it is cited.
 
 | edit (real corpora) | `w*_c` | ordered walk | certificate rows | fact list (record) |
 |---|---|---|---|---|
@@ -291,6 +309,31 @@ Both numbers go in the paper.
 > that no method can address. The census (69 of 77 at arity 10, |Aut| < 10³) is
 > unchanged; only the explanation is. Rewrite at the fold.
 
+**And the ordered walk has no symmetry frontier at all** — the campaign result
+that supersedes the 100-member preview above. On the RQ7 envelope sweep
+(7,776 instances per arm, 60 s budget; `foundation/rq7_envelope_facts.md` §1):
+
+| `\|Aut\|` | n | pointer alphabet | orbit-pruned `w*_c` | **ordered walk `w°`** |
+|---|---|---|---|---|
+| `< 10³` | 6,734 | 31.1 % censored | 29.0 % | **0** |
+| `10³–10⁶` | 615 | 89.1 % | 65.0 % | **0** |
+| `≥ 10⁷` | 427 | **100 %** | 91.8 % | **0** |
+
+**Zero of 7,776**, including all 427 instances at `|Aut| ≥ 10⁷` where the pointer
+alphabet fails every single one. This is a census, not an estimate, so it needs
+no interval.
+
+**What the frontier actually is, once symmetry is held fixed.** Joined against
+size — because every `≥ 10⁷` instance in the sweep also has `m ≥ 80`, so the
+marginal confounds the two — **arity gates and symmetry modulates inside the
+gate**: `k = 2` censors 0.000 at every `m` and every symmetry level, including
+0 of 22 at `m = 160` with `|Aut| ≥ 10⁷`, while at fixed `(m, k)` censoring rises
+across symmetry buckets in 9 of 15 usable cells and falls in none.
+
+**On the real collections the walk canonicalises everything**: 1381/1381,
+1745/1745, 1837/1837 and 3988/3988 — **8,951 of 8,951** members of the four
+gated collections, at 0.60–0.70 ms median.
+
 **The selection rule was pre-registered** (design record §3): among the
 exact, uncensored arms, the one with the highest fraction of
 constant-preserving edits within two instructions, ties by median; the
@@ -300,8 +343,19 @@ losers stay in the same table. The decision is taken on the campaign table.
 fact list's locality is better, the article does not claim otherwise; its
 distinctiveness rests on what a certificate does not have — a language that
 is closed *and connected*, total decoding, the certified representative, and
-generation with validity 1 — plus the one locality the Isal walk owns
-outright, deletions. That argument is made in §6 and tested in RQ3 and RQ6.
+generation with validity 1 — plus the locality the Isal walk owns outright.
+
+**That last clause previously read "deletions", and the measurement does not
+support it.** Against the *certificate* we own three **pendant** edit kinds (it
+scores 0.000 on all of them); against the *fact list* we do **not** own
+deletions — on interior deletions it is 57.8 % against our 13.9 %. **The axis is
+pendant versus interior, not deletion versus insertion.** A pendant edit touches
+the frontier of the walk and costs a constant; an interior one displaces
+everything the walk has already emitted, and a rank-addressed serialisation pays
+nothing for it because it never emitted an order in the first place. The claim
+is restated on that axis and the fact list keeps interior deletions.
+
+That argument is made in §6 and tested in RQ3 and RQ6.
 
 ## 3. Research questions
 
@@ -421,6 +475,24 @@ sections, in order.
   bases — the single place synthetic data is indispensable, since real
   collections do not span sizes — with the real collections placed on it, and
   the yield table per collection.
+- **Measured** (2026-09-11; 7,776 instances per arm;
+  `foundation/rq7_envelope_facts.md`). The frontier hypothesis **holds, and only
+  the join shows it**: censoring is monotone in `m` in both density series while
+  the pure-`n` effect is non-monotone and **changes sign at `m ≈ 100`**, so `m`
+  is the frontier and `n` is not. Marginally the two looked comparable — every
+  dense cell sits in the lowest symmetry bucket, so the apparent `n` effect was
+  partly symmetry.
+  **The `N`-scaling hypothesis holds in its ordering and fails in two
+  magnitudes**, both in the competitors' favour: the full 3,988 × 3,988 matrix on
+  `wd50k66` is **1.39 s** for the ordered walk against 24.19 s for the
+  byte-serialised certificate, 40.6 s for NetLSD (predicted *minutes*), 10.6 min
+  for bipartite GED (predicted *hours*), and **28.9 min for the tie-complete
+  search** — the walk-against-search ratio being **1,252×**, on one alphabet, one
+  tokenisation and one code path.
+  **No speed claim against the certificate survives.** Its cost is whatever its
+  serialisation says: three tokenisations of the *same* canonical form span
+  **19.2×**, and at the row tokenisation the two are at **parity**. L17's
+  concession stands and the paper makes no canonicalisation-speed claim.
 
 ## 4. Theory delivered
 

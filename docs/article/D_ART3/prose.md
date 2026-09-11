@@ -497,7 +497,7 @@ same nauty call.
 
 Unchanged from the ratified plan and documented in full in
 [`supplementary_data.md`](supplementary_data.md): **WD50K(66)** entity
-knowledge bases (3,167 genuinely n-ary members in the envelope; Wikidata types
+knowledge bases (**3,162** genuinely n-ary members in the envelope; Wikidata types
 as class labels, imbalance stated; WD50K(100) as purity control) and
 **NDC-classes** quarterly co-formulation knowledge bases (**1,381** members,
 **22.2 %** of consecutive quarters one-edit variants with exact fact-level truth;

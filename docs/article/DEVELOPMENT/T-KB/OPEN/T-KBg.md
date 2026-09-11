@@ -328,6 +328,42 @@ matches **digit strings**, so it yields candidates and the two flags above had t
 be checked by hand. Bounded and complete beats unbounded and heuristic; neither
 is an audit. (Raised by `[IsalHG-Fable]`.)
 
+**2026-09-11 — the screen run over all five corpora, and improved so it needs no
+pre-freeze census.** `[IsalHG-Fable]`: the reconciliation covered two corpora and
+only `ndc_classes` had been swept. Correct, and the hit was where predicted.
+
+**First version was the wrong shape.** It searched the prose for each census
+field's **built** value and reported presence — which cannot detect staleness
+without already knowing the superseded value, so it found the `ndc_classes`
+figures (whose pre-freeze values I had) and nothing in the other four.
+
+**The form that works: near-miss detection.** A prose integer **within 1 % of a
+census value but not equal to it** is a stale-value candidate. No pre-freeze
+census required, so it generalises to every corpus whose old numbers are not to
+hand. Run over all five collections:
+
+| corpus | census mismatches | prose hit |
+|---|---|---|
+| `wd50k66` | 2 | **3,167** against `n_records_with_arity_ge3` = **3,162** |
+| `ndc_classes` | 10 | (the two already corrected) |
+| `wd50k100` | 1 | none |
+| `ndc_substances` | 3 | none |
+| `wd50k66_full` | 0 | none |
+
+`prose.md` §7 described **"3,167 genuinely n-ary members in the envelope"** — the
+pre-freeze value, in the same paragraph shape as the 1,432, in the paper's
+largest collection. **Corrected to 3,162.**
+
+**Three prose corrections, all from one reconciliation that stopped at the
+counts:** 74.8 → 75.8 %, 1,432 → 1,381 with 21.6 → 22.2 %, and 3,167 → 3,162.
+
+**Residual after the sweep: none.** Two remaining candidates are false positives
+and are recorded as such — *"one in 578"* is a collision rate unrelated to
+`ndc_substances`'s `delta_gt5` = 576, and `1,381` is `n_records` (correct),
+flagged only because the adjacent `n_records_with_arity_ge3` = 1,380 sits one
+away. **Adjacent census fields differing by a hair will always flag**, which is
+the near-miss screen's own cost and is cheaper than the figure it catches.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

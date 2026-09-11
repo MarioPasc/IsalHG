@@ -579,6 +579,36 @@ names a representation the article no longer adopts. A reader who takes
 "the adopted encoding" at face value from a published supplement reaches the
 opposite conclusion from §2.3.
 
+**Third finding — the paper CITES it, which is what decides between the two
+options.** `prose.md` §7 opens: *"Unchanged from the ratified plan and
+**documented in full in `supplementary_data.md`**"* — and then states **3,162**
+n-ary members, **1,381** NDC-classes members, **22.2 %** one-edit variants, all
+corrected tonight. **The supplement it cites in that sentence still carries
+3,167 / 1,432 / 21.6 %.**
+
+So this is not a stale document sitting beside the paper. It is the account the
+paper **sends the reader to**, and the sentence doing the sending now contradicts
+it on three figures and on the representation.
+
+That is asymmetric between the options, and it is the asymmetry the author needs:
+
+- **Option 1 (correct it)** costs nothing that has not been checked: the
+  reconciliation survives in `census.json`'s `audit.rows` and in
+  `freeze_corpora.py`'s hardcoded `EXPECTED`, both verified to be independent of
+  the document.
+- **Option 2 (label it)** means publishing, under the paper's own citation, a
+  document whose counts and whose framing contradict the citing section — with a
+  note explaining that what the paper directs you to is wrong in two ways. **A
+  label does not reach a reader who follows a citation**, because they arrive at
+  the content first. (Raised by `[IsalHG-Fable]`.)
+
+**One claim in §7 checked and NOT a defect.** "Unchanged from the ratified plan"
+was flagged as pre-ruling framing on the grounds that D-ART4 amended the plan.
+D-ART4 changed the **representation**, not the corpus selection, and that clause
+is about which collections are used — which is unchanged. The figures in the
+sentence moved at the **freeze**, not at the ruling, and they are corrected. The
+clause stands.
+
 *Not edited here, deliberately: this file's disposition is the decision, so
 changing it would pre-empt the ruling. Recorded instead.* (The sweep that found
 it was proposed by `[IsalHG-Fable]` on the basis that the test is not whether a

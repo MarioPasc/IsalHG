@@ -340,6 +340,73 @@ The ordered walk is **1.77× one certificate call** — it makes that call and a
 the walk, so this is one call plus 77 %. The tie-complete form is **7,420×**, and
 the two Isal arms differ by 4,193× on the same corpus and path.
 
+#### Correction — 7,420× is a **mean**, and the median ratio is 7.5×
+
+`[IsalHG-Fable]` asked whether the table above is means. It is: 435.6914 ms ×
+3,988 = 1,737.537 s, exactly the recorded canon total, so every figure is
+*total / N*. For the arms that do not have a heavy tail that is harmless — but
+`wstar_orbit` has one, and the mean is **622× its own median**.
+
+Measured per member, 200 random `wd50k66` members (**local machine**, so read the
+ratios, not the absolute values — the cluster runs ~3× slower):
+
+| arm | median | mean | p90 | p99 | max |
+|---|---|---|---|---|---|
+| `canonical_ranks` *(the shared nauty call)* | 0.0155 | 0.0209 | 0.0338 | 0.054 | 0.379 |
+| `nauty_cert` | 0.0171 | 0.0210 | 0.0343 | 0.055 | 0.080 |
+| `nauty_cert_rows` | 0.0191 | 0.0233 | 0.0392 | 0.062 | 0.063 |
+| `fact_rank` | 0.0215 | 0.0259 | 0.0418 | 0.067 | 0.068 |
+| **`isal_ow_struct`** | **0.0349** | 0.0447 | 0.0790 | 0.128 | 0.148 |
+| **`wstar_orbit`** | **0.1281** | **79.7200** | 14.5285 | **1413.7** | **6464.7** |
+
+**The two questions need different statistics, so both are reported with labels.**
+
+* **Mean** (= total ÷ N) — what an `N`-member corpus costs to canonicalise. The
+  right number for the matrix and for planning a run. `wstar_orbit`: **7,420×**
+  the certificate.
+* **Median** — what *a member* costs. The right number for the concession's
+  sentence about identity speed. `wstar_orbit`: **7.5×** the certificate
+  (0.1281 / 0.0171).
+
+**Three orders of magnitude between them**, and the earlier entry quoted only the
+mean. The tail is real and is the paper's subject — p99 1.41 s, max 6.46 s, from
+a median of 0.13 ms — but *"the tie-complete form costs 7,420× a certificate call
+per member"* misdescribes the typical member by a factor of a thousand. Note the
+canon loop applies **no per-member budget** (`_matrix_timing` calls
+`fingerprint(H)` directly), so these means are not a function of a cutoff — the
+hard members contribute their true cost.
+
+**The 1.77× is safe, as predicted.** The walk and both certificate arms censor
+nothing and have no tail, so their mean and median agree: 1.77× (cluster mean)
+against 2.04× (local median). Only the search arm needed the correction.
+
+#### The decomposition — what the language itself costs
+
+All three of `nauty_cert`, `nauty_cert_rows` and `isal_ow_struct` make the **same**
+canonical-labelling call on the same coloured Levi graph and differ only in what
+they do with the result. So the table is a decomposition, on a median shared call
+of **0.0155 ms**:
+
+| | on top of the shared call | as a multiple of it |
+|---|---|---|
+| serialising the certificate to bytes | +0.0016 ms | 1.10× |
+| serialising it to adjacency rows | +0.0036 ms | 1.23× |
+| the fact-rank word | +0.0059 ms | 1.38× |
+| **emitting the Isal ordered walk** | **+0.0194 ms** | **2.25×** |
+
+**So the concession's sentence is not a multiple, it is a quantity: the Isal word
+costs about 0.019 ms on top of a canonical-labelling call that every arm in the
+comparison pays anyway** — roughly one and a quarter times that call again, where
+the certificate's own serialisation costs a tenth of it. That is a stronger form
+of R6's anticipation than 1.77×, because it no longer assumes the certificate's
+serialisation is negligible; it measures it. (Suggested by `[IsalHG-Fable]`.)
+
+**`fact_rank` is at parity with the certificate and that goes in.** 0.95× on the
+cluster mean, 1.26× on the local median — within 30 % either way. It is the
+retired arm and this is the third axis on which it matches or beats us; rule 7
+says it is reported as directly as the rest, and the paper is stronger for
+saying so three times than for saying it twice.
+
 **Not to be mixed with the yield figures.** The yield rows measure the harness
 path (a forked budget guard per member): `fact_rank` 0.187 ms, `isal_ow_struct`
 0.654 ms on the same corpus — **3.4×** and **6.3×** the canon-loop values. The

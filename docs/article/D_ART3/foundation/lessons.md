@@ -900,3 +900,43 @@ the episode that taught it (provenance in `measured_facts.md`).*
 
   So a re-read reports all three counts, and `only-live` is never folded into a
   summary line that says "no change".
+
+  **A total divided by `N` is a mean, and on a heavy tail a mean is not a
+  statement about a member.** The identity-timing concession was quoted from the
+  N-scaling pass as "per member" cost. It is `total / N`: 435.6914 ms × 3,988 is
+  exactly the recorded 1,737.537 s canon total. For the arms without a tail that
+  is harmless — the walk and both certificate arms agree between mean and median
+  to within 15 %. For the orbit-pruned search form the **mean is 622× its own
+  median** (79.72 ms against 0.1281 ms; p99 1.41 s, max 6.46 s), so the published
+  "**7,420×** a certificate call per member" describes the typical member
+  **a thousandfold** wrong; the median ratio is **7.5×**.
+
+  Both statistics are right, for different questions, and the fix is to label
+  them rather than choose: **the mean is what an `N`-member corpus costs to
+  canonicalise** — the right number for a matrix and for planning a run — **and
+  the median is what a member costs**, the right number for a sentence about
+  per-member speed. A figure that answers one while being quoted for the other is
+  the same defect as a rate quoted against the wrong denominator, which L26
+  already covers for rates and did not for central tendency.
+
+  The diagnostic is cheap and general: **for any per-unit figure derived by
+  division, print the median beside it.** Where they agree, nothing was hidden;
+  where they diverge, the divergence *is* the finding — here it is the tail that
+  the whole tail600 experiment exists to characterise, arriving in a summary
+  statistic that had flattened it. (Raised by `[IsalHG-Fable]` from the
+  arithmetic: 435 ms × N reproducing the matrix total exactly is what gives a
+  mean away.)
+
+  **And a ratio between two things that share most of their work should be
+  decomposed, not reported as a multiple.** `nauty_cert`, `nauty_cert_rows` and
+  `isal_ow_struct` all make the *same* canonical-labelling call and differ only
+  afterwards, so "the walk costs 1.77× the certificate" hides that both figures
+  are dominated by a call they share. Timing the shared call splits it: on a
+  median 0.0155 ms `canonical_ranks`, serialising to bytes adds 0.0016 ms,
+  to rows 0.0036 ms, and emitting the Isal walk 0.0194 ms.
+
+  The multiple then becomes a quantity — *the language costs about 0.019 ms on
+  top of a canonical-labelling call every arm pays anyway* — which is both
+  stronger and more falsifiable, and which stops assuming the denominator's own
+  serialisation is negligible. **A multiple against a competitor that does part
+  of the same work is a comparison with a shared term that nobody has measured.**

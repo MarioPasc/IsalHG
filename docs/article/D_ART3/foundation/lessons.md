@@ -963,3 +963,30 @@ the episode that taught it (provenance in `measured_facts.md`).*
   stronger and more falsifiable, and which stops assuming the denominator's own
   serialisation is negligible. **A multiple against a competitor that does part
   of the same work is a comparison with a shared term that nobody has measured.**
+
+  **A subtraction is only meaningful when the term being subtracted is actually
+  shared.** The identity-cost decomposition subtracted a median
+  `canonical_ranks` call from every arm, as the work they all pay before
+  diverging. Four of them do pay it. `wstar_orbit` does not: it is the
+  *oracle-only* cell, taking `autgrp` of the prefix-individualised Levi graph at
+  every residual tie and **never a canonical labelling** — which is precisely why
+  D-TA2 can sanction orbit pruning as value-preserving while forbidding a
+  rank-refined tie set, since the pruned search never consults an order.
+
+  Subtracting anyway produced "+0.3237 ms, 9.06× the shared call", which reads as
+  *one canonical labelling plus eight more of them in own work* when the truth is
+  **a different nauty entry point invoked an unbounded number of times**. The
+  arithmetic succeeded only because both quantities were milliseconds — the same
+  failure as comparing tokens to bytes, one level up: **units matching is not the
+  same as terms corresponding.**
+
+  The fix costs nothing and touches no other row: leave the decomposition blank
+  for that arm, say why, and quote its cost absolutely — median 0.364 ms, 8.1×
+  the certificate's — which is an arm-to-arm comparison needing no shared term.
+  **A decomposition column must state which arms are in it**, because a blank is
+  information and a number that does not belong is not.
+
+  And the check was one grep of the repo's own prose: `isal_engine.py` says
+  *"nauty is an automorphism oracle only"* and `orbit_oracle.py` says
+  *"Stabiliser orbits … via `pynauty.autgrp`"*. Third time tonight that the code's
+  comments answered a question faster than measuring or reasoning would have.

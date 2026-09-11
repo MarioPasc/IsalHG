@@ -397,7 +397,7 @@ a machine caveat — `scripts/diagnostics/rq2_identity_decomposition.py`,
 | `nauty_cert_rows` | 0.0510 | 0.0613 | 0.160 | 0.168 | +0.0108 (**1.27×**) |
 | `fact_rank` | 0.0559 | 0.0672 | 0.168 | 0.175 | +0.0157 (**1.39×**) |
 | **`isal_ow_struct`** | **0.0982** | 0.1260 | 0.338 | 0.742 | **+0.0580 (2.45×)** |
-| `wstar_orbit` | 0.3639 | **287.68** | 3975.6 | **24525.0** | +0.3237 (9.06×) |
+| `wstar_orbit` ‡ | 0.3639 | **287.68** | 3975.6 | **24525.0** | *(not applicable — see ‡)* |
 
 **The concession's sentence, as a quantity rather than a multiple:** *the Isal
 ordered walk costs **0.058 ms** on top of a **0.040 ms** canonical-labelling call
@@ -406,6 +406,24 @@ serialising the certificate to bytes costs 1.12× of it and to adjacency rows
 1.27×. That is stronger than "1.77× the certificate" because it no longer assumes
 the certificate's own serialisation is negligible: it measures it, at roughly a
 tenth of the shared call. (Suggested by `[IsalHG-Fable]`.)
+
+**‡ `wstar_orbit` is not in this decomposition, because it does not make the
+shared call.** It is the *oracle-only* cell of the ablation: nauty supplies
+`autgrp` of the prefix-individualised Levi graph at every residual tie and never
+a canonical labelling — the repo says so in as many words
+(`isal_engine.py`: *"nauty is an automorphism oracle only, so the value **is** the
+frozen `w*_c`"*; `orbit_oracle.py`: *"Stabiliser orbits … via `pynauty.autgrp`"*,
+with an `autgrp_calls` counter). That is precisely why D-TA2 can sanction orbit
+pruning as value-preserving while forbidding a rank-refined tie set: **the pruned
+search never consults an order.**
+
+Subtracting `canonical_ranks` from it would subtract a call it never makes, and
+would read as "one canonical labelling plus eight more in own work" when the
+truth is a *different nauty entry point invoked an unbounded number of times*.
+The subtraction yields a number only because both are milliseconds — the failure
+this column exists to prevent. So its cost is quoted **absolutely**: median
+**0.3639 ms**, which is **8.1×** the certificate's 0.0450 ms — an arm-to-arm
+comparison that needs no shared term. (Caught by `[IsalHG-Fable]`.)
 
 **Ratios are portable, absolutes are not.** The same decomposition on a local
 workstation gives the walk at 2.25× the shared call against the cluster's 2.45×,

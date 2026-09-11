@@ -523,6 +523,47 @@
 
 ---
 
+## D-KBg1 (pending) — `supplementary_data.md`: TWO questions, only one of them a judgement call
+
+**Read this split first.** The supplement is wrong in two *independent* ways and
+they have been weighed as one question. Separating them matters because the half
+with no defensible alternative would otherwise be decided by whichever way the
+other goes. (Separation raised by `[IsalHG-Fable]`.)
+
+### D-KBg1**a** — the counts. *A genuine choice.*
+
+Correct them to the built corpora, **or** keep the document as a deliberate
+pre-freeze record and label it. **The pre-freeze-record argument has real
+force**: a supplement describing what was *planned* is a coherent artefact even
+after the plan moved, and the reconciliation is preserved regardless in
+`census.json`'s `audit.rows` and `freeze_corpora.py`'s `EXPECTED`.
+
+Weighing against it: `prose.md` §7 **cites this document** as the full account
+of the corpora, in a sentence now carrying the corrected 3,162 / 1,381 / 22.2 %
+against the supplement's 3,167 / 1,432 / 21.6 %. A label does not reach a reader
+who follows a citation — they arrive at the content first.
+
+### D-KBg1**b** — the representation framing. *Recommended: correct, either way.*
+
+Line 190 calls the retired fact-addressed word **"the adopted encoding"**; the
+file mentions D-ART4 **zero** times.
+
+**This half does not turn on the answer to (a).** A data supplement preserved as
+a pre-freeze record is a record *of corpora* — asserting which representation the
+article adopts was never its role, and D-ART4 settled that question two days
+after this file was written. **There is no version of "keep it as a pre-freeze
+record" in which that clause is worth preserving**, because the clause is not a
+record of a corpus decision at all. It is also the half that creates the direct
+contradiction with §2.3.
+
+*Recommendation: correct (b) regardless of how (a) is ruled.* Stated as a
+recommendation and not an action — it is the author's, it changes a published
+artefact, and rule 10 found no prior ruling.
+
+---
+
+### The original framing, kept for the record
+
 ## D-KBg1 (pending) — does `supplementary_data.md` get corrected to the built corpora?
 
 **Raised:** 2026-09-11 04:43 CEST, by `[IsalHG-Fable]` via the corpus figure screen.

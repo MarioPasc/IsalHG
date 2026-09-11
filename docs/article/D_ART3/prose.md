@@ -604,20 +604,36 @@ RQ1 fills; the last three are where the certificate member differs from us,
 and RQ3 and RQ6 are the experiments that make the difference visible.
 
 **That column must be two columns — *pendant* and *interior* — and not because
-our entry is awkward.** Run the test down every row of §2.3's locality table and
-**no row is uniform**:
+our entry is awkward.** On the rows the main text carries, neither is uniform and
+the two conditionals point in **opposite directions**:
 
-| | strongest | weakest |
+| main-text row | strongest | weakest |
 |---|---|---|
 | ordered walk | the **pendant** kinds — delete a fact (0.43–0.61), remove an argument (0.51) | interior insertion (0.00–0.02) |
-| fact list | **interior** — add an argument (0.32–0.66), add a fact over existing constants (0.49–0.52) | delete a fact (0.12–0.20) |
 | certificate rows | its only non-zero cells are **interior** widening (0.18–0.32) | 0.000 on three kinds outright |
 
-So a single *locally stable* column does not exist for **any** representation,
-and ours is not the exception — it is the row where the absence happened to be
-noticed. The three are **complementary, not ordered**: each owns an axis the
-others lose, which is what the campaign measured and what no binary column can
-say.
+So a single *locally stable* column does not exist for **either** of them, and
+ours is not the exception — it is the row where the absence happened to be
+noticed. The two are **complementary, not ordered**: each owns an axis the other
+loses, which is what the campaign measured and what no binary column can say.
+The retired fact word makes the same point more sharply — it is the mirror image
+of ours, strongest on interior and weakest on deletion — and that is **a sentence
+here and a table in the supplement**, per D-ART4 (1): its rows do not appear in
+our tables, and naming it as the comparator that beats us on interior is the
+consequence the ruling instructs the prose to own.
+
+**The two columns are filled where RQ1 measured and blank-with-a-reason
+elsewhere.** RQ1's arms were the Isal cells, the two certificate tokenisations
+and the fact arms — **not** WL, NetLSD, hyperedge portrait divergence, HyperCOT,
+the bipartite pipeline or the naive floors, which make up most of the rows above.
+Filling those cells would mean importing the sibling article's sensitivity
+profiles, measured on a different corpus with a different representation for a
+different paper. The reason is stated once, under the table: *locality on these
+axes was measured for the canonical-word family on this campaign's corpora; no
+equivalent measurement exists for the embedding competitors.* **A blank with a
+stated reason is information; a cell filled from another paper's corpus is the
+defect** — and it is the one `foundation/measured_facts.md` now carries a header
+against.
 
 **Two columns state the concession structurally instead of in a sentence.**
 §2.3 already concedes in prose that where the certificate's or the fact list's
@@ -627,8 +643,11 @@ the rest differently from one who meets a qualified tick, which is the version
 that looks like it is protecting something. It also gives RQ1 a clean job:
 the matrix poses the question per axis and RQ1 answers it per axis, rather than
 filling a cell whose definition it has to renegotiate. (Raised by
-`[IsalHG-Fable]`; the per-row profiles above are the §2.3 preview, 60 members
-per corpus, and are replaced when the 27-seed locality figures land.)
+`[IsalHG-Fable]`, and narrowed by it from "every row" to the rows RQ1 measured.
+The profiles above are the §2.3 **preview**, 60 members per corpus; the campaign
+figures are frozen and per corpus in `IEEETKDE/RQ1_isal/merged/` — `regime` **is**
+the pendant/interior axis there — so this is a transcription, and it is owed
+before the matrix is read as the paper's summary of itself.)
 
 **Nauty's role, stated once.** The canonical order of the constants is
 computed by nauty's individualisation–refinement on the coloured incidence

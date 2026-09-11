@@ -74,27 +74,26 @@ because **every dense cell sits in `<1e3`**.
 
 | collection | n | median m | p90 | max | at `m ≥ 80` |
 |---|---|---|---|---|---|
-| `ndc_classes` | 828 | 3 | 5 | 30 | **0** |
+| `ndc_classes` | **828 of 1,381** | 3 | 5 | 30 | 0 — **partial, see below** |
 | `ndc_substances` | 1,745 | 4 | 16 | 41 | **0** |
-| `wd50k100` | 919 | 5 | 11 | 27 | **0** |
+| `wd50k100` | **919 of 1,837** | 5 | 11 | 27 | 0 — **partial, see below** |
 | `wd50k66` | 3,988 | 5 | 11 | 29 | **0** |
 | `wd50k66_full` | 4,554 | 5 | 18 | 303 | 41 (0.9 %) |
 
 **RQ1 (orbit pruning takes censoring at `|Aut| ≥ 1e7` from 36 to zero on real
 corpora) and RQ7 (orbit censors 392/427 in that bucket) are both correct and
-describe disjoint regions.** Every `≥1e7` sweep instance has `m ≥ 80`; no member
-of the four gated collections reaches it; at the real median `m ≈ 5` the sweep
+describe disjoint regions.** Every `≥1e7` sweep instance has `m ≥ 80`; no member of the three collections read whole reaches it; at the real median `m ≈ 5` the sweep
 censors 0.000 at every arity. **The paper states this explicitly** — the two
 numbers are both going in, and unreconciled they are a reviewer's gift.
 
 ## 5. Yield on the real collections (60 s budget, one row per member)
 
-| collection | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` |
-|---|---|---|---|
-| `ndc_classes` | 828/828 = 1.000 | **828/828 = 1.000** | 726/828 = 0.877 |
-| `ndc_substances` | 1745/1745 = 1.000 | **1745/1745 = 1.000** | 1489/1745 = 0.853 |
-| `wd50k100` | 919/919 = 1.000 | **919/919 = 1.000** | 771/919 = 0.839 |
-| `wd50k66` | 3988/3988 = 1.000 | **3988/3988 = 1.000** | 3742/3988 = 0.938 |
+| collection | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` | status |
+|---|---|---|---|---|
+| `ndc_classes` ⚠ | 828/828 | 828/828 | 726/828 = 0.877 | *(60 % of 1,381 — no claim)* |
+| `ndc_substances` | 1745/1745 = 1.000 | **1745/1745 = 1.000** | 1489/1745 = 0.853 | complete |
+| `wd50k100` ⚠ | 919/919 | 919/919 | 771/919 = 0.839 | *(50 % of 1,837 — no claim)* |
+| `wd50k66` | 3988/3988 = 1.000 | **3988/3988 = 1.000** | 3742/3988 = 0.938 | complete |
 | `wd50k66_full` | 4554/4554 = 1.000 | not run | not run |
 
 Median cost on completed members: `fact_rank` 0.156–0.199 ms,
@@ -145,3 +144,42 @@ Competitors, complete over `N ∈ {250, 500, 1000, 2000, 3988}` (log-log slope o
 the pair phase on `N`): `bipartite_ged_assign` 1.913, `bipartite_ged_path`
 1.924, `wl_l1` 1.872, `nauty_cert` 1.706, `nauty_cert_rows` 1.638, `netlsd`
 1.494, `degree_seq_l1` 1.476, `size_l1` 1.149.
+
+### ⚠ Two collections were read partial, and the slice is not random
+
+Raised by `[IsalHG-Fable]`, who noticed the yield table gives `ndc_classes` at
+**828** where RQ1's census gives **1,381**. The corpora manifest is
+authoritative: 1,381. The yield pass shards a collection by contiguous
+`block_slice`, and for `ndc_classes` only blocks **002, 003, 004 of 005** have
+landed; for `wd50k100`, block **000 of 002** (manifest: 1,837). Nothing failed —
+array tasks 60 and 64 are still running.
+
+**The slice is ordered in `m`, descending.** Measured on the collections that
+*are* complete, block medians run 6, 6, 5, 4, 4, 3 (`ndc_substances`) and
+5, 5, 4, 4, 4, 5 (`wd50k66`). So the direction differs per collection and must
+be stated per collection:
+
+| collection | read | blocks present | missing | which end |
+|---|---|---|---|---|
+| `ndc_classes` | 828 / 1,381 (60 %) | 2, 3, 4 | **0, 1** | its **largest** members |
+| `wd50k100` | 919 / 1,837 (50 %) | 0 | 1 | its smallest members |
+
+So `ndc_classes`'s observed maximum of `m = 30` is a **floor**, and its
+`m ≥ 80` count of zero is **not yet established** — the unread blocks are
+exactly where a large member would be. `wd50k100`'s zero is on the larger half
+and is the better-supported of the two. Neither carries a yield claim until its
+blocks land.
+
+**What this cost, and why the guard did not fire.** The sweep's expected row
+counts were declared up front (7,776 / 7,938) and verified; the yield's were
+not, so "828/828 = 1.000" reported a rate over whatever had arrived. The rule
+that catches this is L26's — *declare the input* — applied to one half of the
+same script and not the other. `rq7_envelope_reading.py` now asserts every
+collection against the manifest and names the absent blocks, since the blocks
+present cannot report the ones that never landed.
+
+**The claim that survives unchanged.** The 0-of-7,776 sweep censoring is
+untouched: the sweep is complete and verified per arm. The real-corpus yield
+claim currently rests on `wd50k66` (3,988) and `ndc_substances` (1,745) read
+whole — 5,733 members, every one canonicalized by the ordered walk — and is
+restated to those two until the rest lands.

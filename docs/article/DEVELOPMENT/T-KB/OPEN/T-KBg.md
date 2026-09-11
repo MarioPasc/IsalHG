@@ -168,7 +168,7 @@ and a hazard the second time. Sequence by finality:
 | RQ2 | **fact base written** — `rq2_wellposedness_facts.md`; the fold here is a **fill**, not an audit | **screened** | 7 |
 | RQ6 | `rq6_generation_facts.md` | done | 10 |
 | RQ7 | `rq7_envelope_facts.md` | done; revisit at 2271961 terminal | 6 |
-| RQ3 | re-run landed, readings still settling | build when they settle | 11 |
+| RQ3 | **verified unsettled** — re-runs under the corrected objective; ~180 of 4,457 collections change, "the re-run is not optional" (T-KBf L1411) | **blocked on the campaign** | 11 |
 | RQ4 | depleted `iso_twin` cell awaiting the author | premature | 4 |
 | RQ5 | status unchecked | check before building | 2 |
 

@@ -64,9 +64,18 @@ comparison, and understating it. Matched, it is 662×.)*
 
 ## Acceptance
 
+0. **Confirm the `N` behind every row on both sides, before anything else.** Done
+   for the table above — the paragraph declares `N = 3,988` and annotates its two
+   exceptions — but redo it for any row added later. Whole-matrix times at
+   different `N` are not comparable, and a 16× difference in pairs can
+   manufacture an apparent agreement or conceal a real one. This step decides
+   what the lineage question is even looking for. *(Raised by `[IsalHG-Fable]`
+   against the first draft of this task, which compared six arms after
+   establishing `N` for only one of them.)*
 1. **Establish the lineage** of the walkthrough's paragraph — which results root
-   and job produced 864 s / 2,724 s — before any number is changed. If it is a
-   superseded root, the paragraph is restated from
+   and job produced 864 s and 2,724 s — before any number is changed. Only
+   `nauty_cert` and `netlsd` need explaining; the other four are stable at
+   matched `N`. If it is a superseded root, the paragraph is restated from
    `rq7_envelope_facts.md` §8 and marked with its source.
 2. **Report both tokenisations** wherever a certificate comparison appears, per
    D-ART4: `nauty_cert` (bytes) **and** `nauty_cert_rows` (one symbol per

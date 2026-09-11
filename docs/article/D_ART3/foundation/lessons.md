@@ -661,3 +661,28 @@ the episode that taught it (provenance in `measured_facts.md`).*
   it. Provenance establishes where a number came from, never whether it is right,
   and a figure that has been through a display transform has to be re-derived
   from the source rather than read back out of the rendering.
+
+  **Chaining a commit to its own verification defeats the verification.** The
+  T-KBx update ran a substitution, printed `step 0 present: False`, and committed
+  anyway — with a message asserting the step was there — because the check and
+  the `git commit` were joined by `&&` in one invocation, so the output arrived
+  only after the commit had run. The check worked perfectly and changed nothing,
+  which is the worst of both: the cost of verifying, none of the benefit.
+
+  This is the same defect as the earlier one-hour `3600.000` and the earlier
+  vacuously-successful heredoc, but the mechanism is new and mechanical rather
+  than cognitive: **`&&` means "if the previous command exited zero", and a
+  `print()` of a failed assertion exits zero.** A check whose result is a
+  *printed string* rather than a *non-zero exit* cannot gate anything, however
+  clearly it is worded.
+
+  Two fixes, and the second is the one that scales. Make the check exit non-zero
+  — `assert`, or `grep -q` whose status `&&` actually reads. And **never put a
+  write in the same invocation as the check that is supposed to authorise it**:
+  read the output, then decide. The whole point of verifying is to have a moment
+  where the answer could change what happens next, and a chained command deletes
+  that moment while keeping its appearance.
+
+  Third occurrence tonight of a commit message asserting something the commit did
+  not contain. The other two were anchors that did not match; this one was an
+  anchor that did not match **and said so**.

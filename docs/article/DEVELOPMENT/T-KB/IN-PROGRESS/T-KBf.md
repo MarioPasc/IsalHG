@@ -2646,3 +2646,33 @@ of writing): if all 16 shards reproduce, the tail600 verdict carries an
 independent replication on top of its two tests, which is more than the
 pre-registration asked for. If any shard's outcomes move, that is a boundary
 member and it is worth naming.
+
+#### Replication complete: all 16 shards, zero censoring flips
+
+The recovery sweep `2279007` finished all 16 shards. Diffed **per member**
+against the rows the verdict was computed from:
+
+| | |
+|---|---|
+| files / rows / key set | 16 → 16, 130 → 130, **identical** |
+| columns differing | **`secs` only, in 46 rows** |
+| **censoring flips** | **0** |
+| `wstar_orbit` completed | 19/77 → **19/77** |
+| `wstar_rank` completed | 27/53 → **27/53** |
+
+**The 46 is a self-check:** 19 + 27 = 46 is exactly the number of *completions*.
+A censored row records `secs = 600.0` by construction and cannot differ, so every
+row that *could* vary did vary, and **not one changed its outcome**.
+
+So the tail600 result is **replicated member-for-member on an independent second
+pass**, on different nodes some hours later. Every member landed the same side of
+the 600 s boundary twice.
+
+**What this adds.** The verdict already carried two tests answering two
+objections — the pooled Fisher for effect size, the stratified sign test for
+load-independence. It now also carries a replication, which answers a third
+objection nobody raised: that a budget-threshold measurement might be unstable at
+the boundary. It is not, here: **no member of either arm sits close enough to
+600 s for machine conditions to move it.** That is worth one clause, because it
+is the property a reviewer would reasonably doubt about any wall-clock cutoff and
+it was obtained for free from a sweep that exists for a different purpose.

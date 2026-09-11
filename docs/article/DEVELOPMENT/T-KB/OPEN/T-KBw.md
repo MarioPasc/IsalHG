@@ -103,6 +103,51 @@ before the cache check — and this is exactly the kind of "the instrument measu
 something adjacent to what you asked" question that the rest of this task exists
 to force.
 
+### Correction, same day — the counter is **not** the branch factor
+
+`[IsalHG-Fable]`, against the update above: the half-refutation is smaller than
+it claims, and the cache caveat has a larger consequence than "misses versus
+entries".
+
+The mechanism under test is *displacement enumeration **×** branch factor* —
+each branch re-does the enumeration — so what it needs is **how many times the
+search body executed**. `autgrp_calls` counts oracle invocations that **missed
+the cache**. A branch reaching a prefix already cached still explores, still
+re-runs its enumeration, and **increments nothing**. And a tie set reduced once
+can be entered by many branches, so *neither* misses *nor* entries is the branch
+count.
+
+So **"branches explored has no counter" stands**, and it is the one the mechanism
+needs. The premise was wrong about the code and right about what it was asking
+for. The update above overstated the finding; this is the correction.
+
+### But exposing it answers a different question nothing else can
+
+Multiply `autgrp_calls` by a measured per-call `autgrp` cost and compare against
+the arm's total canonicalisation time, and you get **the fraction of the
+search-based program's cost that *is* nauty**.
+
+That is the question the four-cell ablation exists to answer, and the ablation
+currently answers it **structurally** — the oracle changes time, not value —
+without ever pricing it. A number is much stronger: *on the orbit engine, nauty
+accounts for X % of the cost and the rest is the family's own search.* Large or
+small, it answers the reviewer's objection directly, and nothing else in the
+campaign can produce it.
+
+**So the task's first step is cheap, needs no new counter, and is not
+instrumentation.** Expose the counter, run it over completing members that
+already exist, and ask two questions at once:
+
+1. **Does total cost track `autgrp_calls` tightly?** If it does, the oracle
+   dominates and a branch counter may be unnecessary — the mechanism is "nauty
+   calls multiply", a simpler story than the one drafted above.
+2. **What fraction of cost do the calls account for?** The residual **is** the
+   search body, i.e. the branch work the mechanism claims — measured by
+   subtraction rather than by a counter that does not exist.
+
+Either outcome is worth more than the instrumentation debate, and neither needs
+the counter this task was declared to build.
+
 **Rule this instance illustrates** (`lessons.md`): *when the objection is about
 what a pipeline does, grep the code's own prose first.* This task's premise would
 have been corrected at declaration by one grep for `counter` in the oracle.

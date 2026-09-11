@@ -1225,3 +1225,36 @@ the episode that taught it (provenance in `measured_facts.md`).*
   comparison is a silent filter on what the comparison can find**, and it filters
   in the direction of agreement, because the columns that differ most often are
   the ones that differ most harmlessly.
+
+  **A question can hide two questions — and the test that finds them also says
+  which of two opposite remedies applies.** *Does either part's answer change if
+  the other flips?*
+
+  | | | remedy |
+  |---|---|---|
+  | **bundled** | the answers do **not** move each other — two decisions wearing one label | **separate**, then decide each |
+  | **dependent** | one part is **computed from** the other | **sequence**, and mark the later one **provisional** |
+
+  Both occurred, one of each, and confusing them is the failure the entry exists
+  against:
+
+  **Bundled — D-KBg1.** Whether `supplementary_data.md`'s *counts* are corrected
+  or preserved-and-labelled is a genuine choice; whether it may call the retired
+  fact word "the adopted encoding" is not, since a supplement kept as a
+  pre-freeze record is a record *of corpora* and asserting the article's
+  representation was never its role. Neither answer moves the other, so they were
+  always two. Bundled, the half with no defensible alternative would have been
+  **decided by whichever way the other went** — a decision inheriting an answer it
+  was never asked.
+
+  **Dependent — D-KBf5a.** The Corpus B placement verdict is *computed from* RQ3's
+  rows, and the re-run moves ~180 of 4,457 collections. The answer **does** change
+  if the other flips, so this is not a bundle and separating it is exactly wrong:
+  settling the placement "independently, to unbundle it" is the thing the
+  provisional marking exists to prevent.
+
+  **So the rule is only useful because it discriminates.** A reader who meets the
+  bundled case alone will reach for separation on a dependency and decide
+  something that has no basis yet. (Raised by `[IsalHG-Fable]`, against my own
+  filing of the two as one kind — the test was right and the second example was
+  misclassified under it.)

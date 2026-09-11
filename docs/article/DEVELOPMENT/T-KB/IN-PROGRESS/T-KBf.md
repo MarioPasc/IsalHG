@@ -2676,3 +2676,29 @@ the boundary. It is not, here: **no member of either arm sits close enough to
 600 s for machine conditions to move it.** That is worth one clause, because it
 is the property a reviewer would reasonably doubt about any wall-clock cutoff and
 it was obtained for free from a sweep that exists for a different purpose.
+
+#### Zero flips is a bound, not luck — and the 60 s near-boundary mass is gone
+
+`[IsalHG-Fable]`: zero flips across two runs is an *observation*; the distance to
+the cutoff is what makes it a *bound*.
+
+| arm | completions | median | **slowest** | headroom | within 120 s of the cutoff |
+|---|---|---|---|---|---|
+| `wstar_orbit` | 19 | 139.1 s | **355.8 s** | 244.2 s (**41 %** of budget) | **0** |
+| `wstar_rank` | 27 | 163.6 s | **210.0 s** | 390.0 s (**65 %**) | **0** |
+
+**Not one completion sits within 120 s of the 600 s cutoff**, and the slowest has
+244 s of headroom. So the claim upgrades from *"no member flipped across two
+runs"* to **"no member is near enough to the boundary for run-to-run variance to
+reach it"** — a reason rather than evidence, and it no longer depends on having
+happened to run twice.
+
+**And the structure that motivated the whole prediction has inverted.** At 60 s
+the orbit arm had **32 completions in [30, 60)** — the dense near-boundary mass
+that made "a material fraction should finish at 600 s" reasonable. At 600 s it
+has **zero in [480, 600)**. The population that sat just over the 60 s line has
+completed; what remains is *far* over, on both arms.
+
+That is the same bimodality the prediction was built on, one budget up, and it is
+why a further tenfold budget would be a poor investment: there is no near-boundary
+mass left to harvest.

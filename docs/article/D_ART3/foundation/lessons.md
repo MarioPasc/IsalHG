@@ -812,13 +812,36 @@ the episode that taught it (provenance in `measured_facts.md`).*
   was the error.
 
   Both parties had spent the session catching exactly this shape in each other:
-  a correct operation on quantities from two different populations, here two
-  different machines. It is the seventh instance and the first where the two
-  populations were *hardware*. So the rule wants its widest statement: **before
-  comparing two numbers, ask what produced each one — not only which corpus, but
-  which machine, which code path, and which operation.** Any of the four
-  differing is enough to make the comparison meaningless, and none of them is
-  visible in the numbers themselves.
+  a correct operation on quantities from two different populations. So the rule
+  wants its widest statement: **before comparing two numbers, ask what produced
+  each one — not only which corpus, but which machine, which code path, and which
+  operation.** Any of the four differing is enough to make the comparison
+  meaningless, and none of them is visible in the numbers themselves.
+
+  **The instance was first filed under the wrong axis, which is its own lesson.**
+  It was recorded as "the first where the two populations were *hardware*". They
+  were not, mostly. Decomposed once the per-member medians existed:
+
+  | | |
+  |---|---|
+  | cluster canon-loop vs local canon-loop (machine, same path) | **2.32×** |
+  | cluster yield-path vs cluster canon-loop (path, same machine) | **6.29×** |
+  | product | 14.6×, against the ~13× observed |
+
+  So the gap was **mostly code path and about a fifth machine** — the yield figure
+  carries a forked budget guard per member and the canon loop does not, a 6.3×
+  that had been measured two messages earlier and was not applied to the
+  diagnosis. "Which code path" was already in the rule; hardware is real at 2.32×
+  and is *not* what this instance demonstrates.
+
+  **An instance filed under the wrong axis is a wrong example attached to a right
+  rule, and the example is what gets reused.** The cause of the misfiling is
+  ordinary and worth naming: the newest and most salient candidate — two
+  machines, which had just been discovered — was accepted without decomposing a
+  gap that had two factors available and measured. A multiplicative gap should be
+  factored before it is attributed, for the same reason a marginal should be
+  joined before it is believed. (Caught by `[IsalHG-Fable]`, against its own
+  error's filing.)
 
   **The launcher pattern is not the defect; a recovery sweep without a working
   skip is.** Every RQ launcher submits a recovery sweep behind

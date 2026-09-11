@@ -3189,32 +3189,48 @@ hard members contribute their true cost.
 nothing and have no tail, so their mean and median agree: 1.77× (cluster mean)
 against 2.04× (local median). Only the search arm needed the correction.
 
-#### The decomposition — what the language itself costs
+#### The decomposition — what the language itself costs (**cluster**, sd022)
 
-All three of `nauty_cert`, `nauty_cert_rows` and `isal_ow_struct` make the **same**
-canonical-labelling call on the same coloured Levi graph and differ only in what
-they do with the result. So the table is a decomposition, on a median shared call
-of **0.0155 ms**:
+All three of `nauty_cert`, `nauty_cert_rows` and `isal_ow_struct` make the
+**same** canonical-labelling call on the same coloured Levi graph and differ only
+in what they do with the result, so a multiple between them hides a shared term.
+Timing the bare call splits it. Run **on the cluster** (`sd022`, `cpu_partition`,
+`TKDE_THREADS=1`) so these sit beside the campaign's numbers rather than needing
+a machine caveat — `scripts/diagnostics/rq2_identity_decomposition.py`,
+200 `wd50k66` members, seed 70000, **medians**:
 
-| | on top of the shared call | as a multiple of it |
-|---|---|---|
-| serialising the certificate to bytes | +0.0016 ms | 1.10× |
-| serialising it to adjacency rows | +0.0036 ms | 1.23× |
-| the fact-rank word | +0.0059 ms | 1.38× |
-| **emitting the Isal ordered walk** | **+0.0194 ms** | **2.25×** |
+| arm | median | mean | p99 | max | on top of the shared call |
+|---|---|---|---|---|---|
+| **`canonical_ranks`** *(the shared call)* | **0.0401 ms** | 0.0815 | 0.141 | 6.566 | — |
+| `nauty_cert` | 0.0450 | 0.0547 | 0.134 | 0.216 | +0.0048 (**1.12×**) |
+| `nauty_cert_rows` | 0.0510 | 0.0613 | 0.160 | 0.168 | +0.0108 (**1.27×**) |
+| `fact_rank` | 0.0559 | 0.0672 | 0.168 | 0.175 | +0.0157 (**1.39×**) |
+| **`isal_ow_struct`** | **0.0982** | 0.1260 | 0.338 | 0.742 | **+0.0580 (2.45×)** |
+| `wstar_orbit` | 0.3639 | **287.68** | 3975.6 | **24525.0** | +0.3237 (9.06×) |
 
-**So the concession's sentence is not a multiple, it is a quantity: the Isal word
-costs about 0.019 ms on top of a canonical-labelling call that every arm in the
-comparison pays anyway** — roughly one and a quarter times that call again, where
-the certificate's own serialisation costs a tenth of it. That is a stronger form
-of R6's anticipation than 1.77×, because it no longer assumes the certificate's
-serialisation is negligible; it measures it. (Suggested by `[IsalHG-Fable]`.)
+**The concession's sentence, as a quantity rather than a multiple:** *the Isal
+ordered walk costs **0.058 ms** on top of a **0.040 ms** canonical-labelling call
+that every arm in the comparison pays anyway* — 2.45× that call, where
+serialising the certificate to bytes costs 1.12× of it and to adjacency rows
+1.27×. That is stronger than "1.77× the certificate" because it no longer assumes
+the certificate's own serialisation is negligible: it measures it, at roughly a
+tenth of the shared call. (Suggested by `[IsalHG-Fable]`.)
 
-**`fact_rank` is at parity with the certificate and that goes in.** 0.95× on the
-cluster mean, 1.26× on the local median — within 30 % either way. It is the
-retired arm and this is the third axis on which it matches or beats us; rule 7
-says it is reported as directly as the rest, and the paper is stronger for
-saying so three times than for saying it twice.
+**Ratios are portable, absolutes are not.** The same decomposition on a local
+workstation gives the walk at 2.25× the shared call against the cluster's 2.45×,
+and the median walk/certificate ratio 2.04× against 2.18× — while every absolute
+is ~2.3× smaller. So the ratios carry the argument and the milliseconds are
+quoted only with their machine.
+
+**`wstar_orbit`'s tail is worse on the cluster than the earlier local sample
+showed**: mean/median divergence **790.6×** (against 622× locally), p99 3.98 s,
+**max 24.5 s** from a median of 0.36 ms. Its *median* ratio to the certificate is
+**8.1×**; its *mean* ratio, which is what `total / N` reports, is 7,420×.
+
+**`fact_rank` sits at 1.39× the shared call, ahead of both certificate
+serialisations and behind the walk.** It is the retired arm, and this is the
+third axis on which it matches or beats us; rule 7 puts it in the table with the
+rest rather than in a footnote.
 
 **A second basis exists and is not comparable across arms.** The RQ7 *yield* rows
 measure per-member time through the harness path (a forked budget guard per

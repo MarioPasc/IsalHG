@@ -40,6 +40,7 @@ INDETERMINATE, never REFUTED (lessons L26).
 from __future__ import annotations
 
 import math
+import re
 import statistics
 import sys
 from collections import defaultdict
@@ -65,6 +66,17 @@ EXPECTED_SWEEP_ROWS = {
     "wstar_orbit": 7776,
     "fact_rank": 7938,
     "nauty_cert": 7938,
+}
+# Authoritative member counts, from the corpora MANIFEST.json -- declared here so
+# a partial yield read fails instead of reporting a rate over whatever landed.
+# The sweep's expected counts were declared from the start and the yield's were
+# not, which is exactly how a 60 % read of ndc_classes was reported as 828/828.
+CORPUS_MEMBERS = {
+    "wd50k66": 3988,
+    "wd50k66_full": 4554,
+    "wd50k100": 1837,
+    "ndc_classes": 1381,
+    "ndc_substances": 1745,
 }
 MS_CEILING_S = 1.0
 
@@ -323,6 +335,59 @@ def c4_nscaling(rows: list[dict[str, str]]) -> None:
         print(f"  {arm:22s} {str(ns):>28s} {canon_slope:12.3f} {pair_slope:11.3f}")
 
 
+def yield_completeness(rows: list[dict[str, str]]) -> set[str]:
+    """Which collections were read whole, and which are a partial slice?
+
+    `run_yield` shards a collection by contiguous `block_slice`, and the records
+    are **ordered descending in `m`** (measured: ndc_substances block medians run
+    6, 6, 5, 4, 4, 3). So a missing low-numbered block removes the collection's
+    largest members -- the ones an envelope claim is about. A rate over the
+    blocks that happen to be present is not a rate over the collection.
+
+    Returns
+    -------
+    set of str
+        The collections read whole; only these may carry a yield claim.
+    """
+    print("\n== yield completeness (against the corpora manifest) ==")
+    seen: dict[str, set[str]] = defaultdict(set)
+    blocks: dict[str, set[int]] = defaultdict(set)
+    n_blocks: dict[str, int] = {}
+    for row in rows:
+        if row["arm"] == "fact_rank":
+            seen[row["collection"]].add(row["member_id"])
+    for path in sorted(ROOT.glob("rows_yield_members*.csv")):
+        match = re.search(r"-yield-(.+)-(\d{3})of(\d{3})\.csv$", path.name)
+        if match:
+            blocks[match.group(1)].add(int(match.group(2)))
+            # The total comes from the filename, not from what is present: a set
+            # of blocks cannot report the ones that never landed.
+            n_blocks[match.group(1)] = int(match.group(3))
+    complete: set[str] = set()
+    for collection, expected in CORPUS_MEMBERS.items():
+        got = len(seen.get(collection, ()))
+        if got == expected:
+            complete.add(collection)
+            print(f"  {collection:16s} {got:5d} / {expected:5d}  complete")
+        else:
+            have = blocks.get(collection, set())
+            total = n_blocks.get(collection, 0)
+            missing = sorted(set(range(total)) - have)
+            where = (
+                "the larger-m end"
+                if missing and min(missing) == 0
+                else "the smaller-m end"
+                if missing
+                else "unknown"
+            )
+            print(
+                f"  {collection:16s} {got:5d} / {expected:5d}  PARTIAL "
+                f"({got / expected:.1%}) -- no yield claim; blocks present "
+                f"{sorted(have)}, missing {missing} = {where}"
+            )
+    return complete
+
+
 def main() -> None:
     print(__doc__)
     if FORBIDDEN_ROOT_TOKEN in str(ROOT):
@@ -343,6 +408,7 @@ def main() -> None:
     c1_censoring_frontier(by_arm)
     c2_certificate_arms(by_arm)
     c3_envelope_moves(by_arm)
+    yield_completeness(_load("yield_members"))
     c4_nscaling(_load("nscaling"))
 
 

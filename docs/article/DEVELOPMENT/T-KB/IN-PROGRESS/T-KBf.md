@@ -2702,3 +2702,59 @@ completed; what remains is *far* over, on both arms.
 That is the same bimodality the prediction was built on, one budget up, and it is
 why a further tenfold budget would be a poor investment: there is no near-boundary
 mass left to harvest.
+
+### RQ7 — the sweep is complete, and the envelope does not move: it disappears
+
+**Run root** `results/IEEETKDE_isal/RQ7_envelope/envelope` (job 2271960; **not**
+the `_merged` tree, which carries no envelope sweep). 369 files, newest 02:01.
+Reading: `scripts/diagnostics/rq7_envelope_reading.py`, whose four claims and
+their refutation conditions were written into its docstring **before it read a
+row**. All five arms complete: 7,776 rows each on the grid
+(6 `m` × 4 `k` × 3 `|Σ_E|` × 2 `|Σ_V|` × 2 density × 27 seeds), 7,938 for
+`fact_rank` / `nauty_cert` including the 162 extension cells.
+
+**The headline.** The handoff pre-stated *"RQ7 the envelope moves from `|Aut|` to
+`(m, k)`"*. Censoring per arm × `aut_bucket` at the 60 s budget — a **total**
+tabulation, every row of all 7,776 classified, nothing selected:
+
+| `aut_bucket` | `isalhg_levenshtein` | `wstar_orbit` | `isal_ow_struct` |
+|---|---|---|---|
+| `<1e3` | 2094/6734 (31.1 %) | 1953/6734 (29.0 %) | **0/6734** |
+| `1e3–1e6` | 548/615 (89.1 %) | 400/615 (65.0 %) | **0/615** |
+| `≥1e7` | **427/427 (100 %)** | 392/427 (91.8 %) | **0/427** |
+
+The ordered walk censors **zero of 7,776**, including all 427 instances at
+`|Aut| ≥ 1e7` where the pointer alphabet fails *every single one*. So the
+pre-stated reading understates what happened: it is not that the envelope moves
+off `|Aut|` onto `(m, k)` — **the ordered walk has no symmetry frontier at
+all**, and the sentence should say so. This is the one RQ7 number that needs no
+interval: it is a census of every row, not an estimate from a sample of them.
+
+**H7a — the frontier is `m`, not `n` — confirmed, but only by the join.**
+Marginally the density step (a pure `n` move at fixed `m`) looked comparable to
+an `m` doubling: 1.017 against 1.278 in median `|log₂|` cost ratio. The join
+overturns that: **every dense cell sits in `aut_bucket <1e3`**, so all the
+symmetry lives in the sparse cells and the pooled density gap was partly a
+symmetry gap. Conditioned on `<1e3`, censoring is monotone in `m` in both series —
+
+| `wstar_orbit`, `<1e3` only | m=10 | 20 | 40 | 80 | 120 | 160 |
+|---|---|---|---|---|---|---|
+| sparse (median n = 1.5 m) | 0.005 | 0.142 | 0.371 | 0.447 | 0.477 | 0.526 |
+| dense (median n = 0.5 m) | 0.000 | 0.009 | 0.153 | 0.432 | 0.588 | 0.633 |
+
+— while the density effect is **non-monotone and changes sign at m ≈ 100**
+(sparse censors more below it, dense more above). A variable that reverses
+direction across the grid is not the frontier; `m` is. **Fifth time this session
+that a marginal and its join disagreed** (L26).
+
+**H7c — withheld, not estimated.** Two array tasks are still running
+(`isal_ow_struct` at N=250, `wstar_orbit` at N=3,988), so both Isal arms have a
+truncated `N` range and the script refuses to fit a slope on it. The competitors
+are in: pair-phase log-log slopes 1.913 / 1.924 (bipartite GED assign / path),
+1.872 (WL), against 1.706 (`nauty_cert`) — the `N²` term is where the
+pre-registration put it.
+
+Two further readings — H7b's range claim, refuted at the `m` extension but
+arguably not in its mechanism, and the within-cell symmetry-sensitivity figure,
+whose search-arm cell count is thin and selected by surviving censoring — are
+**with `[IsalHG-Fable]` before they are written**, per §7.

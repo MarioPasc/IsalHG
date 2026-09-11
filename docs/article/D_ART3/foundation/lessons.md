@@ -477,3 +477,39 @@ the episode that taught it (provenance in `measured_facts.md`).*
   numbers that contradict each other on their face, in two sections of one
   paper, need the reconciling sentence written by the authors — the alternative
   is that it gets written in a review.
+
+  **A declared precondition protects only what it was written for; the same
+  script's other half is where the next one lands.** `rq7_envelope_reading.py`
+  declared the sweep's expected row counts up front — 7,776 per Isal arm, 7,938
+  with the extension — and verified all five. It declared **nothing** for the
+  yield pass sitting forty lines below, so `ndc_classes` was reported as
+  *"828/828 = 1.000"* when the corpora manifest says **1,381** and only three of
+  its five blocks had landed; `wd50k100` was read at 919 of 1,837.
+
+  Two things make this worth its own line rather than another tally mark.
+
+  **The rule was applied where the author had already been burned.** The sweep's
+  counts were declared because a previous defect had made row counts feel
+  dangerous. The yield's were not, because nothing had gone wrong there yet. That
+  is *availability*, not discipline, and it is the failure mode a written rule is
+  supposed to remove: a precondition that gets applied where it is remembered is
+  a habit wearing a rule's clothes (the same finding as "make the rule a
+  function, not a habit", now in the form where the function existed and was
+  simply not called on the second input).
+
+  **A partial read is not random, and which end is missing decides what it
+  costs.** `run_yield` shards by contiguous `block_slice` over records ordered
+  **descending in `m`** — block medians 6, 6, 5, 4, 4, 3 on the collection that
+  is complete. So `ndc_classes`'s two absent blocks are its **largest** members,
+  the exact population an envelope claim is about, which makes its observed
+  `max m = 30` a floor and its "zero members at `m ≥ 80`" unestablished;
+  `wd50k100`'s absent block is its *smallest*, so the same statistic there is
+  conservative. **One direction stated for both would have been wrong for one of
+  them**, so the check names the missing blocks per collection instead of
+  asserting an end.
+
+  And it reads the block total out of the **filename** (`002of005`), not out of
+  the blocks present: a set of things that arrived cannot report the ones that
+  never did. That is the same shape as the count-without-an-mtime — the data you
+  have cannot tell you what is absent from it, so the expected extent has to come
+  from somewhere the data does not control.

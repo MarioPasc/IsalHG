@@ -444,3 +444,36 @@ the episode that taught it (provenance in `measured_facts.md`).*
   (65 %), and **no completion sits within 120 s of the cutoff**. That converts
   "nothing flipped" into "nothing is close enough to flip" — a reason instead of
   a coincidence, and one that does not depend on having happened to run twice.
+
+  **The count reached six, and the sixth was found by being asked for rather
+  than by being suspected.** The RQ7 censoring table was marginal in `|Aut|`,
+  and read that way it said the orbit-pruned form censors 29 % at low symmetry
+  and 92 % at high. The join says **all 427 instances at `|Aut| ≥ 1e7` also
+  carry `m ≥ 80`** — every high-symmetry instance in that sweep is a large one,
+  so the marginal attributed to symmetry what partly belongs to size.
+
+  What makes this one worth recording separately is that the join did **not**
+  dissolve the effect, as it had for the "8 branching-only casualties". Symmetry
+  survived it: at fixed `(m, k)`, censoring rises across `aut_bucket` in 9 of 15
+  usable cells and **falls in none**. So the join's job is not to debunk the
+  marginal — twice tonight it confirmed one — it is that **nothing available
+  before the join tells you which of the two it will do.**
+
+  It also produced a third answer where a binary was expected. The prediction
+  under test was "divergence tracks arity rather than `|Aut|`". Arity turns out
+  to be a **gate** — `k = 2` censors 0.000 at every `m` and every symmetry level,
+  including 0 of 22 instances at `m = 160` with `|Aut| ≥ 1e7` — and symmetry
+  modulates *inside* the gate. Neither "confirmed" nor "refuted" is the honest
+  label, which is the three-states rule arriving somewhere new: not in a verdict
+  this time, but in an **attribution**.
+
+  **And a join across two experiments is worth running before a reviewer does
+  it.** RQ1 reports orbit pruning taking censoring at `|Aut| ≥ 1e7` from 36 to
+  **zero** on real corpora; RQ7 reports **392 of 427** censored in the same
+  bucket at the same budget with the same engine. Nought per cent against
+  ninety-two. Both are correct: every `≥1e7` sweep instance has `m ≥ 80`, and
+  **no member of the four real collections reaches `m ≥ 80` at all** (medians 3
+  to 5, maxima 27 to 41). They describe disjoint regions of the grid. Two
+  numbers that contradict each other on their face, in two sections of one
+  paper, need the reconciling sentence written by the authors — the alternative
+  is that it gets written in a review.

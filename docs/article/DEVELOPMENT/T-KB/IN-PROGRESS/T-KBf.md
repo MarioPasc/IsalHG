@@ -3270,3 +3270,33 @@ three-way diff is re-run at terminal.
 per-member yield across all four gated collections (0.600–0.696 ms for the walk,
 0.166–0.199 ms for `fact_rank`) is the harness-path figure and is reported as
 such.
+
+### D-KBf5a's SUPPLEMENT verdict is PROVISIONAL pending the RQ3 re-run
+
+Raised by `[IsalHG-Fable]`, verified here. The gate was applied (§"D-KBf5a
+applied") and returned **SUPPLEMENT** on the `reach′` run. **The tie-break and
+disconnected-candidate corrections landed after that**, and RQ3 re-runs under the
+corrected objective — roughly **180 of 4,457** Corpus A collections change, and
+the ledger already states the published numbers move and the re-run is not
+optional.
+
+**Why this one is not a typical provisional number.**
+
+1. **Its inputs are the most exposed rows in the campaign.** The tie defect can
+   have touched at most **5.3 % of Corpus A** runs but **21.7 % of Corpus B**
+   ones, so the corrected objective can move a materially larger share on exactly
+   the corpus the gate is about. The global 4.0 % figure understates the exposure
+   here by a factor of four.
+2. **The output is not a table cell, it is a structural decision** — whether the
+   paper's only natural real-data corpus appears in the main text or the
+   supplement.
+
+**The obligation, written so it is applied rather than remembered.** When RQ3
+lands, **apply D-KBf5a's pre-registered rule to the new numbers**; do not confirm
+the standing verdict. The distinction matters because the expected outcome is
+that it survives — it is a tie by a wide margin — and *expecting an outcome is the
+register this campaign exists to refuse*. A rule re-applied can return the same
+answer; a rule remembered cannot return a different one.
+
+Until then the ledger's SUPPLEMENT reads as settled and nothing in it says which
+rows produced it. **It is provisional, and its basis is the `reach′` run.**

@@ -664,6 +664,28 @@ the fish. **Screen 1 scales because it is exact; screen 2 does not because it is
 approximate**, and a 655-item candidate list is indistinguishable from no check at
 all, since nobody will clear it.
 
+**2026-09-11 — screen 2's problem is coverage, not window, and the fix is already
+scheduled.** `[IsalHG-Fable]`: tuning the near-miss window cannot save it, because
+the window is wider than the gaps between census fields — any value near one field
+is near several. But the gap it was built for is narrow: **stale values of
+quantities the freeze audit never compared.** That is a *coverage* problem with a
+bounded fix.
+
+> Extend the freeze audit's compared set to the quantities the prose actually
+> cites, and **screen 1 — exact, no window, no false positives — becomes complete
+> over them, and screen 2 retires.**
+
+**And the list of cited quantities is a by-product of work already scheduled.**
+Building the remaining fact bases enumerates exactly which census quantities the
+prose uses, so the sequence closes on itself:
+
+> fact bases → the list of cited quantities → extend `EXPECTED` in
+> `freeze_corpora.py` → the exact screen is complete → the approximate one is
+> unnecessary.
+
+Recorded here rather than acted on now, because the list does not exist until
+RQ3/4/5's fact bases do. Screen 2 stays opt-in meanwhile.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

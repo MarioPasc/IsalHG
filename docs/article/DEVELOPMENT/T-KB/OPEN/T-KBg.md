@@ -364,6 +364,44 @@ flagged only because the adjacent `n_records_with_arity_ge3` = 1,380 sits one
 away. **Adjacent census fields differing by a hair will always flag**, which is
 the near-miss screen's own cost and is cheaper than the figure it catches.
 
+**2026-09-11 — the screen is now a script that gates, and screen 1 is exact.**
+`scripts/diagnostics/corpus_figure_screen.py`, **exit non-zero on any open
+candidate** so it can hold the fold rather than merely inform it.
+
+**Screen 1 (primary, exact).** `[IsalHG-Fable]`: `freeze_corpora.py` already
+records the answer. Each corpus's `census.json` carries `audit.rows` with
+`quantity / expected / obtained / delta / match`, and **`expected` is the
+pre-freeze value**. So a prose figure equal to a mismatched row's `expected` is
+stale *by construction* — no threshold, no inference, a **certainty**, and
+complete over every quantity the freeze audit compared. Over all six corpora,
+16 mismatched quantities: **clean.** The three corrections account for all of
+them.
+
+**Screen 2 (second net) and why its window cannot be tuned.** The first version
+used 1 %, fitted to the one case it caught — which excludes **two of the three**
+figures actually corrected (1,432 → 1,381 is 3.69 %; 555 → 528 is 5.11 %; only
+3,167 → 3,162 at 0.16 % is inside). Widened to 6 %, the largest recorded delta.
+That is the honest window and it is noisy by construction, because the census
+fields sit closer together than the reconciliation deltas: 18 candidates, of
+which **zero** were stale.
+
+Two defects in the instrument, found by clearing those candidates by hand:
+
+* **the extractor split decimals** — `0.4157` yielded `4157` and `0.0386` yielded
+  `386`, putting four numbers that *do not appear in the prose* on the list;
+* **bare four-digit years** collided with `synthetic_rq1`'s `n_records = 2,000`.
+  The prose comma-formats every data figure, so an uncommaed 1900–2100 is a date.
+
+18 → 13 → **7** after both fixes, and the seven are real prose numbers colliding
+with a nearby field (1,300 differentials against 1,381 members, and so on). They
+are recorded in `KNOWN_BENIGN` **with their reasons**, so a later reader can
+re-check the judgement rather than inherit a silent filter.
+
+**Standing status: both screens clean, exit 0.** The residual limitation stays
+stated — it matches digit strings and cannot see whether the noun beside a number
+is the right noun, which is the predicate pass's job. Screen 1 proves a figure
+stale; neither screen proves one correct.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

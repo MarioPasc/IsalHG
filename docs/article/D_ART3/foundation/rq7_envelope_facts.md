@@ -184,16 +184,42 @@ comparison is a tokenisation confound (audit §1.2 item 2)", and quoting the
 bytes figure alone reproduces the confound the ruling exists to prevent, in the
 direction that flatters us.
 
-*Mechanism not established, and the same objection reaches the timing.* The gap
-is in the **pair phase** (0.971 s against 23.960 s), which invites "the Isal word
-is shorter than the certificate". The length column cannot settle that:
-`tokens_or_bytes` holds *tokens* for the walk and *bytes* for the certificate, so
-3,886 against 11,692 at `m = 160` compares two units. **And a pairwise
-Levenshtein is `O(L₁ × L₂)`** — the matrix time is quadratic in exactly those
-lengths, so a unit objection that disqualifies the length claim disqualifies the
-derived timing claim too. Raised by `[IsalHG-Fable]`. The arms that are not
-Levenshtein over a serialisation — NetLSD, WL, bipartite GED, HPD — carry no such
-qualification.
+*Mechanism: measured, and the obvious one is **disconfirmed**.* The gap is in the
+pair phase (0.971 s against 23.960 s, **24.7×**), which invites "the Isal word is
+shorter than the certificate". Measured on `wd50k66` itself — 400-member sample,
+the corpus the matrix actually runs on:
+
+| | median | mean | max |
+|---|---|---|---|
+| `isal_ow_struct` (**tokens**) | 6 | 13.8 | 141 |
+| `nauty_cert` (**bytes**) | 140 | 159.7 | 460 |
+| `nauty_cert` (**4-byte integers**) | 35 | 39.9 | 115 |
+| `fact_rank` (tokens) | 12 | 15.1 | 53 |
+
+**400 of 400 certificate lengths are divisible by 4**: the certificate is a
+sequence of 4-byte big-endian integers, so its natural symbol count is `bytes/4`.
+Counted that way the certificate is **2.9×** longer than the Isal word; counted
+in bytes against tokens it is 11.5×, which is the confounded figure and is very
+likely the source of the "12–30 × longer" claim in `RESULTS_WALKTHROUGH.md`
+(→ T-KBx).
+
+**A 2.9× length difference cannot produce a 24.7× time gap** under any cost
+model — bit-parallel Myers is `O(L₁·⌈L₂/64⌉)`, which for words this short is
+near-linear in `L`, and even a fully quadratic model gives 8.4×. So the length
+explanation is **disconfirmed**, not merely unestablished, and the pair-phase gap
+is something else: per-element comparison cost (a 4-byte int against a structured
+token), the memory layout handed to `rapidfuzz`, or call overhead. Not
+established, and not claimed.
+
+**The lengths previously quoted here — 3,886 tokens against 11,692 bytes — are
+from the *sweep* at `m = 160`, not from `wd50k66`, whose members have median
+`m = 5`.** Quoting them beside a `wd50k66` matrix timing invited exactly the
+inference that the matrix could not be doing full pairwise work; `[IsalHG-Fable]`
+made it, and the figures were mine to put there. Corrected above, and the
+arithmetic is consistent once the right population is used: at mean `L = 13.8`
+tokens the naive bound is 3.0e-09 s/pair against 1.2e-07 measured, i.e. the
+measurement is **41× slower** than the floor, which is what overhead-dominated
+work on very short strings looks like.
 
 **Two arms' `censored` / `nan` handling matters here.** `hpd_jsd` recorded
 exactly 3600.000 s at N=3,988 with `censored=1` and its other two reps

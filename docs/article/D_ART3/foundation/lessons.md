@@ -725,3 +725,38 @@ the episode that taught it (provenance in `measured_facts.md`).*
   and had no home in the first diagnosis — not because it was hard, but because
   the two dramatic rows had absorbed the attention. A residual category of one is
   a category.
+
+  **A supporting measurement must come from the claim's own population, and
+  putting one from a different population next to it is an assertion whether or
+  not a qualifier is attached.** Discussing why the `wd50k66` matrix costs what it
+  does, the text quoted word lengths of **3,886 tokens and 11,692 bytes** — with
+  "at `m = 160`" written right there — when `wd50k66`'s members have median
+  `m = 5`. The label was correct and useless: a careful reader took the two
+  numbers as the lengths entering the matrix and derived, correctly from them,
+  that the measured per-pair time was five orders of magnitude too fast to be
+  doing the work. The anomaly was real arithmetic on figures that did not belong
+  to the corpus under discussion.
+
+  Measured on `wd50k66` itself the lengths are **13.8 tokens** (mean) for the
+  ordered walk and **159.7 bytes** for the certificate, and the arithmetic is
+  ordinary: 3.0e-09 s/pair as a floor against 1.2e-07 measured, overhead
+  dominating on strings this short. **Nothing was wrong except which population
+  the supporting numbers came from** — the fifth distinct appearance of a correct
+  operation on the wrong object, and the first where the wrong object was
+  supplied *to a reader* rather than to a script.
+
+  So the rule is not "label the population"; that was done. It is that a number
+  offered in support of a claim must be **from** the claim's population, and a
+  figure from elsewhere belongs in a different paragraph or not at all.
+
+  **And the measurement disconfirmed the mechanism it was fetched to check.**
+  Counted in bytes against tokens the certificate is 11.5× the walk's length —
+  the confounded ratio, and very likely the source of a "12–30 × longer" claim
+  elsewhere in the docs. But **400 of 400 certificates have a length divisible by
+  4**: it is a sequence of 4-byte integers, so its natural symbol count is
+  `bytes/4`, and in natural units the ratio is **2.9×**. The measured pair-phase
+  time ratio is **24.7×**, which 2.9× of length cannot produce under any cost
+  model. "Its strings are longer" was not merely unestablished; **it is false as
+  an explanation**, and it would have been adopted by anyone who fixed the units
+  and stopped there. Fixing a confound is not the same as testing the claim the
+  confound was hiding.

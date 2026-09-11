@@ -132,10 +132,21 @@ they are distinguishable.
 2. **Report both tokenisations** wherever a certificate comparison appears, per
    D-ART4: `nauty_cert` (bytes) **and** `nauty_cert_rows` (one symbol per
    canonical adjacency row, 13.87 s at N=3,988). Neither quoted bare.
-3. **Strike or re-derive the "12–30 × longer" attribution.** As written it
-   compares tokens against bytes. If a length claim is wanted, it needs one
-   tokenisation applied to both sides; otherwise the timing stands on its own
-   with the serialisation named and no mechanism asserted.
+3. **Strike the "12–30 × longer" attribution — its likely source is now
+   measured.** As written it compares tokens against bytes. On `wd50k66`
+   (400-member sample) the certificate averages **159.7 bytes** against the
+   walk's **13.8 tokens**, a ratio of **11.5×** — in the quoted range, and the
+   confounded comparison. But **400 of 400 certificate lengths are divisible by
+   4**: the certificate is a sequence of 4-byte big-endian integers, so its
+   natural symbol count is `bytes/4`. In natural units the ratio is **2.9×**, and
+   a 4× inflation from integer width is the whole difference between the two
+   figures. Re-derive or strike; do not carry the bytes ratio.
+3b. **The length attribution is also disconfirmed as a mechanism.** The
+   pair-phase time ratio on the same corpus is **24.7×**, and 2.9× of length
+   cannot produce it under any cost model (bit-parallel Myers is
+   `O(L₁·⌈L₂/64⌉)`, near-linear at these lengths; even fully quadratic gives
+   8.4×). So "its strings are longer" does not explain the timing even after the
+   units are fixed, and the paragraph must not assert it in either form.
 4. **Sweep the rest of the file** the same way — it quotes `nauty_cert` four
    times and `nauty_cert_rows` zero times, so items 2–3 may apply more than once.
 

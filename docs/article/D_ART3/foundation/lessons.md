@@ -1077,3 +1077,30 @@ the episode that taught it (provenance in `measured_facts.md`).*
   2026-09-11 while two lesser artefacts frozen the same night were read-only. When
   a protective convention is adopted, **sweep what predates it** — the ordering of
   the calendar is not a statement about what deserves protecting.
+
+  **Sweeping what predates the check-authority rule: the RQ1 gate holds.**
+  "A check that cannot stop the thing it checks is not a check" was filed after a
+  `&&` let a printed `False` through. Every pipeline script in the campaign
+  predates it, and the class is invisible by construction — a check without
+  authority does not fail loudly, it passes quietly. The first target is the one
+  underneath the paper's most-cited deliverable, and the chain was traced end to
+  end:
+
+  | link | |
+  |---|---|
+  | `verify_rq1_join.py` | `if all_problems: … return 1`, and `sys.exit(main())` |
+  | `build_rq1_isal_table.sh` | **`set -euo pipefail` at line 35**, before the gate at line 57 |
+  | consequence | a failed join aborts **before** the merge, as its comment claims |
+
+  So the RQ1 deliverable was built behind a gate with real authority, and the
+  manifest's duplicate audit — zero across five tables — is a second, independent
+  guard that also fired. Worth having established *before* 19 fact-base entries
+  are built on it rather than after. (Sweep proposed by `[IsalHG-Fable]`.)
+
+  **The sweep's own limit, stated so it is not over-read.** Five further scripts
+  (`rq1_extra_checks`, `rq3_consensus_forensics`, `rq7_envelope_reading`,
+  `corpus_figure_screen`, `rq6_reach1_rederivation_check`) all carry non-zero exit
+  paths — but *counting* `sys.exit` and `return 1` shows a failure path **exists**,
+  not that the **relevant** one is wired to it. That is a screen, not an audit, and
+  by the rule two entries above it is a negative result whose implicit clause is
+  "…in what I grepped for". Only the RQ1 chain was traced link by link.

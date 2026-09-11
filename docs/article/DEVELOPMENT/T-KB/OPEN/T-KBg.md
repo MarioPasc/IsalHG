@@ -686,6 +686,39 @@ prose uses, so the sequence closes on itself:
 Recorded here rather than acted on now, because the list does not exist until
 RQ3/4/5's fact bases do. Screen 2 stays opt-in meanwhile.
 
+**2026-09-11 — the locality fold is now a DEPENDENCY of a headline table, and
+its input is already on disk.** `[IsalHG-Fable]`, verified here.
+
+`prose.md` §6's capability matrix was rewritten to carry **two locality columns —
+pendant and interior — for every row**, because no row of §2.3's locality table is
+uniform (the ordered walk owns pendant, the fact list owns interior, and the
+certificate's only non-zero cells are interior widening). That is the right table.
+**But its numbers currently come from the 60-member preview**, and the exposure is
+different in kind: §2.3's table is read as provisional because it says so three
+times around it, whereas **a capability matrix is what a reviewer scans first and
+takes as the paper's summary of itself**. A preview marking there reads as a
+caveat about precision, not about which arm wins a column.
+
+**The campaign's figures are already frozen — this is transcription, not a run.**
+`IEEETKDE/RQ1_isal/merged/` (read-only, provenance in §"RQ1"):
+
+| | |
+|---|---|
+| `m1_instructions_by_kind.md` | columns `collection, edit_kind, regime, arm, n, n_base, median_d_instr, iqr, **within_2**` |
+| collections | `ndc_classes`, `wd50k66`, `synthetic_rq1` **and** `(pooled)` — per corpus, not only pooled |
+| arms | **12**, including both Isal walks, both certificate tokenisations, the pointer alphabet and the retired fact-rank record |
+| `rq1_statistics{,_ndc_classes,_synthetic_rq1,_wd50k66}.md` | **`regime` IS the pendant/interior axis** — `regime 0 (pendant)` over 3 edit kinds, `regime 1 (interior)` over 4: **seven regime × kind cells** |
+
+So the pendant/interior classification the new matrix needs is **not** something to
+derive: it is the `regime` column, already computed, already per corpus, at 27
+seeds, in a frozen deliverable.
+
+**Priority, stated as a dependency rather than a preference.** RQ3/4/5's fact
+bases wait on experiments. **This one waits only on transcription, and it now has
+a headline table downstream of it** — so it is the one remaining fold item that
+can be done now and the one whose absence is most visible. *A table that
+summarises the paper cannot be the last thing to inherit the campaign.*
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

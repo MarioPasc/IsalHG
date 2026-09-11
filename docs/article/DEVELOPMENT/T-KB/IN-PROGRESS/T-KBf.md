@@ -2758,3 +2758,98 @@ Two further readings — H7b's range claim, refuted at the `m` extension but
 arguably not in its mechanism, and the within-cell symmetry-sensitivity figure,
 whose search-arm cell count is thin and selected by surviving censoring — are
 **with `[IsalHG-Fable]` before they are written**, per §7.
+
+#### The join `[IsalHG-Fable]` asked for — it separates symmetry from size, and reconciles RQ1 with RQ7
+
+The censoring table above is marginal in `|Aut|`. Joined against `(m, k)`:
+
+**1. The `≥1e7` bucket is entirely a large-`m` bucket.** All 427 instances have
+`m ≥ 80` (min 80, median 160, max 160); **not one** sits at `m ∈ {10, 20, 40}`.
+So "orbit censors 92 % at high symmetry" is confounded exactly as suspected:
+every high-symmetry instance in this sweep is also a large one.
+
+**2. But symmetry still moves censoring at fixed size.** Within the 15 `(m, k)`
+cells carrying two `aut_bucket` levels at n ≥ 5, censoring **rises in 9 and
+falls in 0**:
+
+| `(m,k)` | `<1e3` | `1e3–1e6` | `≥1e7` |
+|---|---|---|---|
+| (40,4) | 88/310 = 0.28 | 14/14 = 1.00 | — |
+| (80,3) | 29/239 = 0.12 | 42/46 = 0.91 | 39/39 = 1.00 |
+| (120,3) | 86/209 = 0.41 | 1/34 = 0.03 | 81/81 = 1.00 |
+| (160,2) | 0/277 = 0.00 | 0/25 = 0.00 | **0/22 = 0.00** |
+
+The pooled median rise is only +0.006 because most cells are saturated at 0.00
+or 1.00; the unsaturated ones move by 0.6–0.7.
+
+**3. Arity is the gate, symmetry modulates inside it.** `k = 2` censors
+**0.000 at every `m` and every symmetry level** — including 0/22 at `m = 160`
+with `|Aut| ≥ 1e7`. `k = 5` saturates by `m = 80`. So `[IsalHG-Fable]`'s
+pre-registered prediction (divergence tracks arity rather than `|Aut|`) is
+**partly confirmed and its "rather than" is too strong**: arity gates whether
+censoring happens at all, and within the gate symmetry moves it further. Recorded
+as that, not as refuted and not as confirmed.
+
+| `wstar_orbit` censoring | m=10 | 20 | 40 | 80 | 120 | 160 |
+|---|---|---|---|---|---|---|
+| k=2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| k=3 | 0.000 | 0.000 | 0.009 | 0.340 | 0.519 | 0.648 |
+| k=4 | 0.000 | 0.034 | 0.315 | 0.756 | 0.926 | 0.997 |
+| k=5 | 0.009 | 0.269 | 0.670 | 0.981 | 1.000 | 1.000 |
+
+**4. RQ1 and RQ7 do not contradict each other — they describe disjoint regions.**
+RQ1: orbit pruning takes censoring at `|Aut| ≥ 1e7` from 36 to **zero** on real
+corpora. RQ7: orbit censors **392/427** in the same bucket. Both are correct,
+because the real members are not where the synthetic high-symmetry mass is:
+
+| collection | n | median m | p90 | max | members at m ≥ 80 |
+|---|---|---|---|---|---|
+| `ndc_classes` | 828 | 3 | 5 | 30 | **0** |
+| `ndc_substances` | 1,745 | 4 | 16 | 41 | **0** |
+| `wd50k100` | 919 | 5 | 11 | 27 | **0** |
+| `wd50k66` | 3,988 | 5 | 11 | 29 | **0** |
+| `wd50k66_full` | 4,554 | 5 | 18 | 303 | 41 (0.9 %) |
+
+Every `≥1e7` sweep instance has `m ≥ 80`; **no member of the four gated
+collections reaches `m ≥ 80` at all**, and the sweep's censoring at the real
+median (`m ≈ 5`) is 0.000 for every arity. The paper carries this sentence
+explicitly — both numbers are going in, and unreconciled they are a gift to a
+reviewer.
+
+**Yield on the real collections** (60 s budget, one row per member):
+
+| collection | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` |
+|---|---|---|---|
+| `ndc_classes` | 828/828 = 1.000 | **828/828 = 1.000** | 726/828 = 0.877 |
+| `ndc_substances` | 1745/1745 = 1.000 | **1745/1745 = 1.000** | 1489/1745 = 0.853 |
+| `wd50k100` | 919/919 = 1.000 | **919/919 = 1.000** | 771/919 = 0.839 |
+| `wd50k66` | 3988/3988 = 1.000 | **3988/3988 = 1.000** | 3742/3988 = 0.938 |
+
+Median cost on completed members: `fact_rank` 0.156–0.199 ms, `isal_ow_struct`
+0.573–0.696 ms (**3.5×** the certificate, same order), `isalhg_levenshtein`
+4.2–13.5 ms. The ordered walk canonicalizes **every member of every real
+collection**, at sub-millisecond median cost.
+
+#### H7b, reported as the measurement rather than as a surviving half
+
+`[IsalHG-Fable]` is right that "the mechanism claim is untouched" overstates it:
+this measurement is *consistent with* one canonical-labelling call and with other
+accounts of a cost growing in `m`; it does not test the mechanism. And the
+refutation runs **in our favour** — H7b is a claim about how strong the
+competitor is, so bounding its range makes the competitor look worse at scale,
+which is the direction to state most conservatively. So the hypothesis is not
+defended; the measurement is reported in its place:
+
+> Both certificate arms complete every instance with **no censoring anywhere**,
+> at a worst-cell median of **7.2 ms** (`fact_rank`) / **6.8 ms**
+> (`nauty_cert`) on the main grid, rising to **6.24 s** / **6.28 s** at
+> `m = 1,280`.
+
+#### The within-cell symmetry spread is a floor, and the selection says which way
+
+`wstar_orbit`'s 12 usable cells are the ones where it *did not* censor — i.e.
+where symmetry cost it least; its symmetry-sensitive cells censored out of the
+measurement. So **3.84× is a lower bound** on the search/walk ratio (0.565
+against 0.147 log₂ units, n = 12), and it is quoted only with that direction in
+the same clause. The censoring table carries the claim — total over 7,776 per
+arm, nothing selected; the spread corroborates it conservatively.

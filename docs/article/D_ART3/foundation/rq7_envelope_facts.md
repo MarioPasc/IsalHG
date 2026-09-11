@@ -168,26 +168,52 @@ bipartite GED".** The ordering holds; two magnitudes do not. NetLSD is
 they are faster than predicted — so the measurement is reported and the
 hypothesis is not defended.
 
-**The result the paper wants, stated where it carries no unit problem.** The
-ordered walk does the whole 3,988² matrix in **1.39 s** against the orbit-pruned
-tie-complete form's **28.9 min — 1,252×**. Both arms are Isal words, both
-token-granular, same alphabet and same Levenshtein, so nothing about the
-comparison depends on a serialisation choice: **the search is what costs, and the
-same language without it is three orders of magnitude cheaper.**
+**No speed claim against the certificate survives, in either tokenisation.**
+This was checked after `[IsalHG-Fable]` showed the granularity argument cuts
+both ways, and it reverses the earlier reading. Measured on `wd50k66`, identical
+members, same machine:
 
-**The certificate multipliers are tokenisation-dependent and are never quoted
-bare.** Against `nauty_cert_rows` — one symbol per canonical adjacency row, the
-standard tokenisation — the ratio is **10.0×** (13.87 s); against `nauty_cert`,
-raw bytes, **17.5×** (24.19 s). **Both are reported.** D-ART4 requires the
-certificate baseline in two tokenisations precisely because "the bytes-only
-comparison is a tokenisation confound (audit §1.2 item 2)", and quoting the
-bytes figure alone reproduces the confound the ruling exists to prevent, in the
-direction that flatters us.
+| | matrix secs (n=400) |
+|---|---|
+| `nauty_cert_rows.matrix()` **as shipped** — a Python double loop | 0.104 |
+| the **same fingerprints** via `rapidfuzz.process.cdist` | **0.005** |
+| `isal_ow_struct.matrix()` — already `cdist` | 0.024 |
 
-*Mechanism: measured, and the obvious one is **disconfirmed**.* The gap is in the
-pair phase (0.971 s against 23.960 s, **24.7×**), which invites "the Isal word is
-shorter than the certificate". Measured on `wd50k66` itself — 400-member sample,
-the corpus the matrix actually runs on:
+`nauty_cert_rows` carries a **20× implementation penalty**: its `matrix()` fills
+the upper triangle in a Python loop while `isal_ow_struct` and `nauty_cert` both
+call `process.cdist`. Put on the same footing, **rows/walk = 0.22× — the
+row-tokenised certificate is 4.5× *faster* than the Isal word.** The campaign's
+"10× faster than `nauty_cert_rows`" measured a Python loop.
+
+And the byte figure is a granularity artefact in the other direction. Three
+tokenisations of the *same* canonical form, all via `cdist`, span **19.2×**:
+
+| handed to `rapidfuzz` as | mean L | s/pair | ratio to the walk |
+|---|---|---|---|
+| bytes | 160.5 | 6.22e-07 | 20.9× |
+| 4-byte integers | 40.1 | 7.94e-08 | 2.66× |
+| adjacency rows | 15.2 | 3.24e-08 | **1.09×** |
+| *(walk tokens)* | 13.7 | 2.98e-08 | 1× |
+
+So the pair-phase cost of this canonical form is **whatever its serialisation
+says it is**, and a multiplier against it states a tokenisation choice, not a
+property of either representation. **L17 already ruled this out** — *"concede
+identity and deduplication speed to nauty/bliss/Traces … never build a claim on
+canonicalization speed"* — and the headline had drifted into exactly the claim
+the lesson base forbids.
+
+**What survives, and it is the paper's actual claim.** `isal_ow_struct` 1.39 s
+against `wstar_orbit` **28.9 min — 1,252×**. Same alphabet, same tokenisation,
+same distance, same `cdist` path, same corpus: **the search is what costs, and
+the same language without it is three orders of magnitude cheaper.** Nothing in
+this correction touches it.
+
+The certificate comparison is reported as a table of tokenisations with the
+implementation penalty named, and **carries no multiplier**.
+
+*Mechanism: measured, and it is length — at the granularity the library
+actually sees.* The gap is in the pair phase (0.971 s against 23.960 s,
+**24.7×**). Measured on `wd50k66` itself, 400–500 member samples:
 
 | | median | mean | max |
 |---|---|---|---|
@@ -196,30 +222,46 @@ the corpus the matrix actually runs on:
 | `nauty_cert` (**4-byte integers**) | 35 | 39.9 | 115 |
 | `fact_rank` (tokens) | 12 | 15.1 | 53 |
 
-**400 of 400 certificate lengths are divisible by 4**: the certificate is a
-sequence of 4-byte big-endian integers, so its natural symbol count is `bytes/4`.
-Counted that way the certificate is **2.9×** longer than the Isal word; counted
-in bytes against tokens it is 11.5×, which is the confounded figure and is very
-likely the source of the "12–30 × longer" claim in `RESULTS_WALKTHROUGH.md`
-(→ T-KBx).
+**400 of 400 certificate lengths are divisible by 4** — it is a sequence of
+4-byte big-endian integers, so its natural symbol count is `bytes/4`. But
+`rapidfuzz` is handed the **bytes**, and a runtime is governed by what the
+algorithm iterates over, so the byte length is the one in the cost model:
+Myers' `O(L₁·⌈L₂/64⌉)` predicts 481.6 against the walk's 13.7, i.e. ≈35×,
+against 24.7× measured — with the residual in the expected direction, since the
+walk's arm sits 41× above its own compute floor and cannot scale down
+proportionally.
 
-**A 2.9× length difference cannot produce a 24.7× time gap** under any cost
-model — bit-parallel Myers is `O(L₁·⌈L₂/64⌉)`, which for words this short is
-near-linear in `L`, and even a fully quadratic model gives 8.4×. So the length
-explanation is **disconfirmed**, not merely unestablished, and the pair-phase gap
-is something else: per-element comparison cost (a 4-byte int against a structured
-token), the memory layout handed to `rapidfuzz`, or call overhead. Not
-established, and not claimed.
+**Re-timed at each granularity** (500 members, `process.cdist`, same machine):
 
-**The lengths previously quoted here — 3,886 tokens against 11,692 bytes — are
-from the *sweep* at `m = 160`, not from `wd50k66`, whose members have median
-`m = 5`.** Quoting them beside a `wd50k66` matrix timing invited exactly the
-inference that the matrix could not be doing full pairwise work; `[IsalHG-Fable]`
-made it, and the figures were mine to put there. Corrected above, and the
-arithmetic is consistent once the right population is used: at mean `L = 13.8`
-tokens the naive bound is 3.0e-09 s/pair against 1.2e-07 measured, i.e. the
-measurement is **41× slower** than the floor, which is what overhead-dominated
-work on very short strings looks like.
+| handed to `rapidfuzz` as | mean L | s/pair | ratio to the walk |
+|---|---|---|---|
+| bytes | 160.5 | 6.23e-07 | **20.9×** |
+| 4-byte integers | 40.1 | 7.95e-08 | **2.67×** |
+| walk tokens | 13.7 | 2.98e-08 | 1× |
+
+**Granularity alone accounts for 7.83× of the certificate's measured cost.** At
+its own symbol granularity the certificate costs **2.67×** the Isal word — which
+is the 2.9× length ratio, and is the representation-level number.
+
+**This is why D-ART4 requires both tokenisations, and it is a point in favour of
+the methodology rather than a caveat.** The byte comparison *overstates* the
+certificate's cost, because bytes are a finer granularity than the
+representation's own symbols; the row figure is the one that is not an artefact
+of how the comparator was serialised for the comparison. So the paper reports
+both and **the claim rests on the row tokenisation**, never on the byte one.
+
+*(The lengths previously quoted here — 3,886 tokens against 11,692 bytes — are
+from the **sweep** at `m = 160`, not from `wd50k66`, whose members have median
+`m = 5`. Quoting them beside a `wd50k66` matrix timing invited the inference that
+the matrix could not be doing full pairwise work; `[IsalHG-Fable]` made it, and
+the figures were mine to put there. A first correction then went too far the
+other way, using the natural-unit ratio to declare the length mechanism
+disconfirmed — the same error one turn later, in the opposite direction. The
+measurement above settles it.)*
+
+**Compactness at member granularity** — a statement the paper has not previously
+had: on real members the ordered walk's median word is **6 tokens** against the
+certificate's **140 bytes / 35 symbols**.
 
 **Two arms' `censored` / `nan` handling matters here.** `hpd_jsd` recorded
 exactly 3600.000 s at N=3,988 with `censored=1` and its other two reps

@@ -141,12 +141,25 @@ they are distinguishable.
    natural symbol count is `bytes/4`. In natural units the ratio is **2.9×**, and
    a 4× inflation from integer width is the whole difference between the two
    figures. Re-derive or strike; do not carry the bytes ratio.
-3b. **The length attribution is also disconfirmed as a mechanism.** The
-   pair-phase time ratio on the same corpus is **24.7×**, and 2.9× of length
-   cannot produce it under any cost model (bit-parallel Myers is
-   `O(L₁·⌈L₂/64⌉)`, near-linear at these lengths; even fully quadratic gives
-   8.4×). So "its strings are longer" does not explain the timing even after the
-   units are fixed, and the paragraph must not assert it in either form.
+3b. **The length attribution is a *correct* mechanism at the wrong granularity —
+   do not file it as refuted.** A first draft of this task recorded it as
+   disconfirmed, on the grounds that 2.9× of length cannot produce a 24.7× time
+   ratio. That used the certificate's **natural** symbol count while `rapidfuzz`
+   is handed its **bytes**, and a runtime is governed by what the algorithm
+   iterates over. Measured directly (500 wd50k66 members, `process.cdist`):
+
+   | handed to rapidfuzz as | mean L | s/pair | ratio to the walk |
+   |---|---|---|---|
+   | bytes | 160.5 | 6.23e-07 | **20.9×** |
+   | 4-byte integers | 40.1 | 7.95e-08 | **2.67×** |
+   | walk tokens | 13.7 | 2.98e-08 | 1× |
+
+   **Granularity alone accounts for 7.83× of the certificate's cost**, and at its
+   own symbol granularity the ratio is 2.67× — essentially the 2.9× length ratio.
+   So the mechanism is length; what was wrong in the walkthrough is the *ratio*
+   (11.5× bytes-vs-tokens, quoted as "12–30 ×"), not the attribution. Correct the
+   ratio and state the granularity; do not record the mechanism as refuted.
+   *(Caught by `[IsalHG-Fable]` against this task's own first draft.)*
 4. **Sweep the rest of the file** the same way — it quotes `nauty_cert` four
    times and `nauty_cert_rows` zero times, so items 2–3 may apply more than once.
 

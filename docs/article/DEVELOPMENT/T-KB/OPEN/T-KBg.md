@@ -480,6 +480,48 @@ count, so "unscreenable" cannot read as "clean":
 
 Four, hand-checkable, and the first check (`DESIGN.md` L456) came back clean.
 
+**2026-09-11 — the class closed behind L254, and the below-floor four cleared.**
+Three items from `[IsalHG-Fable]`, all closed with evidence.
+
+**1. Name the census field, not its value.** L254 went stale because it wrote a
+*count* where it meant a *quantity*. The corpus has already moved once (singleton
+products, arity cap, fact floor) and there is no reason to expect it never moves
+again, so **every literal count in a specification is a future stale figure** and
+the screen catches those only after the fact. The durable form names the field —
+*"the NDC natural consecutive pairs (`census: n_consecutive_pairs`)"* — which
+cannot go stale, tells a reader where to look, and makes the spec agree with the
+corpus by construction rather than by audit.
+
+Swept `DESIGN.md` for other populations written as literals. **One candidate,
+and it is benign:** L395's *"1,146 of the 1,400 natural Corpus B member pairs"*
+is a measurement **result** — what the pre-`reach′` reading returned — not a
+population to be measured, so a literal is correct there. **L254 was the only
+one**, and the class is closed rather than the instance.
+
+**2. The below-floor four: all clear.** `delta_0` (85→77) was clean from
+`DESIGN.md` L456. The remaining three are now checked by hand in the live
+documents: **45** (`n_classes_run_ge3`) does not occur in any class/run context;
+the **20**s are all `≥ 20 members` label thresholds, unrelated to
+`n_classes_run_ge5`; **35** (`ndc_substances delta_1`) does not occur. Carried as
+three outstanding rather than "hand-checked", per Fable, until each was actually
+done.
+
+**3. `KNOWN_BENIGN` split, because it held two things with different
+re-validation rules:**
+
+| list | meaning | re-validated |
+|---|---|---|
+| `COLLISIONS` (9) | a prose number landing near a census value by accident | **whenever a corpus is rebuilt** — the collision depends on the current value |
+| `LABELLED_HISTORY` (1) | a pre-freeze value deliberately kept *and labelled as such* | **never** — it does not depend on the census at all |
+
+Screen 1 now honours `LABELLED_HISTORY` too, so `DESIGN.md` L254's
+"(555 pre-freeze…)" is reported as deliberate rather than as stale: **9 → 8**.
+Without the split, a maintainer re-checks the permanent entries forever and stops
+re-checking the conditional ones.
+
+**Standing: 8 stale values in live documents**, located and awaiting the fold's
+predicate pass.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

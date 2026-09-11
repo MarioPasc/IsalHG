@@ -65,9 +65,14 @@ ARCHIVAL = ("HANDOFF_", "RESULTS_AUDIT_", "STATE_", "PI_QA_", "probes_", "measur
 DEFAULT_CORPORA = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/corpora")
 DEFAULT_DOCS = Path(__file__).resolve().parents[2] / "docs/article/D_ART3"
 
-#: Cleared by hand on 2026-09-11; each is a genuine coincidence, not a stale value.
-#: Listed rather than silently filtered, so a reader can re-check the judgement.
-KNOWN_BENIGN = {
+#: Two kinds of suppression with **different re-validation rules**, kept apart so
+#: a maintainer does not re-check the permanent ones forever and stop re-checking
+#: the conditional ones (raised by ``[IsalHG-Fable]``).
+#:
+#: COLLISIONS: a prose number that merely lands near a census value. Benign **only
+#: while the census holds** -- re-validate every one of these whenever a corpus is
+#: rebuilt, because the collision is an accident of the current value.
+COLLISIONS = {
     ("ndc_substances", "delta_gt5", 578): '"one in 578" is a collision rate',
     ("ndc_classes", "n_records_with_arity_ge3", 1381): (
         "1,381 is n_records; the adjacent field is 1,380"
@@ -84,6 +89,18 @@ KNOWN_BENIGN = {
     ),
     ("ndc_substances", "delta_gt5", 600): "600 s, the tail characterisation budget",
 }
+
+#: LABELLED_HISTORY: a pre-freeze value deliberately retained *and labelled as
+#: pre-freeze*, so a reconciliation stays legible. Correct **permanently**; never
+#: re-validated, because it does not depend on the current census at all. These
+#: will accumulate as more reconciliations are written up legibly.
+LABELLED_HISTORY = {
+    ("ndc_classes", "n_consecutive_pairs", 555): (
+        "DESIGN.md L254 keeps '(555 pre-freeze; the built corpus has 528)'"
+    ),
+}
+
+KNOWN_BENIGN = {**COLLISIONS, **LABELLED_HISTORY}
 
 
 def prose_integers(text: str) -> set[int]:
@@ -194,6 +211,7 @@ def main() -> int:
     stale: list[str] = []
     archival: list[str] = []
     below_floor: list[str] = []
+    history: list[str] = []
     compared = skipped_small = 0
     for census in censuses:
         collection = census.parent.name
@@ -212,11 +230,20 @@ def main() -> int:
             compared += 1
             if float(expected) not in every:
                 continue
+            labelled = LABELLED_HISTORY.get((collection, quantity, expected))
             live, old = [], []
             for doc, text in per_doc.items():
                 if float(expected) not in prose_numbers(text):
                     continue
                 (old if any(k in doc.name for k in ARCHIVAL) else live).append(doc.name)
+            if labelled and live:
+                # Deliberately retained AND labelled as pre-freeze, so the
+                # reconciliation stays legible. Not stale; not re-validated.
+                history.append(
+                    f"  {collection:16s} {quantity:30s} {expected:,g} kept in "
+                    f"{', '.join(live)} -- {labelled}"
+                )
+                continue
             head = (
                 f"  {collection:16s} {quantity:30s} "
                 f"PRE-FREEZE {expected:,g} (built {obtained:,g})"
@@ -237,6 +264,9 @@ def main() -> int:
     if archival:
         print(f"\n  and in dated records only ({len(archival)}) -- correct as history:")
         print("\n".join(archival))
+    if history:
+        print(f"\n  labelled history ({len(history)}) -- deliberate, permanent:")
+        print("\n".join(history))
     if below_floor:
         print(
             f"\n  BELOW THE FLOOR ({len(below_floor)}) -- unscreenable, NOT clean. "
@@ -276,7 +306,11 @@ def main() -> int:
             f"CLEAN: no prose integer sits within {TOLERANCE:.0%} of a census value "
             "without equalling it."
         )
-        print(f"({len(benign_seen)} known-benign near-misses suppressed; --show-benign)")
+        print(
+            f"({len(benign_seen)} suppressed: {len(COLLISIONS)} collisions "
+            f"[re-validate when a corpus is rebuilt], {len(LABELLED_HISTORY)} "
+            "labelled history [permanent]; --show-benign)"
+        )
         return 0
 
     print(f"screen 2 (near-miss, window {TOLERANCE:.0%}) -- CANDIDATES:")

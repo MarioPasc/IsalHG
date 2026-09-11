@@ -402,6 +402,46 @@ stated — it matches digit strings and cannot see whether the noun beside a num
 is the right noun, which is the predicate pass's job. Screen 1 proves a figure
 stale; neither screen proves one correct.
 
+**2026-09-11 — the screen widened to all 44 D_ART3 documents: nine stale values
+in live documents.** `[IsalHG-Fable]`: `prose.md` is not the only document
+carrying these figures, and `RESULTS_WALKTHROUGH.md` had already proved they
+diverge. Correct.
+
+Two defects in the screen surfaced first and are fixed:
+
+* **screen 1 had no floor** — an expected value of `20` (`n_classes_run_ge5`)
+  matched "20" in nineteen documents. `MIN_VALUE` now applies to both screens;
+  four small quantities are skipped and named as skipped.
+* **dated records were treated as live.** A handoff, audit, state note or probe
+  *correctly* quotes the numbers current when it was written. Those are now
+  reported separately — three pre-freeze values appear **only** in dated records
+  and are right as history.
+
+**The nine, all certainties from the freeze audit's own `expected` values:**
+
+| corpus | quantity | pre-freeze → built | live documents |
+|---|---|---|---|
+| `ndc_classes` | `n_records` | 1,432 → 1,381 | START_HERE, CODE_PLAN, DESIGN |
+| `ndc_classes` | `n_consecutive_pairs` | 555 → 528 | DESIGN |
+| `ndc_classes` | `delta_1` | 120 → 117 | DESIGN, RESULTS_WALKTHROUGH, rq7_envelope_facts, idea3_median |
+| `ndc_classes` | `delta_2` | 134 → 129 | DESIGN, literature_verified, proved_facts |
+| `ndc_classes` | `n_pairs_constant_preserving` | 140 → 128 | START_HERE, ENCODINGS_WORKED_EXAMPLE, rq7_envelope_facts |
+| `ndc_classes` | `n_pairs_constant_changing` | 415 → 400 | START_HERE |
+| `ndc_substances` | `n_records` | **2,222 → 1,745** | DESIGN |
+| `wd50k66` | `n_records` | 3,994 → 3,988 | DESIGN |
+| `wd50k66` | `n_records_with_arity_ge3` | 3,167 → 3,162 | START_HERE |
+
+**`ndc_substances` 2,222 → 1,745 is the largest and it is in `DESIGN.md`**, the
+document every experiment is specified from.
+
+**One caveat the screen cannot resolve, and it is the predicate pass again.** A
+live document may quote a pre-freeze value **as** a pre-freeze value — this
+task's own entries do, and `rq7_envelope_facts.md` appears above for exactly
+that reason (it records 120 and 140 while explaining the reconciliation). The
+screen matches digits, not nouns, so each of the nine is *located*, not
+adjudicated. **Correcting them is fold work and belongs in the fold**, one
+document at a time, with the noun checked.
+
 **The precondition runs in BOTH directions.** As written above it audits every
 number the prose carries against a `foundation/` entry. That is silent on the
 inverse, which has already occurred: the word "novel" appeared nowhere in

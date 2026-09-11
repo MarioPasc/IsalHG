@@ -520,3 +520,53 @@
   the RQ7 envelope's `(m, k)` axis; R3 proved (Prop. C.4); R4 filed (T-KBa);
   R5 kept; R6 conceded for the search, with `w°` the machine's sub-millisecond
   member.
+
+---
+
+## D-KBg1 (pending) — does `supplementary_data.md` get corrected to the built corpora?
+
+**Raised:** 2026-09-11 04:43 CEST, by `[IsalHG-Fable]` via the corpus figure screen.
+**Rule 10 check:** grepped `DECISIONS.md` for `supplement` — **no existing
+ruling**, so it survives and is put to the author rather than settled in the
+ledger.
+
+**The situation.** `supplementary_data.md` §S1–S4 publishes the corpus census
+as it stood **before** the freeze. The built corpora differ on 16 audited
+quantities, the largest being `ndc_substances` **2,222 → 1,745** and
+`ndc_classes` **1,432 → 1,381**. `prose.md` §7 references the supplement as
+documenting the corpora in full, and now says 1,381 and 3,162 itself — so as
+things stand **the paper would ship a supplement contradicting its own data
+section**.
+
+**One premise, checked and false.** The concern was raised that correcting the
+supplement would make the freeze audit vacuous — `expected` becoming
+`obtained`, every row matching, the record of what changed lost.
+**It would not.** `scripts/tkde/freeze_corpora.py` holds `EXPECTED` as a
+**hardcoded literal dict** ("the census of supplementary_data.md S1–S4, as
+published"); it does not read the document at runtime. The reconciliation is
+also pinned in every `census.json`'s `audit.rows`. So the audit record survives
+correction in **two** independent places, and there is no trade-off between
+fixing the supplement and keeping the history.
+
+**What is actually being decided**, therefore, is narrower and is editorial:
+
+1. **Correct the supplement** to the built corpora, keeping the reconciliation
+   in `freeze_corpora.py` + `census.json` (and optionally a short "what changed
+   at freeze" note in the supplement itself). The paper then describes what was
+   run, everywhere.
+2. **Leave it**, and add a sentence to the supplement and to `prose.md` §7
+   saying it documents the *pre-freeze* corpora and naming where the built
+   census lives.
+
+**Recommendation: (1).** The supplement's job is to document the corpora the
+experiments ran on; it currently documents corpora nothing ran on. Option 2
+preserves an inconsistency the reader has to be warned about, in the document
+whose purpose is to remove the need for warnings.
+
+**Why it needs the author rather than the ledger:** it changes a published
+artefact of the paper, and option 2 changes what `prose.md` §7 claims about it.
+
+**Until it is ruled**, the screen excludes `supplementary_data.md` by default
+(`--exclude`), so the gate is not held by a file whose staleness may be
+deliberate — and that exclusion is **named in the output on every run** rather
+than silent, so it cannot outlive the decision unnoticed.

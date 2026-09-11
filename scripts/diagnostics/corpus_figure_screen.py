@@ -53,10 +53,17 @@ from pathlib import Path
 TOLERANCE = 0.06
 
 #: Below this, collisions swamp the signal (page numbers, small counts, years).
+#: Applies to BOTH screens: an expected value of 20 matches "20" in nineteen
+#: documents, which is noise wearing a certainty's label.
 MIN_VALUE = 100
 
+#: Dated records. A handoff, audit, state note or probe *correctly* quotes the
+#: numbers current when it was written; a pre-freeze value there is history, not
+#: staleness. Screened separately so the gate is not held by the archive.
+ARCHIVAL = ("HANDOFF_", "RESULTS_AUDIT_", "STATE_", "PI_QA_", "probes_", "measured_facts")
+
 DEFAULT_CORPORA = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/corpora")
-DEFAULT_PROSE = Path(__file__).resolve().parents[2] / "docs/article/D_ART3/prose.md"
+DEFAULT_DOCS = Path(__file__).resolve().parents[2] / "docs/article/D_ART3"
 
 #: Cleared by hand on 2026-09-11; each is a genuine coincidence, not a stale value.
 #: Listed rather than silently filtered, so a reader can re-check the judgement.
@@ -144,7 +151,18 @@ def census_fields(path: Path) -> dict[str, int]:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--corpora", type=Path, default=DEFAULT_CORPORA)
-    parser.add_argument("--prose", type=Path, default=DEFAULT_PROSE)
+    parser.add_argument(
+        "--docs",
+        type=Path,
+        default=DEFAULT_DOCS,
+        help="directory of documents to screen (every *.md below it)",
+    )
+    parser.add_argument(
+        "--exclude",
+        action="append",
+        default=["supplementary_data.md", "foundation/lessons.md"],
+        help="basenames or suffixes to skip; repeatable",
+    )
     parser.add_argument(
         "--show-benign",
         action="store_true",
@@ -152,38 +170,64 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    if not args.prose.is_file():
-        print(f"no prose at {args.prose}", file=sys.stderr)
+    docs = [
+        d
+        for d in sorted(args.docs.rglob("*.md"))
+        if not any(str(d).endswith(x) for x in args.exclude)
+    ]
+    if not docs:
+        print(f"no documents under {args.docs}", file=sys.stderr)
         return 2
     censuses = sorted(args.corpora.glob("*/census.json"))
     if not censuses:
         print(f"no census.json under {args.corpora}", file=sys.stderr)
         return 2
 
-    text = args.prose.read_text()
-    numbers = prose_integers(text)
-    every = prose_numbers(text)
-    print(f"prose: {args.prose}  ({len(numbers)} integers >= {MIN_VALUE})")
+    per_doc = {d: d.read_text() for d in docs}
+    numbers = {n for t in per_doc.values() for n in prose_integers(t)}
+    every = {n for t in per_doc.values() for n in prose_numbers(t)}
+    print(f"documents: {len(docs)} under {args.docs}  ({len(numbers)} integers >= {MIN_VALUE})")
+    print(f"excluded: {', '.join(args.exclude)}")
     print(f"corpora: {len(censuses)} censuses under {args.corpora}\n")
 
     # -- screen 1: exact, against the freeze audit's own pre-freeze values --------
     stale: list[str] = []
-    compared = 0
+    archival: list[str] = []
+    compared = skipped_small = 0
     for census in censuses:
         collection = census.parent.name
         for quantity, expected, obtained in stale_expectations(census):
+            if expected < MIN_VALUE:
+                skipped_small += 1
+                continue
             compared += 1
-            if float(expected) in every:
-                stale.append(
-                    f"  {collection:16s} {quantity:34s} "
-                    f"PRE-FREEZE {expected:,g} present (built: {obtained:,g})"
-                )
-    print(f"screen 1 (exact, {compared} mismatched quantities across all corpora):")
+            if float(expected) not in every:
+                continue
+            live, old = [], []
+            for doc, text in per_doc.items():
+                if float(expected) not in prose_numbers(text):
+                    continue
+                (old if any(k in doc.name for k in ARCHIVAL) else live).append(doc.name)
+            head = (
+                f"  {collection:16s} {quantity:30s} "
+                f"PRE-FREEZE {expected:,g} (built {obtained:,g})"
+            )
+            if live:
+                stale.append(f"{head} in: {', '.join(live)}")
+            elif old:
+                archival.append(f"{head} only in dated records: {', '.join(old)}")
+    print(
+        f"screen 1 (exact): {compared} mismatched quantities >= {MIN_VALUE} "
+        f"({skipped_small} smaller ones skipped -- they collide with everything)"
+    )
     if stale:
-        print("  STALE VALUES IN THE PROSE -- these are certainties, not candidates:")
+        print("  STALE VALUES IN LIVE DOCUMENTS -- certainties, not candidates:")
         print("\n".join(stale))
     else:
-        print("  clean: no pre-freeze value from any freeze-audit row appears.")
+        print("  clean: no pre-freeze value appears in any live document.")
+    if archival:
+        print(f"\n  and in dated records only ({len(archival)}) -- correct as history:")
+        print("\n".join(archival))
     print()
 
     open_candidates: list[str] = []

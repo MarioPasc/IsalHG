@@ -82,9 +82,18 @@ because **every dense cell sits in `<1e3`**.
 
 **RQ1 (orbit pruning takes censoring at `|Aut| ≥ 1e7` from 36 to zero on real
 corpora) and RQ7 (orbit censors 392/427 in that bucket) are both correct and
-describe disjoint regions.** Every `≥1e7` sweep instance has `m ≥ 80`; no member of the three collections read whole reaches it; at the real median `m ≈ 5` the sweep
-censors 0.000 at every arity. **The paper states this explicitly** — the two
-numbers are both going in, and unreconciled they are a reviewer's gift.
+describe disjoint regions.** Every `≥1e7` sweep instance has `m ≥ 80`; **no
+member of `wd50k66` (3,988) or `ndc_substances` (1,745) — the two gated
+collections read whole — reaches it**; at the real median `m ≈ 5` the sweep
+censors 0.000 at every arity.
+
+Two qualifications belong beside it, not in a footnote. `ndc_classes` and
+`wd50k100` are read partial (§ below) and are evidence neither way. And
+**`wd50k66_full` — the ungated variant of `wd50k66` — has 41 members (0.9 %) at
+`m ≥ 80`**: the claim is about the *gated* collections, **not** about real
+knowledge bases in general, and the row four lines above says so. **The paper
+states this explicitly** — both numbers are going in, and unreconciled they are
+a reviewer's gift.
 
 ## 5. Yield on the real collections (60 s budget, one row per member)
 
@@ -177,6 +186,21 @@ that catches this is L26's — *declare the input* — applied to one half of th
 same script and not the other. `rq7_envelope_reading.py` now asserts every
 collection against the manifest and names the absent blocks, since the blocks
 present cannot report the ones that never landed.
+
+**What the partial read does and does not reach.** Stated as a boundary so no
+reader re-checks the rest of this document:
+
+| affected | unaffected |
+|---|---|
+| the yield table's `ndc_classes` and `wd50k100` rows | **the sweep: 0 of 7,776, verified per arm** |
+| the `m`-distribution table's two partial rows | the arity gate (`k=2` at 0.000 everywhere) |
+| the reconciliation's population, now named | the within-cell symmetry rises (9 of 15, 0 falling) |
+| | the whole `(m,k)` × `aut_bucket` join |
+| | H7a's frontier reading (sweep rows only) |
+| | H7b's certificate-arm measurement (sweep rows only) |
+
+Every affected figure draws on `rows_yield_members`; nothing in the sweep
+analysis touches those rows.
 
 **The claim that survives unchanged.** The 0-of-7,776 sweep censoring is
 untouched: the sweep is complete and verified per arm. The real-corpus yield

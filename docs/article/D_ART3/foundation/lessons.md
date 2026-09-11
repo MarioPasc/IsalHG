@@ -513,3 +513,35 @@ the episode that taught it (provenance in `measured_facts.md`).*
   never did. That is the same shape as the count-without-an-mtime — the data you
   have cannot tell you what is absent from it, so the expected extent has to come
   from somewhere the data does not control.
+
+  **A correction is a write, and unverified writes fail the same way the
+  original did.** The fix for the partial read replaced the reconciliation's
+  population in two documents by string substitution. It matched in one and
+  **not** in the other — the sentence had wrapped at a different column — and the
+  script reported success, because what it printed was that the *appended note*
+  had landed, not that the *replacement* had. The wrong sentence therefore sat
+  in `T-KBf.md` through a commit whose message said it had been corrected.
+
+  That is the heredoc-anchor defect again, in the specific place it is least
+  expected: **inside the repair of another defect**, where attention is at its
+  highest and the sense of having just been careful is strongest. The rule
+  already exists — *grep for the result, do not trust the exit code* — and the
+  usable form of it is narrower: **verify the assertion you actually care about,
+  not a neighbouring one that happens to be true.** Checking that the note
+  appended was a real check of the wrong proposition.
+
+  The tool choice does the work that vigilance did not: `Edit` fails when its
+  anchor is absent, a bare `str.replace` returns the string unchanged. Where a
+  script must substitute, `assert anchor in text` before writing — which is the
+  same shape as `classify()` raising on a row that matched no bucket.
+
+  **And the replacement was itself wrong, for a third reason.** It said "no
+  member of the three collections read whole reaches `m ≥ 80`" while the table
+  four lines above listed `wd50k66_full` with **41 members at `m ≥ 80`** — a
+  sentence refuted by its own page. Caught by `[IsalHG-Fable]`, whose earlier
+  message had cited that exact row. The population was never the count of
+  complete collections; it is the two *gated* ones, and the ungated variant is
+  the counterexample that forces the qualifier. **A claim that names a
+  population must name it by the property that makes the claim true** — "read
+  whole" was availability again, this time in the phrasing rather than in the
+  guard.

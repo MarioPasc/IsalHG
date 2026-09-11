@@ -2810,11 +2810,16 @@ because the real members are not where the synthetic high-symmetry mass is:
 | `wd50k66` | 3,988 | 5 | 11 | 29 | **0** |
 | `wd50k66_full` | 4,554 | 5 | 18 | 303 | 41 (0.9 %) |
 
-Every `≥1e7` sweep instance has `m ≥ 80`; **no member of the four gated
-collections reaches `m ≥ 80` at all**, and the sweep's censoring at the real
-median (`m ≈ 5`) is 0.000 for every arity. The paper carries this sentence
-explicitly — both numbers are going in, and unreconciled they are a gift to a
-reviewer.
+Every `≥1e7` sweep instance has `m ≥ 80`. **No member of `wd50k66` (3,988) or
+`ndc_substances` (1,745) — the two gated collections read whole — reaches
+`m ≥ 80` at all**, and at the real median (`m ≈ 5`) the sweep censors 0.000 for
+every arity. Two qualifications belong in the same breath rather than in a
+footnote: `ndc_classes` and `wd50k100` are read partial (below), so they are not
+evidence either way; and **`wd50k66_full` — the ungated variant of `wd50k66` —
+has 41 members (0.9 %) at `m ≥ 80`**, which is why the sentence is about the
+gated collections and not about real knowledge bases in general. The paper
+carries this reconciliation explicitly — both numbers are going in, and
+unreconciled they are a gift to a reviewer.
 
 **Yield on the real collections** (60 s budget, one row per member):
 
@@ -2827,8 +2832,11 @@ reviewer.
 
 Median cost on completed members: `fact_rank` 0.156–0.199 ms, `isal_ow_struct`
 0.573–0.696 ms (**3.5×** the certificate, same order), `isalhg_levenshtein`
-4.2–13.5 ms. The ordered walk canonicalizes **every member of every real
-collection**, at sub-millisecond median cost.
+4.2–13.5 ms. The ordered walk canonicalizes **every one of the 5,733 members
+read whole** (`wd50k66` 3,988 + `ndc_substances` 1,745), at sub-millisecond
+median cost. The "every member of every real collection" phrasing is **held**
+until `ndc_classes` and `wd50k100` land — a number that would have to be
+restated is worse than one that arrives late.
 
 #### H7b, reported as the measurement rather than as a surviving half
 
@@ -2886,6 +2894,21 @@ that catches this is L26's — *declare the input* — applied to one half of th
 same script and not the other. `rq7_envelope_reading.py` now asserts every
 collection against the manifest and names the absent blocks, since the blocks
 present cannot report the ones that never landed.
+
+**What the partial read does and does not reach.** Stated as a boundary so no
+reader re-checks the rest of this document:
+
+| affected | unaffected |
+|---|---|
+| the yield table's `ndc_classes` and `wd50k100` rows | **the sweep: 0 of 7,776, verified per arm** |
+| the `m`-distribution table's two partial rows | the arity gate (`k=2` at 0.000 everywhere) |
+| the reconciliation's population, now named | the within-cell symmetry rises (9 of 15, 0 falling) |
+| | the whole `(m,k)` × `aut_bucket` join |
+| | H7a's frontier reading (sweep rows only) |
+| | H7b's certificate-arm measurement (sweep rows only) |
+
+Every affected figure draws on `rows_yield_members`; nothing in the sweep
+analysis touches those rows.
 
 **The claim that survives unchanged.** The 0-of-7,776 sweep censoring is
 untouched: the sweep is complete and verified per arm. The real-corpus yield

@@ -535,6 +535,32 @@ the episode that taught it (provenance in `measured_facts.md`).*
   script must substitute, `assert anchor in text` before writing — which is the
   same shape as `classify()` raising on a row that matched no bucket.
 
+  **The operational form, and it is strictly stronger: a replacement is verified
+  by the absence of what it replaced, not by the presence of what replaced it.**
+  A partially applied replacement leaves *both* — which is precisely what
+  happened, the new sentence in one file and the old one still standing in the
+  other. Grepping for the new text passes in the file that changed and says
+  nothing about the file that did not; grepping for the **old** text fails
+  wherever it survives, across every file at once, **without the checker having
+  to know which files were supposed to change**. Same grep, no dependence on
+  remembering that an anchor might have wrapped. (Raised by `[IsalHG-Fable]`
+  after the fact — the absence check is what established that the stale wording
+  now survives only inside this entry.)
+
+  This does not replace "verify the proposition you actually care about": it is
+  that rule's operational form for this class. After a replacement the
+  proposition you care about is a **negative** one — *the old text is gone* — and
+  a presence check is structurally incapable of seeing a negative. The same
+  reason `classify()` must be total: absence has to be checked for directly,
+  because nothing about what is present reports it.
+
+  **And why the self-verification failed, which is the precondition failure
+  again in a new place.** A check written at the same moment as the edit, by the
+  same author, out of the same intent, tends to confirm **what was meant rather
+  than what was done**. No amount of care fixes that, because the care and the
+  error come from the same source — which is the argument for verifying against
+  the artefact's content rather than against one's own record of having acted.
+
   **And the replacement was itself wrong, for a third reason.** It said "no
   member of the three collections read whole reaches `m ≥ 80`" while the table
   four lines above listed `wd50k66_full` with **41 members at `m ≥ 80`** — a

@@ -219,7 +219,8 @@ when they arose:
 | `8f0787b` | `docs(notes): rq8 work log` (first version) |
 | `1ff6c90` | `docs(rq8): pre-register Amendment A1 -- the fact-count-matched arms` |
 | `107ed20` | `feat(rq8): Amendment A1 -- fact-count-matched arms, and the sign reverses` |
-| (this one) | `docs(notes): rq8 work log -- Amendment A1` |
+| `5aeee73` | `docs(notes): rq8 work log -- Amendment A1` |
+| (this one) | `docs(rq8): the two readings of "matched", and the claim status at hand-off` |
 
 `git diff --name-only 704e271..HEAD` matches the Created table exactly. In
 particular `experiments/tkde/rq2.py` and `rq5.py` are **unmodified**: the arm
@@ -458,15 +459,20 @@ failure — satisfied on `wd50k66`, not on `ndc_classes` — so the fallback sta
 and RQ8 remains a supporting exhibit. 27 seeds decide whether the `wd50k66`
 lead survives Holm.
 
-One honest note on why my matched numbers beat the review's counterfactual
-(which had 0.075 → 0.100). The review re-read the draws already made; the
-pre-registered rule I implemented is "first ten distinct such proposals, **same
-R budget rule**", so a rejected multi-fact draw costs an attempt and the arm
-keeps drawing inside its unchanged `R = 20` per slot. That is more generous to
-the generator, and it is what was written down before the numbers were seen.
-The price is visible: the matched arms fill 5.8–8.7 slots of ten against the
-free-running 7.9–9.8, and unfilled slots are reported, never bought back with a
-bigger budget.
+Two readings of "matched", and why mine beats the review's counterfactual. A
+re-read of the *original* draws gives `hit@10` **0.100**; the pre-registered
+re-draw rule — first ten distinct one-fact proposals under the **unchanged**
+`R = 20` per slot, so a rejected multi-fact draw costs an attempt and the arm
+keeps drawing — gives **0.175**, at the price shown in the `acc` column (matched
+arms fill 5.8–8.7 slots of ten against the free-running 7.9–9.8). The re-draw
+rule is what was written down before the numbers were seen, so it is what is
+reported; unfilled slots are stated, never bought back. I offered to add the
+review's stricter reading as a third arm; the orchestrator declined and asked
+for both figures in one sentence of the pilot doc instead, which is there.
+
+**Status of each claim at hand-off, as ruled:** the attachment mechanism is
+**supported**; the `ndc_classes` deficit is a **pattern gap**; the `wd50k66`
+lead is **untested** until Holm at 27 seeds and must not be quoted before then.
 
 **Assumptions I proceeded on (each messaged to `main` when made):**
 - The root is the hub (max fact-degree, ties by smallest id), since the frozen
@@ -551,6 +557,8 @@ filtering, `corpora.load_collection`, `isal_ordered.ordered_fingerprint`,
 
 | Item | Severity | Detail | Suggested owner |
 |---|---|---|---|
+| The `wd50k66` matched lead is untested | medium | `ow_ngram_1f` 0.0383 against `pattern_cooc` 0.0133 is the one place ours wins, and three pilot seeds cannot test it. Job 2308489 supplies the 27-seed Holm comparison; until then the number must not be quoted as a result. | orchestrator, at harvest |
+| Two RQ8 campaigns now exist on disk | low | 2308339 (free-running, COMPLETED) and 2308489 (Amendment A1, nine arms). Different run tags, so neither overwrites the other, and the paper reports both. Do not merge them into one table. | orchestrator |
 | FSCRATCH is read-only for this account | **high** | 276.3k/250.0k files, grace expired. Every future deployment fails the same way, and any job that *writes* there mid-run would die. This wave works around it; the account state is unresolved. | user (via orchestrator) |
 | 6 pre-existing test failures | medium | `test_rq36_smoke.py` (5) and `test_rq45_smoke.py` (1), stale assertions against `rq6.SAMPLE_MODELS` (21 vs 29 units) and the widened `rq1.deploy_stamps` key set. Present at BASE_SHA. | next wave |
 | RQ8's `--mem=32G` is ~3 orders too large | low | Smoke MaxRSS 6.78 MB. Over-requesting costs queue time; I left it because the campaign is already placed. Read the real figure off job 2308339's `.batch` step and size the next run from it. | next wave |

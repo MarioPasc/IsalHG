@@ -346,16 +346,20 @@ satisfied on `wd50k66`, not on `ndc_classes`. The pre-registered fallback still
 applies and **RQ8 remains a supporting exhibit**; the 27-seed run decides
 whether the `wd50k66` lead is Holm-significant, which three seeds cannot.
 
-**One honest note on why these numbers beat the review's counterfactual.** The
-review took the first ten one-fact proposals *from the draws already made*
-(hit@10 0.075 → 0.100). The pre-registered rule implemented here is "first ten
-distinct such proposals, same `R` budget rule", so a rejected multi-fact draw
-costs an attempt and the arm keeps drawing within its unchanged `R = 20` per
-slot. That is more generous to the generator than the review's read, and it is
-what was written down before the numbers were seen. The cost is visible in the
-`acc` column: the matched arms fill 5.8–8.7 slots of ten where the free-running
-ones fill 7.9–9.8, and unfilled slots are reported rather than bought back with
-a larger budget.
+**Two readings of "matched", and which one is reported.** Re-reading the
+*original* draws and keeping the first ten one-fact proposals among them gives
+`hit@10` **0.100**; the pre-registered re-draw rule reported here — first ten
+distinct one-fact proposals under the **unchanged** `R = 20` per slot, so a
+rejected multi-fact draw costs an attempt and the arm keeps drawing — gives
+**0.175**, and its price is the `acc` column, where the matched arms fill
+5.8–8.7 slots of ten against the free-running 7.9–9.8. The re-draw rule is the
+one written down before the numbers were seen, so it is the one reported;
+unfilled slots are stated, never bought back with a larger budget.
+
+**Status of each claim, for the prose fold.** The attachment mechanism is
+**supported**. The `ndc_classes` deficit is a **pattern gap**. The `wd50k66`
+lead is **untested** until the Holm-corrected comparison at 27 seeds — three
+pilot seeds cannot test it, and it must not be quoted as a result before then.
 
 ---
 

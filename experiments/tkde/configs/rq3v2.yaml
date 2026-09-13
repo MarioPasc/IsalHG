@@ -1,0 +1,114 @@
+# RQ3 v2 --- the golden record from N anonymous noisy descriptions.
+#
+# Pre-registered: HEADLINE_DESIGN_2026-09-13.md sections 0-3, plus the
+# orchestrator's rulings of 2026-09-13 (word-space consensus_ow; consensus_fact
+# as the pre-registered fact-space ablation; H3.5). Nothing here is tuned on a
+# measured outcome.
+#
+# Cells = collections x strata x N x t x seeds. The ndc_classes star stratum is
+# structurally empty (gate G0: 0 of 212 members inside the source window are
+# stars), so its cells emit one row carrying that reason and no collection is
+# built; H3.4, the star control, is measured on wd50k66 alone.
+
+rq: RQ3v2
+seed_count: 27
+
+# The medoid screen, at the same 60 s per member as RQ1 and matrices.yaml so the
+# census a reader meets here is the census they met there. An arm that misses
+# any member of a collection reports no medoid for it: the certificate bounds
+# the optimum over the N members, so a medoid over the survivors would be
+# printed under a column headed "certified ratio" while certifying another
+# object.
+fingerprint_budget_s: 60.0
+
+# Wall-clock per consensus call, in a forked child. Both consensus arms reach an
+# engine, and an in-parent canonicalization leaves every later forked child
+# deadlocking on it, so neither may run unguarded in a process that also forks.
+method_budget_s: 1800
+
+# One exact-HGED call. Above n = 10 (the E1' ceiling, DATA.md section 4) or on a
+# timeout the row is judged by bipartite_ged_path and says so in
+# fact_dist_judge.
+hged_timeout_s: 60
+
+# The eleven distance arms of the campaign's standing rule. Every one supplies a
+# medoid, whose exact recovery is 0 by construction -- the structural floor the
+# design prints rather than hides. hypercot needs its pinned environment; where
+# that environment is absent the row carries the reason, never a blank.
+medoid_arms:
+  - nauty_cert
+  - nauty_cert_rows
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_assign
+  - bipartite_ged_path
+  - hypercot
+  - size_l1
+  - degree_seq_l1
+  - isal_ow_struct
+
+design:
+  collections: [ndc_classes, wd50k66]
+  strata: [star, non_star]
+  n_values: [5, 9, 15]
+  t_values: [1, 2]
+  # 50 sources per stratum per seed, re-sampled per seed. The design asks for
+  # 100 per corpus per seed; wd50k66 reaches exactly that across its two strata,
+  # and ndc_classes reaches 50 because gate G0 measured its star stratum empty
+  # inside the source window, so there is only one stratum to draw from.
+  sources_per_cell: 50
+
+  # The frozen RQ3 source window (v1, DESIGN.md section 4): real members with
+  # 4 <= n <= 12, 4 <= m <= 12, max arity <= 6, carrying constant identities so
+  # the identity oracle and the evaluation have something to address.
+  source_window:
+    n_min: 4
+    n_max: 12
+    m_min: 4
+    m_max: 12
+    max_arity: 6
+
+  # Mixed noise: each of a member's t edits draws its kind uniformly from these
+  # four. Gate G3.1 measured fact-reach coverage 1.000 at r = 1 for all four on
+  # both corpora and both strata, and ball reachability of the source class
+  # 1.000 at r = 2, so no kind is restricted out.
+  noise_kinds: [del_pendant, del_interior, ins_existing, ins_new_constant]
+
+  # Ball radius of consensus_ow and reach radius of consensus_fact. r = 2 is the
+  # design's primary; "restricted" with append 3 / delete 2 is the declared
+  # fallback and is not used unless a gate says so.
+  radius: 2
+  ball: indel
+  ball_append: 3
+  ball_delete: 2
+
+  # Which lexicographic order selects consensus_ow's winner.
+  # "coverage_first" is the objective v1 froze -- maximise the number of members
+  # the class was reached from, then minimise the summed distance -- and is the
+  # pre-registered default here.
+  #
+  # The pilot measured that the two orders are not interchangeable in word
+  # space, for a reason the locality table names: a single fact deletion moves
+  # w-degree by a median of 1 token and a single fact insertion by 5-10
+  # (G3.1b1). Inside a fixed radius every member can therefore delete its way to
+  # a common core while none can insert its way to a larger object, so coverage
+  # is biased toward knowledge bases smaller than the source. In fact space,
+  # where reach' charges an insertion and a deletion alike, the bias does not
+  # exist, which is why v1 could use coverage first.
+  #
+  # objective_ablation runs the other order as a second, separately named arm on
+  # every collection, so both are reported and neither is chosen after the fact.
+  objective: coverage_first
+  objective_ablation: true
+
+smoke:
+  seed_count: 1
+  method_budget_s: 300
+  hged_timeout_s: 10
+  design:
+    collections: [ndc_classes]
+    strata: [non_star]
+    n_values: [5]
+    t_values: [1]
+    sources_per_cell: 2

@@ -302,6 +302,42 @@ corpus × stratum × N × t, the censoring rate per arm, the two consensus arms'
 pool sizes and wall-clocks, and the priced full-run cost.*
 <!-- PILOT-TABLE-END -->
 
+### The ball choice, and the arithmetic behind it
+
+Gate G3.1(b2) measured the two families at **identical** coverage — 1.000 each on
+the mixed model at `t = 1` — so this is a cost decision and nothing else, which
+is how the orchestrator framed it.
+
+Measured cost of one `consensus_ow` call, six families per cell, on this
+workstation:
+
+| cell | ball | recovery | sub-record share of misses | median s | classes |
+|---|---|---|---|---|---|
+| wd50k66 non-star N5 t1 | restricted a≤3/d≤2 | 0.167 | 0.500 | 1.8 | 2,028 |
+| wd50k66 non-star N5 t1 | indel r=2 | 0.333 | 0.333 | 14.4 | 14,153 |
+| wd50k66 non-star N9 t1 | restricted a≤3/d≤2 | 0.333 | 0.167 | 9.3 | 7,886 |
+
+(Measured before the scoring loop was hoisted and before the metric amendment,
+so the times are upper bounds and the recoveries are the Levenshtein ones. Both
+were re-measured afterwards; the re-priced table replaces this one.)
+
+The full indel ball buys about twice the recovery for about eight times the cost
+at `N = 5`, and the orchestrator's rule prefers it if the partition fits in
+≤ 24 h.
+
+**The partition.** 486 non-empty units × 50 sources = 24,300 collections. At the
+measured whole-collection cost — the Picasso smoke ran 2 collections at `N = 5`
+in 57 s, i.e. ≈ 28 s each including every medoid, merge and consensus arm — and
+allowing for the larger balls at `N = 9` and `N = 15`, the campaign is on the
+order of 200–400 CPU-hours. Split into 122 array tasks of 4 shards each, that is
+1.6–3.3 h per task: above SCBI's two-hour floor and well inside the 8 h wall.
+With a throttle of 64 the campaign runs in two rounds, so the makespan is
+3–7 h — comfortably inside the 24 h the rule allows.
+
+**Choice recorded: the full indel ball at `r = 2`.** The restricted family stays
+as the declared fallback if a re-price at `N = 15` moves the per-collection cost
+by an order of magnitude.
+
 ---
 
 ## Deviations from the brief, and why

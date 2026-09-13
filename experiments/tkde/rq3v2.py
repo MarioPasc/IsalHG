@@ -1178,6 +1178,59 @@ def consensus_ow(
     RQ3v2Error
         If ``members`` is empty or the enumeration produced no class.
     """
+    pool = build_ball_pool(
+        members, k, n_types, n_preds, radius, ball=ball, append=append, delete=delete
+    )
+    return select_consensus(
+        pool, members, radius, objective=objective, tie_break=tie_break, metric=metric
+    )
+
+
+@dataclass(frozen=True)
+class BallPool:
+    """The decoded candidate set, built once and scored under several objectives.
+
+    The three ``consensus_ow`` arms differ only in how they *rank* the candidates
+    --- metric, first criterion, tie break --- and not at all in which candidates
+    exist.  Enumerating the ball once and scoring it three times is therefore
+    three times cheaper than three calls, and it also makes the arms exactly
+    comparable: they see the same pool by construction rather than by trusting
+    the enumeration to be deterministic.
+
+    Parameters
+    ----------
+    reached : dict
+        Per class key, the set of member indices whose ball reached it.
+    representative : dict
+        Per class key, one decoded knowledge base of that class.
+    member_symbols : tuple
+        Each member's ``w°`` symbol sequence, in member order.
+    n_decoded, n_decoded_connected : int
+        Words decoded, and how many decoded to a connected knowledge base.
+    secs : float
+        Wall-clock of the enumeration.
+    """
+
+    reached: Mapping[Any, set[int]]
+    representative: Mapping[Any, SparseHypergraph]
+    member_symbols: tuple[tuple[Any, ...], ...]
+    n_decoded: int
+    n_decoded_connected: int
+    secs: float
+
+
+def build_ball_pool(
+    members: Sequence[SparseHypergraph],
+    k: int,
+    n_types: int,
+    n_preds: int,
+    radius: int,
+    *,
+    ball: str = "indel",
+    append: int = 3,
+    delete: int = 2,
+) -> BallPool:
+    """Enumerate and decode the members' token balls; see :class:`BallPool`."""
     if not members:
         raise RQ3v2Error("consensus_ow needs at least one member")
     started = time.perf_counter()
@@ -1190,7 +1243,6 @@ def consensus_ow(
     vocabulary = tuple(sorted({token for word in words for token in word}))
 
     reached: dict[Any, set[int]] = defaultdict(set)
-    best_distance: dict[Any, dict[int, int]] = defaultdict(dict)
     representative: dict[Any, SparseHypergraph] = {}
     n_decoded = 0
     n_connected = 0
@@ -1218,18 +1270,39 @@ def consensus_ow(
             known = structures.get(key)
             if known is None or distance < known[1]:
                 structures[key] = (decoded, distance)
-        for decoded, distance in structures.values():
+        for decoded, _distance in structures.values():
             if decoded.n_nodes == 0 or not decoded.is_connected():
                 continue
             class_key = fact_key_of(decoded)
             reached[class_key].add(index)
-            previous = best_distance[class_key].get(index)
-            if previous is None or distance < previous:
-                best_distance[class_key][index] = distance
             representative.setdefault(class_key, decoded)
 
     if not representative:
         raise RQ3v2Error("the ball enumeration produced no in-domain class")
+    return BallPool(
+        reached=reached,
+        representative=representative,
+        member_symbols=tuple(word_symbols(H) for H in members),
+        n_decoded=n_decoded,
+        n_decoded_connected=n_connected,
+        secs=time.perf_counter() - started,
+    )
+
+
+def select_consensus(
+    pool: BallPool,
+    members: Sequence[SparseHypergraph],
+    radius: int,
+    *,
+    objective: str = "distance_first",
+    tie_break: str = "fingerprint",
+    metric: str = "indel",
+) -> ConsensusOutcome:
+    """Rank an already-enumerated :class:`BallPool` and return the winner."""
+    reached = pool.reached
+    representative = pool.representative
+    member_symbols = list(pool.member_symbols)
+    started = pool.secs
 
     if objective not in ("coverage_first", "distance_first"):
         raise RQ3v2Error(
@@ -1241,16 +1314,15 @@ def consensus_ow(
         raise RQ3v2Error(f"metric must be one of {sorted(WORD_METRICS)}; got {metric!r}")
     distance = WORD_METRICS[metric]
 
-    # The cost is the generalized-median objective in the word metric: the sum
-    # of the symmetric canonical-word Levenshtein distances from the candidate's
-    # own w-degree to each member's. It is not the BFS shell index, which
-    # measures a raw word's distance to one centre rather than the class's
-    # distance to all of them. Because the members are themselves candidates,
-    # the winning cost is at most the medoid's, and Prop 3's pairwise bound
-    # LB = sum_{i<j} d(K_i, K_j) / (N - 1) lower-bounds the optimum over every
-    # point of the space --- so the arm carries a certified ratio, which a
-    # coverage objective cannot.
-    member_symbols = [word_symbols(H) for H in members]
+    # The cost is the generalized-median objective in the word metric: the sum of
+    # the distances from the candidate's own w-degree to each member's. It is not
+    # the BFS shell index, which measures a raw word's distance to one centre
+    # rather than the class's distance to all of them. Because the members are
+    # themselves candidates, the winning cost is at most the medoid's, and Prop 3's
+    # pairwise bound LB = sum_{i<j} d(K_i, K_j) / (N - 1) lower-bounds the optimum
+    # over every point of the space --- so the arm carries a certified ratio,
+    # which a coverage objective cannot. The bound is taken in the SAME metric the
+    # cost is, or the ratio compares two different quantities.
     bound = medoid(word_matrix(member_symbols, metric))
 
     scored: list[tuple[float, int, tuple[int, tuple[str, ...]], Any]] = []
@@ -1295,9 +1367,9 @@ def consensus_ow(
         origin=origin,
         n_ties=n_ties,
         pool_size=len(representative),
-        pool_secs=time.perf_counter() - started,
-        n_decoded=n_decoded,
-        n_decoded_connected=n_connected,
+        pool_secs=started,
+        n_decoded=pool.n_decoded,
+        n_decoded_connected=pool.n_decoded_connected,
         cost=winner_cost,
         lower_bound=bound.lower_bound,
         ratio=(
@@ -1624,88 +1696,131 @@ def evaluate_collection(
                 )
             )
 
-    def ball_consensus(objective_name: str, metric_name: str) -> Callable[[], ConsensusOutcome]:
-        """One `consensus_ow` arm, bound so the loop does not close over the loop var."""
+    # The ball arms differ only in how they RANK the candidates, never in which
+    # candidates exist, so the pool is enumerated once and scored several times.
+    # That is the dominant cost divided by the number of arms, and it also makes
+    # the arms exactly comparable: they see one pool by construction rather than
+    # by trusting three enumerations to agree.
+    #
+    # `_lev` changes only the metric and so exhibits the substitution effect ---
+    # Levenshtein charges a fact swap 1 where indel charges 2, and the
+    # under-charge lands on exactly the candidates that compete with the source.
+    # `_coverage` changes only the objective's first criterion.
+    other_metric = "levenshtein" if metric == "indel" else "indel"
+    other_objective = "distance_first" if objective == "coverage_first" else "coverage_first"
+    rankings: list[tuple[str, str, str]] = [("consensus_ow", objective, metric)]
+    if objective_ablation:
+        rankings.append(("consensus_ow_lev", objective, other_metric))
+        rankings.append(("consensus_ow_coverage", other_objective, metric))
 
-        def call() -> ConsensusOutcome:
-            return consensus_ow(
+    def ball_arms() -> dict[str, ConsensusOutcome]:
+        pool = build_ball_pool(
+            members_H, k, n_types, n_preds, radius, ball=ball, append=append, delete=delete
+        )
+        return {
+            name: select_consensus(
+                pool,
                 members_H,
-                k,
-                n_types,
-                n_preds,
                 radius,
-                ball=ball,
-                append=append,
-                delete=delete,
                 objective=objective_name,
                 tie_break=tie_break,
                 metric=metric_name,
             )
+            for name, objective_name, metric_name in rankings
+        }
 
-        return call
+    started = time.perf_counter()
+    bundled = run_guarded(ball_arms, method_budget_s, cpp_engine=False)
+    ball_secs = time.perf_counter() - started
+    for name, _objective_name, _metric_name in rankings:
+        outcome = None if bundled is None else bundled.get(name)
+        rows.append(
+            _consensus_row(
+                shared,
+                name,
+                outcome,
+                radius,
+                ball_secs,
+                method_budget_s,
+                truth_H,
+                truth_cert,
+                hged_timeout_s,
+            )
+        )
 
     consensus_calls: dict[str, Callable[[], ConsensusOutcome]] = {
-        "consensus_ow": ball_consensus(objective, metric),
         "consensus_fact": lambda: consensus_fact(members_H, radius),
     }
-    if objective_ablation:
-        # The two pre-registered ablations of the primary, each isolating one
-        # choice: `_lev` changes only the metric and so exhibits the substitution
-        # effect --- Levenshtein charges a fact swap 1 where indel charges 2, and
-        # the under-charge lands exactly on the candidates that compete with the
-        # source; `_coverage` changes only the objective's first criterion.
-        other_metric = "levenshtein" if metric == "indel" else "indel"
-        consensus_calls["consensus_ow_lev"] = ball_consensus(objective, other_metric)
-        other_objective = "distance_first" if objective == "coverage_first" else "coverage_first"
-        consensus_calls["consensus_ow_coverage"] = ball_consensus(other_objective, metric)
     for name, call in consensus_calls.items():
         started = time.perf_counter()
-        # Both reach the engine in a child; the parent never canonicalizes, so
-        # no later guarded fork can be censored for a poisoning this process
-        # caused.
-        outcome = run_guarded(call, method_budget_s, cpp_engine=(name == "consensus_fact"))
-        if outcome is None:
-            rows.append(
-                _blank_row(
-                    shared,
-                    method=name,
-                    arm="fact_reach" if name == "consensus_fact" else "isal_ow_struct",
-                    radius=radius,
-                    secs=time.perf_counter() - started,
-                    censored=1,
-                    reason=f"budget {method_budget_s:.0f} s exceeded or the call failed",
-                )
-            )
-            continue
-        scored = _score(outcome.kb, truth_H, truth_cert, hged_timeout_s)
-        try:
-            drop = is_sub_record(outcome.kb, truth_H)
-        except Exception as exc:  # noqa: BLE001 - an H3.6 label must not kill the unit
-            logger.info("sub-record test declined a winner: %s", exc)
-            drop = ""
+        # It reaches the engine in a child; the parent never canonicalizes, so no
+        # later guarded fork can be censored for a poisoning this process caused.
+        outcome = run_guarded(call, method_budget_s, cpp_engine=True)
         rows.append(
-            _blank_row(
+            _consensus_row(
                 shared,
-                method=name,
-                arm="fact_reach" if name == "consensus_fact" else "isal_ow_struct",
-                radius=radius,
-                secs=time.perf_counter() - started,
-                pool_size=outcome.pool_size,
-                pool_secs=round(outcome.pool_secs, 4),
-                winner_origin=outcome.origin,
-                winner_connected=int(outcome.kb.is_connected()),
-                n_ties=outcome.n_ties,
-                n_decoded=outcome.n_decoded,
-                n_decoded_connected=outcome.n_decoded_connected,
-                coverage=outcome.coverage,
-                sub_record_drop=drop,
-                medoid_cost=outcome.medoid_cost,
-                LB=outcome.lower_bound,
-                ratio=outcome.ratio,
-                **scored,
+                name,
+                outcome,
+                radius,
+                time.perf_counter() - started,
+                method_budget_s,
+                truth_H,
+                truth_cert,
+                hged_timeout_s,
             )
         )
     return rows
+
+
+def _consensus_row(
+    shared: Mapping[str, Any],
+    name: str,
+    outcome: ConsensusOutcome | None,
+    radius: int,
+    secs: float,
+    budget_s: float,
+    truth_H: SparseHypergraph,
+    truth_cert: tuple[int, str],
+    hged_timeout_s: float | None,
+) -> dict[str, Any]:
+    """One consensus arm's row, censored or scored."""
+    arm = "fact_reach" if name == "consensus_fact" else "isal_ow_struct"
+    if outcome is None:
+        return _blank_row(
+            shared,
+            method=name,
+            arm=arm,
+            radius=radius,
+            secs=secs,
+            censored=1,
+            reason=f"budget {budget_s:.0f} s exceeded or the call failed",
+        )
+    scored = _score(outcome.kb, truth_H, truth_cert, hged_timeout_s)
+    try:
+        drop: Any = is_sub_record(outcome.kb, truth_H)
+    except Exception as exc:  # noqa: BLE001 - an H3.6 label must not kill the unit
+        logger.info("sub-record test declined a winner: %s", exc)
+        drop = ""
+    return _blank_row(
+        shared,
+        method=name,
+        arm=arm,
+        radius=radius,
+        secs=secs,
+        pool_size=outcome.pool_size,
+        pool_secs=round(outcome.pool_secs, 4),
+        winner_origin=outcome.origin,
+        winner_connected=int(outcome.kb.is_connected()),
+        n_ties=outcome.n_ties,
+        n_decoded=outcome.n_decoded,
+        n_decoded_connected=outcome.n_decoded_connected,
+        coverage=outcome.coverage,
+        sub_record_drop=drop,
+        medoid_cost=outcome.medoid_cost,
+        LB=outcome.lower_bound,
+        ratio=outcome.ratio,
+        **scored,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -47,7 +47,10 @@ CORPORA_ROOT="${TKDE_CORPORA_ROOT:-${DATA_ROOT}}"
 
 N_SHARDS="${TKDE_N_SHARDS:-486}"
 N_TASKS="${TKDE_N_TASKS:-122}"
-MAX_CONCURRENT="${TKDE_MAX_CONCURRENT:-32}"
+# 64 tasks x 4 cpus = 256 cores, well inside the 9,000-core QOS cap, and it
+# halves the makespan against a throttle of 32: the campaign runs in two rounds
+# of tasks rather than four.
+MAX_CONCURRENT="${TKDE_MAX_CONCURRENT:-64}"
 WALL="${TKDE_WALL:-0-08:00:00}"
 START_CUTOFF_S="${TKDE_START_CUTOFF_S:-21600}"
 

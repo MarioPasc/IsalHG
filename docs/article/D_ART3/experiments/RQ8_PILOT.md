@@ -212,6 +212,88 @@ its recommendation. Both strengthen the baseline, never ours (L12).
 
 ---
 
+## 3b. Amendment A1 — the fact-count-matched comparison (pre-registered 2026-09-13, before re-measurement)
+
+**Declared before any number below the amendment was computed.** An
+independent read-only review of `rq8.attach` found no leakage and no spec
+violation, but one real asymmetry between the arms, which invalidates the
+attachment sentence of §3 and required a matched arm before anything further
+could be read.
+
+**The asymmetry.** A counting arm attaches exactly one fact by construction, so
+every one of its ten proposals is a candidate for a truth that has exactly one
+more fact than `K⁻`. `ow_ngram` is free-running: it continues until the end
+token, so its accepted proposals add *whatever the model writes*. The review
+measured, on 40 `ndc_classes` non-star units at seed 80900: **607 of 1,923
+accepted `ow_ngram` proposals add exactly one fact (31.6 %); median 2, max 35.**
+Two consequences, both of which distort §3:
+
+1. Roughly two thirds of ours' ten slots are spent on proposals that cannot be
+   a hit at all, so `hit@10` compares ten candidate completions against roughly
+   three.
+2. The attach-miss statistic `pattern_hit ∧ ¬hit` counts an *extra-fact* miss
+   as an *attachment* miss, because a proposal carrying the right pattern plus
+   two other facts is not isomorphic to the truth for a reason that has nothing
+   to do with attachment.
+
+On the review's matched counterfactual (first ten distinct one-fact proposals)
+`hit@10` moves 0.075 → 0.100 and attach-miss 0.750 → **0.556, below
+`pattern_cooc`'s 0.660** — the sign of the §3 attachment sentence reverses. The
+headline ordering does not change (0.100 against 0.303; `pattern@10` 0.225
+against 0.892) and **H8.1 still fails**.
+
+**What is amended, fixed here before re-measurement.**
+
+1. **Δfacts is recorded per proposal** — facts added relative to `K⁻` — and
+   aggregated per `(unit, arm)`. It was previously only thresholded at `> 0` and
+   thrown away.
+2. **Two matched arms are added:** `ow_ngram_1f` and `ow_ngram_ho_1f`. Same
+   model, same seed, same draw sequence, same order and smoothing as their
+   free-running counterparts; the *only* difference is the acceptance
+   predicate, which becomes `Δfacts = 1` instead of `Δfacts ≥ 1`. They take the
+   first ten distinct such proposals. **The R budget rule is unchanged and its
+   value is unchanged: `R = 20` attempts per slot, ten slots, so at most 200
+   draws — exactly the free arms' budget.** A stricter acceptance under an
+   identical budget may leave slots unfilled; the fill is reported
+   (`n_accepted`) rather than compensated, because raising `R` for one arm would
+   replace the asymmetry being removed with a new one.
+3. **The free-running arms stay exactly as they are.** `ow_ngram` and
+   `ow_ngram_ho` are unchanged and still reported. The matched arms are an
+   addition, not a replacement: "what the model writes" and "what the model
+   writes when asked for one fact" are different questions and the paper reports
+   both.
+4. **attach-miss is computed only over Δfacts = 1 proposals, for every arm,**
+   and the column is renamed so its denominator is explicit:
+   `attach_miss | pattern hit on a one-fact proposal`. For the counting arms
+   this changes nothing (every proposal is one-fact); for the generative arms it
+   is the correction. Note that `hit` needs no restriction: the truth carries
+   exactly one fact more than `K⁻`, so any proposal isomorphic to it necessarily
+   has `Δfacts = 1`.
+5. **The §3 sentence "the recommender attaches better than the generator" is
+   withdrawn** and replaced by the matched numbers in §3c. It was computed on an
+   unmatched denominator and does not survive the correction.
+
+Two documentation mismatches the same review found, corrected here:
+
+- The attachment retry goes **three positions** down the degree ranking, not
+  one (`propose_patterns(attachment_ranks=3)`); §3's earlier wording said one.
+- The counting arms rank **3·k = 30** patterns, not `k`, so that a pattern
+  whose attachment is refused does not cost a slot. Measured inert: at the
+  pilot, `pattern_cooc` consumed **9.60 patterns per unit** to fill ten slots,
+  so the extra depth is never reached in practice and cannot be inflating the
+  recommender.
+
+## 3c. Gate G8.1, amended — the matched comparison
+
+*Filled from the re-run of the same three pilot seeds under Amendment A1.
+The table of §3 is retained above as the free-running measurement.*
+
+| corpus | arm | Δfacts = 1 share | hit@10 | pattern@10 | attach-miss (one-fact denominator) |
+|---|---|---|---|---|---|
+| *(filled by the amended pilot run)* | | | | | |
+
+---
+
 ## 4. Provenance
 
 | what | where |

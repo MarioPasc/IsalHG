@@ -61,6 +61,34 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
   on seeds 80900–80902, outside the campaign's `seeds(8, 27) = 80000…80026`, so
   no unit the 27-seed run scores was ever seen by the gate. The offset enters
   the run tag, so a pilot row can never be served to the campaign.
+- **D-KBaa7 — Amendment A1: the fact-count-matched arms (pre-registered
+  2026-09-13, orchestrator-directed, written here before re-measurement).** An
+  independent read-only review of `rq8.attach` found no leakage and no spec
+  violation, but one real asymmetry: a counting arm adds exactly one fact by
+  construction, while only **607 of 1,923 (31.6 %)** accepted `ow_ngram`
+  proposals do (median 2, max 35; 40 `ndc_classes` non-star units, seed 80900).
+  Ours therefore spends most of its ten slots on proposals that cannot be a hit,
+  and the attach-miss statistic counts extra-fact misses as attachment misses.
+  On the review's matched counterfactual `hit@10` moves 0.075 → 0.100 and
+  attach-miss 0.750 → 0.556, **below `pattern_cooc`'s 0.660 — the sign of
+  D-KBaa3's attachment sentence reverses**. The headline ordering is unchanged
+  and **H8.1 still fails**. The amendment, fixed before any new number:
+  (a) record `Δfacts` per proposal; (b) add `ow_ngram_1f` and `ow_ngram_ho_1f`
+  — same model, same seed, same draws, acceptance restricted to `Δfacts = 1`,
+  first ten distinct, **`R = 20` per slot unchanged**, unfilled slots reported
+  rather than compensated; (c) the free-running arms stay as they are, since
+  "what the model writes" and "what it writes when asked for one fact" are
+  different questions; (d) compute attach-miss only over `Δfacts = 1` proposals
+  for every arm and rename the column to name that denominator; (e) withdraw the
+  "the recommender attaches better" sentence from D-KBaa3 and the pilot doc.
+  Also corrected: the attachment retry goes **three** positions down, not one,
+  and the counting arms rank **3·k = 30** patterns (measured inert —
+  `pattern_cooc` consumed 9.60 patterns per unit).
+- **D-KBaa3 is superseded in its attachment clause only.** Its statement that
+  §0's mechanism is contradicted rested on an unmatched denominator. What
+  survives unchanged: H8.1 fails, the gap on `ndc_classes` is a
+  pattern-prediction gap (0.375 against 0.892), and RQ8 is a supporting exhibit.
+  The corrected attachment reading is in D-KBaa7 and `RQ8_PILOT.md` §3b–§3c.
 - **D-KBaa6 — two prefix constructions that would otherwise have measured the
   harness.** The incidence prefix drops its `("END",)` terminator (with it,
   validity reads 1.0000 instead of 0.1718 and the H8.3 contrast inverts); every

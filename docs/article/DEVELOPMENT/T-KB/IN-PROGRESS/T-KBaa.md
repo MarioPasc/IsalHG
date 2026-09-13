@@ -84,11 +84,22 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
   Also corrected: the attachment retry goes **three** positions down, not one,
   and the counting arms rank **3·k = 30** patterns (measured inert —
   `pattern_cooc` consumed 9.60 patterns per unit).
-- **D-KBaa3 is superseded in its attachment clause only.** Its statement that
-  §0's mechanism is contradicted rested on an unmatched denominator. What
-  survives unchanged: H8.1 fails, the gap on `ndc_classes` is a
-  pattern-prediction gap (0.375 against 0.892), and RQ8 is a supporting exhibit.
-  The corrected attachment reading is in D-KBaa7 and `RQ8_PILOT.md` §3b–§3c.
+- **D-KBaa3 is superseded in its attachment clause only, and the correction
+  reverses it.** Re-measured on the matched denominator (same three seeds, run
+  tag `42875bca`): every ordered-walk arm attaches **better** than either
+  recommender on `ndc_classes` — **0.303–0.393 against `pattern_cooc`'s 0.660
+  and `pattern_freq`'s 0.576** — and ours is ahead on `wd50k66` too
+  (0.871/0.874 against 0.981/0.986). **§0's attachment mechanism is therefore
+  supported, not contradicted.** What survives from D-KBaa3 unchanged: the
+  `ndc_classes` loss is a pattern-prediction loss, and it is *larger* than it
+  looked (matched `pattern@10` 0.288 against 0.892, because a free-running
+  proposal's extra facts were incidentally covering the hidden pattern).
+  Matching also moves `hit@10` 0.1067 → 0.1750 on `ndc_classes` and
+  0.0150 → 0.0383 on `wd50k66`, where the matched arm **leads every baseline**
+  including `pattern_cooc` (0.0133). **H8.1 still fails**, now as a scoped
+  failure: satisfied on `wd50k66`, not on `ndc_classes`. RQ8 remains a
+  supporting exhibit; 27 seeds decide whether the `wd50k66` lead survives Holm.
+  Full table: `RQ8_PILOT.md` §3c.
 - **D-KBaa6 — two prefix constructions that would otherwise have measured the
   harness.** The incidence prefix drops its `("END",)` terminator (with it,
   validity reads 1.0000 instead of 0.1718 and the H8.3 contrast inverts); every

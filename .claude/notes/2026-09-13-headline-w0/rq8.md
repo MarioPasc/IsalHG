@@ -216,7 +216,10 @@ when they arose:
 | `eb1c9ec` | `test(rq8): unit generator, Prop. C.8, the baselines, and three regressions` |
 | `9840460` | `feat(rq2-ow,rq5-ow): the w-degree swap, and RQ8's SLURM layer` |
 | `a5748f2` | `docs(rq8): Prop. C.8, the two gates, and the ledger for T-KBaa / T-KBab` |
-| (this one) | `docs(notes): rq8 work log` |
+| `8f0787b` | `docs(notes): rq8 work log` (first version) |
+| `1ff6c90` | `docs(rq8): pre-register Amendment A1 -- the fact-count-matched arms` |
+| `107ed20` | `feat(rq8): Amendment A1 -- fact-count-matched arms, and the sign reverses` |
+| (this one) | `docs(notes): rq8 work log -- Amendment A1` |
 
 `git diff --name-only 704e271..HEAD` matches the Created table exactly. In
 particular `experiments/tkde/rq2.py` and `rq5.py` are **unmodified**: the arm
@@ -276,6 +279,24 @@ tests/experiments_tkde/test_rq8_smoke.py .............................   [100%]
 **Result:** 82 passed, 0 failed, 0 skipped · **Duration:** 1.79 s · **Run at:** `9840460`
 
 Re-run at the final head (after the doc commit `a5748f2`): **82 passed in 2.68 s**.
+After Amendment A1 (`107ed20`), with the 11 new one-fact tests: **93 passed in
+1.64 s**. ruff and mypy still at 38 / 20.
+
+**Amendment A1's regression, shown failing against the pre-amendment
+behaviour.** A scratch pytest plugin restored the old acceptance
+(`Δfacts ≥ 1` for every arm) and the old unrestricted attach-miss denominator:
+
+```
+7 failed, 4 passed, 40 deselected
+FAILED ...::test_a_multi_fact_proposal_is_never_accepted_by_the_1f_arm[2]
+FAILED ...::test_a_multi_fact_proposal_is_never_accepted_by_the_1f_arm[3]
+FAILED ...::test_a_multi_fact_proposal_is_never_accepted_by_the_1f_arm[5]
+FAILED ...::test_a_multi_fact_proposal_is_never_accepted_by_the_1f_arm[35]
+FAILED ...::test_collect_under_the_1f_rule_returns_only_one_fact_proposals
+FAILED ...::test_the_1f_budget_is_the_same_R_and_a_slot_may_go_unfilled
+FAILED ...::test_scoring_restricts_the_attach_miss_denominator_to_one_fact
+E   assert True is False  # pattern_hit_1f on a three-fact proposal
+```
 
 **Whole-directory run, and the pre-existing failures.**
 `python -m pytest tests/experiments_tkde/ -q` at **BASE_SHA, before any edit of
@@ -393,20 +414,59 @@ committed):
   a reported column, both are pinned by regression tests and documented in the
   source and the pilot doc.
 
-**The measured correction the orchestrator asked me to record verbatim:**
+**The measured correction the orchestrator asked me to record verbatim, and its
+subsequent reversal.**
+
+I first recorded, as instructed:
 
 > The mechanism in the design doc's §0 — "the generator learns attachments and
 > counting cannot" — was **contradicted by measurement**.
 
-Measured directly rather than inferred from hit@10 minus pattern@10: among units
-where an arm got the hidden fact's pattern right, the fraction where it still
-missed the attachment is **0.716 for `ow_ngram` against 0.660 for
-`pattern_cooc`** on `ndc_classes` — the recommender attaches *better* than the
-generator. On `wd50k66` every arm is at 0.98–0.99. The NDC gap is a
-pattern-prediction gap (pattern@10 0.375 vs 0.892), not an attachment gap. One
-qualification: `ow_ngram_ho` reaches 0.632, below `pattern_cooc`, so §0 is right
-about *direction* and wrong about *magnitude* and about which arm wins overall.
-The orchestrator folds this into the design doc at merge.
+**That is now withdrawn, and the sign is the other way.** An independent
+read-only review of `rq8.attach` found the reason: a counting arm adds exactly
+one fact by construction, while only **31.6 %** of `ow_ngram`'s accepted
+proposals do (607/1,923; median 2, max 35). So two thirds of ours' ten slots
+went on proposals that could not be a hit, and a proposal carrying the right
+pattern *plus two unrelated facts* was scored as an **attachment** miss. The
+denominator was not comparable between arms.
+
+Amendment A1 (pre-registered in commit `1ff6c90`, **before** any new number)
+added the fact-count-matched arms and re-measured on the same three seeds. On
+that denominator:
+
+| `ndc_classes` interior | attach-miss ∣ one-fact |
+|---|---|
+| `ow_ngram` | 0.347 |
+| `ow_ngram_1f` | 0.393 |
+| `ow_ngram_ho` | 0.303 |
+| `ow_ngram_ho_1f` | 0.346 |
+| `pattern_cooc` | **0.660** |
+| `pattern_freq` | **0.576** |
+
+Every ordered-walk arm attaches **better** than either recommender, and on
+`wd50k66` too (0.871/0.874 against 0.981/0.986). **§0's mechanism is supported.**
+The `ndc_classes` loss is entirely a pattern-prediction loss and a *larger* one
+than the free-running table showed — matched `pattern@10` 0.288 against 0.892,
+because a free-running proposal's extra facts were incidentally covering the
+hidden pattern.
+
+Matching also moves the headline numbers: `hit@10` 0.1067 → **0.1750** on
+`ndc_classes` (0.1950 for `ow_ngram_ho_1f`, above `pattern_freq`'s 0.1867) and
+0.0150 → **0.0383** on `wd50k66`, where the matched arm **leads every baseline**
+including `pattern_cooc` at 0.0133. **H8.1 still fails**, now as a scoped
+failure — satisfied on `wd50k66`, not on `ndc_classes` — so the fallback stands
+and RQ8 remains a supporting exhibit. 27 seeds decide whether the `wd50k66`
+lead survives Holm.
+
+One honest note on why my matched numbers beat the review's counterfactual
+(which had 0.075 → 0.100). The review re-read the draws already made; the
+pre-registered rule I implemented is "first ten distinct such proposals, **same
+R budget rule**", so a rejected multi-fact draw costs an attempt and the arm
+keeps drawing inside its unchanged `R = 20` per slot. That is more generous to
+the generator, and it is what was written down before the numbers were seen.
+The price is visible: the matched arms fill 5.8–8.7 slots of ten against the
+free-running 7.9–9.8, and unfilled slots are reported, never bought back with a
+bigger budget.
 
 **Assumptions I proceeded on (each messaged to `main` when made):**
 - The root is the hub (max fact-degree, ties by smallest id), since the frozen
@@ -509,6 +569,20 @@ filtering, `corpora.load_collection`, `isal_ordered.ordered_fingerprint`,
 | 5 | `configs/rq2_ow.yaml` and `rq5_ow.yaml` identical but for the arm; launchers; a local smoke of each through the existing analyzers; submitted | yes | both smokes verified `isal_ow_struct` present and `wstar_orbit` absent; jobs 2308342 / 2308343 / 2308368 |
 | 6 | Synced to my own repo path, env, jobs submitted, ids in the log and in `rq8_facts.md` | yes, with two approved deviations | HOME path instead of FSCRATCH (forced, approved); shared env instead of private (approved, with reason). Ids in §6, in `rq8_facts.md` §2 and in message 6 |
 | 7 | `T-KBaa.md`, `T-KBab.md`, `rq8_facts.md`, this log committed last; `git status --porcelain` empty | yes | all four written; this is the final commit |
+
+**Post-review addendum (Amendment A1).** An independent read-only review found
+the one thing I had not: `rq8.attach` is sound and the evaluation is symmetric,
+but the *arms* were not fact-count matched, and my attachment sentence was
+computed on an incomparable denominator. I had flagged `attach` as the thing to
+scrutinise first; the defect was one level up, in what I compared it against.
+The amendment was pre-registered before re-measurement, the matched arms were
+added under an unchanged `R`, and the conclusion reversed: the ordered-walk
+arms attach **better** than the recommenders, the `ndc_classes` loss is purely
+a pattern gap, and on `wd50k66` the matched arm leads every baseline. H8.1 still
+fails and RQ8 remains a supporting exhibit. Job 2308339 had already COMPLETED
+(81/81 units) so nothing was cancelled; the amended campaign is **2308489**
+under its own run tag, and both sit on disk as the free-running and the matched
+measurement.
 
 **Overall.** I am confident in the engineering and in the measurements, and the
 headline claim is the part that did not survive them. The runner, the analyzer

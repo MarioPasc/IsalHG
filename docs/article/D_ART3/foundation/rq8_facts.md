@@ -31,7 +31,8 @@ Submitted 2026-09-13 from `~/repos/IsalHG-rq8`, deployed SHA `9840460`.
 | job | id | array | what |
 |---|---|---|---|
 | `tkde-rq8` (cluster smoke) | **2308337** | `0-0` | the `--smoke` configuration, staged under `_smoke/`; payload green in 0.5 s, both tree assertions passed |
-| `tkde-rq8` (campaign) | **2308339** | `0-0` | 81 units, 27 seeds, six arms + `ow_ngram_ho` |
+| `tkde-rq8` (campaign, free-running) | **2308339** | `0-0` | **COMPLETED 00:20:13**, 81/81 units. Seven arms, pre-Amendment-A1. Kept: it is the free-running measurement, which the paper reports beside the matched one |
+| `tkde-rq8` (campaign, Amendment A1) | **2308489** | `0-0` | 81 units, nine arms — adds `ow_ngram_1f` and `ow_ngram_ho_1f`. Its own run tag, so it writes beside 2308339 rather than over it |
 | `tkde-rq2-ow-main` | **2308342** | `0-12` | exact0 / bipartite / oracle / hypercot, 52 shards over 13 tasks |
 | `tkde-rq2-ow-census` | **2308343** | `0-8` | the false-merge census, 33 shards over 9 tasks |
 | `tkde-rq5-ow` | **2308368** | `0-0` | 65 units, three experiments |
@@ -84,16 +85,45 @@ Seeds 80900–80902 (`seed_offset: 900`), disjoint from the campaign's
 | `wd50k66` | `incidence_ngram` | 600 | 0.0000 | 0.4067 | 0.1427 | 1.0000 | 1.000 |
 | `wd50k66` | `random_pattern` | 600 | 0.0000 | 0.0317 | 1.0000 | 1.0000 | 1.000 |
 
+### 4b. Gate G8.1 under Amendment A1 — the fact-count-matched table (FINAL)
+
+Same seeds, run tag `42875bca`. `attach-miss` is over **one-fact proposals
+only**, both numerator and denominator. Full table and reasoning:
+`../experiments/RQ8_PILOT.md` §3b–§3c.
+
+| corpus | arm | Δ1 share | hit@10 | pattern@10 | attach-miss ∣ 1f |
+|---|---|---|---|---|---|
+| `ndc_classes` | `ow_ngram` | 0.328 | 0.1067 | 0.3750 | 0.347 |
+| `ndc_classes` | `ow_ngram_1f` | 1.000 | 0.1750 | 0.2883 | 0.393 |
+| `ndc_classes` | `ow_ngram_ho_1f` | 1.000 | 0.1950 | 0.2983 | 0.346 |
+| `ndc_classes` | `pattern_cooc` | 1.000 | **0.3033** | **0.8917** | 0.660 |
+| `ndc_classes` | `pattern_freq` | 1.000 | 0.1867 | 0.4400 | 0.576 |
+| `wd50k66` | `ow_ngram_1f` | 1.000 | **0.0383** | 0.2967 | 0.871 |
+| `wd50k66` | `ow_ngram_ho_1f` | 1.000 | 0.0367 | 0.2917 | 0.874 |
+| `wd50k66` | `pattern_cooc` | 1.000 | 0.0133 | 0.7067 | 0.981 |
+
+**Citable sentences, corrected.** On a fact-count-matched comparison the
+ordered-walk arms attach **better** than either recommender (0.303–0.393 against
+0.660 and 0.576 on `ndc_classes`), so the design's §0 attachment mechanism holds;
+the `ndc_classes` loss is entirely a pattern-prediction loss (0.288 against
+0.892). On `wd50k66` the matched arm leads every baseline on hit@10 (0.0383
+against `pattern_cooc`'s 0.0133). H8.1 still fails, scoped: satisfied on
+`wd50k66`, not on `ndc_classes`.
+
 **Verdicts, pre-registered and ruled before submission.**
 
 - H8.1 **not supported**; the fallback applies and RQ8 is a **supporting
-  exhibit**, not a headline (D-KBaa2).
+  exhibit**, not a headline (D-KBaa2). Under Amendment A1 this becomes a
+  *scoped* failure: satisfied on `wd50k66`, not on `ndc_classes`.
 - H8.2 holds trivially and then some: `pattern_cooc` does not merely tie us on
   the star control, it beats us on the *relational* corpus.
 - H8.3 clauses 1 and 2 hold — ours valid 1.0000 and connected 1.0000 by theorem,
   `fact_ngram` connectivity 0.867 / 0.512 below 1. Clause 3 **fails as written**
   and the threshold was not moved (D-KBaa4).
-- The design's §0 attachment mechanism is **contradicted** (D-KBaa3).
+- The design's §0 attachment mechanism is **supported** on a matched
+  denominator (D-KBaa7). The earlier "contradicted" reading (D-KBaa3) was an
+  artefact of comparing a free-running arm against arms that add one fact by
+  construction, and is withdrawn.
 
 ## 5. Deployment deviations, with their measured reason
 

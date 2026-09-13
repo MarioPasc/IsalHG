@@ -1055,6 +1055,7 @@ def consensus_ow(
     append: int = 3,
     delete: int = 2,
     objective: str = "distance_first",
+    tie_break: str = "shortlex",
 ) -> ConsensusOutcome:
     """Ball-coverage consensus over the ``w°`` language.
 
@@ -1168,6 +1169,8 @@ def consensus_ow(
         raise RQ3v2Error(
             f"objective must be 'coverage_first' or 'distance_first'; got {objective!r}"
         )
+    if tie_break not in ("shortlex", "fingerprint"):
+        raise RQ3v2Error(f"tie_break must be 'shortlex' or 'fingerprint'; got {tie_break!r}")
 
     # The cost is the generalized-median objective in the word metric: the sum
     # of the symmetric canonical-word Levenshtein distances from the candidate's
@@ -1185,19 +1188,31 @@ def consensus_ow(
             D[i, j] = D[j, i] = float(symbol_distance(member_symbols[i], member_symbols[j]))
     bound = medoid(D)
 
-    scored: list[tuple[float, int, tuple[int, str], Any]] = []
+    scored: list[tuple[float, int, tuple[int, tuple[str, ...]], Any]] = []
     values: dict[Any, tuple[int, float]] = {}
     for class_key, hits in reached.items():
-        candidate_H = representative[class_key]
-        cost = float(
-            sum(symbol_distance(word_symbols(candidate_H), symbols) for symbols in member_symbols)
-        )
+        # One ordered walk per class, not one per (class, member): the candidate's
+        # own word does not depend on which member it is being compared with, and
+        # recomputing it inside the sum made the scoring loop cost N times what it
+        # should --- on the axis H3.6 varies, which is the worst place for it.
+        candidate_symbols = word_symbols(representative[class_key])
+        cost = float(sum(symbol_distance(candidate_symbols, symbols) for symbols in member_symbols))
         coverage = len(hits)
         values[class_key] = (coverage, cost)
         primary, secondary = (
             (float(-coverage), int(cost)) if objective == "coverage_first" else (cost, -coverage)
         )
-        scored.append((primary, secondary, certificate(candidate_H), class_key))
+        serialized = tuple(str(s) for s in candidate_symbols)
+        # The final tie break, and it is load-bearing rather than decorative: on a
+        # star whose members each drop one fact, the source and two of its
+        # sub-records have *equal* cost and *equal* coverage (measured: 4, 4, 4 at
+        # N = 4), so this comparison is what returns the answer. "shortlex" is
+        # what the design fixes and it prefers the shorter word, hence the smaller
+        # record; "fingerprint" is the augmented-fingerprint order the family
+        # already uses for this purpose in v1's consensus, and it is unbiased with
+        # respect to size. Both are total on classes (Theorem C).
+        order = (len(serialized), serialized) if tie_break == "shortlex" else (0, serialized)
+        scored.append((primary, secondary, order, class_key))
     scored.sort()
     best = scored[0]
     n_ties = sum(1 for entry in scored if entry[0] == best[0] and entry[1] == best[1]) - 1
@@ -1407,6 +1422,7 @@ def evaluate_collection(
     delete: int,
     objective: str,
     objective_ablation: bool,
+    tie_break: str,
 ) -> list[dict[str, Any]]:
     """Run every arm and method on one collection and return its rows."""
     n_types, n_preds = collection.n_types, collection.n_preds
@@ -1519,6 +1535,7 @@ def evaluate_collection(
             append=append,
             delete=delete,
             objective=objective,
+            tie_break=tie_break,
         ),
         "consensus_fact": lambda: consensus_fact(members_H, radius),
     }
@@ -1534,6 +1551,23 @@ def evaluate_collection(
             append=append,
             delete=delete,
             objective=other,
+            tie_break=tie_break,
+        )
+        # The tie break decides the answer whenever the source and a sub-record
+        # cost the same, which the star fixture shows is not a corner case, so the
+        # other order is run as its own arm rather than argued about.
+        other_tie = "fingerprint" if tie_break == "shortlex" else "shortlex"
+        consensus_calls[f"consensus_ow_tie_{other_tie}"] = lambda: consensus_ow(
+            members_H,
+            k,
+            n_types,
+            n_preds,
+            radius,
+            ball=ball,
+            append=append,
+            delete=delete,
+            objective=objective,
+            tie_break=other_tie,
         )
     for name, call in consensus_calls.items():
         started = time.perf_counter()
@@ -1734,8 +1768,9 @@ def run_unit(
                 ball=str(block.get("ball", "indel")),
                 append=int(block.get("ball_append", 3)),
                 delete=int(block.get("ball_delete", 2)),
-                objective=str(block.get("objective", "coverage_first")),
+                objective=str(block.get("objective", "distance_first")),
                 objective_ablation=bool(block.get("objective_ablation", True)),
+                tie_break=str(block.get("tie_break", "shortlex")),
             )
         )
     return rows, dropped

@@ -109,6 +109,22 @@ design:
   objective: distance_first
   objective_ablation: true
 
+  # The final tie break, and it is load-bearing rather than decorative. On a star
+  # whose members each drop one fact, the source and two of its sub-records have
+  # equal cost AND equal coverage -- measured 4, 4, 4 at N = 4 -- so this
+  # comparison is what returns the answer, not a formality after the objective
+  # has already decided.
+  #
+  # "shortlex" is what the design fixes: length first, then the token sequence.
+  # It therefore prefers the shorter word and so the smaller record, which is the
+  # size bias of the ball reappearing one level down.
+  # "fingerprint" orders by the augmented fingerprint alone -- the order v1's
+  # consensus uses for exactly this purpose -- and is unbiased with respect to
+  # size.
+  # The other order runs as its own arm on every collection, so the choice is
+  # reported rather than assumed.
+  tie_break: shortlex
+
 smoke:
   seed_count: 1
   method_budget_s: 300

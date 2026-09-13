@@ -34,6 +34,7 @@ from pathlib import Path
 import pytest
 
 from experiments.tkde import rq3v2
+from experiments.tkde.budget import symbol_distance
 from experiments.tkde.io import RunPaths, write_rows
 from experiments.tkde.rq1 import table_file
 from isalhg.datasets.kb.base import make_record
@@ -324,16 +325,48 @@ class TestBall:
 
 
 class TestConsensusOw:
-    def test_it_recovers_a_star_whose_members_each_lack_one_fact(self, star):
-        members = [_H(m) for m in _single_deletion_members(star)]
-        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2)
-        assert fact_key_of(outcome.kb) == fact_key_of(_H(star))
+    def test_the_source_and_two_sub_records_tie_on_the_objective(self, star):
+        """The measurement that makes the tie break load-bearing.
 
-    def test_the_winner_is_not_a_member(self, star):
-        """The claim RQ3 makes: the consensus returns an object no member wrote."""
+        Each member is one deletion from the source, and the ordered walk charges
+        that deletion exactly one token in both directions, so on this star the
+        source costs 4 and members 1 and 2 also cost 4.  The median cannot
+        separate them; whatever breaks the tie returns the answer.  Pinned here
+        because it is the sharpest form of H3.6's mechanism and because a change
+        to the word or the metric that silently resolved it would change RQ3's
+        result without changing any hypothesis.
+        """
         members = [_H(m) for m in _single_deletion_members(star)]
-        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2)
+        symbols = [rq3v2.word_symbols(H) for H in members]
+        source = rq3v2.word_symbols(_H(star))
+        source_cost = sum(symbol_distance(source, s) for s in symbols)
+        member_costs = [sum(symbol_distance(a, b) for b in symbols) for a in symbols]
+        assert source_cost == 4
+        assert sorted(member_costs) == [4, 4, 5, 5]
+
+    def test_the_fingerprint_tie_break_recovers_the_star(self, star):
+        """Unbiased with respect to size, so the source survives the tie."""
+        members = [_H(m) for m in _single_deletion_members(star)]
+        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="fingerprint")
+        assert fact_key_of(outcome.kb) == fact_key_of(_H(star))
         assert outcome.origin == "decoded:non_member"
+
+    def test_the_shortlex_tie_break_prefers_the_shorter_record(self, star):
+        """The design's declared order, and the size bias it carries.
+
+        Reported rather than corrected: shortlex takes the shorter word, and among
+        tied candidates the shorter word is the smaller record.  The arm runs both
+        ways on every collection so the choice is visible in the table.
+        """
+        members = [_H(m) for m in _single_deletion_members(star)]
+        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="shortlex")
+        assert outcome.kb.n_edges < _H(star).n_edges
+        assert rq3v2.is_sub_record(outcome.kb, _H(star)) == 1
+
+    def test_an_unknown_tie_break_is_refused(self, star):
+        members = [_H(m) for m in _single_deletion_members(star)]
+        with pytest.raises(rq3v2.RQ3v2Error):
+            rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="coin")
 
     def test_indistinguishable_facts_send_the_median_to_a_sub_record(self, flat_star):
         """H3.6's mechanism, pinned on the case that isolates it.

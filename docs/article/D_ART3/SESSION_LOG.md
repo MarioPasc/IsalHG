@@ -424,3 +424,48 @@ orchestrator per the parallel-agents protocol; summary in
 cannot recover pendant facts the reference lacks; counting cannot choose
 attachments on non-stars) and a pre-registered fallback. The pilots decide
 before anything is submitted; the fallbacks are printed, not argued around.
+
+## 9. Outcome of wave `2026-09-13-headline-w0` (same day)
+
+Both agents delivered and were merged on `integration/2026-09-13-headline-w0`
+(638 passed, the six pre-existing failures unchanged, ruff 38, mypy 20). Wave
+record: `.claude/notes/2026-09-13-headline-w0/summary.md`; the pre-registration
+amendments and every ruling are in `experiments/HEADLINE_DESIGN_2026-09-13.md`
+§8.
+
+**Measured before any campaign number (the gates).** WD50K(66) is 53.4 %
+stars, NDC-classes 3.0 %; the NDC star stratum is empty everywhere. Every
+single fact edit is one fact-space step away; at word radius 2 the source is
+in the union of the members' balls on every mixed `t = 1` cell; 426,433 ball
+words all decoded connected. The corrected v1 consensus recovers 0.998
+insertion / 0.863 mixed / 0.517 deletion against 0.000 for every medoid.
+
+**Three rulings that changed the science, each pre-registered.** (1) The
+consensus is computed in word space; v1's fact-space machinery is the
+ablation. (2) Coverage-first is size-biased in word space, and the word median
+under Levenshtein cannot separate a source from its sub-records on deletion
+noise because a substitution charges a fact swap 1–2 while a deletion costs 1;
+the primary is the generalized median under the **indel** distance, under
+which the source strictly wins for `N ≥ 3`, with a certified ratio and a
+like-for-like indel medoid. On the first real smoke collection this returned
+the source exactly (ratio 1.091 vs medoid 1.152) where the Levenshtein median
+tied and lost it. (3) RQ8's counting baselines add exactly one fact by
+construction; fact-count-matched arms were added before re-measurement.
+
+**RQ8 verdict.** H8.1 fails on NDC (co-occurrence recommender 0.303 vs ours
+0.175 matched hit@10, a pattern gap: 0.29 vs 0.89 pattern@10) and holds on
+WD50K only at three seeds (0.038 vs 0.013, untested). Matched, every
+ordered-walk arm attaches better than either recommender (NDC 0.35–0.39 vs
+0.66 / 0.58), so the attachment mechanism is supported. RQ8 is a supporting
+exhibit under the pre-registered fallback. The paper's task-metric pattern
+holds: we lose to task-specific counting where the structure is a multiset,
+and win on the structural guarantees.
+
+**Running on Picasso.** RQ3 v2 `2308421` (122 tasks); RQ8 `2308339`
+(completed, free-running record) and `2308489` (matched); RQ2_ow `2308342`,
+`2308343`; RQ5_ow `2308368`. Results root `~/results/IEEETKDE_ow/`.
+
+**Pending the author.** Merge `integration/2026-09-13-headline-w0` into
+`feature/isal-kb-word`; the PI's word on D-ART6; the FSCRATCH quota question;
+harvesting the four campaigns into the fact bases and the `\todo` cells of the
+capability table.

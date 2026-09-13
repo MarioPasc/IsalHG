@@ -31,7 +31,8 @@ rest with a stated reason (b), and answer a knowledge-engineer's question (c).
 **Where we have lost, and why.** RQ5 (clustering vs Wikidata types) and RQ4
 (anomaly AUC) are task-metric contests where counting and vectors suffice. RQ1
 locality is conditional (pendant yes, interior no). The mechanism behind all of
-it is the same: **most WD50K entity knowledge bases are stars** — every fact
+it is the same: **about half of WD50K entity knowledge bases are stars**
+(53.4 %, measured at G0; §8 item 1) — every fact
 contains the root entity, and if no non-root constant is shared between facts
 the isomorphism class is the multiset of fact patterns, which WL, degree
 sequences and plain counting determine exactly. The hypergraph machinery only
@@ -310,4 +311,63 @@ change there is a message to the orchestrator, not an edit.
 
 ## 8. Deviations log
 
-*(appended by the orchestrator as the agents report)*
+*Appended by the orchestrator from the agents' gate reports (wave
+`2026-09-13-headline-w0`, notes in `.claude/notes/2026-09-13-headline-w0/`).
+Each entry was ruled before the number it concerns was measured.*
+
+1. **§0 premise corrected (G0).** "Most WD50K entity knowledge bases are
+   stars" is too strong: 2,128 of 3,988 (53.4 %) corpus-wide, 54.0 % in the
+   RQ3 source window, so wd50k66 supplies both strata in balance. NDC-classes
+   is 3.0 % stars (42 of 1,381) and its star stratum is **empty** in every
+   pool used here (0 of 212 RQ3 sources; 1 of 522 RQ8 members), so H3.4 and
+   H8.2 are wd50k66-only; NDC star cells are printed as structurally empty.
+2. **RQ3 v2 candidate machinery is word-space (§3).** v1's `reach′` pool is
+   fact-space and representation-free, so `consensus_ow` is defined on the
+   decoded token ball (union of `B_r(w°(K_i))`, grouped by certificate);
+   v1's machinery survives as the ablation arm `consensus_fact` with the
+   added **H3.5** (`consensus_ow` recovery ≥ `consensus_fact` − 0.05 at
+   matched `r`, at lower enumeration cost).
+3. **RQ3 v2 objective (§3).** Coverage-first is biased toward sub-records in
+   word space (deletions move `w°` by 1 token, insertions by 5–10). Primary =
+   generalized median over pool ∪ members; and, because Levenshtein
+   substitution charges a fact swap 1–2 while a deletion costs 1 (source and
+   sub-records tie exactly on deletion noise), the median's metric is the
+   **indel** distance (`|w1|+|w2|−2·LCS`, the ball's own geometry), under
+   which the source strictly beats every sub-record for `N ≥ 3`. Ties:
+   coverage, then the size-neutral augmented-fingerprint order; shortlex
+   retired as size-biased. Ablations on every collection: `consensus_ow_lev`
+   (Levenshtein median), `consensus_ow_coverage`, `consensus_fact`;
+   like-for-like `medoid[isal_ow_indel]` so certified ratios compare within
+   one metric. **H3.6** added: recovery under the median increases with `N`
+   and the small-`N` shortfall is a sub-record (the insertion asymmetry).
+4. **RQ3 v2 envelope (§3).** The deletion-heavy `t = 2` NDC cell has source
+   reachability 0.375 at `r = 2`; kept, printed as the envelope boundary,
+   radius not raised. Ball: full indel `r = 2` (coverage 1.000 in every
+   mixed `t = 1` cell), chosen on price.
+5. **RQ8 secondary arm (§4).** `ow_gru` replaced by `ow_ngram_ho` (order-6
+   backoff n-gram) before G8.1, to add no dependency. Its enabling rule fired
+   (NDC 0.107 < 0.5 × 0.303); it closed a sixth of the gap on NDC and none on
+   WD50K.
+6. **RQ8 outcome and Amendment A1 (§4).** G8.1: H8.1 fails on NDC
+   (recommender 0.303 vs ours 0.107 hit@10) and is a wash on WD50K → the
+   pre-registered fallback; RQ8 is a supporting exhibit. An independent
+   review found the counting arms add exactly one fact by construction while
+   the free-running sampler's proposals add one fact 32 % of the time, so the
+   attachment-miss statistic was confounded. Amendment A1 (committed before
+   re-measurement): fact-count-matched arms `ow_ngram_1f` / `ow_ngram_ho_1f`,
+   attach-miss over one-fact proposals on both sides. Matched: every
+   ordered-walk arm attaches better than either recommender (NDC 0.35–0.39
+   vs 0.66 / 0.58), so §0's attachment mechanism is **supported**; the NDC
+   loss is a pattern gap (0.29 vs 0.89 pattern@10); on WD50K the matched arm
+   leads (0.038 vs 0.013), untested until Holm at 27 seeds. H8.3's third
+   clause (incidence < 0.05) is reported failed with the reason that the RQ6
+   threshold assumed unconditional sampling; not moved.
+7. **Deployment.** Private runner trees on Picasso HOME (`~/repos/IsalHG-rq*`)
+   with the shared `isalhg-tkde` env, `--no-build`, because FSCRATCH was
+   measured read-only at the file quota (276.3k / 250k soft, grace expired)
+   at 13:2x and writable again (215.8k) at 13:35; nothing was deleted by any
+   agent. Contradicts `slurm/tkde/README.md`'s "inputs stay on FSCRATCH";
+   both workers refuse to start if any output path resolves under FSCRATCH.
+8. **Jobs.** RQ3 v2 campaign `2308421` (122 tasks); RQ8 free-running
+   `2308339` (completed, record) and amended `2308489`; RQ2_ow `2308342` +
+   `2308343`; RQ5_ow `2308368`. Results root `~/results/IEEETKDE_ow/`.

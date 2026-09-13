@@ -296,10 +296,32 @@ python -m experiments.tkde.rq3v2 --config experiments/tkde/configs/rq3v2.yaml \
 ```
 
 <!-- PILOT-TABLE-START -->
-*Pending: filled from `analyze_rq3v2.py` on the pilot rows once the run
-completes. The table carries exact recovery and fact distance per method per
-corpus × stratum × N × t, the censoring rate per arm, the two consensus arms'
-pool sizes and wall-clocks, and the priced full-run cost.*
+**Status at hand-off: running, table not yet filled.** Fill it with
+
+```
+python -m experiments.tkde.analyze_rq3v2 \
+    --root /media/.../results/IEEETKDE_ow/RQ3v2/pilot2 --run-tag <tag>
+```
+
+and paste the headline, capability, cost and edit-mix tables here.
+
+⚠ **Pass `--run-tag`.** That directory holds **two** tags — `171dabce` from a run
+made before the indel amendment and `edf96e8e` from the final code — because the
+pilot was restarted when the configuration changed. They sit side by side without
+either serving the other, which is the T-KBn guard working as designed, but an
+analysis that pools them is pooling two experiments. The final tag is
+`edf96e8e`; read the definitive one from `manifest.json`.
+
+The campaign (job 2308421) does not wait on this table: the ball choice is
+already recorded below with its arithmetic, and the worker writes per unit and
+defers what it cannot start, so a slower-than-expected cell costs a deferral that
+the resume pass collects, never a wrong row. The per-task `Elapsed` figures from
+2308421 are in any case a better price than this pilot, being measured at the
+campaign's own scale on the campaign's own hardware.
+
+What the table must carry when filled: exact recovery and fact distance per
+method per corpus × stratum × N × t; the censoring rate per arm; the consensus
+arms' pool sizes and enumeration wall-clocks; and the realised edit mix.
 <!-- PILOT-TABLE-END -->
 
 ### The ball choice, and the arithmetic behind it

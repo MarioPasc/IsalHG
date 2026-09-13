@@ -31,6 +31,30 @@ exactly the ones the reference does not have.  The consensus has no reference:
 it enumerates a neighbourhood of *every* member in the language and scores the
 knowledge bases it decodes.  We therefore expect to win on the non-star strata
 and to tie counting on the stars, and both are reported (H3.1, H3.4).
+
+The objective, and why it is taken in the indel metric
+------------------------------------------------------
+``consensus_ow`` returns the **generalized median** of the members in word
+space: the candidate minimising the summed distance from its own ``w°`` to each
+member's.  The medoid is that same objective restricted to the members, so the
+consensus cost is at most the medoid's by construction, and Prop 3's pairwise
+bound lower-bounds the optimum over *every* point of the space --- which gives
+the arm a certified ratio that a coverage objective cannot have.
+
+The distance is the **indel** distance, not Levenshtein.  Levenshtein charges a
+substitution one edit, and a substitution has no fact-level counterpart at unit
+cost: replacing one fact's instruction by another's is one Levenshtein edit but
+two fact edits.  The under-charge falls precisely on the candidates that compete
+with the source.  On a star whose ``N`` members each drop one fact, the source
+is 1 from every member and costs ``N``; two members differ by a fact swap, which
+indel charges 2 and Levenshtein 1, so a member costs ``2(N-1)`` under indel and
+``N-1`` under Levenshtein.  Under indel the source wins strictly for ``N >= 3``;
+under Levenshtein it *ties* and the tie break decides.  Indel is also the metric
+of the ball being enumerated, so objective and candidate set live in one
+geometry.  ``consensus_ow_lev`` runs the Levenshtein median as the pre-registered
+ablation that exhibits this, and ``consensus_ow_coverage`` the coverage-first
+order; all three read one pool (:func:`build_ball_pool`), since they differ in
+how they rank candidates and not in which candidates exist.
 """
 
 from __future__ import annotations

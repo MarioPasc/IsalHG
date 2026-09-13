@@ -1,0 +1,102 @@
+# RQ2 on the ordered walk --- the D-ART6 swap (T-KBab).
+#
+# Identical to configs/rq2.yaml in every parameter except one: `wstar_orbit` is
+# replaced by `isal_ow_struct` wherever it appeared, because D-ART6 makes `w0`
+# the paper's headline program and every main-text table runs on it. Nothing
+# else moves: the same collections, the same pair counts, the same budgets, the
+# same oracle window, so the census is comparable line for line with the
+# `wstar_orbit` run it supersedes.
+#
+# Expected outcome, stated before the run (Theorem C): 0 false merges and an
+# exact partition on all three collections, as for `wstar_orbit` -- but without
+# its censoring. `wstar_orbit` dropped members at the 60 s budget (see
+# <matrices>/<collection>/wstar_orbit.censored.json); the ordered walk censors
+# none, which is the measurable half of lifting R2 for symmetry.
+#
+# Results root: RQ2_ow/ under ISALHG_RESULTS_ROOT=~/results/IEEETKDE_ow.
+# `isal_ow_struct` matrices are already cached for wd50k66, ndc_classes and
+# wd50k100; `ndc_substances` has none, and this runner builds it itself
+# (census_own_collections), exactly as the `wstar_orbit` run did.
+
+rq: 2
+rq_folder: RQ2_wellposedness
+experiment: wellposedness_ow
+
+pointer_budget_s: 60.0
+oracle_budget_s: 600.0
+arm_budget_s: 60.0
+n_jobs: 1
+
+# Step 0 -- exactness at zero, every representation of G3 on every collection.
+exact0_collections: [wd50k66, ndc_classes, ndc_substances]
+exact0_pairs: 100
+exact0_arms:
+  - fact_rank
+  - isalhg_levenshtein
+  - isal_ow_struct
+  - nauty_cert
+  - nauty_cert_rows
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_path
+  - bipartite_ged_assign
+  - size_l1
+  - degree_seq_l1
+  - exact_ged
+  - hypercot
+
+# Step 1 -- the false-merge census, over every arm that has a matrix.
+census_collections: [wd50k66, ndc_classes, ndc_substances]
+census_own_collections: [ndc_substances] # the ones this runner builds itself
+census_arms:
+  - fact_rank
+  - isal_ow_struct
+  - nauty_cert
+  - nauty_cert_rows
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_path
+  - bipartite_ged_assign
+  - size_l1
+  - degree_seq_l1
+
+# Step 2 -- bipartite metricity on real members.
+bipartite_collections: [wd50k66, ndc_classes, ndc_substances]
+bipartite_path_arm: bipartite_ged_path
+bipartite_assign_arm: bipartite_ged_assign
+bipartite_pairs: 2000
+bipartite_triples: 5000
+
+# Step 3 -- the oracle ceiling and the gated HyperCOT timing row.
+oracle_collections: [wd50k66, ndc_classes]
+oracle_arm: exact_ged
+oracle_pairs: 30
+oracle_m_max: 8
+hypercot_collections: [wd50k66]
+hypercot_pairs: 20
+hypercot_member_gate: 20
+
+# 39 exact0 + 30 census + 3 bipartite + 6 oracle + 1 hypercot = 79 units.
+n_shards: 79
+
+smoke:
+  member_limit: 20
+  pointer_budget_s: 5.0
+  oracle_budget_s: 20.0
+  arm_budget_s: 20.0
+  exact0_collections: [ndc_classes]
+  exact0_pairs: 5
+  exact0_arms:
+    [fact_rank, isal_ow_struct, nauty_cert, netlsd, bipartite_ged_path, size_l1]
+  census_collections: [ndc_classes]
+  census_own_collections: [ndc_classes]
+  census_arms: [fact_rank, isal_ow_struct, nauty_cert, size_l1]
+  bipartite_collections: [ndc_classes]
+  bipartite_pairs: 10
+  bipartite_triples: 10
+  oracle_collections: [ndc_classes]
+  oracle_pairs: 3
+  hypercot_collections: []
+  n_shards: 1

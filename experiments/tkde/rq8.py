@@ -87,6 +87,30 @@ ARM_OURS = "ow_ngram"
 #: here so it can never be read as a post-hoc addition.
 ARM_OURS_HO = "ow_ngram_ho"
 
+#: The fact-count-matched twins (Amendment A1, pre-registered 2026-09-13). Same
+#: model, same seed, same draws, same ``R``; acceptance restricted to proposals
+#: adding **exactly one** fact, which is what a counting arm adds by
+#: construction. Measured on the pilot, only 31.6 % of ours' free-running
+#: accepted proposals add one fact, so without these the ten slots of a
+#: generative arm are compared against ten slots of which roughly three can be a
+#: hit, and an extra-fact miss is indistinguishable from an attachment miss.
+ARM_OURS_1F = "ow_ngram_1f"
+ARM_OURS_HO_1F = "ow_ngram_ho_1f"
+
+#: Arms whose acceptance predicate is ``delta facts == 1``.
+ONE_FACT_ARMS: frozenset[str] = frozenset({ARM_OURS_1F, ARM_OURS_HO_1F})
+
+#: Which fitted model each ordered-walk arm draws from. The matched twin shares
+#: its parent's model outright -- it is the same distribution, read under a
+#: different acceptance rule, and fitting a second identical model would only
+#: invite the two to drift apart.
+OW_ARM_MODEL: dict[str, str] = {
+    ARM_OURS: ARM_OURS,
+    ARM_OURS_HO: ARM_OURS_HO,
+    ARM_OURS_1F: ARM_OURS,
+    ARM_OURS_HO_1F: ARM_OURS_HO,
+}
+
 #: The generative baselines of the spec, in table order.
 GENERATIVE_BASELINES: tuple[str, ...] = ("fact_ngram", "incidence_ngram")
 
@@ -134,12 +158,19 @@ COLUMNS_UNITS: tuple[str, ...] = (
     "n_units",
     "n_hit",
     "n_pattern_hit",
-    "n_pattern_hit_attach_miss",
+    "n_pattern_hit_1f",
+    "n_pattern_hit_1f_attach_miss",
     "hit_at_10",
     "pattern_at_10",
+    "attach_miss_given_pattern_1f",
     "n_proposals",
     "n_valid",
     "n_connected",
+    "n_accepted",
+    "n_accepted_1f",
+    "delta_facts_sum",
+    "delta_facts_mean",
+    "frac_accepted_1f",
     "validity",
     "connectivity",
     "n_train",
@@ -163,8 +194,12 @@ COLUMNS_DETAIL: tuple[str, ...] = (
     "n_proposals",
     "n_valid",
     "n_connected",
+    "n_accepted",
+    "n_accepted_1f",
+    "delta_facts_sum",
     "hit",
     "pattern_hit",
+    "pattern_hit_1f",
     "secs",
 )
 
@@ -699,6 +734,18 @@ class Proposal:
         """Whether the proposal decoded at all."""
         return self.hypergraph is not None
 
+    def delta_facts(self, base: tuple[Pattern, ...]) -> int:
+        """Facts this proposal adds relative to ``K-``.
+
+        Recorded rather than thresholded (Amendment A1). A counting arm adds
+        exactly one fact by construction; a free-running sequence model adds
+        whatever it writes, and measured on the pilot only 31.6 % of ours'
+        accepted proposals add exactly one. Keeping only ``delta >= 1`` made
+        the two incomparable and made an extra-fact miss indistinguishable
+        from an attachment miss.
+        """
+        return len(self.patterns) - len(base)
+
 
 def _as_proposal(H: SparseHypergraph | None) -> Proposal:
     if H is None:
@@ -712,31 +759,51 @@ def _as_proposal(H: SparseHypergraph | None) -> Proposal:
     )
 
 
+def _admits(proposal: Proposal, base_patterns: tuple[Pattern, ...], *, exactly_one: bool) -> bool:
+    """Whether ``proposal`` is an admissible completion under the arm's rule.
+
+    ``exactly_one`` is the Amendment A1 switch: the free-running arms admit any
+    proposal that adds at least one fact, the ``_1f`` arms admit only those that
+    add exactly one. Nothing else differs between an arm and its matched twin.
+    """
+    if not proposal.valid or proposal.cert is None:
+        return False
+    delta = proposal.delta_facts(base_patterns)
+    return delta == 1 if exactly_one else delta >= 1
+
+
 def _collect(
     draw: Any,
     base_patterns: tuple[Pattern, ...],
     *,
     k_proposals: int,
     resamples: int,
+    exactly_one: bool = False,
 ) -> list[Proposal]:
-    """Draw distinct completions that add at least one fact.
+    """Draw distinct admissible completions.
 
     ``draw(attempt)`` returns one :class:`Proposal`. Each of the ``k_proposals``
-    slots gets up to ``resamples`` attempts to produce a proposal that both adds
-    a fact and carries a certificate not already taken; an attempt that decodes
-    but adds nothing is still counted in the validity and connectivity totals,
-    because refusing to count it would report a filtered rate as a measured one.
+    slots gets up to ``resamples`` attempts to produce a proposal that is
+    admissible and carries a certificate not already taken; an attempt that
+    decodes but is not admissible is still counted in the validity and
+    connectivity totals, because refusing to count it would report a filtered
+    rate as a measured one.
 
     Parameters
     ----------
     draw : callable
         ``(attempt index) -> Proposal``.
     base_patterns : tuple[Pattern, ...]
-        Patterns of ``K-``; the "at least one new fact" test is against these.
+        Patterns of ``K-``; the fact-count test is against these.
     k_proposals : int
         How many distinct completions to return.
     resamples : int
-        Attempts allowed per slot (``R`` of the spec).
+        Attempts allowed per slot (``R`` of the spec). **Identical for the
+        matched arms**: a stricter acceptance under a larger budget would
+        replace the asymmetry Amendment A1 removes with a new one, so an
+        unfilled slot is reported rather than bought back.
+    exactly_one : bool, optional
+        Restrict acceptance to proposals adding exactly one fact.
 
     Returns
     -------
@@ -754,13 +821,11 @@ def _collect(
             proposal = draw(index)
             index += 1
             attempts.append(proposal)
-            if not proposal.valid or proposal.cert is None:
+            if not _admits(proposal, base_patterns, exactly_one=exactly_one):
                 continue
             if proposal.cert in seen:
                 continue
-            if len(proposal.patterns) <= len(base_patterns):
-                continue
-            seen.add(proposal.cert)
+            seen.add(proposal.cert)  # type: ignore[arg-type]
             accepted.append(proposal)
             break
         if len(accepted) >= k_proposals:
@@ -768,16 +833,21 @@ def _collect(
     return attempts
 
 
-def _accepted(attempts: Sequence[Proposal], base_patterns: tuple[Pattern, ...]) -> list[Proposal]:
-    """The distinct fact-adding proposals among ``attempts``, in draw order."""
+def _accepted(
+    attempts: Sequence[Proposal],
+    base_patterns: tuple[Pattern, ...],
+    *,
+    exactly_one: bool = False,
+) -> list[Proposal]:
+    """The distinct admissible proposals among ``attempts``, in draw order."""
     seen: set[tuple[int, str]] = set()
     out: list[Proposal] = []
     for proposal in attempts:
-        if not proposal.valid or proposal.cert is None or proposal.cert in seen:
+        if not _admits(proposal, base_patterns, exactly_one=exactly_one):
             continue
-        if len(proposal.patterns) <= len(base_patterns):
+        if proposal.cert in seen:
             continue
-        seen.add(proposal.cert)
+        seen.add(proposal.cert)  # type: ignore[arg-type]
         out.append(proposal)
     return out
 
@@ -808,11 +878,16 @@ def propose_ow(
     resamples: int,
     max_len: int,
     max_new: int,
+    exactly_one: bool = False,
 ) -> list[Proposal]:
     """Ours: continue ``w0(K-)`` verbatim and decode.
 
     The prefix survives intact, so Proposition C.8 applies to every proposal:
     it decodes, it is connected, and it contains ``K-``.
+
+    ``exactly_one`` selects the fact-count-matched arm: identical model, seed
+    and draw sequence, acceptance restricted to proposals adding exactly one
+    fact (Amendment A1).
     """
     root_label, prefix = context.ow_word(unit.minus)
     base = patterns_of(unit.minus)
@@ -827,7 +902,9 @@ def propose_ow(
             return _as_proposal(None)
         return _as_proposal(H)
 
-    return _collect(draw, base, k_proposals=k_proposals, resamples=resamples)
+    return _collect(
+        draw, base, k_proposals=k_proposals, resamples=resamples, exactly_one=exactly_one
+    )
 
 
 def propose_fact(
@@ -1099,33 +1176,57 @@ class Score:
     n_proposals: int
     n_valid: int
     n_connected: int
+    n_accepted: int
+    n_accepted_1f: int
+    delta_facts_sum: int
     hit: bool
     pattern_hit: bool
+    pattern_hit_1f: bool
 
 
 def score(
-    unit: EvalUnit, attempts: Sequence[Proposal], truth_cert: tuple[int, str] | None
+    unit: EvalUnit,
+    attempts: Sequence[Proposal],
+    truth_cert: tuple[int, str] | None,
+    *,
+    exactly_one: bool = False,
 ) -> Score:
     """Score one arm's attempts on one evaluation unit.
 
     ``hit`` is exact: some accepted proposal is valid, connected, and carries the
     truth's certificate, which is a complete isomorphism invariant (Theorem C).
+    It needs no fact-count restriction of its own --- the truth carries exactly
+    one fact more than ``K-``, so anything isomorphic to it already adds one.
+
     ``pattern_hit`` is the weaker credit: the hidden fact's pattern appears among
-    the patterns some accepted proposal added.
+    the patterns some accepted proposal added. ``pattern_hit_1f`` restricts that
+    to proposals adding **exactly one** fact, and is the denominator of the
+    attach-miss statistic (Amendment A1): a proposal carrying the right pattern
+    plus two unrelated facts fails to be a hit for a reason that has nothing to
+    do with attachment, and counting it as an attachment miss reversed the sign
+    of the reported effect.
+
+    ``n_accepted`` is reported because the ``_1f`` arms run under the same ``R``
+    budget as their free-running parents and may leave slots unfilled; the fill
+    is a measurement, not something to compensate for.
     """
     base = patterns_of(unit.minus)
-    accepted = _accepted(attempts, base)
+    accepted = _accepted(attempts, base, exactly_one=exactly_one)
+    one_fact = [p for p in accepted if p.delta_facts(base) == 1]
     wanted = unit.hidden_pattern
     hit = truth_cert is not None and any(
         proposal.connected and proposal.cert == truth_cert for proposal in accepted
     )
-    pattern_hit = any(wanted in added_patterns(p.patterns, base) for p in accepted)
     return Score(
         n_proposals=len(attempts),
         n_valid=sum(1 for p in attempts if p.valid),
         n_connected=sum(1 for p in attempts if p.connected),
+        n_accepted=len(accepted),
+        n_accepted_1f=len(one_fact),
+        delta_facts_sum=sum(p.delta_facts(base) for p in accepted),
         hit=hit,
-        pattern_hit=pattern_hit,
+        pattern_hit=any(wanted in added_patterns(p.patterns, base) for p in accepted),
+        pattern_hit_1f=any(wanted in added_patterns(p.patterns, base) for p in one_fact),
     )
 
 
@@ -1141,13 +1242,19 @@ def _fit_models(
     order: int,
     order_ho: int,
 ) -> dict[str, TokenNGram]:
-    """Fit each generative arm's n-gram on the training words only."""
+    """Fit each generative arm's n-gram on the training words only.
+
+    A matched ``_1f`` arm fits nothing of its own: it reads its parent's model,
+    so the two cannot drift apart and the comparison stays a comparison of
+    acceptance rules rather than of models (Amendment A1).
+    """
     models: dict[str, TokenNGram] = {}
-    if ARM_OURS in arms or ARM_OURS_HO in arms:
+    wanted = {OW_ARM_MODEL[arm] for arm in arms if arm in OW_ARM_MODEL}
+    if wanted:
         words = [context.ow_word(record)[1] for record in train]
-        if ARM_OURS in arms:
+        if ARM_OURS in wanted:
             models[ARM_OURS] = TokenNGram(order=order).fit(words)
-        if ARM_OURS_HO in arms:
+        if ARM_OURS_HO in wanted:
             models[ARM_OURS_HO] = TokenNGram(order=order_ho).fit(words)
     if "fact_ngram" in arms:
         models["fact_ngram"] = TokenNGram(order=order).fit(
@@ -1247,7 +1354,12 @@ def run_unit(
                 prefer_root=want_star,
                 rng=random.Random(f"rq8|{arm}|{context.name}|{seed}|{position}"),
             )
-            outcome = score(eval_unit, attempts, truth_certs[eval_unit.truth.kb_id])
+            outcome = score(
+                eval_unit,
+                attempts,
+                truth_certs[eval_unit.truth.kb_id],
+                exactly_one=arm in ONE_FACT_ARMS,
+            )
             detail.append(
                 {
                     **shared,
@@ -1260,8 +1372,12 @@ def run_unit(
                     "n_proposals": outcome.n_proposals,
                     "n_valid": outcome.n_valid,
                     "n_connected": outcome.n_connected,
+                    "n_accepted": outcome.n_accepted,
+                    "n_accepted_1f": outcome.n_accepted_1f,
+                    "delta_facts_sum": outcome.delta_facts_sum,
                     "hit": int(outcome.hit),
                     "pattern_hit": int(outcome.pattern_hit),
+                    "pattern_hit_1f": int(outcome.pattern_hit_1f),
                     "secs": time.perf_counter() - arm_started,
                 }
             )
@@ -1271,19 +1387,32 @@ def run_unit(
                     "n_units": 0,
                     "n_hit": 0,
                     "n_pattern_hit": 0,
-                    "n_pattern_hit_attach_miss": 0,
+                    "n_pattern_hit_1f": 0,
+                    "n_pattern_hit_1f_attach_miss": 0,
                     "n_proposals": 0,
                     "n_valid": 0,
                     "n_connected": 0,
+                    "n_accepted": 0,
+                    "n_accepted_1f": 0,
+                    "delta_facts_sum": 0,
                 },
             )
             bucket["n_units"] += 1
             bucket["n_hit"] += int(outcome.hit)
             bucket["n_pattern_hit"] += int(outcome.pattern_hit)
-            bucket["n_pattern_hit_attach_miss"] += int(outcome.pattern_hit and not outcome.hit)
+            bucket["n_pattern_hit_1f"] += int(outcome.pattern_hit_1f)
+            # The attach-miss numerator and its denominator are both restricted
+            # to one-fact proposals (Amendment A1): a right pattern carried by a
+            # three-fact proposal misses for a reason that is not attachment.
+            bucket["n_pattern_hit_1f_attach_miss"] += int(
+                outcome.pattern_hit_1f and not outcome.hit
+            )
             bucket["n_proposals"] += outcome.n_proposals
             bucket["n_valid"] += outcome.n_valid
             bucket["n_connected"] += outcome.n_connected
+            bucket["n_accepted"] += outcome.n_accepted
+            bucket["n_accepted_1f"] += outcome.n_accepted_1f
+            bucket["delta_facts_sum"] += outcome.delta_facts_sum
 
     elapsed = time.perf_counter() - started
     units_rows = [
@@ -1295,6 +1424,17 @@ def run_unit(
             "hit_at_10": bucket["n_hit"] / bucket["n_units"] if bucket["n_units"] else "",
             "pattern_at_10": (
                 bucket["n_pattern_hit"] / bucket["n_units"] if bucket["n_units"] else ""
+            ),
+            "attach_miss_given_pattern_1f": (
+                bucket["n_pattern_hit_1f_attach_miss"] / bucket["n_pattern_hit_1f"]
+                if bucket["n_pattern_hit_1f"]
+                else ""
+            ),
+            "delta_facts_mean": (
+                bucket["delta_facts_sum"] / bucket["n_accepted"] if bucket["n_accepted"] else ""
+            ),
+            "frac_accepted_1f": (
+                bucket["n_accepted_1f"] / bucket["n_accepted"] if bucket["n_accepted"] else ""
             ),
             "validity": bucket["n_valid"] / bucket["n_proposals"] if bucket["n_proposals"] else "",
             "connectivity": (
@@ -1327,16 +1467,19 @@ def _propose(
     rng: random.Random,
 ) -> list[Proposal]:
     """Dispatch one arm's proposal routine."""
-    if arm in (ARM_OURS, ARM_OURS_HO):
+    if arm in OW_ARM_MODEL:
+        # The matched twin reads its parent's model and its parent's draws; only
+        # the acceptance predicate differs (Amendment A1).
         return propose_ow(
             context,
-            models[arm],
+            models[OW_ARM_MODEL[arm]],
             unit,
             seed=seed,
             k_proposals=k_proposals,
             resamples=resamples,
             max_len=max_len,
             max_new=max_new,
+            exactly_one=arm in ONE_FACT_ARMS,
         )
     if arm == "fact_ngram":
         return propose_fact(

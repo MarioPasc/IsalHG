@@ -52,7 +52,9 @@ from experiments.tkde.analyze_rq1 import load_table
 from experiments.tkde.config import TkdeError
 from experiments.tkde.rq8 import (
     ARM_OURS,
+    ARM_OURS_1F,
     ARM_OURS_HO,
+    ARM_OURS_HO_1F,
     EXPERIMENT,
     KIND_INTERIOR,
     KIND_PENDANT,
@@ -374,18 +376,39 @@ def build_tables(
             [frame, blank], ignore_index=True
         )
 
+    # Amendment A1: numerator AND denominator are restricted to proposals adding
+    # exactly one fact. On the unrestricted denominator an extra-fact miss was
+    # scored as an attachment miss, which reversed the sign of the reported
+    # effect. The column name now carries its own denominator, and the fact-count
+    # profile sits beside it so a reader can see how matched the arms were.
     mechanism = (
         units.groupby(["collection", "stratum", "hidden_kind", "arm"], as_index=False)[
-            ["n_units", "n_hit", "n_pattern_hit", "n_pattern_hit_attach_miss"]
+            [
+                "n_units",
+                "n_hit",
+                "n_pattern_hit",
+                "n_pattern_hit_1f",
+                "n_pattern_hit_1f_attach_miss",
+                "n_accepted",
+                "n_accepted_1f",
+                "delta_facts_sum",
+            ]
         ]
         .sum()
         .assign(
-            pattern_right_attachment_wrong=lambda f: (
-                f["n_pattern_hit_attach_miss"] / f["n_pattern_hit"].where(f["n_pattern_hit"] > 0)
-            )
+            attach_miss_given_pattern_hit_on_a_one_fact_proposal=lambda f: (
+                f["n_pattern_hit_1f_attach_miss"]
+                / f["n_pattern_hit_1f"].where(f["n_pattern_hit_1f"] > 0)
+            ),
+            frac_accepted_1f=lambda f: (
+                f["n_accepted_1f"] / f["n_accepted"].where(f["n_accepted"] > 0)
+            ),
+            delta_facts_mean=lambda f: (
+                f["delta_facts_sum"] / f["n_accepted"].where(f["n_accepted"] > 0)
+            ),
         )
     )
-    tables["Mechanism --- pattern right, attachment wrong"] = mechanism
+    tables["Mechanism --- attachment miss, over one-fact proposals only"] = mechanism
 
     verdicts = _frame(
         [
@@ -429,6 +452,9 @@ def analyze(root: Path, experiment: str) -> dict[str, Any]:
         "n_unit_rows": int(len(units)),
         "arms_scored": sorted(str(a) for a in units["arm"].unique()),
         "secondary_arm_enabled": ARM_OURS_HO in set(units["arm"].unique()),
+        "matched_arms_enabled": sorted(
+            arm for arm in (ARM_OURS_1F, ARM_OURS_HO_1F) if arm in set(units["arm"].unique())
+        ),
         "non_generative_rows": {arm: NO_COMPLETION_REASON for arm in NON_GENERATIVE_ROWS},
         "census": census.to_dict("records") if census is not None and not census.empty else [],
         "intervals": intervals,

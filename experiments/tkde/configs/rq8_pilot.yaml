@@ -44,9 +44,16 @@ max_new_tokens: 60
 # torch-free replacement (order-6 n-gram, same smoothing, same training words)
 # is enabled and measured here. Adding it changes the run tag, so this pass
 # writes its own rows beside the first pass's rather than overwriting them.
+#
+# `ow_ngram_1f` / `ow_ngram_ho_1f` are Amendment A1's fact-count-matched twins
+# (pre-registered before this re-run; RQ8_PILOT.md §3b). Adding them changes the
+# run tag again, so this pass writes its own rows beside both earlier passes
+# rather than overwriting either.
 arms:
   - ow_ngram
+  - ow_ngram_1f
   - ow_ngram_ho
+  - ow_ngram_ho_1f
   - fact_ngram
   - incidence_ngram
   - pattern_freq

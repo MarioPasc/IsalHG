@@ -141,22 +141,14 @@ therefore applies**: the claim reduces to H8.3 plus the measured gap to the
 recommender, and **RQ8 is a supporting exhibit, not a headline**. Ruled by the
 orchestrator, 2026-09-13, before submission.
 
-**The §0 attachment mechanism is contradicted by measurement, and this is the
-correction to fold into the design doc.** §0 states that on non-stars the
-completion must also choose attachments, "which the generator learns and
-counting cannot". Measured directly rather than inferred from `hit@10` minus
-`pattern@10`: among units where an arm got the hidden fact's *pattern* right,
-the fraction where it nonetheless missed the *attachment* is **0.716 for
-`ow_ngram` against 0.660 for `pattern_cooc`** on `ndc_classes` — the recommender
-attaches better than the generator. On `wd50k66` every arm sits at 0.98–0.99,
-i.e. attachment is near-hopeless for all of them. The gap on NDC is a
-**pattern-prediction** gap (`pattern@10` 0.375 against 0.892), not an attachment
-gap.
-
-The one qualification the higher-order arm adds: `ow_ngram_ho` drops the
-attachment-miss rate on NDC to **0.632, below `pattern_cooc`'s 0.660**. So the
-§0 mechanism is right about *direction* — more model capacity does buy
-attachment — and wrong about *magnitude* and about which arm wins overall.
+**The attachment reading of this table is WITHDRAWN — see §3b.** It was computed
+on an unmatched denominator: `ow_ngram` is free-running and only 31.6 % of its
+accepted proposals add exactly one fact, so a proposal carrying the right
+pattern plus two unrelated facts was scored as an *attachment* miss. The
+corrected, fact-count-matched numbers are in §3c, and they reverse the sign of
+the effect. What survives from this table unchanged: the gap on `ndc_classes` is
+a **pattern-prediction** gap (`pattern@10` 0.375 against 0.892), not an
+attachment gap, and H8.1 fails.
 
 **The secondary arm was enabled by the pre-registered rule, and it does not
 close the gap.** The rule fired: `0.1067 < 0.5 × 0.3033 = 0.1517` on
@@ -203,12 +195,18 @@ recorded here because each changes a reported column.
    artefact in the validity column at 0.5 — the column H8.3 is read from.
 
 One baseline-strengthening decision, stated so it is not mistaken for a thumb on
-the scale: the attachment heuristic retries one position down the degree ranking
-when its top choice repeats an existing fact, and anchors on the hub when no
-operand type occurs in the record. Without the retry a deterministic heuristic
-emits at most one proposal per pattern and the recommender is capped below `k`;
-without the hub anchor it would score the recommender's connectivity instead of
-its recommendation. Both strengthen the baseline, never ours (L12).
+the scale: the attachment heuristic retries **three positions** down the degree
+ranking when its top choice repeats an existing fact, and anchors on the hub
+when no operand type occurs in the record. Without the retry a deterministic
+heuristic emits at most one proposal per pattern and the recommender is capped
+below `k`; without the hub anchor it would score the recommender's connectivity
+instead of its recommendation. Both strengthen the baseline, never ours (L12).
+
+The counting arms rank **3·k = 30** patterns rather than `k`, for the same
+reason: a pattern whose attachment is refused must not cost a slot. The extra
+depth is measured **inert** — at the pilot `pattern_cooc` consumed **9.60
+patterns per unit** to fill ten slots, so ranks beyond the first ten are
+essentially never reached and cannot be inflating the recommender.
 
 ---
 
@@ -285,12 +283,79 @@ Two documentation mismatches the same review found, corrected here:
 
 ## 3c. Gate G8.1, amended — the matched comparison
 
-*Filled from the re-run of the same three pilot seeds under Amendment A1.
-The table of §3 is retained above as the free-running measurement.*
+*Same three pilot seeds (80900–80902), same 200 interior units per corpus, run
+tag `42875bca`. The §3 table is retained above as the free-running measurement;
+this one is the fact-count-matched one. Both are reported.*
 
-| corpus | arm | Δfacts = 1 share | hit@10 | pattern@10 | attach-miss (one-fact denominator) |
-|---|---|---|---|---|---|
-| *(filled by the amended pilot run)* | | | | | |
+`Δ1 share` is the fraction of accepted proposals adding exactly one fact;
+`Δ̄` their mean fact delta; `acc` the mean number of slots filled out of ten.
+**attach-miss is `pattern hit on a one-fact proposal ∧ ¬hit`, over one-fact
+proposals only** — for the counting arms this is unchanged, since every one of
+their proposals adds one fact.
+
+| corpus | arm | Δ1 share | Δ̄ | hit@10 | pattern@10 | attach-miss ∣ 1f | acc |
+|---|---|---|---|---|---|---|---|
+| `ndc_classes` | `ow_ngram` | 0.328 | 2.87 | 0.1067 | 0.3750 | **0.347** | 9.2 |
+| `ndc_classes` | **`ow_ngram_1f`** | 1.000 | 1.00 | **0.1750** | 0.2883 | 0.393 | 7.2 |
+| `ndc_classes` | `ow_ngram_ho` | 0.358 | 2.46 | 0.1417 | 0.3850 | **0.303** | 7.9 |
+| `ndc_classes` | **`ow_ngram_ho_1f`** | 1.000 | 1.00 | **0.1950** | 0.2983 | 0.346 | 5.8 |
+| `ndc_classes` | `pattern_cooc` | 1.000 | 1.00 | **0.3033** | **0.8917** | 0.660 | 9.9 |
+| `ndc_classes` | `pattern_freq` | 1.000 | 1.00 | 0.1867 | 0.4400 | 0.576 | 10.0 |
+| `ndc_classes` | `fact_ngram` | 0.199 | 4.34 | 0.0950 | 0.3667 | 0.287 | 8.0 |
+| `ndc_classes` | `incidence_ngram` | 0.411 | 2.52 | 0.0117 | 0.2700 | 0.854 | 6.9 |
+| `ndc_classes` | `random_pattern` | 1.000 | 1.00 | 0.0267 | 0.0833 | 0.680 | 10.0 |
+| `wd50k66` | `ow_ngram` | 0.248 | 5.15 | 0.0150 | 0.7317 | 0.892 | 9.8 |
+| `wd50k66` | **`ow_ngram_1f`** | 1.000 | 1.00 | **0.0383** | 0.2967 | **0.871** | 8.7 |
+| `wd50k66` | `ow_ngram_ho` | 0.261 | 4.20 | 0.0100 | 0.6350 | 0.933 | 9.6 |
+| `wd50k66` | **`ow_ngram_ho_1f`** | 1.000 | 1.00 | 0.0367 | 0.2917 | 0.874 | 8.2 |
+| `wd50k66` | `pattern_cooc` | 1.000 | 1.00 | 0.0133 | 0.7067 | 0.981 | 10.0 |
+| `wd50k66` | `pattern_freq` | 1.000 | 1.00 | 0.0083 | 0.5850 | 0.986 | 10.0 |
+| `wd50k66` | `fact_ngram` | 0.234 | 7.93 | 0.0050 | 0.7417 | 0.944 | 9.5 |
+| `wd50k66` | `incidence_ngram` | 0.447 | 2.81 | 0.0000 | 0.4067 | 1.000 | 6.8 |
+| `wd50k66` | `random_pattern` | 1.000 | 1.00 | 0.0000 | 0.0317 | 1.000 | 10.0 |
+
+### What the matched comparison changes, and what it does not
+
+**The attachment sentence reverses, more strongly than the review's
+counterfactual indicated.** On `ndc_classes`, every ordered-walk arm attaches
+better than either recommender on a matched denominator: **0.303–0.393 against
+`pattern_cooc`'s 0.660 and `pattern_freq`'s 0.576.** On `wd50k66`, where every
+arm is near-hopeless, ours is still ahead (0.871/0.874 against 0.981/0.986). So
+the design's §0 mechanism — *the completion must choose attachments, which the
+generator learns and counting cannot* — **is supported on the attachment axis
+after all.** The §3 reading that contradicted it was an artefact of the
+unmatched denominator, and it is withdrawn.
+
+**The `ndc_classes` loss is therefore entirely a pattern-prediction loss, and a
+larger one than §3 showed.** Restricting to one-fact proposals *lowers*
+`pattern@10` for the generative arms (0.375 → 0.288 and 0.385 → 0.298), because
+the extra facts of a free-running proposal were incidentally covering the hidden
+pattern. Against `pattern_cooc`'s 0.892, the matched gap is 3×. The n-gram
+family is a weaker pattern predictor than item–item co-occurrence; it is the
+better attacher. That is the honest decomposition.
+
+**Matching moves ours materially, and on `wd50k66` it flips the ordering.**
+`hit@10` rises 0.1067 → 0.1750 on NDC and 0.0150 → 0.0383 on WD50K — where the
+matched arm now **leads every baseline**, `pattern_cooc` included (0.0383
+against 0.0133, ~2.9×). `ow_ngram_ho_1f` is the best ordered-walk arm on NDC at
+0.1950, above `pattern_freq`'s 0.1867 and still below `pattern_cooc`'s 0.3033.
+
+**H8.1 still fails, now as a scoped failure rather than a flat one.** It asks
+for ours above *every* baseline on the interior units of *both* corpora:
+satisfied on `wd50k66`, not on `ndc_classes`. The pre-registered fallback still
+applies and **RQ8 remains a supporting exhibit**; the 27-seed run decides
+whether the `wd50k66` lead is Holm-significant, which three seeds cannot.
+
+**One honest note on why these numbers beat the review's counterfactual.** The
+review took the first ten one-fact proposals *from the draws already made*
+(hit@10 0.075 → 0.100). The pre-registered rule implemented here is "first ten
+distinct such proposals, same `R` budget rule", so a rejected multi-fact draw
+costs an attempt and the arm keeps drawing within its unchanged `R = 20` per
+slot. That is more generous to the generator than the review's read, and it is
+what was written down before the numbers were seen. The cost is visible in the
+`acc` column: the matched arms fill 5.8–8.7 slots of ten where the free-running
+ones fill 7.9–9.8, and unfilled slots are reported rather than bought back with
+a larger budget.
 
 ---
 

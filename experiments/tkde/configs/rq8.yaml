@@ -60,8 +60,22 @@ ngram_order_ho: 6
 max_len: 200
 max_new_tokens: 60
 
+# `ow_ngram_1f` / `ow_ngram_ho_1f` are the fact-count-matched twins of
+# Amendment A1 (pre-registered 2026-09-13, RQ8_PILOT.md §3b). Same model, same
+# seed, same draws, same R = 20 per slot; acceptance restricted to proposals
+# adding EXACTLY one fact, which is what a counting arm adds by construction.
+# Without them, ten slots of a generative arm are compared against ten of which
+# only ~32 % can be a hit, and an extra-fact miss is scored as an attachment
+# miss. The free-running arms stay: "what the model writes" and "what it writes
+# when asked for one fact" are different questions and both are reported.
+#
+# `ow_ngram_ho` and its twin are present because the pre-registered secondary
+# rule fired at G8.1 (interior hit@10 below 0.5 x pattern_cooc on ndc_classes).
 arms:
   - ow_ngram
+  - ow_ngram_1f
+  - ow_ngram_ho
+  - ow_ngram_ho_1f
   - fact_ngram
   - incidence_ngram
   - pattern_freq

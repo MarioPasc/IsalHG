@@ -13,7 +13,12 @@ import pytest
 from experiments.tkde.rq8 import (
     KIND_INTERIOR,
     KIND_PENDANT,
+    EvalUnit,
     PatternStatistics,
+    Proposal,
+    _accepted,
+    _admits,
+    _collect,
     attach,
     build_eval_units,
     delete_fact,
@@ -24,6 +29,7 @@ from experiments.tkde.rq8 import (
     pattern_of,
     patterns_of,
     root_of,
+    score,
     split_members,
     star_census,
 )
@@ -249,6 +255,109 @@ class TestSplitLeakage:
         pool = [*self._pool(9), record("solo", 3, (0, 1, 1), [(0, (0, 1)), (1, (0, 2))], "rare")]
         train, _evaluation = split_members(pool, train_frac=0.8, rng=random.Random(0))
         assert "rare" in {r.label for r in train}
+
+
+class TestOneFactAcceptance:
+    """Amendment A1: the ``_1f`` arms accept only proposals adding one fact.
+
+    The asymmetry this removes: a counting arm adds exactly one fact by
+    construction, while only 31.6 % of ours' free-running accepted proposals do
+    (607/1,923, measured on 40 ndc_classes non-star units). Without the matched
+    arm, ten slots are compared against ten of which roughly three can be a hit,
+    and an extra-fact miss is scored as an attachment miss.
+    """
+
+    @staticmethod
+    def _proposal(n_added: int, cert_id: int = 0) -> Proposal:
+        base = (0, 2, (0, 1))
+        return Proposal(
+            hypergraph=STAR.to_hypergraph(),
+            connected=True,
+            patterns=(base,) * (2 + n_added),
+            cert=(0, f"w{cert_id}"),
+        )
+
+    BASE = ((0, 2, (0, 1)),) * 2
+
+    def test_delta_facts_counts_the_added_facts(self):
+        assert self._proposal(0).delta_facts(self.BASE) == 0
+        assert self._proposal(1).delta_facts(self.BASE) == 1
+        assert self._proposal(7).delta_facts(self.BASE) == 7
+
+    @pytest.mark.parametrize("n_added", [2, 3, 5, 35])
+    def test_a_multi_fact_proposal_is_never_accepted_by_the_1f_arm(self, n_added):
+        # THE regression. A proposal adding two or more facts cannot be a
+        # completion of a record missing exactly one, and must not occupy a slot.
+        proposal = self._proposal(n_added)
+        assert not _admits(proposal, self.BASE, exactly_one=True)
+        assert _accepted([proposal], self.BASE, exactly_one=True) == []
+
+    def test_the_free_running_arm_still_accepts_it(self):
+        proposal = self._proposal(3)
+        assert _admits(proposal, self.BASE, exactly_one=False)
+        assert _accepted([proposal], self.BASE, exactly_one=False) == [proposal]
+
+    def test_a_one_fact_proposal_is_accepted_by_both(self):
+        proposal = self._proposal(1)
+        assert _admits(proposal, self.BASE, exactly_one=True)
+        assert _admits(proposal, self.BASE, exactly_one=False)
+
+    def test_a_zero_fact_proposal_is_accepted_by_neither(self):
+        proposal = self._proposal(0)
+        assert not _admits(proposal, self.BASE, exactly_one=True)
+        assert not _admits(proposal, self.BASE, exactly_one=False)
+
+    def test_collect_under_the_1f_rule_returns_only_one_fact_proposals(self):
+        # Alternating 2-fact and 1-fact draws: the matched arm must fill its
+        # slots from the odd draws alone and never bank an even one.
+        draws = [self._proposal(2 if i % 2 == 0 else 1, cert_id=i) for i in range(12)]
+        attempts = _collect(
+            lambda i: draws[min(i, len(draws) - 1)],
+            self.BASE,
+            k_proposals=3,
+            resamples=4,
+            exactly_one=True,
+        )
+        accepted = _accepted(attempts, self.BASE, exactly_one=True)
+        assert accepted
+        assert all(p.delta_facts(self.BASE) == 1 for p in accepted)
+
+    def test_the_1f_budget_is_the_same_R_and_a_slot_may_go_unfilled(self):
+        # Every draw adds two facts, so the arm fills nothing -- and it must not
+        # keep drawing beyond k * R to compensate, because a larger budget for
+        # one arm would replace the asymmetry being removed with a new one.
+        k_proposals, resamples = 3, 4
+        attempts = _collect(
+            lambda i: self._proposal(2, cert_id=i),
+            self.BASE,
+            k_proposals=k_proposals,
+            resamples=resamples,
+            exactly_one=True,
+        )
+        assert _accepted(attempts, self.BASE, exactly_one=True) == []
+        assert len(attempts) == k_proposals * resamples
+
+    def test_scoring_restricts_the_attach_miss_denominator_to_one_fact(self):
+        # A three-fact proposal carrying the right pattern is a pattern_hit but
+        # NOT a pattern_hit_1f, so it cannot enter the attach-miss denominator.
+        hidden = STAR.facts[0]
+        wanted = pattern_of(STAR, hidden)
+        minus = delete_fact(STAR, 0)
+        assert minus is not None
+        base = patterns_of(minus)
+        fat = Proposal(
+            hypergraph=STAR.to_hypergraph(),
+            connected=True,
+            patterns=(*base, wanted, wanted, wanted),
+            cert=(0, "fat"),
+        )
+        unit = EvalUnit(truth=STAR, minus=minus, hidden=hidden, kind=KIND_PENDANT)
+        outcome = score(unit, [fat], truth_cert=(0, "truth"))
+        assert outcome.pattern_hit is True
+        assert outcome.pattern_hit_1f is False
+        assert outcome.n_accepted == 1
+        assert outcome.n_accepted_1f == 0
+        assert outcome.delta_facts_sum == 3
 
 
 class TestPatternBaselines:

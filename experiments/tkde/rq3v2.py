@@ -54,6 +54,7 @@ from experiments.tkde.budget import (
     CPP_ENGINE_ARMS,
     arm_fingerprint_screen,
     guarded_budget_call,
+    symbol_distance,
 )
 from experiments.tkde.config import TkdeConfigError, TkdeError, load_yaml, results_root, seeds
 from experiments.tkde.matrices import BUDGETED_MATRIX_ARMS
@@ -62,10 +63,10 @@ from isalhg.core.instructions import parse
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.string_to_hypergraph import string_to_hypergraph
 from isalhg.datasets.kb.base import KBCollection, KBRecord, compact, make_record
-from isalhg.iso_backends.isal_ordered import ordered_fingerprint
+from isalhg.iso_backends.isal_ordered import ordered_fingerprint, ordered_symbols
 from isalhg.language.consensus import coverage_consensus
 from isalhg.language.majority import majority_merge
-from isalhg.language.reach import compact_constants, fact_key_of
+from isalhg.language.reach import compact_constants, fact_key_of, remove_facts
 from isalhg.metric_space.toolkit.matrix import build_matrix
 from isalhg.metric_space.toolkit.medoid import medoid
 
@@ -159,6 +160,8 @@ ROW_COLUMNS: tuple[str, ...] = (
     "n_ties",
     "n_decoded",
     "n_decoded_connected",
+    "coverage",
+    "sub_record_drop",
     "edit_mix",
     "source_n",
     "source_m",
@@ -759,49 +762,91 @@ def pattern_vote(members: Sequence[SparseHypergraph]) -> SparseHypergraph:
     constant being created when none is.
     """
     total = len(members)
-    votes: Counter[tuple[int, int, tuple[int, ...]]] = Counter()
+    # The vote is on *multiplicity*, not on presence. On a star the isomorphism
+    # class is the multiset of fact patterns, so a baseline that recorded only
+    # which patterns occur would rebuild a one-fact record from a four-fact star
+    # and would lose the control it exists to provide. The kept multiplicity of
+    # a pattern is the largest c such that strictly more than half the members
+    # carry at least c copies of it.
+    per_member: list[Counter[tuple[int, int, tuple[int, ...]]]] = []
     for member in members:
         seen: Counter[tuple[int, int, tuple[int, ...]]] = Counter()
         for edge in range(member.n_edges):
             seen[_fact_pattern(member, edge)] += 1
-        for pattern, count in seen.items():
-            votes[pattern] += 1 if count else 0
-    kept = sorted(pattern for pattern, count in votes.items() if 2 * count > total)
+        per_member.append(seen)
+    kept: list[tuple[int, int, tuple[int, ...]]] = []
+    for pattern in sorted({p for seen in per_member for p in seen}):
+        multiplicity = 0
+        for level in range(1, max(seen.get(pattern, 0) for seen in per_member) + 1):
+            if 2 * sum(1 for seen in per_member if seen.get(pattern, 0) >= level) > total:
+                multiplicity = level
+            else:
+                break
+        kept.extend([pattern] * multiplicity)
     if not kept:
-        kept = sorted(votes)[:1]
+        kept = sorted({p for seen in per_member for p in seen})[:1]
     template = members[0]
-    if not kept:
-        return _rebuild(1, [0], [], template)
-
     # A hub of the modal type carries every fact, which is the star assembly;
     # the remaining slots are filled by the highest-degree constant of the
     # matching type, creating one when the pool is empty.
     hub_type = Counter(
         member.vertex_label(v) for member in members for v in range(member.n_nodes)
     ).most_common(1)[0][0]
+    # Which types are shared, decided from what the members show rather than
+    # from the answer.  A type counts as shared when some member holds *two or
+    # more* constants of it at degree >= 2: one such constant is exactly the
+    # star's hub, and treating its type as shared would attach every fact to the
+    # same leaf, turning a four-leaf star into a two-constant record and erasing
+    # the control the star stratum exists to provide.  Where a type is shared
+    # the stated heuristic applies --- attach to the highest-degree constant of
+    # matching type --- and where it is not, the assembly grows a fresh leaf,
+    # which is the star assembly.
+    shared_types: set[int] = set()
+    for member in members:
+        hubs: Counter[int] = Counter()
+        for v in range(member.n_nodes):
+            if member.degree(v) >= 2:
+                hubs[member.vertex_label(v)] += 1
+        shared_types |= {label for label, count in hubs.items() if count >= 2}
+
     types: list[int] = [hub_type]
     degree: Counter[int] = Counter()
     facts: list[tuple[int, tuple[int, ...]]] = []
+    emitted: set[tuple[int, tuple[int, ...]]] = set()
     for predicate, arity, slot_types in kept:
-        chosen: list[int] = [0]
-        degree[0] += 1
         remaining = list(slot_types)
         if hub_type in remaining:
             remaining.remove(hub_type)
-        for slot_type in remaining[: max(0, arity - 1)]:
-            pool = [v for v in range(len(types)) if types[v] == slot_type and v not in chosen]
-            if pool:
-                pick = max(pool, key=lambda v: (degree[v], -v))
-            else:
-                pick = len(types)
-                types.append(slot_type)
-            chosen.append(pick)
-            degree[pick] += 1
-        while len(chosen) < arity:
-            pick = len(types)
-            types.append(hub_type)
-            chosen.append(pick)
-        facts.append((predicate, tuple(sorted(chosen))))
+        # Two passes. The first follows the heuristic; if it reproduces a fact
+        # already emitted the second creates fresh constants instead, because a
+        # repeated pattern in the vote means a second fact of that shape and a
+        # knowledge base cannot hold the same fact twice.
+        for fresh in (False, True):
+            chosen: list[int] = [0]
+            grown: list[int] = []
+            for slot_type in remaining[: max(0, arity - 1)]:
+                pool = [
+                    v
+                    for v in range(len(types))
+                    if types[v] == slot_type and v not in chosen and v != 0
+                ]
+                if pool and not fresh and slot_type in shared_types:
+                    pick = max(pool, key=lambda v: (degree[v], -v))
+                else:
+                    pick = len(types) + len(grown)
+                    grown.append(slot_type)
+                chosen.append(pick)
+            while len(chosen) < arity:
+                chosen.append(len(types) + len(grown))
+                grown.append(hub_type)
+            candidate = (predicate, tuple(sorted(chosen)))
+            if candidate not in emitted or fresh:
+                types.extend(grown)
+                for v in chosen:
+                    degree[v] += 1
+                facts.append(candidate)
+                emitted.add(candidate)
+                break
     return _rebuild(len(types), types, facts, template)
 
 
@@ -814,6 +859,46 @@ def word_tokens(H: SparseHypergraph) -> tuple[int, Tokens]:
     """``(root type, ordered-walk token sequence)`` of ``H``."""
     root_label, word = ordered_fingerprint(H)
     return int(root_label), tuple(token.serialize() for token in parse(word))
+
+
+def word_symbols(H: SparseHypergraph) -> tuple[Any, ...]:
+    """``w°`` as one symbol per instruction --- the alphabet ``d_I`` measures over.
+
+    A multi-digit field such as ``P[10]`` counts once, not four times (L7), and
+    the seed type is prepended exactly when the vertex vocabulary is non-trivial
+    (L8), which is the campaign's frozen ``isal_ow_struct`` convention.
+    """
+    return ordered_symbols(H)
+
+
+def is_sub_record(candidate: SparseHypergraph, truth: SparseHypergraph, max_drop: int = 3) -> int:
+    """Whether ``candidate`` is the truth with at most ``max_drop`` facts removed.
+
+    Pre-registered for H3.6.  The word median can prefer a knowledge base
+    *smaller* than the source at small ``N``, because dropping a fact one member
+    lacks saves that member an insertion --- 5 to 10 tokens in the measured
+    locality profile --- and costs the other ``N - 1`` a deletion of about one
+    token each.  Whether the shortfall is a sub-record or an arbitrary object is
+    the difference between a legible failure mode and an unexplained one, so the
+    row carries it.
+
+    Returns
+    -------
+    int
+        The number of facts dropped, or ``-1`` when the candidate is not a
+        sub-record within ``max_drop``.
+    """
+    target = fact_key_of(candidate)
+    if target == fact_key_of(truth):
+        return 0
+    for size in range(1, min(max_drop, truth.n_edges) + 1):
+        for drop in combinations(range(truth.n_edges), size):
+            reduced = remove_facts(truth, drop)
+            if reduced.n_edges == 0:
+                continue
+            if fact_key_of(reduced) == target:
+                return size
+    return -1
 
 
 def indel_ball(word: Tokens, radius: int, vocabulary: Sequence[str]) -> dict[Tokens, int]:
@@ -914,17 +999,49 @@ def _structure_key(H: SparseHypergraph) -> tuple:
 
 @dataclass(frozen=True)
 class ConsensusOutcome:
-    """What one consensus call contributes to a row."""
+    """What one consensus call contributes to a row.
+
+    Parameters
+    ----------
+    kb : SparseHypergraph
+        The representative the objective selected.
+    coverage : int
+        Members whose ball reached the winning class.
+    sum_reach : float
+        The winning value of the objective's distance criterion.
+    origin : str
+        ``"member:<i>"`` when the winner is an input, ``"decoded:non_member"``
+        when it is an object no member wrote --- the claim RQ3 makes, so the row
+        states it rather than leaving it to be inferred.
+    n_ties : int
+        Candidates the first two criteria could not separate from the winner.
+    pool_size, pool_secs : int, float
+        Size of the deduplicated candidate set and the enumeration's wall-clock;
+        the cost is part of the argument, so it is persisted.
+    n_decoded, n_decoded_connected : int
+        Words decoded and how many decoded to a connected knowledge base. Their
+        equality is the ambient decodability of Prop. C.4, measured rather than
+        asserted (L19).
+    cost, lower_bound, ratio, medoid_cost : float
+        The generalized-median cost of the winner, Prop 3's pairwise lower bound
+        on the optimum over *every* point of the space, their ratio, and the
+        medoid's cost for comparison. ``cost <= medoid_cost`` by construction,
+        because every member is itself a candidate.
+    """
 
     kb: SparseHypergraph
     coverage: int
-    sum_reach: int
+    sum_reach: float
     origin: str
     n_ties: int
     pool_size: int
     pool_secs: float
     n_decoded: int
     n_decoded_connected: int
+    cost: float = float("nan")
+    lower_bound: float = float("nan")
+    ratio: float = float("nan")
+    medoid_cost: float = float("nan")
 
 
 def consensus_ow(
@@ -937,7 +1054,7 @@ def consensus_ow(
     ball: str = "indel",
     append: int = 3,
     delete: int = 2,
-    objective: str = "coverage_first",
+    objective: str = "distance_first",
 ) -> ConsensusOutcome:
     """Ball-coverage consensus over the ``w°`` language.
 
@@ -966,22 +1083,23 @@ def consensus_ow(
         Which family to enumerate.  ``"restricted"`` is the design's fallback.
     append, delete : int, optional
         Bounds of the restricted family.
-    objective : {"coverage_first", "distance_first"}, optional
-        Which lexicographic order selects the winner.  ``"coverage_first"`` is
-        the objective inherited from v1 --- maximise coverage, then minimise the
-        summed distance --- and is the default.  ``"distance_first"`` inverts
-        the first two criteria.
+    objective : {"distance_first", "coverage_first"}, optional
+        Which lexicographic order selects the winner.  ``"distance_first"``
+        (default, and the pre-registered primary) is the generalized median in
+        the word metric: minimise ``sum_i d_I(w(M), w(K_i))``, ties by coverage,
+        then by the shortlex of ``w``.  ``"coverage_first"`` is v1's order, kept
+        as the named ablation.
 
-        The two differ because the *word* ball is not symmetric in what it
-        reaches, even though the metric is symmetric: the pilot measured a
-        single fact deletion at a median of 1 token and a single fact insertion
-        at 5--10 (gate G3.1b1), so within a fixed radius every member can delete
-        its way to a common core while none can insert its way to a larger
-        object.  Coverage therefore carries a bias toward knowledge bases
-        *smaller* than the source, and the summed distance does not.  In fact
-        space, where ``reach'`` charges an insertion and a deletion alike, no
-        such bias exists and coverage is the natural first criterion --- which
-        is why v1 used it.
+        The two differ because the *word ball* is not symmetric in what it
+        reaches, even though the metric is: the pilot measured a single fact
+        deletion at a median of 1 token and a single fact insertion at 5--10
+        (gate G3.1b1), so inside a fixed radius every member can delete its way
+        to a common core while none can insert its way to a larger object.
+        Coverage therefore carries a bias toward knowledge bases *smaller* than
+        the source, and the summed distance does not.  In fact space, where
+        ``reach'`` charges an insertion and a deletion alike, no such bias
+        exists and coverage is the natural first criterion --- which is why v1
+        used it.
 
     Returns
     -------
@@ -1050,23 +1168,42 @@ def consensus_ow(
         raise RQ3v2Error(
             f"objective must be 'coverage_first' or 'distance_first'; got {objective!r}"
         )
-    unreached_charge = radius + 1
-    scored: list[tuple[int, int, tuple[int, str], Any]] = []
-    values: dict[Any, tuple[int, int]] = {}
+
+    # The cost is the generalized-median objective in the word metric: the sum
+    # of the symmetric canonical-word Levenshtein distances from the candidate's
+    # own w-degree to each member's. It is not the BFS shell index, which
+    # measures a raw word's distance to one centre rather than the class's
+    # distance to all of them. Because the members are themselves candidates,
+    # the winning cost is at most the medoid's, and Prop 3's pairwise bound
+    # LB = sum_{i<j} d(K_i, K_j) / (N - 1) lower-bounds the optimum over every
+    # point of the space --- so the arm carries a certified ratio, which a
+    # coverage objective cannot.
+    member_symbols = [word_symbols(H) for H in members]
+    D = np.zeros((len(members), len(members)), dtype=np.float64)
+    for i in range(len(members)):
+        for j in range(i + 1, len(members)):
+            D[i, j] = D[j, i] = float(symbol_distance(member_symbols[i], member_symbols[j]))
+    bound = medoid(D)
+
+    scored: list[tuple[float, int, tuple[int, str], Any]] = []
+    values: dict[Any, tuple[int, float]] = {}
     for class_key, hits in reached.items():
-        coverage = len(hits)
-        total = sum(best_distance[class_key].get(i, unreached_charge) for i in range(len(members)))
-        values[class_key] = (coverage, total)
-        primary, secondary = (
-            (-coverage, total) if objective == "coverage_first" else (total, -coverage)
+        candidate_H = representative[class_key]
+        cost = float(
+            sum(symbol_distance(word_symbols(candidate_H), symbols) for symbols in member_symbols)
         )
-        scored.append((primary, secondary, certificate(representative[class_key]), class_key))
+        coverage = len(hits)
+        values[class_key] = (coverage, cost)
+        primary, secondary = (
+            (float(-coverage), int(cost)) if objective == "coverage_first" else (cost, -coverage)
+        )
+        scored.append((primary, secondary, certificate(candidate_H), class_key))
     scored.sort()
     best = scored[0]
     n_ties = sum(1 for entry in scored if entry[0] == best[0] and entry[1] == best[1]) - 1
     winner_key = best[3]
     winner = representative[winner_key]
-    winner_coverage, winner_total = values[winner_key]
+    winner_coverage, winner_cost = values[winner_key]
     member_keys = {fact_key_of(H): i for i, H in enumerate(members)}
     origin = (
         f"member:{member_keys[winner_key]}" if winner_key in member_keys else "decoded:non_member"
@@ -1074,13 +1211,21 @@ def consensus_ow(
     return ConsensusOutcome(
         kb=winner,
         coverage=winner_coverage,
-        sum_reach=winner_total,
+        sum_reach=winner_cost,
         origin=origin,
         n_ties=n_ties,
         pool_size=len(representative),
         pool_secs=time.perf_counter() - started,
         n_decoded=n_decoded,
         n_decoded_connected=n_connected,
+        cost=winner_cost,
+        lower_bound=bound.lower_bound,
+        ratio=(
+            winner_cost / bound.lower_bound
+            if bound.lower_bound
+            else (1.0 if winner_cost == 0 else float("inf"))
+        ),
+        medoid_cost=bound.cost,
     )
 
 
@@ -1183,6 +1328,8 @@ def _blank_row(shared: Mapping[str, Any], **overrides: Any) -> dict[str, Any]:
         "n_ties": "",
         "n_decoded": "",
         "n_decoded_connected": "",
+        "coverage": "",
+        "sub_record_drop": "",
     }
     row.update(overrides)
     return row
@@ -1408,6 +1555,11 @@ def evaluate_collection(
             )
             continue
         scored = _score(outcome.kb, truth_H, truth_cert, hged_timeout_s)
+        try:
+            drop = is_sub_record(outcome.kb, truth_H)
+        except Exception as exc:  # noqa: BLE001 - an H3.6 label must not kill the unit
+            logger.info("sub-record test declined a winner: %s", exc)
+            drop = ""
         rows.append(
             _blank_row(
                 shared,
@@ -1422,6 +1574,11 @@ def evaluate_collection(
                 n_ties=outcome.n_ties,
                 n_decoded=outcome.n_decoded,
                 n_decoded_connected=outcome.n_decoded_connected,
+                coverage=outcome.coverage,
+                sub_record_drop=drop,
+                medoid_cost=outcome.medoid_cost,
+                LB=outcome.lower_bound,
+                ratio=outcome.ratio,
                 **scored,
             )
         )
@@ -1725,15 +1882,24 @@ def _parse_shard(text: str) -> tuple[int, int]:
     return index, count
 
 
-def _apply_smoke(config: dict[str, Any]) -> dict[str, Any]:
-    """Shrink the configuration to the pre-registered smoke cell."""
-    smoke = config.get("smoke") or {}
+def _apply_overlay(config: dict[str, Any], block: str) -> dict[str, Any]:
+    """Shrink the configuration to the ``smoke`` or ``pilot`` overlay.
+
+    The overlay is a genuine configuration change, so it enters the run tag and
+    its rows can never be served to the full campaign: a smoke and the campaign
+    share the unit-id namespace, and RQ3 v1's untagged files are exactly how two
+    runs came to be indistinguishable on disk (T-KBn).  ``smoke`` is excluded
+    from the tag payload for the same reason ``n_shards`` is --- it names which
+    overlay ran, and the overlay's own parameters already carry the difference.
+    """
+    overlay = config.get(block) or {}
     merged = dict(config)
-    merged["seed_count"] = int(smoke.get("seed_count", 1))
-    merged["design"] = {**config["design"], **(smoke.get("design") or {})}
+    merged["seed_count"] = int(overlay.get("seed_count", config.get("seed_count", 27)))
+    merged["design"] = {**config["design"], **(overlay.get("design") or {})}
     for key in ("medoid_arms", "fingerprint_budget_s", "method_budget_s", "hged_timeout_s"):
-        if key in smoke:
-            merged[key] = smoke[key]
+        if key in overlay:
+            merged[key] = overlay[key]
+    merged["overlay"] = block
     merged["smoke"] = True
     return merged
 
@@ -1745,6 +1911,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=None)
     parser.add_argument("--shard", default="1/1")
     parser.add_argument("--smoke", action="store_true")
+    parser.add_argument("--pilot", action="store_true", help="run the local pilot overlay")
     parser.add_argument("--count", action="store_true", help="print the unit count and exit")
     parser.add_argument("--census", action="store_true", help="print the G0 census and exit")
     parser.add_argument("--data-root", type=Path, default=None)
@@ -1758,8 +1925,12 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
 
     config = load_yaml(args.config)
+    if args.smoke and args.pilot:
+        raise TkdeConfigError("--smoke and --pilot are two different overlays; pass one")
     if args.smoke:
-        config = _apply_smoke(config)
+        config = _apply_overlay(config, "smoke")
+    elif args.pilot:
+        config = _apply_overlay(config, "pilot")
 
     if args.count:
         print(len(enumerate_units(config)))

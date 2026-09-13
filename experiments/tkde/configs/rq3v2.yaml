@@ -84,22 +84,29 @@ design:
   ball_delete: 2
 
   # Which lexicographic order selects consensus_ow's winner.
-  # "coverage_first" is the objective v1 froze -- maximise the number of members
-  # the class was reached from, then minimise the summed distance -- and is the
-  # pre-registered default here.
   #
-  # The pilot measured that the two orders are not interchangeable in word
-  # space, for a reason the locality table names: a single fact deletion moves
-  # w-degree by a median of 1 token and a single fact insertion by 5-10
-  # (G3.1b1). Inside a fixed radius every member can therefore delete its way to
-  # a common core while none can insert its way to a larger object, so coverage
-  # is biased toward knowledge bases smaller than the source. In fact space,
-  # where reach' charges an insertion and a deletion alike, the bias does not
-  # exist, which is why v1 could use coverage first.
+  # PRIMARY = distance_first: the generalized median in the word metric over the
+  # candidate set (the decoded ball pool, which contains the members), i.e.
+  # minimise sum_i d_I(w(M), w(K_i)) with d_I the symmetric canonical-word
+  # Levenshtein, ties by coverage, then by the shortlex of w. Pre-registered on
+  # three a-priori grounds, none of them an outcome: it is the classical
+  # consensus objective in string spaces (de la Higuera & Casacuberta; Jiang,
+  # Muenger & Bunke); the medoid is the same objective restricted to the
+  # members, so the consensus cost is at most the medoid's by construction; and
+  # Prop 3's pairwise bound LB <= OPT therefore certifies it, giving a ratio
+  # cost / LB that is reported beside every medoid's. A coverage objective
+  # admits no such certificate.
   #
-  # objective_ablation runs the other order as a second, separately named arm on
-  # every collection, so both are reported and neither is chosen after the fact.
-  objective: coverage_first
+  # coverage_first is v1's order, kept as the named ablation arm and run on
+  # every collection so both are reported and neither is chosen after the fact.
+  # The two are not interchangeable in word space: a fact deletion moves w by a
+  # median of 1 token and an insertion by 5-10 (gate G3.1b1), so inside a fixed
+  # radius every member can delete its way to a common core while none can
+  # insert its way to a larger object. Coverage is therefore biased toward
+  # knowledge bases smaller than the source. In fact space reach' charges an
+  # insertion and a deletion alike and the bias does not exist, which is why v1
+  # could put coverage first.
+  objective: distance_first
   objective_ablation: true
 
 smoke:
@@ -112,3 +119,16 @@ smoke:
     n_values: [5]
     t_values: [1]
     sources_per_cell: 2
+
+# The local pilot gate (design section 1 rule 6): 3 seeds, 20 sources per corpus
+# per stratum, N in {5, 9}, t in {1, 2}, every arm. It prices the full run and
+# is never tuned on -- the objective, the strata, the noise kinds and the radius
+# are all fixed above before it runs.
+pilot:
+  seed_count: 3
+  method_budget_s: 900
+  hged_timeout_s: 20
+  design:
+    n_values: [5, 9]
+    t_values: [1, 2]
+    sources_per_cell: 20

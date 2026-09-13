@@ -1,0 +1,56 @@
+# RQ8 gate G8.1 --- the local pilot, three seeds, 200 interior units per corpus.
+#
+# HEADLINE_DESIGN_2026-09-13.md section 4: "3 seeds, 200 interior units per
+# corpus, all arms: report hit@10 and pattern@10. If ow_ngram <= pattern_cooc on
+# interior units, report to the orchestrator with the numbers before submitting."
+#
+# `seed_offset: 900` is the whole point of this file. The campaign runs the G7
+# schedule seeds(8, 27) = 80000..80026; the pilot runs 80900..80902, which are
+# outside it, so the split it draws and the units it scores are disjoint from
+# every unit the 27-seed run will score. Without that the gate would have tuned
+# on evaluation data. The offset also enters the run tag, so pilot rows can
+# never be served to the campaign.
+#
+# Non-star strata only: G8.1 measures the interior units, which is where H8.1
+# is stated. The star control is the campaign's, not the pilot's.
+
+rq: RQ8
+experiment: pilot_g8_1
+seed_count: 3
+seed_offset: 900
+
+collections: [ndc_classes, wd50k66]
+strata:
+  ndc_classes: [non_star]
+  wd50k66: [non_star]
+
+m_min: 4
+min_pool: 20
+train_frac: 0.8
+units_per_member: 2
+max_eval_units: 200
+
+k_proposals: 10
+resamples: 20
+ngram_order: 3
+ngram_order_ho: 6
+max_len: 200
+max_new_tokens: 60
+
+# `ow_ngram_ho` is present because the pre-registered rule FIRED at the first
+# pilot pass: on ndc_classes interior units `ow_ngram` scored hit@10 = 0.1067
+# against `pattern_cooc` 0.3033, i.e. below 0.5 x the recommender. The rule the
+# design attached to `ow_gru` therefore applies, and the orchestrator's
+# torch-free replacement (order-6 n-gram, same smoothing, same training words)
+# is enabled and measured here. Adding it changes the run tag, so this pass
+# writes its own rows beside the first pass's rather than overwriting them.
+arms:
+  - ow_ngram
+  - ow_ngram_ho
+  - fact_ngram
+  - incidence_ngram
+  - pattern_freq
+  - pattern_cooc
+  - random_pattern
+
+n_shards: 6

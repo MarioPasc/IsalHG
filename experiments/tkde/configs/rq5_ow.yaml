@@ -1,0 +1,71 @@
+# RQ5 on the ordered walk --- the D-ART6 swap (T-KBab).
+#
+# Identical to configs/rq5.yaml except that `wstar_orbit` is replaced by
+# `isal_ow_struct` in all three experiments, because D-ART6 makes `w0` the
+# paper's headline program. Every other parameter is unchanged -- the same
+# collections, designs, class thresholds, per-class counts and seed counts -- so
+# the clustering table is comparable line for line with the run it supersedes.
+#
+# Expected outcome, stated before the run: the same negative RQ5 already
+# measured. The naive floors `size_l1` and `degree_seq_l1` are mandatory on every
+# task table (L1) and are expected to win; the swap is reported whatever it
+# shows, and no baseline is removed for winning (L12).
+#
+# Reads submatrices of the cached full-collection matrices and computes nothing
+# distance-shaped itself. `isal_ow_struct` matrices are already cached for
+# wd50k66 and wd50k100, so no matrices job is needed for this swap.
+#
+# Results root: RQ5_ow/ under ISALHG_RESULTS_ROOT=~/results/IEEETKDE_ow.
+
+experiments:
+  - name: wd50k66_full
+    collection: wd50k66
+    design: full
+    min_class_size: 20
+    per_class: 20
+    n_seeds: 27 # = the number of PAM initializations on this design
+    arms:
+      - fact_rank
+      - isal_ow_struct
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: wd50k66_balanced
+    collection: wd50k66
+    design: balanced
+    min_class_size: 20
+    per_class: 20 # 14 classes x 20 = 280 members per seed
+    n_seeds: 27
+    arms:
+      - fact_rank
+      - isal_ow_struct
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: wd50k100_balanced # purity control, supplement (DESIGN.md section G4)
+    collection: wd50k100
+    design: balanced
+    min_class_size: 20
+    per_class: 20
+    n_seeds: 27
+    arms:
+      - fact_rank
+      - isal_ow_struct
+      - nauty_cert
+      - wl_l1
+      - size_l1
+      - degree_seq_l1

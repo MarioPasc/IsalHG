@@ -1186,7 +1186,7 @@ def run_unit(
     train_frac = float(config.get("train_frac", 0.8))
     per_member = int(config.get("units_per_member", 2))
     limit = int(config.get("max_eval_units", 200))
-    seed = seeds(RQ_INDEX, int(config.get("seed_count", 27)))[unit.seed_index]
+    seed = unit_seed(config, unit.seed_index)
 
     want_star = unit.stratum == STRATUM_STAR
     pool = [
@@ -1379,6 +1379,31 @@ def _propose(
 # ---------------------------------------------------------------------------
 
 
+def unit_seed(config: Mapping[str, Any], index: int) -> int:
+    """The seed of one replication, ``seed_offset`` included.
+
+    The campaign runs the G7 schedule ``seeds(8, S)`` unshifted. A **pilot** sets
+    ``seed_offset`` so its seeds lie outside that schedule: gate G8.1 must never
+    score a unit the 27-seed run will score, or the gate has tuned on evaluation
+    data. The offset also enters the run tag, so a pilot's rows can never be
+    served to the campaign.
+
+    Parameters
+    ----------
+    config : Mapping
+        The parsed configuration.
+    index : int
+        Replication index into the schedule.
+
+    Returns
+    -------
+    int
+        The seed.
+    """
+    schedule = seeds(RQ_INDEX, int(config.get("seed_count", 27)))
+    return schedule[index] + int(config.get("seed_offset", 0))
+
+
 def enumerate_units(config: Mapping[str, Any]) -> list[Unit]:
     """Every RQ8 unit, in a fixed order."""
     seed_count = int(config.get("seed_count", 27))
@@ -1545,7 +1570,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         "smoke": bool(args.smoke),
         "results_root": str(results_root),
         "data_root": str(args.data_root) if args.data_root else None,
-        "seeds": seeds(RQ_INDEX, int(config.get("seed_count", 27))),
+        "seeds": [unit_seed(config, index) for index in range(int(config.get("seed_count", 27)))],
+        "seed_offset": int(config.get("seed_offset", 0)),
         "arms": list(config.get("arms") or DEFAULT_ARMS),
         "non_generative_rows": list(NON_GENERATIVE_ROWS),
         "units": [unit.unit_id for unit in mine],

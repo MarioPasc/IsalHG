@@ -17,7 +17,19 @@ baselines of one ``(corpus, stratum)`` table.
 reported as the scope statement, two-sided, never hidden.
 
 **H8.3** proposals valid and connected: ours 1.000 by theorem (Proposition C.8),
-``fact_ngram`` below 1, ``incidence_ngram`` below 0.05.
+``fact_ngram`` below 1, ``incidence_ngram`` below 0.05. The third clause was
+measured **false** at gate G8.1 (0.17 / 0.14) and is reported failed with its
+reason rather than relaxed: the ceiling was ported from RQ6, where sampling is
+*unconditional*, and here the prefix is itself a well-formed serialization, so a
+truncated continuation decodes far more often. The threshold measures a
+different experiment.
+
+**hit@10 is already usable@10.** A proposal counts only if it decoded, is
+connected, and carries the truth's certificate --- the runner's ``score`` takes
+the ``accepted`` set, which requires a decode and a certificate, and then tests
+``connected`` explicitly. There is therefore no separate corrected column:
+``fact_ngram``'s disconnected samples never reach a hit. The table header says
+so, so no reader has to reconstruct it.
 
 Every representation that defines a distance and no completion operation appears
 in the tables with the cell ``"no completion definable"`` --- the spec's rule
@@ -347,7 +359,7 @@ def build_tables(
         ]
 
     for metric, label in (
-        ("hit_at_10", "hit@10"),
+        ("hit_at_10", "hit@10 (= usable@10)"),
         ("pattern_at_10", "pattern@10"),
         ("validity", "validity"),
         ("connectivity", "connectivity"),

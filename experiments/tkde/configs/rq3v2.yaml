@@ -109,21 +109,29 @@ design:
   objective: distance_first
   objective_ablation: true
 
-  # The final tie break, and it is load-bearing rather than decorative. On a star
-  # whose members each drop one fact, the source and two of its sub-records have
-  # equal cost AND equal coverage -- measured 4, 4, 4 at N = 4 -- so this
-  # comparison is what returns the answer, not a formality after the objective
-  # has already decided.
+  # The word metric the median is taken in. PRIMARY = indel: insertions and
+  # deletions at unit cost, no substitutions (|w1| + |w2| - 2|LCS|). It is the
+  # metric of the ball this arm enumerates, so the objective and the candidate
+  # set live in one geometry, and a substitution has no fact-level counterpart at
+  # unit cost -- replacing one fact's instruction by another's is one Levenshtein
+  # edit but two fact edits.
   #
-  # "shortlex" is what the design fixes: length first, then the token sequence.
-  # It therefore prefers the shorter word and so the smaller record, which is the
-  # size bias of the ball reappearing one level down.
-  # "fingerprint" orders by the augmented fingerprint alone -- the order v1's
-  # consensus uses for exactly this purpose -- and is unbiased with respect to
-  # size.
-  # The other order runs as its own arm on every collection, so the choice is
-  # reported rather than assumed.
-  tie_break: shortlex
+  # The consequence is exact on a star whose N members each drop one fact: under
+  # indel the source is 1 from every member and costs N, while two members differ
+  # by a fact swap and so are 2 apart, making a member cost 2(N-1). The source
+  # wins strictly for every N >= 3. Under Levenshtein the swap costs 1, member
+  # cost falls to N-1, and at N = 4 the source TIES its sub-records at 4 -- the
+  # tie break then decides the answer, and shortlex decides it downward.
+  #
+  # `consensus_ow_lev` runs the Levenshtein median on every collection as the
+  # pre-registered ablation that exhibits this.
+  metric: indel
+
+  # The final tie break: "fingerprint" is the augmented-fingerprint order alone,
+  # size-neutral, and the order v1's consensus already uses for this purpose.
+  # "shortlex" is retired as a primary because it is provably biased toward
+  # smaller records; it survives only in a test, as the documentation of why.
+  tie_break: fingerprint
 
 smoke:
   seed_count: 1

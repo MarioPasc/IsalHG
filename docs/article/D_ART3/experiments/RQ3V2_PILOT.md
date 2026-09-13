@@ -227,8 +227,53 @@ Three a-priori grounds:
    ratio** `cost / LB` reportable beside every medoid's. A coverage objective
    admits no such certificate.
 
-v1's order is kept as `consensus_ow_coverage_first` and run on every collection,
-so both are reported and neither was chosen after the fact (L12).
+### Pre-registration amendment, 2026-09-13: the metric is indel, not Levenshtein
+
+Measured after the objective was fixed and before any campaign number was seen.
+On a star whose `N` members each drop one distinct fact, the median under
+**Levenshtein** cannot separate the source from its own sub-records:
+
+| candidate | word length | distance to each member | cost |
+|---|---|---|---|
+| source | 5 | 1, 1, 1, 1 | **4** |
+| member 0 | 4 | 0, 1, 2, 2 | 5 |
+| member 1 | 4 | 1, 0, 1, 2 | **4** |
+| member 2 | 4 | 2, 1, 0, 1 | **4** |
+| member 3 | 4 | 2, 2, 1, 0 | 5 |
+
+Coverage ties as well (all four classes are reached by all four balls at `r = 2`),
+so the *tie break* returned the answer — and shortlex returns the shorter word,
+hence the smaller record.
+
+The cause is a substitution. Two members differ by a fact **swap**: one member
+has fact *a* where another has fact *b*. Levenshtein charges that one
+substitution; at fact level it is two edits, a deletion and an insertion. The
+under-charge falls precisely on the candidates that compete with the source.
+
+**The primary metric is therefore the indel distance**
+`d(w₁,w₂) = |w₁| + |w₂| − 2·|LCS(w₁,w₂)|` — insertions and deletions at unit
+cost, no substitutions. Two reasons, both a priori: it is the metric of the ball
+this arm enumerates, so the objective and the candidate set live in one geometry;
+and a substitution has no fact-level counterpart at unit cost. Under indel the
+source costs `N` and every sub-record `2(N − 1)`, a strict win for `N ≥ 3`, so the
+outcome no longer rests on a tie break. Remaining ties break by coverage, then by
+the augmented-fingerprint order, which is size-neutral. Shortlex is retired as a
+tie break and survives only as a test documenting its downward bias.
+
+*Measured consequence on the first real collection of the smoke:* under indel
+`consensus_ow` **recovers the source** (`fact_dist = 0`, `n_ties = 0`, certified
+ratio 1.091 against the indel medoid's 1.152); under Levenshtein the same
+collection returns a non-source at `fact_dist = 3` with `n_ties = 2`.
+
+**Arms, all on every collection.** `consensus_ow` (indel median), and the three
+pre-registered ablations `consensus_ow_lev` (metric only), `consensus_ow_coverage`
+(first criterion only) and `consensus_fact` (fact space, H3.5).
+
+**Certificates are comparable only within a metric.** The medoid arm
+`isal_ow_indel` is the members' medoid under the *same* indel metric, so
+`consensus_ow`'s `cost / LB` can be read against it. The `isal_ow_struct` medoid
+row is the Levenshtein one and belongs to the cross-representation table; the two
+ratios must never be read against each other.
 
 **H3.6, pre-registered here.** The same asymmetry touches the median at small
 `N`: dropping a fact that one member lacks saves that member an insertion (5–10

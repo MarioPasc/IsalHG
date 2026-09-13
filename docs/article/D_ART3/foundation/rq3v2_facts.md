@@ -157,21 +157,38 @@ were already knowledge bases.
 
 ## 5. The objective (pre-registered, 2026-09-13)
 
-Primary: the **generalized median in the word metric** — minimise
-`Σᵢ d_I(w°(M), w°(Kᵢ))`, ties by coverage, then by the shortlex of `w°`. Grounds,
-all a priori: it is the classical consensus objective in string spaces; the
-medoid is the same objective restricted to the members, so the consensus cost is
-at most the medoid's by construction; and Prop 3's bound
-`LB = Σ_{i<j} d(Kᵢ,Kⱼ)/(N−1)` lower-bounds the optimum over every point, giving a
-**certified ratio** `cost / LB` a coverage objective cannot have.
+Primary: the **generalized median in the indel word metric** — minimise
+`Σᵢ d(w°(M), w°(Kᵢ))` with `d(w₁,w₂) = |w₁| + |w₂| − 2|LCS(w₁,w₂)|`, ties by
+coverage, then by the augmented-fingerprint order. Grounds, all a priori: it is
+the classical consensus objective in string spaces; the medoid is the same
+objective restricted to the members, so the consensus cost is at most the
+medoid's by construction; Prop 3's bound `LB = Σ_{i<j} d(Kᵢ,Kⱼ)/(N−1)`
+lower-bounds the optimum over every point, giving a **certified ratio**
+`cost / LB` a coverage objective cannot have; and the indel metric is the metric
+of the ball the arm enumerates, so objective and candidate set live in one
+geometry.
 
-v1's coverage order runs on every collection as `consensus_ow_coverage_first`;
-the fact-space computation runs as `consensus_fact` (H3.5).
+**Why not Levenshtein (amendment, 2026-09-13, pre-registered).** A substitution
+has no fact-level counterpart at unit cost. Measured on a star whose members each
+drop one fact: under Levenshtein the source costs 4 and two of its sub-records
+also cost 4 — a tie the objective cannot break, resolved by a tie break that
+prefers the shorter word and so the smaller record. Under indel the source costs
+`N` and every sub-record `2(N−1)`, strict for `N ≥ 3`.
+
+Ablation arms, all on every collection: `consensus_ow_lev` (metric only),
+`consensus_ow_coverage` (first criterion only), `consensus_fact` (fact space,
+H3.5).
+
+**Certified ratios are comparable only within a metric.** `medoid:isal_ow_indel`
+is the members' medoid under the same indel metric and is the row
+`consensus_ow`'s ratio is read against; `medoid:isal_ow_struct` is the
+Levenshtein one, for the cross-representation table.
 
 Measured on two smoke collections only — worth nothing except as a sanity check,
-and recorded here so it is not mistaken for a result: `consensus_ow` ratio 1.148
-against medoid ratios 1.143–1.546, i.e. at the best medoid's ratio, while the
-coverage order gave 1.67 and 1.86.
+and recorded here so it is not mistaken for a result: on the first collection
+`consensus_ow` under indel recovers the source (`fact_dist` 0, `n_ties` 0, ratio
+1.091 against the indel medoid's 1.152), while `consensus_ow_lev` on the same
+collection returns a non-source at `fact_dist` 3 with `n_ties` 2.
 
 ---
 

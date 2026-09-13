@@ -871,6 +871,71 @@ def word_symbols(H: SparseHypergraph) -> tuple[Any, ...]:
     return ordered_symbols(H)
 
 
+def indel_distance(a: Sequence[Any], b: Sequence[Any]) -> int:
+    """Insertions and deletions only: ``|a| + |b| - 2 |LCS(a, b)|``.
+
+    The metric of the ball this arm enumerates, and therefore the one its
+    objective must be written in.  Levenshtein charges a *substitution* one edit,
+    and a substitution has no fact-level counterpart at unit cost: replacing one
+    fact's instruction by another's is one Levenshtein edit but two fact edits, a
+    deletion and an insertion.  The under-charging falls precisely on the
+    candidates that compete with the source.
+
+    On the star fixture the consequence is exact.  Each member is the source
+    minus one fact, so under indel the source is 1 from every member and costs
+    ``N``; two members differ by a fact swap, which is 2 under indel and 1 under
+    Levenshtein, so a member costs ``2(N - 1)``.  Under indel the source wins
+    strictly for every ``N >= 3``; under Levenshtein it ties at ``N = 4`` and the
+    tie break decides.
+
+    Parameters
+    ----------
+    a, b : Sequence
+        Symbol sequences, comparable by equality.
+
+    Returns
+    -------
+    int
+        The indel distance.
+    """
+    from rapidfuzz.distance import Indel
+
+    return int(Indel.distance(list(a), list(b)))
+
+
+#: The two word metrics this experiment measures in. ``indel`` is the primary,
+#: because it is the metric of the enumerated ball; ``levenshtein`` is the
+#: pre-registered ablation that exhibits the substitution effect.
+WORD_METRICS: dict[str, Callable[[Sequence[Any], Sequence[Any]], int]] = {
+    "indel": indel_distance,
+    "levenshtein": lambda a, b: int(symbol_distance(tuple(a), tuple(b))),
+}
+
+
+def word_matrix(symbols: Sequence[Sequence[Any]], metric: str) -> Any:
+    """The members' ``N x N`` word-distance matrix under ``metric``.
+
+    Parameters
+    ----------
+    symbols : Sequence of Sequence
+        One symbol sequence per member, in row order.
+    metric : str
+        A key of :data:`WORD_METRICS`.
+
+    Returns
+    -------
+    numpy.ndarray
+        Symmetric ``float64`` with a zero diagonal.
+    """
+    distance = WORD_METRICS[metric]
+    size = len(symbols)
+    D = np.zeros((size, size), dtype=np.float64)
+    for i in range(size):
+        for j in range(i + 1, size):
+            D[i, j] = D[j, i] = float(distance(symbols[i], symbols[j]))
+    return D
+
+
 def is_sub_record(candidate: SparseHypergraph, truth: SparseHypergraph, max_drop: int = 3) -> int:
     """Whether ``candidate`` is the truth with at most ``max_drop`` facts removed.
 
@@ -1055,7 +1120,8 @@ def consensus_ow(
     append: int = 3,
     delete: int = 2,
     objective: str = "distance_first",
-    tie_break: str = "shortlex",
+    tie_break: str = "fingerprint",
+    metric: str = "indel",
 ) -> ConsensusOutcome:
     """Ball-coverage consensus over the ``w°`` language.
 
@@ -1171,6 +1237,9 @@ def consensus_ow(
         )
     if tie_break not in ("shortlex", "fingerprint"):
         raise RQ3v2Error(f"tie_break must be 'shortlex' or 'fingerprint'; got {tie_break!r}")
+    if metric not in WORD_METRICS:
+        raise RQ3v2Error(f"metric must be one of {sorted(WORD_METRICS)}; got {metric!r}")
+    distance = WORD_METRICS[metric]
 
     # The cost is the generalized-median objective in the word metric: the sum
     # of the symmetric canonical-word Levenshtein distances from the candidate's
@@ -1182,11 +1251,7 @@ def consensus_ow(
     # point of the space --- so the arm carries a certified ratio, which a
     # coverage objective cannot.
     member_symbols = [word_symbols(H) for H in members]
-    D = np.zeros((len(members), len(members)), dtype=np.float64)
-    for i in range(len(members)):
-        for j in range(i + 1, len(members)):
-            D[i, j] = D[j, i] = float(symbol_distance(member_symbols[i], member_symbols[j]))
-    bound = medoid(D)
+    bound = medoid(word_matrix(member_symbols, metric))
 
     scored: list[tuple[float, int, tuple[int, tuple[str, ...]], Any]] = []
     values: dict[Any, tuple[int, float]] = {}
@@ -1196,21 +1261,21 @@ def consensus_ow(
         # recomputing it inside the sum made the scoring loop cost N times what it
         # should --- on the axis H3.6 varies, which is the worst place for it.
         candidate_symbols = word_symbols(representative[class_key])
-        cost = float(sum(symbol_distance(candidate_symbols, symbols) for symbols in member_symbols))
+        cost = float(sum(distance(candidate_symbols, symbols) for symbols in member_symbols))
         coverage = len(hits)
         values[class_key] = (coverage, cost)
         primary, secondary = (
             (float(-coverage), int(cost)) if objective == "coverage_first" else (cost, -coverage)
         )
         serialized = tuple(str(s) for s in candidate_symbols)
-        # The final tie break, and it is load-bearing rather than decorative: on a
-        # star whose members each drop one fact, the source and two of its
-        # sub-records have *equal* cost and *equal* coverage (measured: 4, 4, 4 at
-        # N = 4), so this comparison is what returns the answer. "shortlex" is
-        # what the design fixes and it prefers the shorter word, hence the smaller
-        # record; "fingerprint" is the augmented-fingerprint order the family
-        # already uses for this purpose in v1's consensus, and it is unbiased with
-        # respect to size. Both are total on classes (Theorem C).
+        # The final tie break. Under the indel metric it is rarely decisive --- the
+        # source separates strictly from its sub-records --- but under Levenshtein
+        # it decided the answer outright, and shortlex decided it *downward*: the
+        # shorter word is the smaller record, so the ball's size bias reappeared
+        # here. "fingerprint" orders by the augmented fingerprint alone, which is
+        # size-neutral and is the order v1's consensus already uses for this
+        # purpose; it is the primary. "shortlex" is retained only so that the bias
+        # stays documented by a test.
         order = (len(serialized), serialized) if tie_break == "shortlex" else (0, serialized)
         scored.append((primary, secondary, order, class_key))
     scored.sort()
@@ -1423,6 +1488,7 @@ def evaluate_collection(
     objective: str,
     objective_ablation: bool,
     tie_break: str,
+    metric: str,
 ) -> list[dict[str, Any]]:
     """Run every arm and method on one collection and return its rows."""
     n_types, n_preds = collection.n_types, collection.n_preds
@@ -1433,6 +1499,40 @@ def evaluate_collection(
     truth_cert = certificate(truth_H)
     k = max(collection.k_max, truth.max_arity, *(r.max_arity for r in members))
     rows: list[dict[str, Any]] = []
+
+    # The members' medoid under the same indel metric the consensus minimises, so
+    # the certified ratios are comparable. A ratio under Levenshtein and a ratio
+    # under indel are two different quantities and must never be read against
+    # each other; the `medoid:isal_ow_struct` row below is the Levenshtein one and
+    # stays for the cross-representation table.
+    started = time.perf_counter()
+    try:
+        indel_bound = medoid(word_matrix([word_symbols(H) for H in members_H], "indel"))
+        indel_scored = _score(members_H[indel_bound.index], truth_H, truth_cert, hged_timeout_s)
+        rows.append(
+            _blank_row(
+                shared,
+                method="medoid",
+                arm="isal_ow_indel",
+                secs=time.perf_counter() - started,
+                medoid_cost=indel_bound.cost,
+                LB=indel_bound.lower_bound,
+                ratio=indel_bound.ratio,
+                **indel_scored,
+            )
+        )
+    except Exception as exc:  # noqa: BLE001 - one dead arm must not kill the unit
+        logger.warning("isal_ow_indel medoid failed on %s: %s", shared.get("collection_id"), exc)
+        rows.append(
+            _blank_row(
+                shared,
+                method="medoid",
+                arm="isal_ow_indel",
+                secs=time.perf_counter() - started,
+                censored=1,
+                reason=f"{type(exc).__name__}: {exc}"[:160],
+            )
+        )
 
     reference_index = 0
     for arm in arms:
@@ -1524,51 +1624,40 @@ def evaluate_collection(
                 )
             )
 
+    def ball_consensus(objective_name: str, metric_name: str) -> Callable[[], ConsensusOutcome]:
+        """One `consensus_ow` arm, bound so the loop does not close over the loop var."""
+
+        def call() -> ConsensusOutcome:
+            return consensus_ow(
+                members_H,
+                k,
+                n_types,
+                n_preds,
+                radius,
+                ball=ball,
+                append=append,
+                delete=delete,
+                objective=objective_name,
+                tie_break=tie_break,
+                metric=metric_name,
+            )
+
+        return call
+
     consensus_calls: dict[str, Callable[[], ConsensusOutcome]] = {
-        "consensus_ow": lambda: consensus_ow(
-            members_H,
-            k,
-            n_types,
-            n_preds,
-            radius,
-            ball=ball,
-            append=append,
-            delete=delete,
-            objective=objective,
-            tie_break=tie_break,
-        ),
+        "consensus_ow": ball_consensus(objective, metric),
         "consensus_fact": lambda: consensus_fact(members_H, radius),
     }
     if objective_ablation:
-        other = "distance_first" if objective == "coverage_first" else "coverage_first"
-        consensus_calls[f"consensus_ow_{other}"] = lambda: consensus_ow(
-            members_H,
-            k,
-            n_types,
-            n_preds,
-            radius,
-            ball=ball,
-            append=append,
-            delete=delete,
-            objective=other,
-            tie_break=tie_break,
-        )
-        # The tie break decides the answer whenever the source and a sub-record
-        # cost the same, which the star fixture shows is not a corner case, so the
-        # other order is run as its own arm rather than argued about.
-        other_tie = "fingerprint" if tie_break == "shortlex" else "shortlex"
-        consensus_calls[f"consensus_ow_tie_{other_tie}"] = lambda: consensus_ow(
-            members_H,
-            k,
-            n_types,
-            n_preds,
-            radius,
-            ball=ball,
-            append=append,
-            delete=delete,
-            objective=objective,
-            tie_break=other_tie,
-        )
+        # The two pre-registered ablations of the primary, each isolating one
+        # choice: `_lev` changes only the metric and so exhibits the substitution
+        # effect --- Levenshtein charges a fact swap 1 where indel charges 2, and
+        # the under-charge lands exactly on the candidates that compete with the
+        # source; `_coverage` changes only the objective's first criterion.
+        other_metric = "levenshtein" if metric == "indel" else "indel"
+        consensus_calls["consensus_ow_lev"] = ball_consensus(objective, other_metric)
+        other_objective = "distance_first" if objective == "coverage_first" else "coverage_first"
+        consensus_calls["consensus_ow_coverage"] = ball_consensus(other_objective, metric)
     for name, call in consensus_calls.items():
         started = time.perf_counter()
         # Both reach the engine in a child; the parent never canonicalizes, so
@@ -1770,7 +1859,8 @@ def run_unit(
                 delete=int(block.get("ball_delete", 2)),
                 objective=str(block.get("objective", "distance_first")),
                 objective_ablation=bool(block.get("objective_ablation", True)),
-                tie_break=str(block.get("tie_break", "shortlex")),
+                tie_break=str(block.get("tie_break", "fingerprint")),
+                metric=str(block.get("metric", "indel")),
             )
         )
     return rows, dropped

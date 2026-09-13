@@ -78,6 +78,21 @@ against each other so the word-space claim is bounded rather than asserted.
   under the median rises with `N`, and the `N = 5` shortfall is a *sub-record*
   rather than an arbitrary object. Every consensus row carries
   `sub_record_drop`.
+- **D-KBz7 (orchestrator, 2026-09-13, pre-registration amendment).** The word
+  metric of the median is the **indel** distance
+  (`|w₁| + |w₂| − 2|LCS|`), not Levenshtein. It is the metric of the ball the arm
+  enumerates, and a substitution has no fact-level counterpart at unit cost: two
+  members differing by a fact *swap* are one Levenshtein edit apart and two fact
+  edits apart, and the under-charge falls on exactly the candidates that compete
+  with the source. Derivation on the star fixture: under Levenshtein the source
+  costs 4 and two sub-records also cost 4 (tie; the tie break decides, and
+  shortlex decides downward); under indel the source costs `N` and every
+  sub-record `2(N − 1)`, strict for `N ≥ 3`. Remaining ties break by coverage,
+  then by the size-neutral augmented-fingerprint order. Shortlex is retired as a
+  tie break and survives only as a test of its bias. Arms: `consensus_ow` (indel),
+  `consensus_ow_lev`, `consensus_ow_coverage`, `consensus_fact`. The medoid arm
+  `isal_ow_indel` is added so the certified ratio is compared within one metric;
+  `isal_ow_struct`'s ratio is the Levenshtein one and is not comparable with it.
 - **D-KBz6 (orchestrator, 2026-09-13).** Picasso deployment: private runner tree
   on **HOME** (`~/repos/IsalHG-rq3v2`) because FSCRATCH is at its file quota with
   the grace expired and is read-only; the **shared** `isalhg-tkde` environment

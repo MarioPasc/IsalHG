@@ -282,6 +282,42 @@ def hypotheses(frame: pd.DataFrame) -> dict[str, Any]:
             "reduces to the decoded output, the certificate and the cost"
         ),
     }
+
+    # H3.6 --- the small-N prediction, and whether the shortfall is legible.
+    ours_rows = frame[(frame["method"] == OURS) & (frame["censored"] != 1)]
+    by_n: dict[str, Any] = {}
+    monotone = True
+    previous: float | None = None
+    for n_members in sorted(ours_rows["cell_N"].dropna().unique()):
+        cell = ours_rows[ours_rows["cell_N"] == n_members]
+        recovery = float(cell["exact_recovery"].mean())
+        missed = cell[cell["exact_recovery"] != 1]
+        drops = pd.to_numeric(missed.get("sub_record_drop"), errors="coerce")
+        by_n[f"N{int(n_members)}"] = {
+            "n": int(len(cell)),
+            "exact_recovery": recovery,
+            "n_missed": int(len(missed)),
+            "sub_record_frac_of_missed": (
+                float((drops > 0).mean()) if drops is not None and len(drops) else None
+            ),
+        }
+        if previous is not None and recovery + 1e-12 < previous:
+            monotone = False
+        previous = recovery
+    out["H3.6"] = {
+        "statement": (
+            "consensus_ow exact recovery rises with N, and the small-N shortfall is a "
+            "sub-record of the source rather than an arbitrary object"
+        ),
+        "by_N": by_n,
+        "monotone_in_N": monotone,
+        "held": bool(monotone and len(by_n) >= 2),
+        "note": (
+            "the mechanism: dropping a fact one member lacks saves that member an insertion "
+            "(5-10 tokens) and costs the other N-1 a deletion (about 1 each), so the word "
+            "median can prefer a sub-record at small N and should not at large N"
+        ),
+    }
     return out
 
 
@@ -437,7 +473,7 @@ def analyze(root: Path, out: Path, run_tag: str | None) -> dict[str, Any]:
 
 def _verdicts(stats: Mapping[str, Any]) -> str:
     lines = []
-    for name in ("H3.1", "H3.2", "H3.3", "H3.4", "H3.5"):
+    for name in ("H3.1", "H3.2", "H3.3", "H3.4", "H3.5", "H3.6"):
         entry = stats.get(name)
         if not entry:
             continue

@@ -325,16 +325,16 @@ class TestBall:
 
 
 class TestConsensusOw:
-    def test_the_source_and_two_sub_records_tie_on_the_objective(self, star):
-        """The measurement that makes the tie break load-bearing.
+    def test_levenshtein_ties_the_source_with_its_sub_records(self, star):
+        """Why the primary metric is indel and not Levenshtein.
 
-        Each member is one deletion from the source, and the ordered walk charges
-        that deletion exactly one token in both directions, so on this star the
-        source costs 4 and members 1 and 2 also cost 4.  The median cannot
-        separate them; whatever breaks the tie returns the answer.  Pinned here
-        because it is the sharpest form of H3.6's mechanism and because a change
-        to the word or the metric that silently resolved it would change RQ3's
-        result without changing any hypothesis.
+        Each member is the source minus one fact, so the source is 1 from every
+        member under either metric.  Two members differ by a fact *swap*, which
+        Levenshtein charges as one substitution and indel as a deletion plus an
+        insertion.  Under Levenshtein the source therefore costs 4 and two of its
+        sub-records also cost 4 — the median cannot separate them and the tie
+        break returns the answer.  The under-charge falls exactly on the
+        candidates that compete with the source.
         """
         members = [_H(m) for m in _single_deletion_members(star)]
         symbols = [rq3v2.word_symbols(H) for H in members]
@@ -344,29 +344,53 @@ class TestConsensusOw:
         assert source_cost == 4
         assert sorted(member_costs) == [4, 4, 5, 5]
 
-    def test_the_fingerprint_tie_break_recovers_the_star(self, star):
-        """Unbiased with respect to size, so the source survives the tie."""
+    def test_indel_separates_the_source_strictly(self, star):
+        """The ruling's derivation, checked: source ``N``, every sub-record ``2(N-1)``."""
         members = [_H(m) for m in _single_deletion_members(star)]
-        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="fingerprint")
+        symbols = [rq3v2.word_symbols(H) for H in members]
+        source = rq3v2.word_symbols(_H(star))
+        n = len(members)
+        source_cost = sum(rq3v2.indel_distance(source, s) for s in symbols)
+        member_costs = [sum(rq3v2.indel_distance(a, b) for b in symbols) for a in symbols]
+        assert source_cost == n
+        assert min(member_costs) >= 2 * (n - 1)
+        assert source_cost < min(member_costs), "strict for N >= 3"
+
+    def test_the_primary_recovers_the_star(self, star):
+        """Under indel the answer does not rest on a tie break."""
+        members = [_H(m) for m in _single_deletion_members(star)]
+        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2)
         assert fact_key_of(outcome.kb) == fact_key_of(_H(star))
         assert outcome.origin == "decoded:non_member"
+        assert outcome.n_ties == 0
 
     def test_the_shortlex_tie_break_prefers_the_shorter_record(self, star):
-        """The design's declared order, and the size bias it carries.
+        """Retired as a primary; kept as the documentation of its size bias.
 
-        Reported rather than corrected: shortlex takes the shorter word, and among
-        tied candidates the shorter word is the smaller record.  The arm runs both
-        ways on every collection so the choice is visible in the table.
+        Under Levenshtein, where the source and its sub-records tie, shortlex
+        takes the shorter word — and among tied candidates the shorter word is the
+        smaller record.
         """
         members = [_H(m) for m in _single_deletion_members(star)]
-        outcome = rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="shortlex")
+        outcome = rq3v2.consensus_ow(
+            members, 3, N_TYPES, N_PREDS, 2, tie_break="shortlex", metric="levenshtein"
+        )
         assert outcome.kb.n_edges < _H(star).n_edges
         assert rq3v2.is_sub_record(outcome.kb, _H(star)) == 1
 
-    def test_an_unknown_tie_break_is_refused(self, star):
+    def test_an_unknown_tie_break_or_metric_is_refused(self, star):
         members = [_H(m) for m in _single_deletion_members(star)]
         with pytest.raises(rq3v2.RQ3v2Error):
             rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, tie_break="coin")
+        with pytest.raises(rq3v2.RQ3v2Error):
+            rq3v2.consensus_ow(members, 3, N_TYPES, N_PREDS, 2, metric="hamming")
+
+    def test_indel_is_the_lcs_identity(self):
+        """``|a| + |b| - 2|LCS(a, b)|``, and a substitution costs 2 not 1."""
+        assert rq3v2.indel_distance(("A", "B"), ("A", "B")) == 0
+        assert rq3v2.indel_distance(("A", "B"), ("A", "C")) == 2
+        assert rq3v2.indel_distance(("A", "B"), ("A",)) == 1
+        assert symbol_distance(("A", "B"), ("A", "C")) == 1, "Levenshtein under-charges a swap"
 
     def test_indistinguishable_facts_send_the_median_to_a_sub_record(self, flat_star):
         """H3.6's mechanism, pinned on the case that isolates it.

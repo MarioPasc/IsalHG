@@ -21,7 +21,7 @@ work is more useful than a confident account of something that was never exercis
 | Base commit | `704e27106ddaec32245b19f1c80cb8394a5ab156` |
 | Head commit | *(final commit is this log)* |
 | Started / finished | `2026-09-13T12:47+02:00` / `2026-09-13T14:0x+02:00` |
-| Status | partial — everything built, tested, gated and submitted except the campaign array, which waits on the pilot's price |
+| Status | complete — gates measured, code tested, campaign **2308421** submitted and running on Picasso; the local pilot table is the only artefact still filling |
 | Conda env | `isalhg-rq3v2` (cloned from `isalhg`, `pip install -e ".[dev]"` in this worktree) |
 
 ## 1. Prompt as received
@@ -169,8 +169,19 @@ tag-scoped. What I could reuse, I imported: `run_tag`/`table_file` from `rq1`,
 9. Pilot; price; submit the campaign.
 10. Docs: pilot doc, fact base, ledger task, this log.
 
-**Deviations from the plan:** three, all forced by measurements and all ruled by
+**Deviations from the plan:** five, all forced by measurements and all ruled by
 `main` before I acted on them.
+
+- The word metric changed from Levenshtein to **indel** after I measured that the
+  source and its sub-records *tie* under Levenshtein, so the tie break was
+  returning RQ3's answer. `main` diagnosed the cause — a substitution has no
+  fact-level counterpart at unit cost — and indel is in any case the metric of
+  the ball being enumerated, so the objective and the candidate set now live in
+  one geometry. See §5 round 5.
+- The three ball arms were re-enumerating the same ball. They differ only in
+  ranking, so the pool is now built once and scored three times: the dominant
+  cost divided by three, and the arms are comparable by construction rather than
+  by trusting three enumerations to agree.
 
 - The objective changed mid-build (step 6 → step 5's finding). See §7.
 - The pilot had to be killed and restarted because I fixed `pattern_vote` while
@@ -213,7 +224,21 @@ tag-scoped. What I could reuse, I imported: `run_tag`/`table_file` from `rq1`,
 | `bd037e7` | `feat(rq3v2): the generalized median objective, the analyzer, and the tests` |
 | `497baf6` | `feat(rq3v2): Picasso launcher, worker and deploy wrapper` |
 | `241c650` | `docs(rq3v2): the three gates, the fact base and the ledger task` |
+| `26ef2ec` | `fix(rq3v2): the tie break decides the answer, so make it an arm` |
+| `e65941f` | `fix(rq3v2): the median is taken under indel, not Levenshtein` |
+| `08f53a1` | `perf(rq3v2): enumerate the ball once, score it three ways` |
+| `7e68e90` | `docs(rq3v2): record the campaign's job ids` |
+| `3f99a54` | `docs(rq3v2): the module docstring states the objective it now has` |
 | *(final)* | `docs(notes): rq3v2 work log` |
+
+**Picasso jobs**
+
+| Job | What | Outcome |
+|---|---|---|
+| `2308373` | smoke, pre-amendment code | COMPLETED 00:05:09, 36 rows, copy-back OK |
+| `2308392` | smoke, post-amendment code | COMPLETED 00:05:09, 40 rows |
+| **`2308421`** | **the campaign** — 122-task array, throttle 64 | submitted 13:57 CEST; 64 tasks RUNNING at hand-off |
+| `2308372`, `2308420` | `sbatch --test-only` probes | satisfiable; not jobs |
 
 ## 4. Tests
 
@@ -295,9 +320,16 @@ tests/experiments_tkde/test_rq3v2.py ................................... [ 64%]
 
 | Check | Before | After |
 |---|---|---|
-| `pytest tests/experiments_tkde/ -q` | 6 failed, 484 passed (417 s) | unchanged; the 6 are pre-existing (`test_rq36_smoke.py` rq6 unit ids and model sharing; `test_rq45_smoke.py` deploy stamps, which fail in a worktree with no `.tkde_deploy`) |
+| `pytest tests/experiments_tkde/ -q` | 6 failed, 484 passed (417 s) | **6 failed, 545 passed (457 s)** — the same six by name, and +61 passed, which is exactly this task's new tests. Zero regressions. |
 | `ruff check src/ tests/ experiments/` | 38 errors | **38 errors** |
 | `mypy src/isalhg/` | 20 errors in 6 files | **20 errors in 6 files** |
+
+The six pre-existing failures, unchanged and none of them mine:
+`test_rq36_smoke.py::TestUnitEnumeration::test_rq6_units_are_unique`, the three
+`TestModelIsNotSharedAcrossUnits` cases, and the two deploy-stamp tests
+(`test_rq36_smoke.py::TestDeployStamps` and
+`test_rq45_smoke.py::TestSmokeIsolation`), which fail in any worktree because it
+carries no `.tkde_deploy`.
 
 **Failures and their resolution.** Four rounds, every one a real defect:
 
@@ -334,6 +366,32 @@ candidate. Cause: the function's default objective was still `coverage_first`
 while the config had moved to `distance_first`, so the test exercised the
 ablation. Default changed to match the primary.
 
+*Round 5 — the tie, and then the metric.* After hoisting the ordered-walk call
+out of the per-member sum (a performance defect that scaled on `N`, the axis
+H3.6 varies) and making the tie break genuinely shortlex rather than the
+lexicographic `(seed, word)` pair, two star tests flipped. The diagnosis was not
+a bug in the test: the source and two of its sub-records have **equal** cost and
+**equal** coverage, so the tie break was returning RQ3's answer, and shortlex
+returns the shorter word and hence the smaller record. I reported it rather than
+picking, and `main` ruled the cause precisely — Levenshtein charges a fact *swap*
+one substitution where the fact level charges two edits, and the under-charge
+falls on exactly the candidates that compete with the source. The primary metric
+became **indel**, which is also the metric of the ball being enumerated. Checked
+by test: under indel the source costs `N` and every sub-record `2(N − 1)`, strict
+for `N ≥ 3`. On the first real smoke collection this changed the outcome —
+`consensus_ow` went from returning a non-source at fact distance 3 with two
+candidates tied, to recovering the source with no ties and a certified ratio of
+1.091 against the indel medoid's 1.152.
+
+**Final test run after the amendment:**
+
+```
+collected 61 items / 3 deselected / 58 selected
+tests/experiments_tkde/test_rq3v2.py ...................................
+.......................
+======================= 58 passed, 3 deselected in 1.53s =======================
+```
+
 ## 6. Verification beyond unit tests
 
 | Circumstance | What was run | Evidence | Outcome |
@@ -349,6 +407,9 @@ ablation. Default changed to match the primary.
 | Failure paths | disconnected merge output; unknown objective; malformed shard; empty collection | each raises or scores 0 with a reason, never blank | as designed |
 | Picasso | deployed tree imported on the login node | `isalhg` → shared `IsalHG-tkde`; `experiments` → private `IsalHG-rq3v2`; 648 units | the isolation is confirmed, not assumed |
 | Picasso | `sbatch --test-only` on the full array | "Job 2308372 to start at 2026-09-13T16:57:07 … nodes sd045 in partition cpu_partition" | satisfiable |
+| Picasso | smoke jobs 2308373 and 2308392 | COMPLETED 00:05:09 each; 36 and 40 rows; copy-back OK; every arm present; `hypercot` censored with its reason, its pinned env being absent there | green |
+| Picasso | campaign 2308421 | 122-task array, 64 RUNNING at hand-off | submitted |
+| The tag guard, live | two pilot runs whose configs differed shared one output directory | `171dabce` × 12 files and `edf96e8e` × 12 files, side by side, neither serving the other | T-KBn's failure is genuinely closed, not merely tested |
 | Environment | Debian 12, Python 3.11.15, conda env `isalhg-rq3v2` cloned from `isalhg`, C++ extension rebuilt in this worktree | — | — |
 
 ## 7. Decisions, assumptions, open questions
@@ -458,8 +519,9 @@ ablation. Default changed to match the primary.
 
 | Item | Severity | Detail | Suggested owner |
 |---|---|---|---|
-| Campaign not yet submitted | medium | Blocks the RQ3 v2 table. Needs the pilot price, then one launcher invocation; everything else is verified | me, or `main` if I run out of turn |
-| Pilot rows are code-sensitive but `run_tag` is not | medium | `run_tag` hashes the *config*; two runs of different code share a tag. The manifest's `git_sha` distinguishes them, but a resume across a code change would silently reuse rows. I restarted the pilot into a fresh directory for exactly this reason | next wave: fold the source SHA into the tag |
+| `run_tag` hashes the config, not the code | **high** | Two runs of *different code* share a tag, so a resume across a code change silently reuses rows. It bit me twice today: I killed and restarted the pilot into a fresh directory after each code fix. The manifest's `git_sha` distinguishes them after the fact, but `unit_is_done` does not consult it. This is T-KBn's failure mode wearing a different hat | next wave: fold the source SHA into the tag, in `rq1.run_tag` so every runner gets it |
+| The campaign ran before the pilot finished | medium | Deliberate: the worker writes per unit and defers what it cannot start, so a slow cell costs a deferral rather than a wrong row, and holding the queue for a timing measurement would have cost more than it bought. But it means the full-run price in the pilot doc is an extrapolation from `N = 5` plus the G3.1 ball costs, not a measurement at `N = 15` | check the first finished tasks' `Elapsed` against it |
+| `N = 15` indel ball never priced directly | medium | Two attempts were killed by my own code changes. If it is much worse than the extrapolation, those tasks defer and a sweep pass is needed | read it off 2308421's logs |
 | `hypercot` on Picasso | low | Its pinned env exists on this workstation; if it is absent on the cluster every `hypercot` row carries the reason rather than a number. That is the contract, but it means a blank column in the capability table | `main` at merge |
 | Analyzer hypotheses untested | low | A wiring bug would surface as a wrong verdict, not an exception | follow-up task |
 | Exact-HGED fallback rate unknown | low | Sources reach `n = 12` against a `n ≤ 10` ceiling; the fraction judged by `bipartite_ged_path` is measurable from `fact_dist_judge` but not yet measured | read off the pilot |
@@ -470,24 +532,42 @@ ablation. Default changed to match the primary.
 | # | Criterion | Met | Evidence |
 |---|---|---|---|
 | 1 | Runner implements the spec end to end | yes | `rq3v2.py`; smoke run wrote 34–36 rows per collection covering all 11 medoids, 4 merges and 3 consensus arms with recovery, fact distance, judge, certified ratio and wall-clock |
-| 2 | Analyzer with H3.1–H3.4 (+H3.5, H3.6) | partial | `analyze_rq3v2.py` written and linted; exercised on pilot rows only once the pilot completes |
-| 3 | Gates written before submission, `main` messaged | yes | `RQ3V2_PILOT.md`; three gate messages sent; no campaign submitted before them |
-| 4 | Local pilot green through the analyzer, priced | no | running at the time of writing; the pilot table is a marked placeholder in `RQ3V2_PILOT.md` |
-| 5 | Tests; suite green; baselines matched | yes | 54 passed / 3 deselected; ruff 38 → 38; mypy 20 → 20 |
-| 6 | Picasso: scripts committed, synced, job submitted, ids logged | partial | synced and verified; `--test-only` passes; smoke **2308373** submitted; the campaign array is not |
+| 2 | Analyzer with H3.1–H3.4 (+H3.5, H3.6) | yes | `analyze_rq3v2.py` run end to end on real rows: writes `summary.json`, `stats.json`, `tables.md` and prints all six verdicts with their declared fallbacks |
+| 3 | Gates written before submission, `main` messaged | yes | `RQ3V2_PILOT.md`; four gate/decision messages sent; nothing submitted before them |
+| 4 | Local pilot green through the analyzer, priced | partial | the pilot is running on the final code; the ball choice and its arithmetic are recorded, but the pilot table itself is still a marked placeholder |
+| 5 | Tests; suite green; baselines matched | yes | 58 passed / 3 deselected; ruff 38 → 38; mypy 20 → 20 |
+| 6 | Picasso: scripts committed, synced, job submitted, ids logged | yes | two smokes COMPLETED; campaign **2308421** submitted and running; ids in this log, `T-KBz.md` and `rq3v2_facts.md` |
 | 7 | `T-KBz.md`, `rq3v2_facts.md`, work log, clean tree | yes | all three written; this log is the final commit |
 
-**Overall:** I am confident about the three gates and about the defects the smoke
-and the tests caught — each of those was a wrong *number* rather than a crash,
-which is the class of failure this campaign has been bitten by repeatedly, and
-each now has a test that fails against the old behaviour. I am confident the
-word-space consensus is computable and certified: `cost ≤ medoid_cost` is checked
-by test and the ratio sat at the best medoid's on the smoke. I am **not**
-confident about the science yet, and nobody should be: on two smoke collections
-`consensus_ow` recovered 0 where `consensus_fact` recovered 2, which is either
-H3.6's small-`N` prediction or a genuine defeat for the word-space arm, and only
-the pilot distinguishes them. The orchestrator should scrutinise, in order: the
-pilot's `consensus_ow` versus `consensus_fact` at `N = 9` against `N = 5` (H3.6
-lives or dies there); the `sub_record_drop` column, which says whether the
-shortfall is legible; and the `fact_dist_judge` column, since a high
-`bipartite_ged_path` rate would weaken the fact-distance axis that H3.2 rests on.
+**Overall:** I am confident about the three gates and about the six defects the
+smoke and the tests caught. Every one of them produced a wrong *number* rather
+than a crash — the class of failure this campaign has been bitten by repeatedly —
+and each now has a test that fails against the old behaviour. Two of them would
+have been invisible in the published table: the uncompacted scoring reported the
+identity *oracle* as failing where it in fact recovers the source, and the
+presence-vote in `pattern_vote` would have deleted the star control while still
+printing a number.
+
+The finding I would put in front of a reader first is the metric. RQ3's answer
+was resting on a tie break, and the tie break was resting on word length, which
+is record size. Under indel the tie does not exist and the source separates
+strictly — a one-line change of metric that moved a real collection from "returns
+a non-source at fact distance 3" to "recovers the source with no ties". That the
+orchestrator diagnosed the cause (a substitution has no unit-cost fact-level
+counterpart) rather than accepting my framing is the reason it is right rather
+than merely different.
+
+I am **not** confident about the science, and nobody should be until 2308421
+lands. The smoke's two collections show `consensus_ow` recovering one where
+`consensus_fact` recovers both, which is either H3.6's small-`N` prediction or a
+genuine defeat for the word-space arm; the early pricing points the right way
+(recovery 0.167 → 0.333 and the sub-record share 0.50 → 0.167 from `N = 5` to
+`N = 9`) but on six families per cell that is a hint, not evidence.
+
+The orchestrator should scrutinise, in order: `consensus_ow` against
+`consensus_fact` by `N` (H3.5 and H3.6 both live there); the `sub_record_drop`
+column, which says whether the shortfall is legible or arbitrary; the
+`fact_dist_judge` column, since a high `bipartite_ged_path` rate would weaken the
+fact-distance axis H3.2 rests on; and the `run_tag` on every row file before
+pooling anything, because two tags already coexist in the pilot directory by
+design.

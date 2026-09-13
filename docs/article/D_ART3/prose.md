@@ -19,6 +19,16 @@ the only metric reported for it. (iii) The logical machinery stays out of
 this manuscript — knowledge bases are treated as data, not as models of
 sentences; the logic program is the follow-up paper (§10).
 
+> **D-ART6 (2026-09-13, author-directed; PI ratification pending).** The
+> paper's headline program is the **ordered walk `w°`**, not the orbit-pruned
+> `w*_c` that D-ART5 named. Every sentence below that says `w*_c` "carries
+> §§3–7" is superseded; `w*_c` stays the family's search form and appears in
+> RQ1's ablation only. Three headline exhibits: RQ6 (generation), RQ3 v2 (the
+> golden record, redesigned), RQ8 (valid completion, new), plus the measured
+> capability table. Design and pre-registration:
+> `experiments/HEADLINE_DESIGN_2026-09-13.md`; reasoning: `SESSION_LOG.md` §6.
+> This file is re-folded under T-KBg once those runs land.
+
 **The alphabet gate, and its answer.** The PI ratified changing the
 instruction alphabet and set the criterion: *similar knowledge bases must
 encode to strings at small Levenshtein distance*. **The answer was not an

@@ -661,3 +661,41 @@ which correctly *defines* the `fact_rank` arm rather than adopting it.)
 (`--exclude`), so the gate is not held by a file whose staleness may be
 deliberate — and that exclusion is **named in the output on every run** rather
 than silent, so it cannot outlive the decision unnoticed.
+
+## D-ART6 (author-directed 2026-09-13; PI ratification pending) — the ordered walk `w°` is the paper's headline program
+
+**Raised:** 2026-09-13 by `[IsalHG-Fable-Review]`, on the first author's
+instruction after the readiness assessment (`../D_ART3/SESSION_LOG.md` §6.5).
+**Supersedes** D-ART5's choice of the orbit-pruned `w*_c` as the program that
+carries §§3–7; **does not supersede** D-TA2 (`w*_c` stays the family's frozen
+search form) or Theorem A (the family's foundation).
+
+**Ruling.** Every main-text table runs on `w°` (`isal_ow_struct`, Theorem C).
+`w*_c` appears in RQ1's four-cell nauty ablation (the no-search and oracle
+cells) and nowhere else in the main text. The comparison the paper makes is
+"nauty inside an Isal encoder" (a language) against "nauty's canonical form
+written out" (a certificate), on every table.
+
+**Why.** The paper's third prerequisite — polynomial per-pair cost *after one
+canonicalisation* — is void for the 77 real members `w*_c` never canonicalises
+at 60 s, and the tail-600 study showed that tail is the search itself (rank
+walk 50.9 % vs orbit 24.7 %, Fisher p = 0.0028). `w°` censors 0 of 7,776 sweep
+instances and 0 of 8,951 real members, and builds the 3,988 × 3,988 matrix in
+1.39 s against 28.9 min. `w*_c` is more local on every RQ1 cell (e.g. 0.223 vs
+0.096 within two on insert-with-new-constant), but both programs beat the
+certificate on every pendant cell, so the locality argument survives the
+switch. RQ6 already ran on `w°`; RQ7 already headlines it.
+
+**Consequences.** (1) RQ2 census and RQ5 re-run on `w°` (T-KBab). (2) RQ3 is
+redesigned as RQ3 v2 on `w°` (T-KBz) and RQ8 (valid completion) is added
+(T-KBaa); the pre-registered design is
+`../D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md`. (3) The headline
+exhibits are RQ6, RQ3 v2, RQ8 and the measured capability table
+(`../D_ART3/tables/tab_kb_representation_properties.tex`); RQ1 is supporting
+(the ablation + the two locality columns); RQ4 and RQ5 go to the supplement.
+(4) `prose.md` §2.2–§2.3, §3 and §4 are re-folded under T-KBg once the runs
+land. (5) The natural NDC series stays a supplement exhibit as measured.
+
+**Put to the PI.** The switch changes which canonical form the paper names as
+its own; the author directed it and the PI's word is requested with the
+arm-against-arm table of `SESSION_LOG.md` §6.5.

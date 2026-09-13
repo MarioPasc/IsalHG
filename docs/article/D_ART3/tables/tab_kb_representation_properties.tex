@@ -1,0 +1,90 @@
+% =====================================================================
+% Knowledge-base representations compared.  Mirrors the sibling's
+% tab_representation_properties.tex (IsalGraph, review1): every cell is
+% measured or follows from a stated theorem, and the source of every
+% column is named here so a reviewer can trace it.
+%
+% Row order: competitors grouped by family, then the family's own
+% search form w*_c, then the paper's program w° LAST and BOLD (D-ART6).
+%
+% Column sources (keep in sync with HEADLINE_DESIGN_2026-09-13.md §6):
+%   Complete   exact at zero on isomorphism classes: theorem (Thm A / C;
+%              nauty) or counterexample (WL: Prop 9; NetLSD/HPD: measured
+%              merges; bipartite assignment: false zeros, Prop 8).
+%   Merges     false merges on wd50k66, 7,949,355 non-isomorphic pairs
+%              (RQ2 census, rq2_wellposedness_facts.md §1).  "0*" = zero
+%              measured but not guaranteed (WL is provably incomplete).
+%   Metric     metric on isomorphism classes.  "pseudo" = metric on the
+%              vector, pseudometric on classes.  Bipartite edit-path:
+%              38 % asymmetric, 1.4 % triangle violations (Prop 8).
+%   Matrix     wall-clock of the full 3,988 x 3,988 wd50k66 matrix, s
+%              (rq7_envelope_facts.md §8; cluster).  DAGGER: the rows
+%              certificate was timed through a Python loop (T-KBy);
+%              at matched implementation it is at parity with w°
+%              (1.09-1.19x).  Re-measure after the fix and replace.
+%   Closed     every string decodes to a connected KB (Prop. C.4).
+%              An edited certificate is not a certificate; vectors have
+%              no decoder.
+%   Gen.       fraction of generated samples valid AND connected (RQ6,
+%              270,000 per collection).  "--" = no generative model
+%              definable on the representation.
+%   Cons.      the consensus is a decoded object that need not be a
+%              member (RQ3 v2).  Medoids under any distance return a
+%              member.  \todo until RQ3 v2 lands.
+%   Compl.     a completion operation is definable (RQ8).  \todo until
+%              RQ8 lands.
+%   Pend./Int. fraction of single edits within two symbols, delete a
+%              fact, pendant / interior (RQ1 M1, published_tables.md).
+%              Vectors: no symbol scale ("n/a"); they are continuous.
+%
+% TKDE (IEEEtran) is two-column: table* spans both.  \scriptsize +
+% tabcolsep 3pt fits 11 columns in \textwidth at 10 pt; check in the
+% compiled draft and drop Cons./Compl. into the caption if it overflows.
+% =====================================================================
+\begin{table*}[!t]
+\centering
+\caption{Knowledge-base representations compared; every cell is measured or
+follows from a stated result. \emph{Complete} marks a representation that
+determines the isomorphism class; \emph{merges} counts false isomorphisms over
+$7{,}949{,}355$ non-isomorphic WD50K pairs ($0^{*}$: none observed, not
+guaranteed); \emph{metric} whether the distance is a metric on isomorphism
+classes (\emph{pseudo}: a metric on the vector only); \emph{matrix} the
+wall-clock of the full $3{,}988\times3{,}988$ WD50K matrix; \emph{closed}
+whether every string decodes to a connected knowledge base; \emph{gen.} the
+fraction of generated samples that are valid and connected; \emph{cons.}
+whether the consensus is a decoded object; \emph{compl.} whether a completion
+is definable; \emph{pend./int.} the fraction of single fact deletions within
+two symbols, pendant and interior. A dash is a property the representation
+cannot have; the reason is in the text.}
+\label{tab:kb-representation-properties}
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.05}
+\begin{tabular*}{\textwidth}{@{\extracolsep{\fill}}llcccccccccc@{}}
+\toprule
+ & & \multicolumn{2}{c}{Uniqueness} & \multicolumn{2}{c}{Metric space} & \multicolumn{4}{c}{Language} & \multicolumn{2}{c}{Locality} \\
+\cmidrule(lr){3-4}\cmidrule(lr){5-6}\cmidrule(lr){7-10}\cmidrule(lr){11-12}
+Representation & Family & Complete & Merges & Metric & Matrix (s) & Closed & Gen. & Cons. & Compl. & Pend. & Int. \\
+\midrule
+exact structure edit distance & edit distance & \checkmark & 0 & \checkmark & NP-hard & -- & -- & -- & -- & -- & -- \\
+bipartite GED, assignment & edit distance & -- & false zeros & pseudo & 634 & -- & -- & -- & -- & -- & -- \\
+bipartite GED, edit path & edit distance & \checkmark$^{\dagger}$ & 0 (splits 17) & -- & 953 & -- & -- & -- & -- & -- & -- \\
+WL histogram & feature map & -- & $0^{*}$ & pseudo & \todo & -- & -- & -- & -- & n/a & n/a \\
+NetLSD (Levi) & spectral & -- & 185{,}917 & pseudo & 40.6 & -- & -- & -- & -- & n/a & n/a \\
+hyperedge portrait divergence & portrait & -- & 212{,}179 & pseudo & 1{,}486 ($N{=}2{,}000$) & -- & -- & -- & -- & n/a & n/a \\
+HyperCOT & optimal transport & \checkmark (local opt.) & \todo & \checkmark (theory) & gated & -- & -- & -- & -- & n/a & n/a \\
+nauty certificate (bytes) & canonical labelling & \checkmark & 0 & \checkmark & 24.2 & -- & -- & -- & -- & 0.000 & 0.000 \\
+nauty certificate (rows) & canonical labelling & \checkmark & 0 & \checkmark & $\approx$ parity$^{\ddagger}$ & -- & -- & -- & -- & 0.000 & 0.000 \\
+size baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a & n/a \\
+degree-sequence baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a & n/a \\
+\midrule
+\textsc{IsalHG} $w^{*}_c$ (search) & canonical program & \checkmark & 0 & \checkmark & 1{,}734 & \checkmark & \checkmark & \checkmark & \checkmark & 0.771 & 0.139 \\
+\textbf{\textsc{IsalHG} $w^{\circ}$ (ordered walk)} & \textbf{canonical program} & \textbf{\checkmark} & \textbf{0} & \textbf{\checkmark} & \textbf{1.39} & \textbf{\checkmark} & \textbf{1.000} & \textbf{\todo} & \textbf{\todo} & \textbf{0.732} & \textbf{0.087} \\
+\bottomrule
+\end{tabular*}
+\vspace{2pt}
+\begin{flushleft}\scriptsize
+$^{\dagger}$ exact at zero but not a metric, and it splits 557 true classes into 574 on NDC (RQ2).
+$^{\ddagger}$ the rows serialisation was timed through a Python loop; at matched implementation it is within $1.1$--$1.2\times$ of $w^{\circ}$ (T-KBy); the number is replaced after the fix.
+\end{flushleft}
+\end{table*}

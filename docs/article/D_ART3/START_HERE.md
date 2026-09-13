@@ -33,6 +33,13 @@ addressing question was measured and closed (§0, RQ1).*
 > §3 corrects *other* files in this folder and never corrected this one.
 > (Raised by `[IsalHG-Fable]` from the same defect in `prose.md`'s header.)
 
+> **2026-09-13 — D-ART6 and the headline campaign.** The headline program is
+> now the ordered walk `w°` (D-ART6, `../DEVELOPMENT/DECISIONS.md`). The
+> readiness assessment is `SESSION_LOG.md`; the pre-registered design of the
+> three headline exhibits (RQ6, RQ3 v2, RQ8) and the capability table is
+> `experiments/HEADLINE_DESIGN_2026-09-13.md`. Read those two before anything
+> dated earlier in this file.
+
 **Standing instruction (author).** Prior results are *guidance*, not assets:
 every experiment may start from zero, designed for its own question, on its own
 corpora. What carries over is the experience (`foundation/lessons.md`), the

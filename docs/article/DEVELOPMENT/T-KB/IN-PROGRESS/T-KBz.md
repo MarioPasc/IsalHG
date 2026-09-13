@@ -137,9 +137,15 @@ served. `TestStaleRowGuard`, five cases.
 - [x] G0, G3.1, G3.2 measured and written to `RQ3V2_PILOT.md` before submission.
 - [x] Runner and analyzer implement the spec; rows tagged; strata handled.
 - [x] Unit tests green; ruff and mypy baselines not grown.
+- [x] Synced to Picasso; smoke jobs **2308373** and **2308392** both COMPLETED
+      (00:05:09 each, 36 and 40 rows, copy-back OK, every arm present, `hypercot`
+      censored there with its reason because its pinned env is not on the
+      cluster); campaign **2308421** submitted 2026-09-13 13:57 CEST, a 122-task
+      array at throttle 64, 64 tasks RUNNING at the time of writing.
 - [ ] Local pilot green through the analyzer, with the priced full-run cost.
-- [ ] Synced to Picasso, smoke job green, campaign submitted, job ids recorded
-      here and in `rq3v2_facts.md`.
+      *(Restarted after the indel amendment; the ball choice is already recorded
+      in `RQ3V2_PILOT.md` with its arithmetic, and the campaign does not wait on
+      it because a slow cell degrades into a deferral, not a wrong row.)*
 - [ ] H3.1–H3.6 verdicts written into `rq3v2_facts.md` §6 after the harvest.
 
 ## Out of scope

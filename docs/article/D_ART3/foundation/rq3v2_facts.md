@@ -21,8 +21,8 @@ reasoning: `../experiments/RQ3V2_PILOT.md`. Ledger:
 | SLURM | `slurm/tkde/rq3v2_{launcher,worker}.sh`; deploy `slurm/tkde/rq3v2_sync.sh` |
 | corpora | the frozen `ndc_classes` (1,381) and `wd50k66` (3,988) |
 | program | `isal_ow_struct` (`w°`), 60 s budget, under the forked-child model of `experiments/tkde/budget.py` |
-| job ids | *pending submission* |
-| run tag | *pending: written into every row, into `summary.json` and into `manifest.json`* |
+| job ids | **2308421** — the campaign, a 122-task array, throttle 64, submitted 2026-09-13 13:57 CEST. Smokes: 2308373 (COMPLETED 00:05:09) and 2308392 (COMPLETED 00:05:09, after the indel amendment). 2308372 and 2308420 were `--test-only` probes and are not jobs. |
+| run tag | written into every row, into `summary.json` and into `manifest.json`; the smoke's was `3310f637`. Read the campaign's from its manifest and quote no row whose tag differs. |
 
 **Row files are tag-scoped** (`rows_golden__<run_tag>-<unit>.csv`). A number read
 from a file whose tag is not the one in the manifest belongs to another

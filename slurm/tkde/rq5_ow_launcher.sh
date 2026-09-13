@@ -23,7 +23,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
-export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-rq8}"
+export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/repos/IsalHG-rq8}"
 export ISALHG_RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE_ow}"
 export RQ5_CONFIG="${RQ5_CONFIG:-experiments/tkde/configs/rq5_ow.yaml}"
 

@@ -10,12 +10,21 @@
 # certificate and model itself, so it waits on no matrices job.
 #
 # This launcher belongs to a PRIVATE deployment. It defaults REPO_DIR to
-# ~/fscratch/repos/IsalHG-rq8 so it cannot collide with the rq3v2 agent's tree
-# or with the canonical IsalHG-tkde checkout, and ISALHG_RESULTS_ROOT to
+# ~/repos/IsalHG-rq8 so it cannot collide with the rq3v2 agent's tree or with
+# the canonical IsalHG-tkde checkout, and ISALHG_RESULTS_ROOT to
 # ~/results/IEEETKDE_ow, the wave's clean root (T-KBn precedent). The conda env
 # stays the SHARED isalhg-tkde: this wave changes nothing under src/**, so
 # `isalhg.*` must keep resolving through that env's editable install --- which
 # is also what every worker in this directory asserts.
+#
+# The runner tree is on HOME, not FSCRATCH, against this directory's own
+# convention. Measured 2026-09-13: FSCRATCH is at 276.3k files against a 250.0k
+# soft quota whose GRACE HAS EXPIRED, so it is read-only --- `mkdir
+# ~/fscratch/repos/...` returns "Disk quota exceeded" and no tree can be
+# deployed there at all. HOME had 16.3k of 35.0k files, and a runner tree costs
+# about 900. The convention exists because HOME's file quota is the scarce one;
+# right now the measured state is the reverse. Inputs that are NOT written stay
+# where they are: the env and the frozen corpora are read from FSCRATCH.
 #
 # Prints the job id on the last line.
 
@@ -24,7 +33,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
-export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-rq8}"
+export REPO_DIR="${REPO_DIR:-${TKDE_USER_ROOT}/repos/IsalHG-rq8}"
 export ISALHG_RESULTS_ROOT="${ISALHG_RESULTS_ROOT:-${TKDE_USER_ROOT}/results/IEEETKDE_ow}"
 LOGS_DIR="${TKDE_LOGS_DIR:-${TKDE_USER_ROOT}/execs/tkde/logs}"
 CONFIG="${RQ8_CONFIG:-experiments/tkde/configs/rq8.yaml}"

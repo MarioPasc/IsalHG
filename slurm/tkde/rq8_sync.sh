@@ -9,9 +9,16 @@
 # deviations from the shared deployment, both recorded here so the next reader
 # does not have to reconstruct them:
 #
-# 1. REMOTE REPO is ~/fscratch/repos/IsalHG-rq8, not IsalHG-tkde. Two agents
-#    deploy in this wave and the canonical checkout is a shared input to both;
-#    a private runner tree is what keeps them from overwriting each other.
+# 1. REMOTE REPO is ~/repos/IsalHG-rq8, not ~/fscratch/repos/IsalHG-tkde. Two
+#    reasons, one of which is forced. Private, because two agents deploy in this
+#    wave and the canonical checkout is a shared input to both. On HOME, because
+#    FSCRATCH was measured READ-ONLY on 2026-09-13: 276.3k files against a
+#    250.0k soft quota whose grace has expired, so `mkdir ~/fscratch/repos/...`
+#    returns "Disk quota exceeded". This contradicts slurm/tkde/README.md
+#    ("Inputs stay on FSCRATCH: repo, env, raw data and corpora"), which exists
+#    because HOME's file quota is normally the scarce one; the measured state is
+#    currently the reverse. Read-only inputs are unaffected and stay put: the
+#    conda env and the frozen corpora are read from FSCRATCH.
 #
 # 2. --no-build, and the SHARED isalhg-tkde env. common.sh states the rule: the
 #    editable install is a PEP 660 meta-path finder, so `isalhg.*` always
@@ -34,7 +41,7 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 TKDE_USER_ROOT="/mnt/home/users/tic_163_uma/mpascual"
 
-export TKDE_REMOTE_REPO="${TKDE_REMOTE_REPO:-${TKDE_USER_ROOT}/fscratch/repos/IsalHG-rq8}"
+export TKDE_REMOTE_REPO="${TKDE_REMOTE_REPO:-${TKDE_USER_ROOT}/repos/IsalHG-rq8}"
 export TKDE_CONDA_PREFIX="${TKDE_CONDA_PREFIX:-${TKDE_USER_ROOT}/fscratch/conda_envs/isalhg-tkde}"
 
 echo "=== rq8_sync ==="

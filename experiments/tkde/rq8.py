@@ -897,7 +897,9 @@ def propose_incidence(
 # --- counting arms ----------------------------------------------------------
 
 
-def attach(record: KBRecord, pattern: Pattern, *, prefer_root: bool) -> KBRecord | None:
+def attach(
+    record: KBRecord, pattern: Pattern, *, prefer_root: bool, rank: int = 0
+) -> KBRecord | None:
     """Attach one fact pattern to ``record`` under the spec's heuristic.
 
     The heuristic, stated once: **the root for stars, the highest-degree
@@ -917,6 +919,13 @@ def attach(record: KBRecord, pattern: Pattern, *, prefer_root: bool) -> KBRecord
         ``(predicate, arity, ascending operand types)``.
     prefer_root : bool
         Whether the root must occupy a slot --- the star rule.
+    rank : int, optional
+        How far down the degree ranking to start. ``0`` is the plain heuristic;
+        a caller retries with ``1``, ``2``, ... when the top choice reproduces a
+        fact the record already carries, so one pattern can still yield several
+        distinct proposals. Without it a deterministic heuristic emits at most
+        one proposal per pattern, which would cap the recommender's recall at
+        the number of distinct patterns it ranks rather than at ``k``.
 
     Returns
     -------
@@ -933,6 +942,7 @@ def attach(record: KBRecord, pattern: Pattern, *, prefer_root: bool) -> KBRecord
     operands: list[int] = []
     new_types: list[int] = []
     wanted = list(types)
+    shift = max(int(rank), 0)
 
     if prefer_root:
         root_type = record.types[root]
@@ -942,9 +952,13 @@ def attach(record: KBRecord, pattern: Pattern, *, prefer_root: bool) -> KBRecord
             used.add(root)
 
     for want in wanted:
-        choices = [v for v in range(record.n) if v not in used and record.types[v] == want]
+        choices = sorted(
+            (v for v in range(record.n) if v not in used and record.types[v] == want),
+            key=lambda v: (-degree[v], v),
+        )
         if choices:
-            best = max(choices, key=lambda v: (degree[v], -v))
+            best = choices[min(shift, len(choices) - 1)]
+            shift = 0
             operands.append(best)
             used.add(best)
         else:
@@ -982,26 +996,32 @@ def propose_patterns(
     *,
     prefer_root: bool,
     k_proposals: int,
+    attachment_ranks: int = 3,
 ) -> list[Proposal]:
     """Attach the top-``k`` ranked patterns to ``K-``, in rank order.
 
-    A ranked pattern whose attachment reproduces a fact ``K-`` already carries
-    emits nothing --- a wasted slot, not an invalid proposal. Recording it as a
-    decode failure would put a counting artefact in the validity column, which
-    is the H8.3 measurement; the ranking simply runs deeper than the slot count
-    so the arm still gets its ``k`` proposals.
+    Each pattern is attached at the top of the degree ranking first and, when
+    that reproduces a fact ``K-`` already carries, at the next positions down
+    (``attachment_ranks`` of them). A pattern that still yields nothing emits
+    nothing --- a wasted slot, not an invalid proposal. Recording it as a decode
+    failure would put a counting artefact in the validity column, which is the
+    H8.3 measurement.
     """
     base = patterns_of(unit.minus)
     attempts: list[Proposal] = []
     for pattern in ranked:
         if len(_accepted(attempts, base)) >= k_proposals:
             break
-        extended = attach(unit.minus, pattern, prefer_root=prefer_root)
-        if extended is None:
-            continue
-        attempts.append(
-            _as_proposal(extended.to_hypergraph(n_types=context.n_types, n_preds=context.n_preds))
-        )
+        for rank in range(max(attachment_ranks, 1)):
+            extended = attach(unit.minus, pattern, prefer_root=prefer_root, rank=rank)
+            if extended is None:
+                continue
+            attempts.append(
+                _as_proposal(
+                    extended.to_hypergraph(n_types=context.n_types, n_preds=context.n_preds)
+                )
+            )
+            break
     return attempts
 
 

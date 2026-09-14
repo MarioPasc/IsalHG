@@ -326,6 +326,61 @@ star stratum stops being a control. If the recommender takes the lead, that is
 the **expected control** of the design and it is reported as such. Either way
 the 0.0000 is retired.
 
+## 3a-ter. Amendment A3 — the counting baseline must learn attachment from data (pre-registered 2026-09-14, before re-measurement)
+
+**Declared before the re-run it governs.** A2 lifted `pattern_cooc` off exactly
+zero on stars, and the decomposition then showed it getting the *pattern* right
+62.4 % of the time and the *attachment* wrong 93.5 % of the time. On a star,
+where the correct attachment is always "fresh constants pendant to the hub",
+that is not evidence that counting cannot attach — **it is a crippled
+baseline**, and a reviewer will say so first.
+
+**The defect.** The heuristic tries **existing constants of matching type
+first**, and only falls back to fresh when that duplicates an existing fact. On
+a star with repeated operand types the existing-constant choice is almost always
+wrong, and the fallback fires only on exact duplication, so the arm is
+systematically attaching in the one place a star completion never goes. That is
+a **fixed rule**, while our arm learns attachment from the training words. The
+comparison is therefore not between two attachers but between a learner and a
+constant.
+
+**What is amended.** For the pattern baselines (`pattern_cooc`, `pattern_freq`
+and, for consistency of construction, `random_pattern`), attachment becomes
+**data-driven**:
+
+1. On the **training split only**, for each pattern `(predicate, arity, operand
+   types)`, count its instances that are **pendant** — every operand other than
+   the hub occurs in no other fact — against those that are **interior** — some
+   non-hub operand is shared with another fact.
+2. Propose the **majority form** for that pattern; **ties go to pendant**.
+3. The interior form keeps the existing rule: highest-degree constant of
+   matching type, with the three-position retry.
+4. A2's fresh fallback remains underneath both, so the arm still never emits
+   nothing.
+
+**Nothing changes for our arms.** The before/after control of §5 is repeated:
+every ordered-walk arm must come back byte-identical, and if one moves, the
+amendment leaked and the re-run is void.
+
+**Scope: both strata are re-run** — `ndc_classes/non_star`,
+`wd50k66/non_star`, `wd50k66/star` — same 27 seeds, locally, under a new run tag
+merged with `--supersede`. Unlike A2 this is not a star-local change: a
+data-driven rule can move the non-star numbers too, and asserting otherwise
+without measuring would repeat the mistake A3 exists to correct.
+
+**What the re-measurement can show, both stated in advance.**
+
+- **If the star lead is cut or reversed** — the expected outcome, since a
+  majority-pendant rule attaches correctly on stars by construction, so the
+  recommender's `hit@10` should climb toward its `pattern@10` of 0.624 against
+  our 0.185 — then the star row becomes **the control §0 predicted**, and RQ8's
+  claim rests on the **relational stratum only**. That is the stronger paper:
+  the star loss then *explains* why the win is where it is.
+- **If our lead survives a data-driven attacher**, it is a result about
+  attachment that a fixed-rule baseline could not have established.
+
+Either way it is measured, not argued.
+
 ## 3c. Gate G8.1, amended — the matched comparison
 
 *Same three pilot seeds (80900–80902), same 200 interior units per corpus, run

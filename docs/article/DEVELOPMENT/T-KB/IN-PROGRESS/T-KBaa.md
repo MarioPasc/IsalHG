@@ -121,6 +121,32 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
   A2's effect there at ≈ 1 %. Both outcomes are declared in advance — if ours
   still leads, the star stratum stops being a control and becomes a result; if
   the recommender leads, it is the design's expected control and is reported so.
+- **D-KBaa9 — Amendment A3: the counting baseline must learn attachment from
+  data (pre-registered 2026-09-14, orchestrator-directed, written before
+  re-measurement).** A2's decomposition had `pattern_cooc` getting the pattern
+  right 62.4 % of the time and the attachment wrong 93.5 % on the **star**
+  stratum, where the correct attachment is *always* fresh constants pendant to
+  the hub. That is not evidence that counting cannot attach; it is a crippled
+  baseline, and it is the first thing a reviewer will say. The defect: the
+  heuristic tries **existing constants of matching type first** and only falls
+  back to fresh on an exact duplicate, so on a star with repeated operand types
+  it attaches in the one place a star completion never goes — a **fixed rule**
+  against our arm, which learns attachment from the training words. Amendment:
+  for the pattern baselines, estimate on the **training split only**, per
+  pattern, the pendant-versus-interior split of its instances (pendant = every
+  non-hub operand occurs in no other fact); propose the **majority form**, ties
+  to pendant; the interior form keeps the highest-degree matching-type rule with
+  the three-position retry; A2's fresh fallback stays underneath. **Nothing
+  changes for our arms** and the before/after control is repeated — if an
+  ordered-walk arm moves, the amendment leaked and the run is void.
+  **Both strata are re-run**, not just the star: a data-driven rule can move the
+  non-star numbers too, and asserting otherwise without measuring would repeat
+  the very mistake A3 corrects. Both outcomes declared in advance — if the star
+  lead is cut or reversed the star row becomes the control §0 predicted and
+  RQ8's claim rests on the relational stratum only (the stronger paper, since
+  the star loss then explains where the win is); if the lead survives a
+  data-driven attacher it is a result a fixed-rule baseline could not have
+  established.
 - **D-KBaa6 — two prefix constructions that would otherwise have measured the
   harness.** The incidence prefix drops its `("END",)` terminator (with it,
   validity reads 1.0000 instead of 0.1718 and the H8.3 contrast inverts); every

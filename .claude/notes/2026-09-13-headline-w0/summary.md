@@ -134,3 +134,19 @@ recorded.
 - Agent definitions: pre-registered global workers (`opus5-xhigh`, `opus5-high`); nothing to archive
 - Branches: `worktree-agent-a032654f325dc9240`, `worktree-agent-a1b4083a2935ce6dd` — retained
 - Conda envs: `isalhg-rq3v2`, `isalhg-rq8` (local); Picasso trees `~/repos/IsalHG-rq3v2`, `~/repos/IsalHG-rq8`
+
+---
+
+## Addendum 2026-09-14 — follow-up pass on the same wave
+
+Both agents were resumed (not respawned) for the harvest and recovery work.
+Merges: `66a9c4c` (rq3v2 recovery pass: re-price, two-tag judge budget,
+arrays 2311518/2311519/2311520), `ac81c74` (rq8: H8 verdicts at 27 seeds,
+Amendments A2/A3, RQ5_ow, RQ2_ow row-loss fix, T-KBac/T-KBad). Combined new
+suites 192 passed; ruff 38 / mypy 20 held. Outcomes and rulings:
+`docs/article/D_ART3/SESSION_LOG.md` §10 and the design doc §8.
+
+Open at hand-off: RQ3 v2 arrays running (heavy: ~6 rounds of 6 h at throttle
+32); RQ2_ow attempt 3 landing; the consensus cell of the capability table;
+merge of the integration branch into `feature/isal-kb-word` (user); D-ART6
+with the PI (user).

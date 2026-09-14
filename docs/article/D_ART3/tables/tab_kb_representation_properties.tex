@@ -79,12 +79,13 @@ size baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a &
 degree-sequence baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a & n/a \\
 \midrule
 \textsc{IsalHG} $w^{*}_c$ (search) & canonical program & \checkmark & 0 & \checkmark & 1{,}734 & \checkmark & \checkmark & \checkmark & \checkmark & 0.771 & 0.139 \\
-\textbf{\textsc{IsalHG} $w^{\circ}$ (ordered walk)} & \textbf{canonical program} & \textbf{\checkmark} & \textbf{0} & \textbf{\checkmark} & \textbf{1.39} & \textbf{\checkmark} & \textbf{1.000} & \textbf{\todo} & \textbf{\todo} & \textbf{0.732} & \textbf{0.087} \\
+\textbf{\textsc{IsalHG} $w^{\circ}$ (ordered walk)} & \textbf{canonical program} & \textbf{\checkmark} & \textbf{0} & \textbf{\checkmark} & \textbf{1.39} & \textbf{\checkmark} & \textbf{1.000} & \textbf{\todo} & \textbf{\checkmark}$^{\S}$ & \textbf{0.732} & \textbf{0.087} \\
 \bottomrule
 \end{tabular*}
 \vspace{2pt}
 \begin{flushleft}\scriptsize
 $^{\dagger}$ exact at zero but not a metric, and it splits 557 true classes into 574 on NDC (RQ2).
 $^{\ddagger}$ the rows serialisation was timed through a Python loop; at matched implementation it is within $1.1$--$1.2\times$ of $w^{\circ}$ (T-KBy); the number is replaced after the fix.
+$^{\S}$ RQ8: completions valid and connected $1.000$ by Prop.~C.8; on WD50K(66)'s relational stratum the fact-count-matched model proposes the true missing fact in its top ten $0.048$ $[0.042, 0.056]$ against $0.019$ $[0.014, 0.024]$ for the best counting baseline (27 seeds, Holm $p = 1.3\times10^{-5}$); on NDC-classes the counting baseline leads ($0.32$ vs $0.19$) and on star-shaped records it leads ($0.62$ vs $0.18$), both pattern-prediction gaps. Source: \texttt{foundation/rq8\_facts.md}.
 \end{flushleft}
 \end{table*}

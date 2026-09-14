@@ -469,3 +469,62 @@ and win on the structural guarantees.
 `feature/isal-kb-word`; the PI's word on D-ART6; the FSCRATCH quota question;
 harvesting the four campaigns into the fact bases and the `\todo` cells of the
 capability table.
+
+## 10. 2026-09-14 — the campaigns, the recovery pass, and RQ8 at power
+
+**RQ3 v2 (job 2308421).** 85 of 122 tasks completed, 37 timed out; 358 of
+648 units written. The per-unit re-price from the logs runs 0.19–3.1 h on
+eleven cells and ≥ 6.4 h (censored at the wall) on seven; three N = 15 cells
+never completed a unit. The cause is the exact-HGED judge on the large wrong
+records the alignment merges return at larger N (about twenty calls per
+collection, 17.8 % already timing out at 60 s), not the ball (33–127 s per
+collection). The pre-submission estimate was wrong by one to two orders of
+magnitude; the agent recorded why in its own words (T-KBz, `RQ3V2_PILOT.md`).
+Ruling (design doc §8 item 9): the seven heavy cells re-run all 27 seeds under
+a second tag with an 8 s judge budget, one unit per task at 6 h / 64 G; the
+analyzer refuses to pool two judge budgets inside one cell and supersedes the
+frozen tag only where the new one covers the cell; every fact-distance column
+carries its exact-vs-bipartite fallback rate per cell. The primary metric
+(exact recovery by certificate) does not depend on the judge. Arrays 2311518
+(light, 40 units), 2311519 (empty cells), 2311520 (heavy, 189 units). No
+hypothesis test runs on a partial table.
+
+**RQ8 at 27 seeds (jobs 2308339, 2308489; Amendments A2, A3 run locally,
+seed-deterministic).** As originally registered, H8.1 is not supported on
+either corpus. Under Amendment A1 (fact-count-matched, registered before
+re-measurement), the ordered-walk completion beats all five baselines on
+WD50K(66)'s relational stratum: 0.048 [0.042, 0.056] vs 0.019 [0.014, 0.024]
+hit@10, Holm p = 1.3 × 10⁻⁵, rank-biserial 1.000; on NDC the co-occurrence
+recommender leads (0.32 vs 0.19), a pattern gap (0.28 vs 0.89 pattern@10).
+The star stratum went through two baseline repairs, both in the baseline's
+favour and both pre-registered: A2 (instantiate a repeated pattern with fresh
+constants instead of refusing it) lifted the recommender from exactly 0 to
+0.040; A3 (data-driven pendant-vs-interior attachment learned on the training
+split) lifted it to 0.624, above ours (0.185), with attachment-miss 0.000 for
+every arm — the star row is a pure pattern-prediction contest and we lose it,
+as §0 originally predicted. The RQ8 claim is therefore the relational stratum
+only, quoted against the baseline's best construction per stratum. The
+attachment mechanism is confirmed on interior facts (miss 0.26–0.37 vs 0.64
+on NDC). Validity and connectivity 1.000 by theorem. Fact base:
+`foundation/rq8_facts.md`.
+
+**RQ5 on `w°` (job 2308368).** Negative as predicted (every arm ARI < 0.08);
+`w°` leads NMI on wd50k66 and ARI on wd50k100 within that; 2.6× the retired
+fact-rank word. The `w*_c` arm is absent from all 54 campaign RQ5 row files
+although listed in `rq5.yaml`; the earlier fact base's `w*_c` numbers need
+their provenance checked (T-KBad, OPEN).
+
+**RQ2 on `w°`.** The first run (2308342/2308343) produced zero rows: the RQ2
+runner takes its output directory from a module constant, not the config, so
+the renamed experiment wrote to unmirrored node scratch and the copy-back
+reported success on an empty tree — the failure `slurm/tkde/README.md`
+already documents from 2026-09-07. Fixed (assertion before run, refusal to
+report copy-back on an empty output, regression test); a second attempt
+failed in seconds on a path-canonicalisation false positive in the new guard;
+the third (2311593/2311604) is landing rows. T-KBac (OPEN) proposes the
+emptiness guard for `common.sh`.
+
+**Integration.** `integration/2026-09-13-headline-w0` at the merge of both
+agents' latest heads; new suites 192 passed; ruff 38 / mypy 20 unchanged.
+The capability table's completion column is filled from `rq8_facts.md`; the
+consensus column waits for RQ3 v2.

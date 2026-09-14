@@ -578,6 +578,84 @@ filtering, `corpora.load_collection`, `isal_ordered.ordered_fingerprint`,
 | 6 | Synced to my own repo path, env, jobs submitted, ids in the log and in `rq8_facts.md` | yes, with two approved deviations | HOME path instead of FSCRATCH (forced, approved); shared env instead of private (approved, with reason). Ids in §6, in `rq8_facts.md` §2 and in message 6 |
 | 7 | `T-KBaa.md`, `T-KBab.md`, `rq8_facts.md`, this log committed last; `git status --porcelain` empty | yes | all four written; this is the final commit |
 
+**Harvest addendum (2026-09-14) — the campaigns, and two things I got wrong.**
+
+*What landed.* RQ8 both campaigns COMPLETED (2308339 free-running tag
+`b327d7c5`; 2308489 Amendment A1 tag `c5380cde`), 81 units each at 27 seeds,
+counts verified against the config. RQ5_ow COMPLETED (2308368, 65 units). Full
+numbers in `foundation/rq8_facts.md` and `rq5_ow_facts.md`.
+
+*The result.* H8.1 as pre-registered still fails on both corpora — the pilot was
+right at power. But the **matched arms win `wd50k66` Holm-clean**:
+`ow_ngram_1f` 0.0463 and `ow_ngram_ho_1f` 0.0481 beat all five baselines
+including `pattern_cooc` (0.0185), every `p_Holm` ≈ 1.3e-05, rank-biserial
++0.989 / +1.000. And the §0 attachment mechanism is **confirmed at power**:
+every ordered-walk arm attaches better than either recommender on both corpora
+(0.256–0.373 vs 0.643/0.586 on NDC; 0.845/0.854 vs 0.974/0.979 on WD50K). The
+Amendment A1 reversal holds.
+
+*Amendment A2 — the star control was a hole in my own baseline, and repairing
+it turned a non-result into the cleanest result in RQ8.* `pattern_cooc` scored
+**exactly 0.0000** on stars because a star's facts share patterns, the
+deterministic attachment then reproduced an existing fact, and the proposal was
+refused — the baseline could not express "another instance of a repeated
+pattern", which is precisely what a star completion is. Pre-registered the fix
+(instantiate over fresh constants, pendant to the hub), re-ran the 27 star units
+under tag `7f25205b`, merged by stratum under a duplicate-key guard.
+
+The amendment is its own control: **every ours-arm is byte-identical before and
+after**, so the fallback touched only what it was meant to. `pattern_cooc` rose
+0.0000 → 0.0404. **Ours still leads**: 0.1156 free-running, 0.1846 matched,
+p = 5.5e-06, rank-biserial +1.000. Per the pre-registration that makes it a
+result, and it contradicts design §0's expectation that counting ties or wins on
+stars.
+
+The decomposition is the best evidence in the whole task for §0's mechanism: the
+recommender gets the **pattern** right 2.3× as often (0.6243 vs 0.2719) and
+still loses 2.9×, because its attach-miss is **0.935** while ours is **exactly
+0.000** over 624–997 one-fact opportunities per arm. A pendant completion
+emitted by the ordered walk chains its new constant onto the placed frontier by
+construction, so the attachment cannot be wrong — `ow_ngram_1f`'s `pattern@10`
+and `hit@10` are literally the same number.
+
+I should have caught the 0.0000 myself when I first reported it. I flagged it as
+a caveat and moved on; the orchestrator was right that a baseline scoring exactly
+zero across 27 seeds is a hole, not a control.
+
+*Mistake 1 — RQ2_ow lost every row, and it was my defect.* 22 tasks, all
+logging "copy-back OK", 21 `COMPLETED`, **zero rows**. `rq2.py` line 997 builds
+its path from the module constant `EXPERIMENT`, never from the config key; my
+worker had renamed the experiment for subtree separation, so the runner wrote to
+plain node scratch outside the mirrored tree and the copy-back faithfully
+mirrored an empty directory. ~7 wall-hours. This is the defect
+`slurm/tkde/README.md` already documents for the 2026-09-07 rank run — I read
+that paragraph and reintroduced it anyway, which is precisely the argument for a
+mechanical guard over a documented caution. Separation never needed the rename:
+the results root and the run tag already differ.
+
+*Mistake 2 — my fix's guard was itself a false positive.* The re-submission
+failed all 22 tasks in seconds because I compared `readlink -f` of the symlink
+(canonical) against the raw `${MYLOCALSCRATCH}/out`, and Picasso exports
+`LOCALSCRATCH` with a trailing slash. Both sides are canonicalised now. It cost
+seconds instead of hours, which is the guard behaving correctly while being
+wrong — but it was still wrong, and I should have reproduced the path shapes
+before submitting rather than after.
+
+*Two analyzer corrections, both about not fooling myself.* Both campaigns share
+a directory and `load_table` concatenates every tagged file, so reading them
+together **silently pooled two measurements of overlapping arms**; `--run-tag`
+is now required when several are present. And the Holm family was including
+`ow_ngram_1f` / `ow_ngram_ho*` as *competitors* — inflating the correction and
+scoring our own arms against each other. The family is now ours against the
+baselines only.
+
+*One thing the brief asked for that does not exist.* `wstar_orbit` appears in
+**0 of 54** campaign RQ5 row files although `rq5.yaml` lists it in all three
+experiments, so the requested `w°`-vs-orbit RQ5 comparison cannot be made. I
+recomputed the whole field from the campaign's own rows instead; every shared
+arm reproduces to four decimals, which is a stronger check than the missing
+single-arm delta would have been.
+
 **Post-review addendum (Amendment A1).** An independent read-only review found
 the one thing I had not: `rq8.attach` is sound and the evaluation is symmetric,
 but the *arms* were not fact-count matched, and my attachment sentence was
@@ -612,3 +690,78 @@ headline verdict changes; (2) the H8.3 clause-3 decision, which is a
 pre-registration question and not mine; (3) the `[:-1]` on the incidence prefix,
 which moved a reported column from 1.0000 to 0.1718 and whose justification is
 an argument, not a theorem.
+
+---
+
+## Amendment A3 — the orchestrator was right, and the star result was mine to lose
+
+*2026-09-14, after A2. Pre-registered in `RQ8_PILOT.md` §3a-ter and T-KBaa
+(D-KBaa9) at commit `c3f4496`, before any A3 number existed.*
+
+I reported the A2 star row as a result. The orchestrator refused it with the
+reason a reviewer gives first: a recommender that gets the pattern right 62 % of
+the time and then places it wrongly 93.5 % of the time **on a star** — where the
+right place is fixed by the stratum's own definition — is a crippled baseline,
+not evidence that counting cannot attach. My heuristic tried existing constants
+of matching type first and fell back to fresh only on an exact duplicate. That
+is a fixed rule; our arm learns attachment from the training words. I had
+written the sentence "ours still leads" on a comparison between a learner and a
+constant.
+
+**What I implemented.** For each pattern the training split now gives the
+pendant/interior split of its instances (pendant = every non-hub operand occurs
+in no other fact); the majority form is proposed, ties to pendant; the interior
+form keeps the highest-degree matching-type rule with its three-position retry;
+A2's fresh fallback stays underneath. Applied to all three pattern arms,
+including `random_pattern`, because the change is to the *attacher* they share
+and leaving the floor arm on the old rule would make the floor incomparable.
+Config-gated (`attach_data_driven`) so the campaign's rows keep the construction
+they were measured under.
+
+**The nine new tests were run against the pre-A3 runner first: 8 of 9 fail**
+(`prefers_pendant` absent, `propose_patterns` has no `pendant_oracle`). The ninth
+passes on both sides on purpose — it pins the pre-A3 placement, which A3 must
+keep reachable whenever the training split says a pattern is interior. 118 RQ8
+tests now pass; ruff 38 and mypy 20 unchanged.
+
+**The run.** All 81 units, same 27 seeds, locally, tag `52c4f4f9`, 4.5 min wall
+at six concurrent shards (14–18 s per unit — the workstation is faster per unit
+than the `sd` nodes). Analysed with all three tags and `--supersede`: 972 unit
+rows superseded = 108 units × 9 arms, exactly the earlier coverage.
+
+**The control passed exactly, and that is the only reason I trust the rest.**
+Row by row on `(collection, stratum, seed, arm, member, hidden fact, kind)`:
+**0 of 63,260** ordered-walk rows changed and **0 of 31,630** other generative
+rows changed; **7,803 of 47,445** counting rows changed, every one in the
+baseline's favour.
+
+**The star lead did not just shrink, it reversed.** `pattern_cooc`
+0.0404 → **0.6243**, `pattern_freq` 0.0261 → **0.3785**, both at **attach-miss
+0.000**; ours unchanged at 0.1156 / 0.1846. H8.2 now reads *as expected*:
+Δ = −0.5087, p = 5.5e-06, rank-biserial −1.000, 27 of 27 seeds. Every arm of
+both families attaches perfectly on pendant targets, so the star stratum is a
+pure pattern-prediction contest — and we lose it 0.185 to 0.624.
+
+**The honest reading, which is better for the paper than the one I had.** The
+ordered walk's advantage *is* the attachment. A stratum whose attachment is
+trivial removes the advantage, and removes it completely. So the attachment
+claim is a claim about **interior** facts, and RQ8's positive result is the
+relational stratum alone — where it survives and widens.
+
+**One thing I had to check before quoting anything.** A3 *costs* the recommender
+on the interior stratum (`wd50k66` `pattern_cooc` 0.0185 → 0.0131, attach-miss
+0.974 → 0.985), because the majority form is pendant for most patterns while the
+hidden fact there is interior by construction. Quoting the A3 number would flatter
+us. The strongest-baseline rule applies: **the citable baseline on that stratum
+stays A2's 0.0185**, ours leads it 2.5–2.6×, and leads the A3 construction
+3.5–3.7×. Both are Holm-clean; I report the smaller lead.
+
+**What I got wrong, stated plainly.** Twice now the star row has moved by
+hundreds of percent because of a rule I wrote in the baseline and then measured
+against. A2 I proposed myself after the orchestrator flagged the 0.0000; A3 I
+did not see at all — I had the 93.5 % attach-miss in my own table, next to a
+stratum whose correct attachment is a one-line description, and I read it as the
+recommender's failure rather than my rule's. The lesson is narrower than "make
+baselines strong": when a baseline's error is concentrated in a component whose
+correct value is *determined by the stratum definition*, that is a bug in the
+baseline until proved otherwise.

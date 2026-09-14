@@ -24,6 +24,8 @@ and are never mixed with the campaign's.
 | pilot rows (gate G8.1) | `results/IEEETKDE_ow/RQ8/pilot/RQ8_completion/pilot_g8_1/` |
 | analysis, free-running | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_b327d7c5/` |
 | analysis, Amendment A1 | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_c5380cde/` |
+| analysis, Amendment A2 | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_c5380cde+7f25205b/` |
+| analysis, Amendment A3 (**current**) | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_c5380cde+7f25205b+52c4f4f9/` |
 | deployed SHA | `9840460` → `107ed20` on `worktree-agent-a1b4083a2935ce6dd`, from BASE_SHA `704e271` |
 
 ## 2. Job ids
@@ -40,6 +42,13 @@ write", the matched arms "what does it write when asked for one fact". The
 analyzer refuses to pool them (`--run-tag` is required when two tags are
 present) because an arm in both would otherwise contribute twice to what the
 Wilcoxon believes are 27 seed-level replications.
+
+**Amendment A3 re-run (tag `52c4f4f9`, local, 2026-09-14).** All 81 units,
+same 27 seeds, `configs/rq8_a3.yaml` (`attach_fresh_fallback` +
+`attach_data_driven`). Ran on this workstation in 4.5 min wall at six
+concurrent shards, 14–18 s per unit; no cluster time. It **supersedes** both
+`c5380cde` and `7f25205b` for every counting-arm cell and reproduces every
+other cell byte-for-byte (§5).
 
 **Count check, both tags:** 81 units each = 27 seeds × {`ndc_classes/non_star`,
 `wd50k66/non_star`, `wd50k66/star`}, matching `configs/rq8.yaml`. 333 files =
@@ -116,6 +125,18 @@ shows to be a pattern-prediction gap, not an attachment gap.
 Any shorter form of this claim that omits "as originally registered" or "under
 Amendment A1" misstates what was pre-registered when, and must not be used.
 
+**Under Amendment A3 the relational lead widens, so quote the A2 baseline.**
+A data-driven attacher *helps* the recommender where the hidden fact is
+pendant and *costs* it where the hidden fact is interior, because the
+majority form estimated on the training split is pendant for most patterns.
+On `wd50k66/non_star` `pattern_cooc` falls 0.0185 → **0.0131** and
+`pattern_freq` 0.0126 → **0.0111**, while our arms are unchanged, so the
+matched lead grows from 2.5–2.6× to 3.5–3.7× (all four baselines rejected,
+every `p_H` = 1.33e-05, rank-biserial +1.000). **The stronger baseline on
+this stratum is therefore the A2 one**, and the citable sentence keeps
+`0.0185`: ours leads the better of the two attachers. On `ndc_classes`
+`pattern_cooc` moves 0.3185 → 0.3146 and still leads; nothing there changes.
+
 ### 4.3 hit@10 with 95 % BCa intervals — interior, non-star
 
 | corpus | arm | hit@10 | 95 % BCa |
@@ -139,78 +160,98 @@ Amendment A1" misstates what was pre-registered when, and must not be used.
 | `wd50k66` | `incidence_ngram` | 0.0002 | [0.0000, 0.0009] |
 | `wd50k66` | `random_pattern` | 0.0015 | [0.0006, 0.0030] |
 
-## 5. H8.2 — the star control, repaired under Amendment A2, and ours still leads
+The counting arms above are the Amendment A2 construction. Under Amendment
+A3 (§5) only they move, and downward on this stratum:
 
-**First measurement, and why it could not be reported.** On `wd50k66/star`
-(pendant hidden facts) ours scored 0.1156 and `pattern_cooc` **exactly
-0.0000** — not a recommender losing, a recommender unable to propose. A star's
-facts frequently share a pattern; the deterministic attachment resolves that
-pattern to the hub plus the highest-degree matching constant, which is a fact
-the record already carries, so it is refused, and the rank retries cannot rescue
-it because a star has few distinct constants of the required type.
+| corpus | arm | hit@10 under A3 | 95 % BCa |
+|---|---|---|---|
+| `ndc_classes` | `pattern_cooc` | 0.3146 | [0.3037, 0.3241] |
+| `ndc_classes` | `pattern_freq` | 0.1806 | [0.1702, 0.1906] |
+| `ndc_classes` | `random_pattern` | 0.0339 | [0.0298, 0.0381] |
+| `wd50k66` | `pattern_cooc` | 0.0131 | [0.0104, 0.0172] |
+| `wd50k66` | `pattern_freq` | 0.0111 | [0.0087, 0.0144] |
+| `wd50k66` | `random_pattern` | 0.0007 | [0.0002, 0.0020] |
 
-**Amendment A2 (pre-registered before re-measurement,
-`../experiments/RQ8_PILOT.md` §3a-bis).** When every ranked attachment would
-duplicate, the pattern is instantiated over **fresh constants**, pendant to the
-hub. Strictly in the baseline's favour. Star units only, same 27 seeds, run tag
-**`7f25205b`**, merged with the non-star rows of `c5380cde` under a
-duplicate-key guard (243 star rows superseded = 27 seeds × 9 arms, exactly the
-cell re-run).
+## 5. H8.2 — the star control, repaired twice, and the control holds
 
-**The amendment is its own control: our arms did not move at all.**
+**Two amendments, in order, each pre-registered before the run it governs.**
+`wd50k66/star` hides a **pendant** fact, so the correct attachment is always
+"fresh constants hanging off the hub". The baseline reached that construction
+only at the second attempt, and the reading reversed when it did.
 
-| arm | star hit@10 before A2 | after A2 |
+| stage | `pattern_cooc` star hit@10 | what the baseline could do |
 |---|---|---|
-| `ow_ngram` | 0.1156 | **0.1156** |
-| `ow_ngram_1f` | 0.1846 | **0.1846** |
-| `ow_ngram_ho` | 0.1220 | **0.1220** |
-| `ow_ngram_ho_1f` | 0.1785 | **0.1785** |
-| `fact_ngram` | 0.0287 | 0.0287 |
-| `pattern_cooc` | 0.0000 | **0.0404** |
-| `pattern_freq` | 0.0000 | **0.0261** |
-| `random_pattern` | 0.0000 | 0.0009 |
+| as measured (tag `c5380cde`) | **0.0000** | nothing: every ranked attachment reproduced an existing fact and was refused |
+| Amendment A2 (tag `7f25205b`) | 0.0404 | propose, via a fresh-constant fallback fired only on a duplicate |
+| Amendment A3 (tag `52c4f4f9`) | **0.6243** | choose the *shape* too, estimated per pattern on the training split |
 
-The fallback touches only the arms that were being refused, exactly as designed.
+**Why A2 was not enough, and a reviewer would have said so first.** Under A2 the
+recommender got the **pattern** right 62.4 % of the time and then put it in the
+wrong place **93.5 %** of the time, on a stratum where the right place is fixed
+by the stratum's definition. That is not evidence that counting cannot attach;
+it is a fixed rule ("existing constants of matching type, highest degree first;
+fresh only on an exact duplicate") being scored against an arm that learns
+attachment from data.
 
-**H8.2 after the repair: ours 0.1156 against `pattern_cooc` 0.0404**,
-Δ = +0.0752, p = 5.5 × 10⁻⁶, rank-biserial **+1.000** over 27 seeds. The matched
-arm `ow_ngram_1f` reaches **0.1846**, 4.6× the recommender.
+**Amendment A3 (`../experiments/RQ8_PILOT.md` §3a-ter, D-KBaa9).** For every
+pattern, the training split gives the fraction of its instances that are
+**pendant** (every non-hub operand occurs in no other fact) against **interior**
+(some non-hub operand is shared); the majority form is proposed, ties to
+pendant; the interior form keeps the highest-degree matching-type rule and its
+three-position retry, with A2's fresh fallback still underneath. All 81 units
+were re-run locally at the same 27 seeds under tag **`52c4f4f9`**, merged with
+`--supersede` (972 unit rows = 108 units × 9 arms, exactly the earlier coverage).
 
-**Per the pre-registration, this is a result, not a control.** Design §0 expected
-that "on stars the missing statement is a pattern-prediction contest where a
-co-occurrence recommender is expected to tie or win". With the recommender able
-to propose, it still does not: it loses 0.0404 to 0.1156 free-running and to
-0.1846 matched.
+**The amendment is its own control, and it passes exactly.** Over the whole
+campaign, row by row on `(collection, stratum, seed, arm, member, hidden fact,
+kind)`:
 
-**And the decomposition says exactly why — this is §0's mechanism in its purest
-form.** `wd50k66/star/pendant`, after A2:
+| arm family | rows compared | rows changed |
+|---|---|---|
+| ordered-walk (`ow_ngram`, `ow_ngram_1f`, `ow_ngram_ho`, `ow_ngram_ho_1f`) | 63,260 | **0** |
+| other generative (`fact_ngram`, `incidence_ngram`) | 31,630 | **0** |
+| counting (`pattern_cooc`, `pattern_freq`, `random_pattern`) | 47,445 | 7,803 |
+
+Every changed row moved in the **baseline's** favour.
+
+**H8.2 under A3 — as the design expected.** On `wd50k66/star/pendant`,
+`pattern_cooc` reaches **0.6243** [0.6111, 0.6359] against our **0.1156**
+[0.1091, 0.1226]; Δ = −0.5087, p = 5.5 × 10⁻⁶, rank-biserial **−1.000**, 27 of
+27 seeds. The matched arm `ow_ngram_1f` reaches 0.1846 and still loses 3.4×.
+Design §0 stated that "on stars the missing statement is a pattern-prediction
+contest where a co-occurrence recommender is expected to tie or win". With the
+recommender allowed to learn where to attach, **it wins**, and the star stratum
+is the control §0 predicted rather than a result for us.
+
+**Star stratum, full table under A3** (`wd50k66/star/pendant`, 27 seeds):
 
 | arm | hit@10 | pattern@10 | **attach-miss ∣ 1f** | denom |
 |---|---|---|---|---|
 | `ow_ngram` | 0.1156 | 0.2719 | **0.000** | 624 |
 | `ow_ngram_1f` | 0.1846 | 0.1846 | **0.000** | 997 |
+| `ow_ngram_ho` | 0.1220 | 0.2637 | **0.000** | 659 |
 | `ow_ngram_ho_1f` | 0.1785 | 0.1785 | **0.000** | 964 |
-| `pattern_cooc` | 0.0404 | **0.6243** | 0.935 | 3,371 |
-| `pattern_freq` | 0.0261 | 0.3785 | 0.931 | 2,044 |
+| `pattern_cooc` | **0.6243** | 0.6243 | **0.000** | 3,371 |
+| `pattern_freq` | 0.3785 | 0.3785 | **0.000** | 2,044 |
+| `random_pattern` | 0.0309 | 0.0309 | **0.000** | 167 |
 | `fact_ngram` | 0.0287 | 0.3296 | 0.475 | 295 |
+| `incidence_ngram` | 0.0000 | 0.2276 | 1.000 | 424 |
 
-The recommender gets the **pattern** right 2.3× as often as we do (0.6243
-against 0.2719) and still loses by 2.9×, because when it has the right pattern
-it puts it in the wrong place 93.5 % of the time. **Our attachment-miss rate on
-stars is exactly 0.000** — every ordered-walk arm, every one-fact proposal, 624
-to 997 opportunities each. That is not a tuning artefact: a pendant completion
-emitted by the ordered walk chains its new constant onto the placed frontier by
-construction, so the attachment cannot be wrong. `ow_ngram_1f`'s `pattern@10`
-and `hit@10` are identical (0.1846) for the same reason — with attach-miss zero,
-pattern-right implies hit.
+**What A3 settles about the mechanism.** On this stratum *both* families now
+attach perfectly — `hit@10` equals `pattern@10` for every counting arm and every
+ordered-walk arm — so the star row is a **pure pattern-prediction contest**, and
+we lose it 0.185 to 0.624. That is the honest reading: where the attachment is
+trivial, counting is the better predictor; the ordered walk's advantage is the
+attachment, and a stratum that removes attachment removes the advantage.
 
-**Citable sentence.** On star-shaped records the completion model is a *worse*
-pattern predictor than item–item co-occurrence (0.272 against 0.624) and still
-proposes the true missing fact 2.9× more often (0.116 against 0.040;
-p = 5.5 × 10⁻⁶, rank-biserial 1.000, 27 seeds), because the language attaches
-correctly by construction — attachment-miss 0.000 against the recommender's
-0.935 — after the recommender was given a repaired attachment that lifted it off
-exactly zero.
+**Citable sentence.** On star-shaped records, where the missing fact is pendant
+and the correct attachment is fixed by the stratum, an item–item co-occurrence
+recommender given a data-driven attachment beats the completion model 0.624 to
+0.185 (p = 5.5 × 10⁻⁶, rank-biserial −1.000, 27 seeds), with attachment-miss
+0.000 on both sides: the star stratum is a pattern-prediction contest that the
+language does not win, and RQ8's claim rests on the relational stratum (§4.2).
+The earlier readings — 0.0000 as measured, 0.0404 under Amendment A2 — measured
+the baseline's attachment rule and are **superseded**, not evidence.
 
 ## 6. H8.3 — validity and connectivity
 
@@ -261,6 +302,26 @@ from an unmatched denominator and is withdrawn; see `RQ8_PILOT.md` §3b.
 large one: matched `pattern@10` 0.269–0.280 against `pattern_cooc`'s 0.891. The
 n-gram family is the better attacher and the much weaker pattern predictor.
 
+**Under Amendment A3 the conclusion survives on the interior units and is
+erased on the pendant ones**, which is exactly the shape the mechanism
+predicts. Interior (non-star), attach-miss ∣ 1f with the A3 denominators:
+
+| corpus | arm | attach-miss under A2 | under A3 | denom (A3) |
+|---|---|---|---|---|
+| `ndc_classes` | `ow_ngram_ho` | **0.256** | **0.256** | 1,015 |
+| `ndc_classes` | `ow_ngram_ho_1f` | **0.314** | **0.314** | 1,513 |
+| `ndc_classes` | `pattern_cooc` | 0.643 | 0.648 | 4,828 |
+| `ndc_classes` | `pattern_freq` | 0.586 | 0.588 | 2,365 |
+| `wd50k66` | `ow_ngram_1f` | **0.854** | **0.854** | 1,715 |
+| `wd50k66` | `ow_ngram_ho_1f` | **0.845** | **0.845** | 1,677 |
+| `wd50k66` | `pattern_cooc` | 0.974 | 0.985 | 4,818 |
+| `wd50k66` | `pattern_freq` | 0.979 | 0.985 | 4,109 |
+
+On the **pendant** (star) units every arm of both families attaches with miss
+**0.000** under A3, so the mechanism has nothing left to separate them there
+and the stratum reduces to pattern prediction (§5). The attachment claim is
+therefore a claim about **interior** facts, and must be stated as one.
+
 ## 8. Deployment deviations, with their measured reason
 
 | deviation | reason |
@@ -280,8 +341,9 @@ Run-time write audit: every write target is `$LOCALSCRATCH` (node-local),
 |---|---|---|
 | completion definable | **yes** — the prefix property, Prop. C.8 | **no** — "no completion definable"; neither a canonical certificate nor a vector fingerprint admits the operation |
 | completion valid ∧ connected | **1.000 by theorem** [1.000, 1.000] | not applicable |
-| hit@10, `wd50k66` interior (matched) | **0.0481** [0.0422, 0.0559] | best competitor `pattern_cooc` 0.0185 [0.0144, 0.0235] |
-| hit@10, `ndc_classes` interior (matched) | 0.1922 [0.1806, 0.2024] | best competitor `pattern_cooc` 0.3185 [0.3076, 0.3280] |
+| hit@10, `wd50k66` interior (matched) | **0.0481** [0.0422, 0.0559] | best competitor `pattern_cooc` 0.0185 [0.0144, 0.0235] (A2 attacher, the stronger of the two; 0.0131 under A3) |
+| hit@10, `ndc_classes` interior (matched) | 0.1922 [0.1806, 0.2024] | best competitor `pattern_cooc` 0.3185 [0.3076, 0.3280] (0.3146 under A3) |
+| hit@10, `wd50k66` star / pendant | 0.1846 [0.1750, 0.1961] | `pattern_cooc` **0.6243** [0.6111, 0.6359] — the control wins this stratum |
 | hit@10, free-running | 0.0146 [0.0119, 0.0174] (wd50k66) · 0.1028 [0.0952, 0.1098] (ndc) | as above |
 
 The non-generative rows — `nauty_cert`, `nauty_cert_rows`, `wl_l1`, `netlsd`,

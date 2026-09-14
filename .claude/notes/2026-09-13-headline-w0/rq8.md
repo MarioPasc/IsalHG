@@ -690,3 +690,78 @@ headline verdict changes; (2) the H8.3 clause-3 decision, which is a
 pre-registration question and not mine; (3) the `[:-1]` on the incidence prefix,
 which moved a reported column from 1.0000 to 0.1718 and whose justification is
 an argument, not a theorem.
+
+---
+
+## Amendment A3 — the orchestrator was right, and the star result was mine to lose
+
+*2026-09-14, after A2. Pre-registered in `RQ8_PILOT.md` §3a-ter and T-KBaa
+(D-KBaa9) at commit `c3f4496`, before any A3 number existed.*
+
+I reported the A2 star row as a result. The orchestrator refused it with the
+reason a reviewer gives first: a recommender that gets the pattern right 62 % of
+the time and then places it wrongly 93.5 % of the time **on a star** — where the
+right place is fixed by the stratum's own definition — is a crippled baseline,
+not evidence that counting cannot attach. My heuristic tried existing constants
+of matching type first and fell back to fresh only on an exact duplicate. That
+is a fixed rule; our arm learns attachment from the training words. I had
+written the sentence "ours still leads" on a comparison between a learner and a
+constant.
+
+**What I implemented.** For each pattern the training split now gives the
+pendant/interior split of its instances (pendant = every non-hub operand occurs
+in no other fact); the majority form is proposed, ties to pendant; the interior
+form keeps the highest-degree matching-type rule with its three-position retry;
+A2's fresh fallback stays underneath. Applied to all three pattern arms,
+including `random_pattern`, because the change is to the *attacher* they share
+and leaving the floor arm on the old rule would make the floor incomparable.
+Config-gated (`attach_data_driven`) so the campaign's rows keep the construction
+they were measured under.
+
+**The nine new tests were run against the pre-A3 runner first: 8 of 9 fail**
+(`prefers_pendant` absent, `propose_patterns` has no `pendant_oracle`). The ninth
+passes on both sides on purpose — it pins the pre-A3 placement, which A3 must
+keep reachable whenever the training split says a pattern is interior. 118 RQ8
+tests now pass; ruff 38 and mypy 20 unchanged.
+
+**The run.** All 81 units, same 27 seeds, locally, tag `52c4f4f9`, 4.5 min wall
+at six concurrent shards (14–18 s per unit — the workstation is faster per unit
+than the `sd` nodes). Analysed with all three tags and `--supersede`: 972 unit
+rows superseded = 108 units × 9 arms, exactly the earlier coverage.
+
+**The control passed exactly, and that is the only reason I trust the rest.**
+Row by row on `(collection, stratum, seed, arm, member, hidden fact, kind)`:
+**0 of 63,260** ordered-walk rows changed and **0 of 31,630** other generative
+rows changed; **7,803 of 47,445** counting rows changed, every one in the
+baseline's favour.
+
+**The star lead did not just shrink, it reversed.** `pattern_cooc`
+0.0404 → **0.6243**, `pattern_freq` 0.0261 → **0.3785**, both at **attach-miss
+0.000**; ours unchanged at 0.1156 / 0.1846. H8.2 now reads *as expected*:
+Δ = −0.5087, p = 5.5e-06, rank-biserial −1.000, 27 of 27 seeds. Every arm of
+both families attaches perfectly on pendant targets, so the star stratum is a
+pure pattern-prediction contest — and we lose it 0.185 to 0.624.
+
+**The honest reading, which is better for the paper than the one I had.** The
+ordered walk's advantage *is* the attachment. A stratum whose attachment is
+trivial removes the advantage, and removes it completely. So the attachment
+claim is a claim about **interior** facts, and RQ8's positive result is the
+relational stratum alone — where it survives and widens.
+
+**One thing I had to check before quoting anything.** A3 *costs* the recommender
+on the interior stratum (`wd50k66` `pattern_cooc` 0.0185 → 0.0131, attach-miss
+0.974 → 0.985), because the majority form is pendant for most patterns while the
+hidden fact there is interior by construction. Quoting the A3 number would flatter
+us. The strongest-baseline rule applies: **the citable baseline on that stratum
+stays A2's 0.0185**, ours leads it 2.5–2.6×, and leads the A3 construction
+3.5–3.7×. Both are Holm-clean; I report the smaller lead.
+
+**What I got wrong, stated plainly.** Twice now the star row has moved by
+hundreds of percent because of a rule I wrote in the baseline and then measured
+against. A2 I proposed myself after the orchestrator flagged the 0.0000; A3 I
+did not see at all — I had the 93.5 % attach-miss in my own table, next to a
+stratum whose correct attachment is a one-line description, and I read it as the
+recommender's failure rather than my rule's. The lesson is narrower than "make
+baselines strong": when a baseline's error is concentrated in a component whose
+correct value is *determined by the stratum definition*, that is a bug in the
+baseline until proved otherwise.

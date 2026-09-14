@@ -162,7 +162,9 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
 | `experiments/tkde/analyze_rq8.py` | H8.1–H8.3, the tables, the blank rows |
 | `experiments/tkde/configs/rq8.yaml` | the campaign, 27 seeds, 81 units |
 | `experiments/tkde/configs/rq8_pilot.yaml` | gate G8.1, off-schedule seeds |
-| `tests/experiments_tkde/test_rq8_units.py` | unit generator, census, baselines (40) |
+| `experiments/tkde/configs/rq8_star_a2.yaml` | Amendment A2, star units only |
+| `experiments/tkde/configs/rq8_a3.yaml` | Amendment A3, all 81 units, data-driven attacher |
+| `tests/experiments_tkde/test_rq8_units.py` | unit generator, census, baselines, A2/A3 attachment (68) |
 | `tests/experiments_tkde/test_rq8_prefix_property.py` | Proposition C.8 (13) |
 | `tests/experiments_tkde/test_rq8_smoke.py` | end-to-end + the stale-row guard (29) |
 | `slurm/tkde/rq8_{launcher,worker}.sh` | one task, `--constraint=sd`, node staging |
@@ -175,9 +177,17 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
 ```
 $P -m pytest tests/experiments_tkde/test_rq8_units.py \
              tests/experiments_tkde/test_rq8_prefix_property.py \
-             tests/experiments_tkde/test_rq8_smoke.py -q
-82 passed
+             tests/experiments_tkde/test_rq8_smoke.py \
+             tests/experiments_tkde/test_rq8_ow_worker_paths.py -q
+118 passed
 ```
+
+The nine Amendment-A3 tests (`TestDataDrivenAttachment`) were run against the
+pre-A3 runner first: **8 of 9 fail** there (`prefers_pendant` absent;
+`propose_patterns` has no `pendant_oracle`). The ninth,
+`test_without_the_oracle_a_star_pattern_lands_on_an_existing_constant`, passes
+on both sides by design — it pins the pre-A3 placement that A3 must leave
+reachable whenever the training split says a pattern is interior.
 
 `ruff check src/ tests/ experiments/` stays at the 38-error baseline;
 `mypy src/isalhg/` stays at 20. The pre-existing 6 failures in
@@ -226,6 +236,38 @@ seeds, counts verified against `configs/rq8.yaml`. Full numbers with provenance:
   so the attachment cannot be wrong; `ow_ngram_1f`'s pattern@10 and hit@10 are
   identical (0.1846) for that reason. **Design §0 expected counting to tie or
   win on stars; measured, it does not.**
+
+- **H8.2 under Amendment A3, which supersedes the two readings above: the
+  control HOLDS and the star stratum is not ours.** A2 left the recommender
+  getting the pattern right 62.4 % of the time and placing it wrongly 93.5 % on
+  a stratum whose correct attachment is fixed by definition — a fixed rule
+  scored against an arm that learns attachment, not a baseline. With the shape
+  estimated per pattern on the training split (majority form, ties to pendant;
+  interior keeps the highest-degree matching-type rule and its three-position
+  retry), `pattern_cooc` goes **0.0404 → 0.6243** and `pattern_freq`
+  **0.0261 → 0.3785**, both with **attach-miss 0.000**, against our unchanged
+  0.1156 / 0.1846. H8.2 reads **as expected**: Δ = −0.5087, p = 5.5e-06,
+  rank-biserial **−1.000**, 27 of 27 seeds. Every arm of both families now
+  attaches perfectly on pendant targets, so the star row is a **pure
+  pattern-prediction contest** and we lose it 0.185 to 0.624. Run tag
+  `52c4f4f9`, all 81 units re-run locally at the same 27 seeds, merged with
+  `--supersede` (972 unit rows = 108 × 9, exactly the earlier coverage).
+  **The control passed exactly**: 0 of 63,260 ordered-walk rows and 0 of 31,630
+  other generative rows changed; 7,803 of 47,445 counting rows changed, all in
+  the baseline's favour.
+- **A3 also costs the recommender on the interior stratum, and the stronger
+  baseline there is the A2 one.** The majority form is pendant for most
+  patterns, while the hidden fact on `non_star` is interior by construction:
+  `wd50k66` `pattern_cooc` 0.0185 → 0.0131, `pattern_freq` 0.0126 → 0.0111,
+  attach-miss 0.974 → 0.985 and 0.979 → 0.985. **The citable sentence keeps
+  `0.0185`** — ours must lead the better of the two attachers, and it does
+  (0.0463 / 0.0481, 2.5–2.6×; 3.5–3.7× against the A3 construction, all four
+  contrasts rejected at `p_H` = 1.33e-05, rank-biserial +1.000). `ndc_classes`
+  is unchanged in substance (`pattern_cooc` 0.3185 → 0.3146, still leading).
+- **What A3 changes is the scope of the attachment claim, not a verdict.** H8.1
+  not supported, H8.2 reported as scope, H8.3 not supported — the same three.
+  But the mechanism is now a claim about **interior** facts only: on pendant
+  targets both families attach with miss 0.000, so there is nothing to separate.
 
 Two analyzer corrections were needed to read the campaigns honestly, both in
 `analyze_rq8.py`:

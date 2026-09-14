@@ -381,6 +381,49 @@ without measuring would repeat the mistake A3 exists to correct.
 
 Either way it is measured, not argued.
 
+### A3 as measured (2026-09-14, run tag `52c4f4f9`, local, 27 seeds, all 81 units)
+
+**The control passed exactly.** Row by row over the whole campaign, on
+`(collection, stratum, seed, arm, member, hidden fact, kind)`: **0 of 63,260**
+ordered-walk rows changed, **0 of 31,630** `fact_ngram` / `incidence_ngram` rows
+changed, **7,803 of 47,445** counting rows changed — every one of them in the
+baseline's favour. The amendment reached only what it was aimed at.
+
+**The star lead reversed, as the first of the two declared outcomes.**
+`wd50k66/star/pendant`:
+
+| arm | hit@10 A2 | hit@10 A3 | pattern@10 A3 | attach-miss ∣ 1f A2 | A3 | denom |
+|---|---|---|---|---|---|---|
+| `ow_ngram` | 0.1156 | 0.1156 | 0.2719 | 0.000 | 0.000 | 624 |
+| `ow_ngram_1f` | 0.1846 | 0.1846 | 0.1846 | 0.000 | 0.000 | 997 |
+| `ow_ngram_ho_1f` | 0.1785 | 0.1785 | 0.1785 | 0.000 | 0.000 | 964 |
+| `pattern_cooc` | 0.0404 | **0.6243** | 0.6243 | 0.935 | **0.000** | 3,371 |
+| `pattern_freq` | 0.0261 | **0.3785** | 0.3785 | 0.931 | **0.000** | 2,044 |
+| `random_pattern` | 0.0009 | 0.0309 | 0.0309 | 0.970 | **0.000** | 167 |
+
+H8.2 now reads **as expected**: `pattern_cooc` 0.6243 against `ow_ngram` 0.1156,
+Δ = −0.5087, p = 5.5 × 10⁻⁶, rank-biserial −1.000, 27 of 27 seeds; the matched
+`ow_ngram_1f` loses 3.4×. Every arm of both families attaches with miss 0.000,
+so the star stratum is a **pure pattern-prediction contest** — and the
+pre-registered reading applies: the star row is the control §0 predicted, and
+RQ8's claim rests on the relational stratum alone.
+
+**On the interior stratum the data-driven rule costs the recommender**, because
+the majority form estimated on the training split is pendant for most patterns
+while the hidden fact there is interior by construction: `wd50k66/non_star`
+`pattern_cooc` 0.0185 → 0.0131 and `pattern_freq` 0.0126 → 0.0111, with
+attach-miss rising 0.974 → 0.985 and 0.979 → 0.985. **The stronger baseline on
+that stratum is therefore the A2 one and it is the number that must be quoted**;
+the matched arms (0.0463 / 0.0481, unchanged) lead it 2.5–2.6× and lead the A3
+construction 3.5–3.7×, all four contrasts rejected at `p_H` = 1.33e-05 with
+rank-biserial +1.000. `ndc_classes` is untouched in substance: `pattern_cooc`
+0.3185 → 0.3146 and still leads.
+
+**Verdicts unchanged.** H8.1 not supported (as originally registered), H8.2
+reported as scope, H8.3 not supported — the same three as under A2. What A3
+changes is not a verdict but which stratum carries the claim, and on what
+baseline.
+
 ## 3c. Gate G8.1, amended — the matched comparison
 
 *Same three pilot seeds (80900–80902), same 200 interior units per corpus, run

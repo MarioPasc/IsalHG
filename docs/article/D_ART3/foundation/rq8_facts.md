@@ -1,13 +1,13 @@
 # RQ8 fact base — valid completion of a record
 
 *The derivation of record for every RQ8 number the prose may cite. Precondition
-for T-KBg. Declared 2026-09-13, wave `2026-09-13-headline-w0`, agent `rq8`.
-Ledger: `../../DEVELOPMENT/T-KB/IN-PROGRESS/T-KBaa.md`. Gate evidence:
-`../experiments/RQ8_PILOT.md`.*
+for T-KBg. Agent `rq8`, wave `2026-09-13-headline-w0`; campaigns harvested and
+analysed 2026-09-14. Ledger: `../../DEVELOPMENT/T-KB/IN-PROGRESS/T-KBaa.md`.
+Gate evidence and the pre-registration: `../experiments/RQ8_PILOT.md`.*
 
 **Rule for this file.** A number enters here only with the run that produced it.
-Where a campaign table is not yet harvested the row says so; it is never filled
-from the pilot, whose seeds are deliberately outside the campaign schedule.
+The pilot's numbers are marked as the pilot's; they are on off-schedule seeds
+and are never mixed with the campaign's.
 
 ---
 
@@ -16,138 +16,219 @@ from the pilot, whose seeds are deliberately outside the campaign schedule.
 | what | where |
 |---|---|
 | Picasso results root | `~/results/IEEETKDE_ow/RQ8_completion/completion/` |
-| Picasso runner tree | `~/repos/IsalHG-rq8` (HOME, not FSCRATCH — see §5) |
+| Picasso runner tree | `~/repos/IsalHG-rq8` (HOME, not FSCRATCH — §7) |
 | Picasso library tree | `~/fscratch/repos/IsalHG-tkde` (shared, read-only) |
 | conda env | `~/fscratch/conda_envs/isalhg-tkde` (shared, not rebuilt) |
 | corpora | `~/fscratch/datasets/isalhg_tkde/corpora/` (read-only) |
-| drive mirror | `results/IEEETKDE_ow/RQ8/` |
+| drive mirror | `results/IEEETKDE_ow/RQ8_completion/` (333 files, harvested 2026-09-14) |
 | pilot rows (gate G8.1) | `results/IEEETKDE_ow/RQ8/pilot/RQ8_completion/pilot_g8_1/` |
-| deployed SHA | `9840460` on `worktree-agent-a1b4083a2935ce6dd`, from BASE_SHA `704e271` |
+| analysis, free-running | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_b327d7c5/` |
+| analysis, Amendment A1 | `results/IEEETKDE_ow/RQ8_completion/completion/_tag_c5380cde/` |
+| deployed SHA | `9840460` → `107ed20` on `worktree-agent-a1b4083a2935ce6dd`, from BASE_SHA `704e271` |
 
 ## 2. Job ids
 
-Submitted 2026-09-13 from `~/repos/IsalHG-rq8`, deployed SHA `9840460`.
-
-| job | id | array | what |
+| job | id | state | what |
 |---|---|---|---|
-| `tkde-rq8` (cluster smoke) | **2308337** | `0-0` | the `--smoke` configuration, staged under `_smoke/`; payload green in 0.5 s, both tree assertions passed |
-| `tkde-rq8` (campaign, free-running) | **2308339** | `0-0` | **COMPLETED 00:20:13**, 81/81 units. Seven arms, pre-Amendment-A1. Kept: it is the free-running measurement, which the paper reports beside the matched one |
-| `tkde-rq8` (campaign, Amendment A1) | **2308489** | `0-0` | 81 units, nine arms — adds `ow_ngram_1f` and `ow_ngram_ho_1f`. Its own run tag, so it writes beside 2308339 rather than over it |
-| `tkde-rq2-ow-main` | **2308342** | `0-12` | exact0 / bipartite / oracle / hypercot, 52 shards over 13 tasks |
-| `tkde-rq2-ow-census` | **2308343** | `0-8` | the false-merge census, 33 shards over 9 tasks |
-| `tkde-rq5-ow` | **2308368** | `0-0` | 65 units, three experiments |
+| `tkde-rq8` (cluster smoke) | 2308337 | COMPLETED 00:05:08 | `--smoke`, staged under `_smoke/`; MaxRSS 6.78 MB |
+| `tkde-rq8` (free-running) | **2308339** | COMPLETED 00:20:13 | 81 units, 27 seeds, six arms. Run tag **`b327d7c5`** |
+| `tkde-rq8` (Amendment A1) | **2308489** | COMPLETED 00:40:14 | 81 units, 27 seeds, nine arms. Run tag **`c5380cde`** |
 
-`sbatch --test-only` was run and passed for all three before submission
-(probe ids 2308268, 2308340/2308341, 2308362 — test-only, no job created).
+Both campaigns are retained. They are **different measurements of overlapping
+arms**, not a run and a rerun: the free-running arms answer "what does the model
+write", the matched arms "what does it write when asked for one fact". The
+analyzer refuses to pool them (`--run-tag` is required when two tags are
+present) because an arm in both would otherwise contribute twice to what the
+Wilcoxon believes are 27 seed-level replications.
 
-Monitor: `sacct -j <id> -X -n -P -o JobID,State,Elapsed,NodeList`; memory needs
-the `.batch` step, so drop `-X`.
+**Count check, both tags:** 81 units each = 27 seeds × {`ndc_classes/non_star`,
+`wd50k66/non_star`, `wd50k66/star`}, matching `configs/rq8.yaml`. 333 files =
+2 × (81 units × 2 tables + 1 census) + 7 config/manifest artefacts.
 
-## 3. Gate G0 — the star census (FINAL, measured locally 2026-09-13)
+## 3. Gate G0 — the star census (FINAL, both corpora)
 
 `is_star` = some constant in every fact **and** every other constant in at most
 one. Root convention for the interior/pendant rule: the hub (max fact-degree,
-ties by smallest id).
+ties by smallest id); on a star this *is* the every-fact constant, so the census
+does not depend on it.
 
 | corpus | N | stars | fraction | non-stars | shared constants (median/mean) | shared facts (median/mean) |
 |---|---|---|---|---|---|---|
-| `ndc_classes` | 1,381 | 42 | 0.0304 | 1,339 | 2 / 2.938 | 3 / 3.500 |
-| `wd50k66` | 3,988 | 2,128 | 0.5336 | 1,860 | 3 / 3.254 | 4 / 4.719 |
+| `ndc_classes` | 1,381 | 42 | **0.0304** | 1,339 | 2 / 2.938 | 3 / 3.500 |
+| `wd50k66` | 3,988 | 2,128 | **0.5336** | 1,860 | 3 / 3.254 | 4 / 4.719 |
 
 Substrate pool at `m ≥ 4`: `ndc_classes` 522 (521 non-star, 1 star);
-`wd50k66` 2,775 (1,641 non-star, 1,134 star). Every non-star in both pools has at
-least one interior fact. NDC's star stratum is `n = 1` and **not reportable**.
-
-Cross-checked independently by the `rq3v2` agent: agrees to the member.
+`wd50k66` 2,775 (1,641 non-star, 1,134 star). Every non-star in both pools has
+at least one interior fact. **NDC's star stratum is a single member and is not
+a reportable stratum.** Cross-checked independently by the `rq3v2` agent: agrees
+to the member.
 
 **Citable sentence.** Structure exists in 46.6 % of WD50K(66) entity
 descriptions; NDC-classes is 97.0 % non-star, i.e. genuinely relational.
 
-## 4. Gate G8.1 — the pilot (FINAL, 3 off-schedule seeds, 200 interior units/corpus)
+## 4. H8.1 — hit@10 on interior units, Holm over 27 seeds
 
-Seeds 80900–80902 (`seed_offset: 900`), disjoint from the campaign's
-80000–80026. `hit@10` is `usable@10`: valid ∧ connected ∧ isomorphic to truth.
+`hit@10` **is** `usable@10`: a proposal counts only if it decoded, is connected,
+and carries the truth's certificate (a complete invariant, Theorem C).
 
-| corpus | arm | N | hit@10 | pattern@10 | validity | connectivity | pattern right, attachment wrong |
+The Holm family is **ours against the baselines**. The other ordered-walk arms
+are ours too; putting them in the family would inflate the correction and score
+our own arms as competitors. Each is instead tested against the same baseline
+family in its own right.
+
+### 4.1 The pre-registered arm, `ow_ngram` — NOT SUPPORTED on either corpus
+
+| corpus | mean | vs `pattern_cooc` | vs `pattern_freq` | vs `fact_ngram` | vs `incidence_ngram` | vs `random_pattern` |
+|---|---|---|---|---|---|---|
+| `ndc_classes` | 0.1028 | 0.3185, p_H = 1.000 | 0.1806, p_H = 1.000 | 0.0913, p_H = 0.089 | 0.0059, **p_H = 1.4e-05** | 0.0339, **p_H = 1.4e-05** |
+| `wd50k66` | 0.0146 | 0.0185, p_H = 0.850 | 0.0126, p_H = 0.248 | 0.0037, **p_H = 8.7e-05** | 0.0002, **p_H = 2.5e-05** | 0.0015, **p_H = 2.5e-05** |
+
+**Verdict: not supported.** The pre-registered fallback applies and RQ8 is a
+**supporting exhibit**, not a headline.
+
+### 4.2 The Amendment A1 matched arms — the `wd50k66` lead SURVIVES HOLM
+
+| corpus | arm | mean | verdict vs the whole baseline family |
+|---|---|---|---|
+| `wd50k66` | **`ow_ngram_1f`** | **0.0463** | **SUPPORTED** — beats all five, every p_H = 1.33e-05 |
+| `wd50k66` | **`ow_ngram_ho_1f`** | **0.0481** | **SUPPORTED** — beats all five, every p_H = 1.35e-05 |
+| `wd50k66` | `ow_ngram_ho` | 0.0167 | not supported (ties `pattern_cooc` 0.0185, p_H = 0.526) |
+| `ndc_classes` | `ow_ngram_ho_1f` | 0.1922 | not supported — beats `fact_ngram` (p_H = 1.4e-05), ties `pattern_freq` 0.1806 (p_H = 0.248), loses to `pattern_cooc` 0.3185 |
+| `ndc_classes` | `ow_ngram_1f` | 0.1687 | not supported (same shape) |
+| `ndc_classes` | `ow_ngram_ho` | 0.1398 | not supported |
+
+Against `pattern_cooc` on `wd50k66` the matched arms lead **0.0463 / 0.0481
+against 0.0185** — 2.5–2.6× — with rank-biserial **+0.989** and **+1.000** over
+27 paired seeds. This is the one place in RQ8 where ours wins outright, and it
+is Holm-clean.
+
+**Citable sentence.** On the relational stratum of WD50K(66), a completion model
+over the ordered-walk language proposes the true missing fact in its top ten
+2.6× more often than an item–item co-occurrence recommender (0.0481 against
+0.0185; Holm-corrected paired Wilcoxon over 27 seeds, p = 1.3 × 10⁻⁵,
+rank-biserial 1.000), while on NDC-classes the recommender leads 0.3185 to
+0.1922.
+
+### 4.3 hit@10 with 95 % BCa intervals — interior, non-star
+
+| corpus | arm | hit@10 | 95 % BCa |
+|---|---|---|---|
+| `ndc_classes` | `ow_ngram` | 0.1028 | [0.0952, 0.1098] |
+| `ndc_classes` | `ow_ngram_1f` | 0.1687 | [0.1593, 0.1769] |
+| `ndc_classes` | `ow_ngram_ho` | 0.1398 | [0.1293, 0.1491] |
+| `ndc_classes` | `ow_ngram_ho_1f` | 0.1922 | [0.1806, 0.2024] |
+| `ndc_classes` | `pattern_cooc` | 0.3185 | [0.3076, 0.3280] |
+| `ndc_classes` | `pattern_freq` | 0.1806 | [0.1702, 0.1906] |
+| `ndc_classes` | `fact_ngram` | 0.0913 | [0.0854, 0.0976] |
+| `ndc_classes` | `incidence_ngram` | 0.0059 | [0.0041, 0.0083] |
+| `ndc_classes` | `random_pattern` | 0.0339 | [0.0298, 0.0381] |
+| `wd50k66` | `ow_ngram` | 0.0146 | [0.0119, 0.0174] |
+| `wd50k66` | `ow_ngram_1f` | 0.0463 | [0.0413, 0.0515] |
+| `wd50k66` | `ow_ngram_ho` | 0.0167 | [0.0135, 0.0206] |
+| `wd50k66` | `ow_ngram_ho_1f` | 0.0481 | [0.0422, 0.0559] |
+| `wd50k66` | `pattern_cooc` | 0.0185 | [0.0144, 0.0235] |
+| `wd50k66` | `pattern_freq` | 0.0126 | [0.0102, 0.0167] |
+| `wd50k66` | `fact_ngram` | 0.0037 | [0.0022, 0.0052] |
+| `wd50k66` | `incidence_ngram` | 0.0002 | [0.0000, 0.0009] |
+| `wd50k66` | `random_pattern` | 0.0015 | [0.0006, 0.0030] |
+
+## 5. H8.2 — the star control, which did not behave as pre-stated
+
+Design §4 expected `pattern_cooc ≥ ow_ngram` on stars. Measured on
+`wd50k66/star`, pendant hidden facts: **ours 0.1156, `pattern_cooc` 0.0000**,
+Δ = +0.1156, p = 5.4 × 10⁻⁶ — ours ahead on the control.
+
+**This is reported with its mechanism caveat, not as a win.** `pattern_cooc`
+scores exactly zero because on a star the attachment heuristic is starved: a
+star's facts frequently share a pattern, the deterministic attachment then
+reproduces a fact the record already carries, and the proposal is refused. The
+three-deep rank retry does not rescue it because a star has few distinct
+constants of matching type. So the 0.0000 measures **this implementation of the
+counting baseline on stars**, not counting as such. The honest reading is that
+the star control is uninformative as built, and the paper should say so rather
+than claim the control was won.
+
+## 6. H8.3 — validity and connectivity
+
+| quantity | point | 95 % BCa | n |
+|---|---|---|---|
+| `ow_ngram` validity | **1.0000** | [1.0000, 1.0000] | 81 |
+| `ow_ngram` connectivity | **1.0000** | [1.0000, 1.0000] | 81 |
+| `fact_ngram` connectivity | 0.6918 | [0.6617, 0.7227] | 81 |
+| `incidence_ngram` validity | 0.1906 | [0.1811, 0.2009] | 81 |
+
+Clauses 1 and 2 hold: ours is valid and connected at 1.000 **by theorem**
+(Proposition C.8), `fact_ngram` connectivity is 0.692, well below 1.
+
+**Clause 3 fails as written and the threshold was not moved.**
+`incidence_ngram` validity is 0.1906, not below the pre-registered 0.05. The
+ceiling was ported from RQ6, where sampling is *unconditional*; under
+conditional completion the prefix is itself a well-formed serialization, so a
+truncated continuation decodes far more often. The clause measures a different
+experiment. Reported failed with that reason (L12). The paper's sentence is the
+measured **0.191 against 1.000 by theorem**, which is enough.
+
+## 7. The mechanism — attachment miss over one-fact proposals
+
+Numerator and denominator both restricted to proposals adding **exactly one**
+fact (Amendment A1). Interior units, non-star stratum, 27 seeds.
+
+| corpus | arm | pattern@10 | Δ1 share | Δ̄ | slots filled | **attach-miss ∣ 1f** | denom |
 |---|---|---|---|---|---|---|---|
-| `ndc_classes` | `ow_ngram` | 600 | 0.1067 | 0.3750 | 1.0000 | 1.0000 | 0.716 |
-| `ndc_classes` | `ow_ngram_ho` | 600 | 0.1417 | 0.3850 | 1.0000 | 1.0000 | 0.632 |
-| `ndc_classes` | `pattern_cooc` | 600 | 0.3033 | 0.8917 | 1.0000 | 1.0000 | 0.660 |
-| `ndc_classes` | `pattern_freq` | 600 | 0.1867 | 0.4400 | 1.0000 | 1.0000 | 0.576 |
-| `ndc_classes` | `fact_ngram` | 600 | 0.0950 | 0.3667 | 1.0000 | 0.8670 | 0.741 |
-| `ndc_classes` | `incidence_ngram` | 600 | 0.0117 | 0.2700 | 0.1695 | 1.0000 | 0.957 |
-| `ndc_classes` | `random_pattern` | 600 | 0.0267 | 0.0833 | 1.0000 | 1.0000 | 0.680 |
-| `wd50k66` | `ow_ngram` | 600 | 0.0150 | 0.7317 | 1.0000 | 1.0000 | 0.979 |
-| `wd50k66` | `ow_ngram_ho` | 600 | 0.0100 | 0.6350 | 1.0000 | 1.0000 | 0.984 |
-| `wd50k66` | `pattern_cooc` | 600 | 0.0133 | 0.7067 | 1.0000 | 1.0000 | 0.981 |
-| `wd50k66` | `pattern_freq` | 600 | 0.0083 | 0.5850 | 1.0000 | 1.0000 | 0.986 |
-| `wd50k66` | `fact_ngram` | 600 | 0.0050 | 0.7417 | 1.0000 | 0.5116 | 0.993 |
-| `wd50k66` | `incidence_ngram` | 600 | 0.0000 | 0.4067 | 0.1427 | 1.0000 | 1.000 |
-| `wd50k66` | `random_pattern` | 600 | 0.0000 | 0.0317 | 1.0000 | 1.0000 | 1.000 |
+| `ndc_classes` | `ow_ngram` | 0.3848 | 0.342 | 2.81 | 9.1 | **0.327** | 825 |
+| `ndc_classes` | `ow_ngram_1f` | 0.2691 | 1.000 | 1.00 | 7.4 | **0.373** | 1,453 |
+| `ndc_classes` | `ow_ngram_ho` | 0.3669 | 0.374 | 2.43 | 8.0 | **0.256** | 1,015 |
+| `ndc_classes` | `ow_ngram_ho_1f` | 0.2802 | 1.000 | 1.00 | 6.3 | **0.314** | 1,513 |
+| `ndc_classes` | `pattern_cooc` | 0.8911 | 1.000 | 1.00 | 9.9 | 0.643 | 4,812 |
+| `ndc_classes` | `pattern_freq` | 0.4363 | 1.000 | 1.00 | 10.0 | 0.586 | 2,356 |
+| `ndc_classes` | `fact_ngram` | 0.3513 | 0.200 | 4.45 | 8.2 | 0.303 | 707 |
+| `wd50k66` | `ow_ngram_1f` | 0.3176 | 1.000 | 1.00 | 8.7 | **0.854** | 1,715 |
+| `wd50k66` | `ow_ngram_ho_1f` | 0.3106 | 1.000 | 1.00 | 8.3 | **0.845** | 1,677 |
+| `wd50k66` | `pattern_cooc` | 0.7170 | 1.000 | 1.00 | 10.0 | 0.974 | 3,872 |
+| `wd50k66` | `pattern_freq` | 0.6041 | 1.000 | 1.00 | 10.0 | 0.979 | 3,262 |
 
-### 4b. Gate G8.1 under Amendment A1 — the fact-count-matched table (FINAL)
+**The design's §0 attachment mechanism is SUPPORTED at full power, on both
+corpora.** Every ordered-walk arm attaches better than either recommender:
+0.256–0.373 against 0.643 / 0.586 on `ndc_classes`, and 0.845 / 0.854 against
+0.974 / 0.979 on `wd50k66`. The earlier "contradicted" reading (D-KBaa3) came
+from an unmatched denominator and is withdrawn; see `RQ8_PILOT.md` §3b.
 
-Same seeds, run tag `42875bca`. `attach-miss` is over **one-fact proposals
-only**, both numerator and denominator. Full table and reasoning:
-`../experiments/RQ8_PILOT.md` §3b–§3c.
+**The `ndc_classes` deficit is therefore a pattern-prediction deficit**, and a
+large one: matched `pattern@10` 0.269–0.280 against `pattern_cooc`'s 0.891. The
+n-gram family is the better attacher and the much weaker pattern predictor.
 
-| corpus | arm | Δ1 share | hit@10 | pattern@10 | attach-miss ∣ 1f |
-|---|---|---|---|---|---|
-| `ndc_classes` | `ow_ngram` | 0.328 | 0.1067 | 0.3750 | 0.347 |
-| `ndc_classes` | `ow_ngram_1f` | 1.000 | 0.1750 | 0.2883 | 0.393 |
-| `ndc_classes` | `ow_ngram_ho_1f` | 1.000 | 0.1950 | 0.2983 | 0.346 |
-| `ndc_classes` | `pattern_cooc` | 1.000 | **0.3033** | **0.8917** | 0.660 |
-| `ndc_classes` | `pattern_freq` | 1.000 | 0.1867 | 0.4400 | 0.576 |
-| `wd50k66` | `ow_ngram_1f` | 1.000 | **0.0383** | 0.2967 | 0.871 |
-| `wd50k66` | `ow_ngram_ho_1f` | 1.000 | 0.0367 | 0.2917 | 0.874 |
-| `wd50k66` | `pattern_cooc` | 1.000 | 0.0133 | 0.7067 | 0.981 |
-
-**Citable sentences, corrected.** On a fact-count-matched comparison the
-ordered-walk arms attach **better** than either recommender (0.303–0.393 against
-0.660 and 0.576 on `ndc_classes`), so the design's §0 attachment mechanism holds;
-the `ndc_classes` loss is entirely a pattern-prediction loss (0.288 against
-0.892). On `wd50k66` the matched arm leads every baseline on hit@10 (0.0383
-against `pattern_cooc`'s 0.0133). H8.1 still fails, scoped: satisfied on
-`wd50k66`, not on `ndc_classes`.
-
-**Verdicts, pre-registered and ruled before submission.**
-
-- H8.1 **not supported**; the fallback applies and RQ8 is a **supporting
-  exhibit**, not a headline (D-KBaa2). Under Amendment A1 this becomes a
-  *scoped* failure: satisfied on `wd50k66`, not on `ndc_classes`.
-- H8.2 holds trivially and then some: `pattern_cooc` does not merely tie us on
-  the star control, it beats us on the *relational* corpus.
-- H8.3 clauses 1 and 2 hold — ours valid 1.0000 and connected 1.0000 by theorem,
-  `fact_ngram` connectivity 0.867 / 0.512 below 1. Clause 3 **fails as written**
-  and the threshold was not moved (D-KBaa4).
-- The design's §0 attachment mechanism is **supported** on a matched
-  denominator (D-KBaa7). The earlier "contradicted" reading (D-KBaa3) was an
-  artefact of comparing a free-running arm against arms that add one fact by
-  construction, and is withdrawn.
-
-## 5. Deployment deviations, with their measured reason
+## 8. Deployment deviations, with their measured reason
 
 | deviation | reason |
 |---|---|
-| runner tree on HOME (`~/repos/IsalHG-rq8`), not FSCRATCH | FSCRATCH measured **read-only** 2026-09-13: 276.3k files against a 250.0k soft quota with the grace **expired**; `mkdir ~/fscratch/repos/...` returns "Disk quota exceeded". Contradicts `slurm/tkde/README.md`, which assumes HOME's file quota is the scarce one. |
-| shared `isalhg-tkde` env, `--no-build` | This wave changes nothing under `src/**`; the editable install is a PEP 660 finder, so `isalhg.*` must keep resolving to the canonical tree — which every worker in `slurm/tkde/` asserts. |
-| `ow_ngram_ho` replaces the design's `ow_gru` | torch is not installed and adding a dependency was out of scope; same enabling rule, declared before the measurement (D-KBaa1). |
+| runner tree on HOME (`~/repos/IsalHG-rq8`) | FSCRATCH measured **read-only** 2026-09-13: 276.3k files against a 250.0k soft quota, grace expired; `mkdir` returns "Disk quota exceeded" |
+| shared `isalhg-tkde` env, `--no-build` | this wave changes nothing under `src/**`; `isalhg.*` must keep resolving to the canonical tree, which every worker asserts |
+| `ow_ngram_ho` replaces the design's `ow_gru` | torch absent, dependency out of scope; same enabling rule, declared before measurement (D-KBaa1) |
+| `ow_ngram_1f` / `ow_ngram_ho_1f` added | Amendment A1, pre-registered before re-measurement (D-KBaa7) |
 
-Run-time write audit before submission: every write target is `$LOCALSCRATCH`
-(node-local), `$ISALHG_RESULTS_ROOT` (HOME) or `~/execs/tkde/logs` (HOME).
-`TMPDIR=/localscratch/users/tmp` and `PYTHONPYCACHEPREFIX` are node-local.
-Nothing writes to FSCRATCH at run time, so the quota block cannot kill a job
-mid-run.
+Run-time write audit: every write target is `$LOCALSCRATCH` (node-local),
+`$ISALHG_RESULTS_ROOT` (HOME) or `~/execs/tkde/logs` (HOME).
+`TMPDIR=/localscratch/users/tmp`. Nothing writes to FSCRATCH at run time.
 
-## 6. Campaign tables — PENDING HARVEST
+## 9. Capability-table cells (for `tab_kb_representation_properties.tex`)
 
-Not yet filled. When jobs 2308489 / 2308495 / 2308496 / 2308498 complete, harvest
-with `scripts/tkde/harvest_from_picasso.sh` and fill:
+| column | `w°` (ours) | certificates / vectors |
+|---|---|---|
+| completion definable | **yes** — the prefix property, Prop. C.8 | **no** — "no completion definable"; neither a canonical certificate nor a vector fingerprint admits the operation |
+| completion valid ∧ connected | **1.000 by theorem** [1.000, 1.000] | not applicable |
+| hit@10, `wd50k66` interior (matched) | **0.0481** [0.0422, 0.0559] | best competitor `pattern_cooc` 0.0185 [0.0144, 0.0235] |
+| hit@10, `ndc_classes` interior (matched) | 0.1922 [0.1806, 0.2024] | best competitor `pattern_cooc` 0.3185 [0.3076, 0.3280] |
+| hit@10, free-running | 0.0146 [0.0119, 0.0174] (wd50k66) · 0.1028 [0.0952, 0.1098] (ndc) | as above |
 
-- [ ] RQ8 hit@10 and pattern@10, 27 seeds, BCa 95 % CIs, Holm-corrected paired
-      Wilcoxon against every baseline, per corpus × stratum × hidden-fact kind.
-- [ ] RQ8 validity and connectivity per arm with CIs (the H8.3 sentence).
-- [ ] RQ8 mechanism table: pattern right, attachment wrong, per arm.
-- [ ] RQ2_ow: false merges per arm per collection, and the censoring contrast
-      against `wstar_orbit` (expected 0 censored for `isal_ow_struct`).
-- [ ] RQ5_ow: ARI / NMI / silhouette per arm, against the naive floors.
+The non-generative rows — `nauty_cert`, `nauty_cert_rows`, `wl_l1`, `netlsd`,
+`hpd_jsd`, `bipartite_ged_assign`, `bipartite_ged_path`, `hypercot`, `size_l1`,
+`degree_seq_l1` — carry **"no completion definable"** in every RQ8 table, never
+an empty cell.
+
+## 10. Pilot (gate G8.1) — kept distinct
+
+The pilot ran on **off-schedule seeds 80900–80902** (`seed_offset: 900`),
+disjoint from the campaign's 80000–80026, so no unit the campaign scores was
+ever seen by the gate. Its tables are in `../experiments/RQ8_PILOT.md` §3 and
+§3c. Every direction it showed is reproduced at 27 seeds; the campaign's numbers
+supersede it for citation.

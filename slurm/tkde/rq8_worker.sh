@@ -51,6 +51,25 @@ set -euo pipefail
 # shellcheck source=/dev/null
 source "${REPO_DIR}/slurm/tkde/common.sh"
 
+# `tkde_finalize` prints "copy-back OK" whenever the mirror succeeds, and
+# mirroring an EMPTY tree succeeds -- so a run that produced nothing reads in the
+# log exactly like one that worked. Measured 2026-09-13 on RQ2_ow: 22 tasks, all
+# "copy-back OK", zero rows. This refuses to reach the copy-back when no row file
+# was staged. It belongs in common.sh, which is read-only here; T-KBac proposes
+# the move.
+tkde_assert_out_dir_not_empty() {
+    local n
+    n=$(find "${OUT_DIR}" -name 'rows_*.csv' 2>/dev/null | wc -l)
+    if [[ "${n}" -eq 0 ]]; then
+        echo "" >&2
+        echo "[FATAL] ${OUT_DIR} holds no rows_*.csv after the payload ran." >&2
+        echo "        The copy-back would mirror an empty tree and report OK." >&2
+        find "${MYLOCALSCRATCH}" -name 'rows_*.csv' 2>/dev/null | head -5 >&2
+        exit 1
+    fi
+    echo "[ok] ${n} row file(s) staged in ${OUT_DIR}"
+}
+
 tkde_job_header "tkde-rq8"
 tkde_stage_localscratch "."
 cd "${REPO_DIR}"
@@ -136,6 +155,7 @@ print(load_yaml(sys.argv[1]).get('experiment', 'completion'))
 " "${CONFIG}")" || echo "[warn] analyzer failed; the rows are still staged"
 fi
 
+tkde_assert_out_dir_not_empty
 tkde_sync_partial
 
 echo ""

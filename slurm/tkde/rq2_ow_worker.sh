@@ -11,20 +11,45 @@
 # variant is a copy of rq2_worker.sh differing in exactly three places:
 #
 #   1. CONFIG is read from ${RQ2_CONFIG}, defaulting to configs/rq2_ow.yaml;
-#   2. EXPERIMENT is "wellposedness_ow", so the rows land in their own subtree
-#      and can never be confused with the `wstar_orbit` census they supersede;
-#   3. the job name is tkde-rq2-ow.
+#   2. the job name is tkde-rq2-ow.
+#
+# EXPERIMENT is deliberately "wellposedness", the SAME as the shared worker's.
+# It is not a free choice. `experiments/tkde/rq2.py` builds its output path from
+# a MODULE CONSTANT --
+#
+#     paths = RunPaths(root=results_root, rq=RQ_FOLDER, experiment=EXPERIMENT)
+#
+# -- and never reads the config's `experiment:` key, so naming this variable
+# anything else points the symlink at a directory the runner will not write to.
+# Measured 2026-09-13 (jobs 2308342 / 2308343): with EXPERIMENT="wellposedness_ow"
+# every one of 22 tasks ran its units, logged "copy-back OK", and delivered ZERO
+# rows -- the runner wrote to ${STAGE_ROOT}/RQ2_wellposedness/wellposedness, a
+# plain directory outside the mirrored out/ tree, and the whole night's work died
+# with the nodes. This is the same defect slurm/tkde/README.md records for the
+# 2026-09-07 rank run.
+#
+# Separation from the `wstar_orbit` census does not need a directory rename and
+# never did: the results ROOT already differs (~/results/IEEETKDE_ow against the
+# campaign's ~/results/IEEETKDE), and the run tag differs because the arm list
+# does. The assertion below makes the coupling explicit so it cannot rot.
 #
 # Everything else is byte-for-byte the shared worker's, including the smoke's
 # private matrices directory -- which is not cosmetic: the smoke configuration
 # puts ndc_classes in census_own_collections over a 20-member subset, so through
 # the shared symlink it would overwrite the real ndc_classes cache with a toy.
 
+# Memory, measured rather than inherited. The shared worker asks for 32 G; on
+# this arm set that is too tight. Jobs 2308342_*, MaxRSS off the .batch step:
+# the bipartite units dominate, task 3 completed at 26.1 GB and task 10 was
+# OUT_OF_MEMORY at 31.4 GB after 5 h 55 m -- still climbing, so its true peak is
+# unknown and 32 G cannot be shown to be enough for any of them. 96 G is ~3x the
+# only observed floor, schedules on every sd node (182 GB usable) and costs
+# queue time rather than a lost run.
 #SBATCH --job-name=tkde-rq2-ow
 #SBATCH --time=1-00:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
-#SBATCH --mem=32G
+#SBATCH --mem=96G
 #SBATCH --constraint=sd
 #SBATCH --account=tic_163_uma
 
@@ -40,8 +65,32 @@ export TKDE_THREADS=1
 source "${REPO_DIR}/slurm/tkde/common.sh"
 
 RQ_FOLDER="RQ2_wellposedness"
-EXPERIMENT="wellposedness_ow"
+EXPERIMENT="wellposedness"
 CONFIG="${RQ2_CONFIG:-${REPO_DIR}/experiments/tkde/configs/rq2_ow.yaml}"
+
+# The generic half of the 2026-09-13 lesson. `tkde_finalize` prints "copy-back
+# OK" whenever the mirror command succeeds, and mirroring an EMPTY tree succeeds,
+# so a run that produced nothing is indistinguishable in the log from one that
+# worked. This refuses to reach the copy-back at all when the staged tree holds
+# no row file -- a loud non-zero exit instead of a successful-looking empty run.
+#
+# It lives here rather than in common.sh only because common.sh is read-only to
+# this agent; it belongs there, and T-KBac proposes the move.
+tkde_assert_out_dir_not_empty() {
+    local n
+    n=$(find "${OUT_DIR}" -name 'rows_*.csv' 2>/dev/null | wc -l)
+    if [[ "${n}" -eq 0 ]]; then
+        echo "" >&2
+        echo "[FATAL] ${OUT_DIR} holds no rows_*.csv after the payload ran." >&2
+        echo "        The copy-back would mirror an empty tree and report OK." >&2
+        echo "        Usual cause: the runner wrote outside the mirrored out/" >&2
+        echo "        tree -- check the experiment/folder names against the" >&2
+        echo "        runner's own constants." >&2
+        find "${MYLOCALSCRATCH}" -name 'rows_*.csv' 2>/dev/null | head -5 >&2
+        exit 1
+    fi
+    echo "[ok] ${n} row file(s) staged in ${OUT_DIR}"
+}
 
 tkde_job_header "tkde-rq2-ow"
 # The smoke gets its own results subtree: its unit ids come from the same
@@ -62,6 +111,49 @@ echo ""
 STAGE_ROOT="${MYLOCALSCRATCH}/root"
 mkdir -p "${STAGE_ROOT}/${RQ_FOLDER}"
 ln -sfn "${OUT_DIR}" "${STAGE_ROOT}/${RQ_FOLDER}/${EXPERIMENT}"
+
+# The rows reach HOME only if the directory the RUNNER writes to is the one this
+# worker symlinked into the mirrored out/ tree. That is an assumption about
+# another module's constants, so it is asserted rather than trusted: a mismatch
+# here produced 22 successful-looking tasks and zero rows (2026-09-13). Checked
+# before any unit runs, so the cost of being wrong is a failed job instead of a
+# lost night.
+"${PY}" - "${RQ_FOLDER}" "${EXPERIMENT}" <<'PYEOF'
+import sys
+
+import experiments.tkde.rq2 as runner
+
+want_folder, want_experiment = sys.argv[1], sys.argv[2]
+assert runner.RQ_FOLDER == want_folder, (
+    f"worker RQ_FOLDER={want_folder!r} but rq2.py writes to {runner.RQ_FOLDER!r}"
+)
+assert runner.EXPERIMENT == want_experiment, (
+    f"worker EXPERIMENT={want_experiment!r} but rq2.py writes to "
+    f"{runner.EXPERIMENT!r} -- rq2.py takes this from a module constant, NOT from "
+    "the config's `experiment:` key, so the symlink would point at a directory "
+    "the runner never writes to and every row would die on the node"
+)
+print(f"[ok] runner writes to {runner.RQ_FOLDER}/{runner.EXPERIMENT}")
+PYEOF
+
+# ... and that the link really lands inside the tree tkde_finalize mirrors.
+# BOTH sides are canonicalised. Picasso exports LOCALSCRATCH with a trailing
+# slash, so MYLOCALSCRATCH is `/localscratch/users//mpascual/<job>`; `readlink
+# -f` collapses the double slash on the left-hand side only, and comparing a
+# canonical path against a raw one failed 22 tasks on a correct layout
+# (job 2311493). `-m` is used because it canonicalises a path that need not
+# exist yet.
+LINK_TARGET="$(readlink -f "${STAGE_ROOT}/${RQ_FOLDER}/${EXPERIMENT}")"
+MIRRORED_ROOT="$(readlink -m "${MYLOCALSCRATCH}/out")"
+case "${LINK_TARGET}" in
+    "${MIRRORED_ROOT}"*) echo "[ok] rows land in ${LINK_TARGET} (mirrored)" ;;
+    *)
+        echo "[FATAL] ${STAGE_ROOT}/${RQ_FOLDER}/${EXPERIMENT} resolves to" >&2
+        echo "        ${LINK_TARGET}, which is outside ${MIRRORED_ROOT} -- " >&2
+        echo "        the copy-back would report success and deliver nothing." >&2
+        exit 1
+        ;;
+esac
 # matrices/ is a SHARED input (and, for ndc_substances, a shared output), so in
 # a real run it points at the durable root rather than at the node: staging it
 # would hide the cache the shared matrices job wrote and rebuild every arm.
@@ -121,4 +213,5 @@ for (( S = LO; S < HI; S++ )); do
         "${KINDS_ARG[@]}"
 done
 
+tkde_assert_out_dir_not_empty
 tkde_job_footer

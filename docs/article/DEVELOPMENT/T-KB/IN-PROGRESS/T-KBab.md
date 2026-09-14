@@ -64,6 +64,69 @@ Local, both configs, through the unmodified runners:
 | `slurm/tkde/rq2_ow_{launcher,worker}.sh` | the ow pair (D-KBab2) |
 | `slurm/tkde/rq5_ow_launcher.sh` | thin wrapper over the shared RQ5 pair |
 
+## Closing evidence (2026-09-14)
+
+### RQ5_ow — DONE. Job **2308368**, COMPLETED 01:05:09, 65 units.
+
+Harvested to `results/IEEETKDE_ow/RQ5_patterns/` (144 files); analysed with the
+unmodified `analyze_rq5.py`. Full table:
+`../../../D_ART3/foundation/rq5_ow_facts.md`.
+
+- The pre-stated expectation held: **RQ5 stays negative**, every arm below
+  ARI 0.08. Analyzer verdicts H5a/H5b/H5c `not_supported`, H5d `inconclusive`.
+- Within that negative the swap is an improvement: `isal_ow_struct` leads NMI on
+  `wd50k66_balanced` (0.2632, above `netlsd` 0.2606) and leads ARI on
+  `wd50k100_balanced` (0.0768, above `degree_seq_l1` 0.0705); second on
+  `wd50k66` ARI (0.0675 against `netlsd` 0.0705). The retired fact-rank word
+  scored 0.0260 on the same design, so the ordered walk is **2.6× its ARI**.
+- **The naive floors do NOT win here**, against the expectation carried over
+  from the planted corpora: `size_l1` 0.0431, `degree_seq_l1` 0.0392 on
+  `wd50k66_balanced`. Reported as measured (L12).
+- **D-KBab4 — the requested `wstar_orbit` comparison is not possible.**
+  `wstar_orbit` appears in **0 of 54** campaign RQ5 clustering row files, though
+  `configs/rq5.yaml` lists it in all three experiments. Either the campaign RQ5
+  predates that config or the arm was dropped at run time. The full field was
+  recomputed from the campaign's own rows with identical aggregation instead;
+  every shared arm reproduces to four decimals (`bipartite_ged_assign`
+  0.0379/0.2305/0.5176 in both), which is the cross-check that the `w°` run is
+  sound.
+
+### RQ2_ow — RE-RUNNING. Attempt 1 lost everything; attempt 3 is in flight.
+
+**Jobs 2308342 / 2308343 produced ZERO rows** despite 21 of 22 tasks reporting
+COMPLETED and all 22 logging "copy-back OK". Diagnosis, fix, and the second
+(false-positive) failure are recorded in full in
+`../../../D_ART3/foundation/rq2_ow_facts.md` §3. In short:
+
+- **D-KBab5 — `rq2.py` takes its output path from a module constant, not the
+  config.** Line 997: `RunPaths(root=results_root, rq=RQ_FOLDER,
+  experiment=EXPERIMENT)`. The ow worker's `EXPERIMENT="wellposedness_ow"`
+  therefore symlinked a directory the runner never wrote to; the runner wrote to
+  a plain node-scratch directory outside the mirrored tree, the copy-back
+  mirrored an empty tree and **reported success**. ~7 wall-hours lost. This is
+  the defect `slurm/tkde/README.md` already records for the 2026-09-07 rank run.
+  Fixed: `EXPERIMENT="wellposedness"`; separation comes from the results **root**
+  and the run tag, which is all it ever needed. Pinned by
+  `tests/experiments_tkde/test_rq8_ow_worker_paths.py` (8 tests), shown failing
+  against the pre-fix worker.
+- **Memory:** task 10 OOM at **31.4 GB** against 32 G after 5 h 55 m, still
+  climbing; heaviest COMPLETED sibling 26.1 GB. Main array now 96 G.
+- **Attempt 2 (2311493/2311494) failed all 22 tasks in seconds on my own new
+  guard — a false positive.** `readlink -f` canonicalised the link but the
+  comparison used the raw `${MYLOCALSCRATCH}/out`, and Picasso exports
+  `LOCALSCRATCH` with a trailing slash (`/localscratch/users//mpascual/...`).
+  Both sides are now canonicalised with `readlink -m`; reproduced locally and
+  verified the guard still fires on a genuinely stranded directory.
+- **Attempt 3: jobs 2311593 (main) / 2311604 (census), RUNNING.** Both guards
+  pass: `[ok] runner writes to RQ2_wellposedness/wellposedness` and
+  `[ok] rows land in /localscratch/users/mpascual/2311594_0/out (mirrored)`.
+- A generic emptiness guard now sits in both of this agent's workers and refuses
+  to reach the copy-back when no row file was staged. **T-KBac** (OPEN) proposes
+  moving it into `slurm/tkde/common.sh`.
+
+**RQ2_ow numbers are NOT available and nothing may cite them yet.** The census
+is complete only when rows exist; `rq2_ow_facts.md` §4 is the pending list.
+
 ## Open, for the orchestrator
 
 - Results land under `~/results/IEEETKDE_ow/` on Picasso and are harvested to

@@ -137,6 +137,54 @@ $P -m pytest tests/experiments_tkde/test_rq8_units.py \
 `test_rq36_smoke.py` and `test_rq45_smoke.py` are at BASE_SHA and untouched
 (see the work log).
 
+## Closing evidence (2026-09-14, campaigns harvested and analysed)
+
+Both campaigns COMPLETED and are on the drive: **2308339** free-running (tag
+`b327d7c5`) and **2308489** Amendment A1 (tag `c5380cde`), 81 units each, 27
+seeds, counts verified against `configs/rq8.yaml`. Full numbers with provenance:
+`../../../D_ART3/foundation/rq8_facts.md`.
+
+- **H8.1 as pre-registered (`ow_ngram`): NOT SUPPORTED** on either corpus. The
+  fallback applies; RQ8 is a supporting exhibit. Confirms the pilot at power.
+- **The matched arms win `wd50k66`, Holm-clean.** `ow_ngram_1f` 0.0463 and
+  `ow_ngram_ho_1f` 0.0481 beat **all five** baselines including `pattern_cooc`
+  (0.0185) — every `p_Holm` ≈ 1.3e-05, rank-biserial +0.989 / +1.000 over 27
+  paired seeds. On `ndc_classes` they beat `fact_ngram`, tie `pattern_freq`
+  (0.1922 vs 0.1806, p_H = 0.248) and lose to `pattern_cooc` (0.3185).
+- **D-KBaa3's withdrawal is confirmed at power: §0's attachment mechanism is
+  SUPPORTED.** attach-miss over one-fact proposals, every ordered-walk arm below
+  every recommender — `ndc_classes` 0.256–0.373 against 0.643 / 0.586;
+  `wd50k66` 0.845 / 0.854 against 0.974 / 0.979, denominators 1,453–4,812. The
+  `ndc_classes` deficit is purely pattern prediction (matched `pattern@10`
+  0.269–0.280 against 0.891).
+- **H8.3:** ours valid **1.0000** and connected **1.0000** [1.0000, 1.0000],
+  n = 81, by theorem; `fact_ngram` connectivity 0.6918 [0.6617, 0.7227].
+  **Clause 3 fails as written** — `incidence_ngram` validity 0.1906
+  [0.1811, 0.2009], not below the RQ6-ported 0.05 ceiling. Reported failed with
+  its reason; the number was not moved (D-KBaa4).
+- **H8.2's star control is uninformative as built, and that is stated rather
+  than claimed as a win.** Ours 0.1156 against `pattern_cooc` 0.0000
+  (p = 5.4e-06) only because the deterministic attachment is starved on stars:
+  a star's facts share patterns, so the attachment reproduces an existing fact
+  and is refused. The zero measures this baseline's implementation on stars,
+  not counting as such.
+
+Two analyzer corrections were needed to read the campaigns honestly, both in
+`analyze_rq8.py`:
+
+1. **`--run-tag`.** Both campaigns share one directory and `load_table`
+   concatenates every tagged file, so reading them together silently pooled two
+   measurements of overlapping arms. The analyzer now refuses when more than one
+   tag is present and writes each run's artefacts to its own `_tag_*` folder.
+2. **The Holm family is ours against the BASELINES.** It was including
+   `ow_ngram_1f` / `ow_ngram_ho*` as competitors, inflating the correction and
+   scoring our own arms against each other. Each ours-arm is now tested against
+   the same baseline family in its own right; only `ARM_OURS` sets the verdict.
+
+A pre-Amendment-A1 table carries none of the one-fact columns; the mechanism
+table is emitted without the matched statistic and says so, rather than the
+analyzer refusing to read the older campaign or inventing a denominator.
+
 ## Open, for the orchestrator
 
 - The prose fold (T-KBg) has to carry D-KBaa2/3/4 verbatim; RQ8 is a supporting

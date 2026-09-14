@@ -48,7 +48,6 @@ from typing import Any
 
 from experiments.tkde import corpora as corpora_io
 from experiments.tkde import io, stats
-from experiments.tkde.analyze_rq1 import load_table
 from experiments.tkde.config import TkdeError
 from experiments.tkde.rq8 import (
     ARM_OURS,
@@ -68,6 +67,12 @@ logger = logging.getLogger(__name__)
 
 #: ``fact_ngram`` must fall below 1 and ``incidence_ngram`` below this, per H8.3.
 INCIDENCE_CEILING = 0.05
+
+#: Every arm that is *ours*. None of these may enter another's Holm family: a
+#: family is ours against the baselines, and scoring our own matched twin as a
+#: competitor would both inflate the correction and answer a question the
+#: pre-registration never asked.
+OURS_FAMILY: frozenset[str] = frozenset({ARM_OURS, ARM_OURS_1F, ARM_OURS_HO, ARM_OURS_HO_1F})
 
 
 class RQ8AnalysisError(TkdeError):
@@ -158,7 +163,16 @@ def interval_table(
 def test_h81(
     scores: Mapping[tuple[str, str, str, str], Mapping[int, float]],
 ) -> dict[str, Any]:
-    """H8.1: ours above every baseline on the interior units of both corpora."""
+    """H8.1: ours above every baseline on the interior units of both corpora.
+
+    The Holm family is ours against the **baselines**, not against the other
+    ordered-walk arms. `ow_ngram_1f`, `ow_ngram_ho` and `ow_ngram_ho_1f` are all
+    ours: including them would inflate the family, correct the p-values for
+    comparisons the hypothesis never made, and score our own arms as if they
+    were competitors. Each of them is instead tested against the same baseline
+    family in its own right, which is what Amendment A1 needs answering --- in
+    particular whether the matched arm's `wd50k66` lead survives Holm.
+    """
     cells = sorted(
         {
             (collection, stratum)
@@ -166,35 +180,52 @@ def test_h81(
             if kind == KIND_INTERIOR and stratum != STRATUM_STAR
         }
     )
+    candidates = [
+        arm
+        for arm in (ARM_OURS, ARM_OURS_1F, ARM_OURS_HO, ARM_OURS_HO_1F)
+        if any(key[3] == arm for key in scores)
+    ]
     per_cell: list[dict[str, Any]] = []
     for collection, stratum in cells:
-        ours, others = paired(scores, (collection, stratum, KIND_INTERIOR), ARM_OURS)
-        if not ours or not others:
+        for candidate in candidates:
+            ours, others = paired(scores, (collection, stratum, KIND_INTERIOR), candidate)
+            others = {name: values for name, values in others.items() if name not in OURS_FAMILY}
+            if not ours or not others:
+                per_cell.append(
+                    {
+                        "collection": collection,
+                        "stratum": stratum,
+                        "arm": candidate,
+                        "primary": candidate == ARM_OURS,
+                        "verdict": "not testable",
+                        "reason": "no paired seeds against any baseline",
+                    }
+                )
+                continue
+            family = stats.paired_family(ours, others, alternative="greater")
             per_cell.append(
                 {
                     "collection": collection,
                     "stratum": stratum,
-                    "verdict": "not testable",
-                    "reason": "no paired seeds for ours against any baseline",
+                    "arm": candidate,
+                    "primary": candidate == ARM_OURS,
+                    "n_seeds": len(ours),
+                    "mean_ours": sum(ours) / len(ours),
+                    "family": family,
+                    "verdict": (
+                        "supported"
+                        if all(
+                            row["reject"] and row["mean_ours"] > row["mean_other"] for row in family
+                        )
+                        else "not supported"
+                    ),
                 }
             )
-            continue
-        family = stats.paired_family(ours, others, alternative="greater")
-        per_cell.append(
-            {
-                "collection": collection,
-                "stratum": stratum,
-                "n_seeds": len(ours),
-                "mean_ours": sum(ours) / len(ours),
-                "family": family,
-                "verdict": (
-                    "supported"
-                    if all(row["reject"] and row["mean_ours"] > row["mean_other"] for row in family)
-                    else "not supported"
-                ),
-            }
-        )
-    supported = [cell for cell in per_cell if cell.get("verdict") == "supported"]
+    # The pre-registered hypothesis is about ARM_OURS; the other rows are the
+    # amendment's evidence and are reported beside it without changing the verdict.
+    primary = [cell for cell in per_cell if cell.get("primary")]
+    supported = [cell for cell in primary if cell.get("verdict") == "supported"]
+    per_cell_all, per_cell = per_cell, primary
     if len(supported) == len(per_cell) and per_cell:
         verdict, fallback = "supported", ""
     elif supported:
@@ -221,6 +252,7 @@ def test_h81(
         "verdict": verdict,
         "fallback": fallback,
         "cells": per_cell,
+        "amendment_a1_arms": [cell for cell in per_cell_all if not cell.get("primary")],
     }
 
 
@@ -381,21 +413,28 @@ def build_tables(
     # scored as an attachment miss, which reversed the sign of the reported
     # effect. The column name now carries its own denominator, and the fact-count
     # profile sits beside it so a reader can see how matched the arms were.
-    mechanism = (
-        units.groupby(["collection", "stratum", "hidden_kind", "arm"], as_index=False)[
-            [
-                "n_units",
-                "n_hit",
-                "n_pattern_hit",
-                "n_pattern_hit_1f",
-                "n_pattern_hit_1f_attach_miss",
-                "n_accepted",
-                "n_accepted_1f",
-                "delta_facts_sum",
-            ]
-        ]
-        .sum()
-        .assign(
+    # A pre-Amendment-A1 table carries none of the one-fact columns, because the
+    # run that wrote it did not record the fact delta. That is a fact about the
+    # run, not a defect: the mechanism table is emitted without the matched
+    # statistic and says so, rather than the analyzer refusing to read an older
+    # campaign or, worse, inventing a denominator for it.
+    wanted = [
+        "n_units",
+        "n_hit",
+        "n_pattern_hit",
+        "n_pattern_hit_1f",
+        "n_pattern_hit_1f_attach_miss",
+        "n_accepted",
+        "n_accepted_1f",
+        "delta_facts_sum",
+    ]
+    present = [column for column in wanted if column in units.columns]
+    matched = "n_pattern_hit_1f" in present and "n_pattern_hit_1f_attach_miss" in present
+    mechanism = units.groupby(["collection", "stratum", "hidden_kind", "arm"], as_index=False)[
+        present
+    ].sum()
+    if matched:
+        mechanism = mechanism.assign(
             attach_miss_given_pattern_hit_on_a_one_fact_proposal=lambda f: (
                 f["n_pattern_hit_1f_attach_miss"]
                 / f["n_pattern_hit_1f"].where(f["n_pattern_hit_1f"] > 0)
@@ -407,8 +446,11 @@ def build_tables(
                 f["delta_facts_sum"] / f["n_accepted"].where(f["n_accepted"] > 0)
             ),
         )
-    )
-    tables["Mechanism --- attachment miss, over one-fact proposals only"] = mechanism
+        title = "Mechanism --- attachment miss, over one-fact proposals only"
+    else:
+        mechanism = mechanism.assign(note="pre-Amendment-A1 run: no fact-delta recorded")
+        title = "Mechanism --- attachment miss NOT computable (pre-Amendment-A1 run)"
+    tables[title] = mechanism
 
     verdicts = _frame(
         [
@@ -429,12 +471,66 @@ def build_tables(
 # ---------------------------------------------------------------------------
 
 
-def analyze(root: Path, experiment: str) -> dict[str, Any]:
+def load_tagged(root: Path, table: str, run_tag: str | None) -> Any:
+    """``load_table`` restricted to one run tag.
+
+    Two RQ8 campaigns share a results directory --- the free-running arms and
+    the Amendment A1 matched arms --- and they are *different measurements* of
+    overlapping arms. ``load_table`` concatenates every tagged file it finds, so
+    reading them together would silently pool two runs: an arm present in both
+    would contribute twice to what the Wilcoxon believes are 27 seed-level
+    replications. Passing ``run_tag`` keeps a table to one run; passing ``None``
+    reproduces the old behaviour and is refused when more than one tag is
+    present.
+
+    Parameters
+    ----------
+    root : Path
+        The results root.
+    table : str
+        Table name without the ``rows_`` prefix.
+    run_tag : str or None
+        The eight-hex run tag, or ``None`` for "whatever is there".
+
+    Returns
+    -------
+    pandas.DataFrame
+        The rows of that run.
+
+    Raises
+    ------
+    RQ8AnalysisError
+        If ``run_tag`` is ``None`` and the directory holds more than one tag.
+    """
+    import pandas as pd
+
+    base = Path(root) / RQ_FOLDER
+    paths = sorted(base.rglob(f"rows_{table}__*.csv"))
+    paths = [p for p in paths if "_smoke" not in p.parts]
+    tags = {p.name.split(f"rows_{table}__")[1].split("-")[0] for p in paths}
+    if run_tag is None and len(tags) > 1:
+        raise RQ8AnalysisError(
+            f"{base} holds {len(tags)} run tags ({sorted(tags)}); pass --run-tag to "
+            "pick one. Pooling them would mix two measurements of the same arms."
+        )
+    if run_tag is not None:
+        paths = [p for p in paths if f"__{run_tag}-" in p.name]
+    frames = []
+    for path in paths:
+        try:
+            frames.append(pd.read_csv(path))
+        except (OSError, ValueError) as exc:
+            logger.warning("unreadable rows file %s: %s", path, exc)
+    frames = [f for f in frames if not f.empty]
+    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+
+
+def analyze(root: Path, experiment: str, run_tag: str | None = None) -> dict[str, Any]:
     """Read one RQ8 run and write ``summary.json`` / ``stats.json`` / ``tables.md``."""
-    units = load_table(root, RQ_FOLDER, "units")
+    units = load_tagged(Path(root), "units", run_tag)
     if units.empty:
         raise RQ8AnalysisError(f"no RQ8 unit rows under {Path(root) / RQ_FOLDER}")
-    census = load_table(root, RQ_FOLDER, "census")
+    census = load_tagged(Path(root), "census", run_tag)
 
     metrics = ("hit_at_10", "pattern_at_10", "validity", "connectivity")
     scores = {metric: seed_scores(units, metric) for metric in metrics}
@@ -449,6 +545,7 @@ def analyze(root: Path, experiment: str) -> dict[str, Any]:
     summary = {
         "rq": "RQ8",
         "experiment": experiment,
+        "run_tag": run_tag,
         "n_unit_rows": int(len(units)),
         "arms_scored": sorted(str(a) for a in units["arm"].unique()),
         "secondary_arm_enabled": ARM_OURS_HO in set(units["arm"].unique()),
@@ -462,7 +559,10 @@ def analyze(root: Path, experiment: str) -> dict[str, Any]:
         "expected_kinds": [KIND_INTERIOR, KIND_PENDANT],
     }
 
-    paths = io.RunPaths(root=Path(root), rq=RQ_FOLDER, experiment=experiment)
+    # Each run tag gets its own artefact directory, so the two campaigns'
+    # summaries and tables cannot overwrite one another.
+    folder = experiment if run_tag is None else f"{experiment}/_tag_{run_tag}"
+    paths = io.RunPaths(root=Path(root), rq=RQ_FOLDER, experiment=folder)
     io.write_summary(paths, summary)
     io.write_stats(paths, {"hypotheses": hypotheses, "intervals": intervals})
     io.write_tables_md(paths, build_tables(units, census, intervals, hypotheses))
@@ -474,6 +574,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="experiments.tkde.analyze_rq8")
     parser.add_argument("--root", type=Path, default=None, help="the results root")
     parser.add_argument("--experiment", default=EXPERIMENT)
+    parser.add_argument(
+        "--run-tag",
+        default=None,
+        help=(
+            "eight-hex run tag to analyse. Required when the results directory "
+            "holds more than one campaign, because pooling two runs of "
+            "overlapping arms would corrupt the paired statistics."
+        ),
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
     logging.basicConfig(
@@ -481,7 +590,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     root = args.root if args.root is not None else corpora_io.results_root()
-    result = analyze(Path(root), str(args.experiment))
+    result = analyze(Path(root), str(args.experiment), args.run_tag)
     for name, block in result["hypotheses"].items():
         logger.info("%s: %s", name, block.get("verdict", "reported as scope"))
         if block.get("fallback"):

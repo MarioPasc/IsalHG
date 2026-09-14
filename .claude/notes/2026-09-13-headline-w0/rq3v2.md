@@ -239,6 +239,78 @@ tag-scoped. What I could reuse, I imported: `run_tag`/`table_file` from `rq1`,
 | `2308392` | smoke, post-amendment code | COMPLETED 00:05:09, 40 rows |
 | **`2308421`** | **the campaign** — 122-task array, throttle 64 | submitted 13:57 CEST; 64 tasks RUNNING at hand-off |
 | `2308372`, `2308420` | `sbatch --test-only` probes | satisfiable; not jobs |
+| `2311518` | recovery, **light** — 40 units, 1/task, 6 h, 32G, frozen tag | 40 RUNNING |
+| `2311519` | recovery, **empty** — 79 structurally-empty units, 1 task, 1 h, 8G | RUNNING |
+| `2311520` | recovery, **heavy** — 189 units, 1/task, 6 h, **64G**, tag `1efdcf54` | 32 RUNNING, rest pending |
+
+## 12. The recovery pass (2026-09-14)
+
+**What 2308421 actually did:** 358 of 648 units written, all under one tag
+`ef0c58b4`; 85 tasks COMPLETED, 37 TIMEOUT at the 8 h wall. **No OOM in my
+array** — `grep -c OUT_OF_MEMORY` = 0; the one `main` had heard of was rq8's
+(`2308342_10`). What is true of mine is a peak MaxRSS of 25.9 GB against
+`--mem=32G` on `2308421_39`, a heavy task: a 6 GB margin, not a comfortable one.
+
+**The re-price, and I got this badly wrong the first time.** Median wall-clock
+per unit, from the tasks' own `unit done` timestamps: 0.19 h (wd50k star N5 t1)
+to 3.13 h (wd50k non-star N9 t1) in eleven cells, and ≥ 6.4 h in seven — four of
+those medians sitting just under 27,600 s, which is the wall minus teardown, so
+they measure the wall rather than the work. Three cells never completed a single
+unit. My pre-submission estimate was 1.6–3.3 h per *task of five units*: wrong by
+one to two orders of magnitude on the heavy cells, because I extrapolated from a
+two-collection smoke at `N = 5` on `ndc_classes` (12.6 s/collection against a
+true 55 s) and never measured `N = 9` or `N = 15` at all — both pricing runs were
+killed by my own later code changes. Deferral made the *rows* safe, which is why
+nothing is wrong in the data; it did not make the *estimate* honest, and I should
+have written "unpriced".
+
+**The diagnosis, which changed the remedy.** It is the exact-HGED judge, not the
+ball. Per collection: the bundled ball is 33.4 / 85.7 / 127.0 s at `N = 5/9/15`,
+`consensus_fact` is 0.28 / 0.85 / 2.70, all twelve medoids together ~0.01 — and a
+`N = 15` collection is ≥ 540 s. The remaining ~410 s is ~20 judge calls at ~20 s,
+with 17.8 % of judged rows (46,463 of 261,169) already falling back to
+`bipartite_ged_path` *after* burning the full 60 s budget. It grows with `N`
+because `align_merge_iter` admits a constant once ≥ N/2 members carry an
+unmatched one of the same type and pattern, so the merges hand the judge larger
+wrong records at larger `N`, and exact HGED on those is exponential.
+
+**So I did not apply the declared fallback.** The restricted ball addresses ~20 %
+of the cost at `N = 15` and would have left those cells over the wall while
+looking like a remedy. `main` ruled option B: drop the oracle budget to 8 s for
+the heavy cells only. The arithmetic, stated so it is checkable: 50 collections ×
+~20 calls = 1,000 calls; all timing out at 8 s is 8,000 s; plus the measured ball
+at 127 s × 50 = 6,350 s; ≈ 14,500 s = 4.0 h against a 6 h wall.
+
+**Two tags, and the rule that keeps them honest.** The oracle budget is a
+*measured* parameter, so `--hged-timeout-s` is folded into the config before the
+tag is computed: frozen `ef0c58b4`, heavy `1efdcf54`. A cell measured half under
+each is two instruments averaged, so `check_one_tag_per_cell` **raises** on it
+while the analyzer merges the two tags across cells; `--supersede-tag` drops a
+named tag's rows only where another tag also covers the cell; every row now
+carries `judge_timeout_s`; and the tables footnote the exact-vs-bipartite rate
+per cell. That is why the heavy array runs all 27 seeds per cell and not only the
+171 missing: the 18 the first pass wrote are superseded, not merged.
+
+**Coverage arithmetic, which closes exactly:** 358 + 40 light + 79 empty = 477
+frozen, less the 18 superseded heavy-cell units = 459 = 17 cells × 27; plus 189 =
+7 cells × 27 heavy. Total 648.
+
+**A launcher defect I found by triggering it.** `rq3v2_launcher.sh` read only
+`$1`, so `--resume-heavy --dry-run` submitted a 189-task array while printing
+nothing about a dry run. All three recovery arrays went out that way. I checked
+their parameters against what I intended before doing anything else —
+`scontrol`: 6 h/32G, 1 h/8G, 6 h/64G, arrays 40/1/189, `Start cutoff: 1 s`
+proving the export string arrived — and they were correct, so nothing needed
+cancelling. The launcher now parses every argument and refuses an unknown one. I
+also proved the heavy array's `--hged-timeout-s 8` reaches the runner by
+reproducing the worker's flag construction rather than assuming it.
+
+**Tests added for all of it:** `TestResumeSelection` (6 cases: the filters, the
+misspelt-cell refusal, resume under another tag dropping nothing) and
+`test_rq3v2_analysis.py` (6 cases: two tags across cells allowed, two tags within
+a cell refused with the cell named, the per-cell fallback rate). Plus
+`test_the_oracle_budget_changes_the_tag`, which is the one that makes the whole
+two-tag scheme safe.
 
 ## 4. Tests
 

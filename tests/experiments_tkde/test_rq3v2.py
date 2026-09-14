@@ -563,6 +563,20 @@ class TestStaleRowGuard:
         resharded = {"design": {"radius": 2}, "n_shards": 64}
         assert run_tag(base) == run_tag(resharded)
 
+    def test_the_oracle_budget_changes_the_tag(self):
+        """`hged_timeout_s` is a measured parameter, so it must reach the tag.
+
+        The heavy cells are re-scored under a shorter exact-oracle budget. If that
+        budget did not change the tag, those rows would be poolable with rows
+        scored under the frozen 60 s budget and the fact-distance axis would mix
+        two instruments without saying so.
+        """
+        from experiments.tkde.rq1 import run_tag
+
+        frozen = {"design": {"radius": 2}, "hged_timeout_s": 60}
+        short = {"design": {"radius": 2}, "hged_timeout_s": 8}
+        assert run_tag(frozen) != run_tag(short)
+
     def test_a_truncated_file_is_not_done(self, tmp_path):
         paths = RunPaths(root=tmp_path, rq=rq3v2.RQ_DIR, experiment=rq3v2.EXPERIMENT)
         paths.ensure()
@@ -575,6 +589,70 @@ class TestStaleRowGuard:
 # ---------------------------------------------------------------------------
 # Unit enumeration and the empty-stratum row
 # ---------------------------------------------------------------------------
+
+
+class TestResumeSelection:
+    """The filters a resume pass narrows with. Both are operational, never measured."""
+
+    CONFIG = {
+        "seed_count": 2,
+        "design": {
+            "collections": ["ndc_classes", "wd50k66"],
+            "strata": ["star", "non_star"],
+            "n_values": [5, 15],
+            "t_values": [1],
+        },
+    }
+
+    def test_no_filter_keeps_everything(self):
+        units = rq3v2.enumerate_units(self.CONFIG)
+        assert rq3v2.select_units(units) == units
+
+    def test_only_cells_keeps_exactly_those_cells(self):
+        units = rq3v2.enumerate_units(self.CONFIG)
+        chosen = rq3v2.select_units(units, only_cells=["wd50k66|non_star_N15_t1"])
+        assert chosen
+        assert {f"{u.collection}|{u.cell}" for u in chosen} == {"wd50k66|non_star_N15_t1"}
+        assert len(chosen) == 2
+
+    def test_a_misspelt_cell_is_refused_not_silently_empty(self):
+        """A typo here would run an empty campaign and report success."""
+        units = rq3v2.enumerate_units(self.CONFIG)
+        with pytest.raises(rq3v2.RQ3v2Error):
+            rq3v2.select_units(units, only_cells=["wd50k66|non_star_N99_t1"])
+
+    def test_resume_drops_units_already_written_under_that_tag(self, tmp_path):
+        units = rq3v2.enumerate_units(self.CONFIG)
+        paths = RunPaths(root=tmp_path, rq=rq3v2.RQ_DIR, experiment=rq3v2.EXPERIMENT)
+        paths.ensure()
+        done = units[0]
+        write_rows(
+            paths,
+            table_file("aaaaaaaa", rq3v2.ROWS_TABLE, done.unit_id),
+            [{"run_tag": "aaaaaaaa", "unit": done.unit_id}],
+            columns=("run_tag", "unit"),
+        )
+        remaining = rq3v2.select_units(units, resume_root=tmp_path, tag="aaaaaaaa")
+        assert done not in remaining
+        assert len(remaining) == len(units) - 1
+
+    def test_resume_under_another_tag_drops_nothing(self, tmp_path):
+        """A row measured under one oracle budget does not satisfy another."""
+        units = rq3v2.enumerate_units(self.CONFIG)
+        paths = RunPaths(root=tmp_path, rq=rq3v2.RQ_DIR, experiment=rq3v2.EXPERIMENT)
+        paths.ensure()
+        write_rows(
+            paths,
+            table_file("aaaaaaaa", rq3v2.ROWS_TABLE, units[0].unit_id),
+            [{"run_tag": "aaaaaaaa", "unit": units[0].unit_id}],
+            columns=("run_tag", "unit"),
+        )
+        assert len(rq3v2.select_units(units, resume_root=tmp_path, tag="bbbbbbbb")) == len(units)
+
+    def test_resume_without_a_tag_is_refused(self, tmp_path):
+        units = rq3v2.enumerate_units(self.CONFIG)
+        with pytest.raises(rq3v2.RQ3v2Error):
+            rq3v2.select_units(units, resume_root=tmp_path)
 
 
 class TestUnits:

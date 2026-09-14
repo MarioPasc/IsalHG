@@ -101,6 +101,16 @@ fi
 SMOKE_FLAG=()
 [[ "${TKDE_SMOKE}" == "1" ]] && SMOKE_FLAG=(--smoke)
 
+# Resume selectors. --only-cells and --resume are OPERATIONAL: they say which of
+# the already-enumerated units this submission runs. --hged-timeout-s is
+# MEASURED: it is folded into the configuration before the run tag is computed,
+# so a shorter oracle budget carries its own tag and can never be pooled with the
+# frozen one. The launcher decides which are set; the worker only relays them.
+RESUME_FLAGS=()
+[[ -n "${TKDE_ONLY_CELLS:-}" ]] && RESUME_FLAGS+=(--only-cells "${TKDE_ONLY_CELLS//:/,}")
+[[ "${TKDE_RESUME:-0}" == "1" ]] && RESUME_FLAGS+=(--resume)
+[[ -n "${TKDE_HGED_TIMEOUT_S:-}" ]] && RESUME_FLAGS+=(--hged-timeout-s "${TKDE_HGED_TIMEOUT_S}")
+
 echo ""
 echo "Task ${TASK_ID}/${TKDE_N_TASKS} -> shards ${LO}..${HI} of ${TKDE_N_SHARDS}"
 echo "Corpora root: ${TKDE_CORPORA_ROOT}"
@@ -125,7 +135,7 @@ for (( SHARD = LO; SHARD <= HI; SHARD++ )); do
         --data-root "${TKDE_CORPORA_ROOT}" \
         --shard "${SHARD}/${TKDE_N_SHARDS}" \
         --start-cutoff-s "$(( TKDE_START_CUTOFF_S - ELAPSED ))" \
-        "${SMOKE_FLAG[@]}"
+        "${SMOKE_FLAG[@]}" "${RESUME_FLAGS[@]}"
 done
 
 # The analyzer merges every shard, so a task holding part of the shard list would

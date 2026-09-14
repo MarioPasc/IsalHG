@@ -13,6 +13,7 @@ import pytest
 from experiments.tkde.rq8 import (
     KIND_INTERIOR,
     KIND_PENDANT,
+    CollectionContext,
     EvalUnit,
     PatternStatistics,
     Proposal,
@@ -29,6 +30,7 @@ from experiments.tkde.rq8 import (
     is_star,
     pattern_of,
     patterns_of,
+    propose_patterns,
     root_of,
     score,
     split_members,
@@ -548,3 +550,145 @@ class TestAttachment:
 
     def test_an_arity_one_pattern_is_refused(self):
         assert attach(MIXED, (0, 1, (1,)), prefer_root=False) is None
+
+
+class TestDataDrivenAttachment:
+    """Amendment A3: the counting baseline learns *where* to attach.
+
+    The hole this fills. A2 gave the baseline a fresh-constant fallback, but
+    only on a duplicate --- the first choice was still "existing constants of
+    matching type, highest degree first". On a star the correct attachment is
+    always fresh constants pendant to the hub, so the baseline was a fixed rule
+    being compared against an arm that learns attachment from data: it got the
+    pattern right 62 % of the time and then placed it wrongly 93.5 % of the
+    time. Here the *shape* is estimated on the training split, pattern by
+    pattern, exactly as the pattern itself already is.
+    """
+
+    # Every fact of STAR hangs off the hub alone: a pendant-only training split.
+    # Every fact of this one shares a non-root constant: an interior-only split.
+    INTERIOR = record("interior", 3, (0, 1, 1), [(0, (0, 1)), (0, (0, 2)), (1, (1, 2))])
+
+    @staticmethod
+    def _context() -> CollectionContext:
+        collection = KBCollection(
+            name="tiny",
+            records=(STAR,),
+            type_names=("a", "b", "c"),
+            pred_names=("p", "q", "r"),
+        )
+        return CollectionContext(
+            name="tiny",
+            collection=collection,
+            n_types=3,
+            n_preds=3,
+            k=3,
+            records=[STAR],
+            hypergraphs=[],
+        )
+
+    def test_the_split_is_counted_on_the_training_records(self):
+        statistics = PatternStatistics.fit([STAR])
+        repeated = pattern_of(STAR, STAR.facts[0])
+        assert statistics.frequency[repeated] == 2
+        assert statistics.pendant[repeated] == 2
+
+    def test_a_pendant_only_pattern_prefers_pendant(self):
+        statistics = PatternStatistics.fit([STAR])
+        assert statistics.prefers_pendant(pattern_of(STAR, STAR.facts[0]))
+
+    def test_an_interior_only_pattern_does_not(self):
+        statistics = PatternStatistics.fit([self.INTERIOR])
+        interior_pattern = pattern_of(self.INTERIOR, self.INTERIOR.facts[0])
+        assert statistics.frequency[interior_pattern] == 2
+        assert statistics.pendant.get(interior_pattern, 0) == 0
+        assert not statistics.prefers_pendant(interior_pattern)
+
+    def test_a_tie_goes_to_pendant(self):
+        # One pendant instance, one interior instance of the same pattern.
+        statistics = PatternStatistics.fit([STAR, self.INTERIOR])
+        shared = pattern_of(STAR, STAR.facts[0])
+        assert statistics.frequency[shared] == 4
+        assert statistics.pendant[shared] == 2
+        assert statistics.prefers_pendant(shared)
+
+    def test_an_unseen_pattern_counts_as_pendant(self):
+        statistics = PatternStatistics.fit([self.INTERIOR])
+        assert statistics.prefers_pendant((2, 3, (0, 1, 1)))
+
+    def test_without_the_oracle_a_star_pattern_lands_on_an_existing_constant(self):
+        # The pre-A3 behaviour, pinned: rank 0 duplicates fact 0 and is refused,
+        # rank 1 reaches another existing leaf, so the proposal creates no
+        # constant --- on a star, the one placement a completion never takes.
+        ranked = [pattern_of(STAR, STAR.facts[0])]
+        unit = EvalUnit(truth=STAR, minus=STAR, hidden=STAR.facts[0], kind=KIND_PENDANT)
+        attempts = propose_patterns(
+            self._context(), unit, ranked, prefer_root=True, k_proposals=1
+        )
+        assert len(attempts) == 1
+        assert attempts[0].hypergraph is not None
+        assert attempts[0].hypergraph.n_nodes == STAR.n
+
+    def test_the_oracle_attaches_a_pendant_pattern_over_fresh_constants(self):
+        ranked = [pattern_of(STAR, STAR.facts[0])]
+        unit = EvalUnit(truth=STAR, minus=STAR, hidden=STAR.facts[0], kind=KIND_PENDANT)
+        attempts = propose_patterns(
+            self._context(),
+            unit,
+            ranked,
+            prefer_root=True,
+            k_proposals=1,
+            pendant_oracle=PatternStatistics.fit([STAR]),
+        )
+        assert len(attempts) == 1
+        assert attempts[0].hypergraph is not None
+        assert attempts[0].hypergraph.n_nodes == STAR.n + 1
+        assert attempts[0].connected
+
+    def test_an_interior_majority_pattern_keeps_the_ranked_rule(self):
+        # The oracle only redirects patterns the training split says are
+        # pendant; an interior-majority pattern still goes through the
+        # highest-degree matching-type rule and its three-position retry.
+        ranked = [pattern_of(STAR, STAR.facts[0])]
+        unit = EvalUnit(truth=STAR, minus=STAR, hidden=STAR.facts[0], kind=KIND_PENDANT)
+        attempts = propose_patterns(
+            self._context(),
+            unit,
+            ranked,
+            prefer_root=True,
+            k_proposals=1,
+            pendant_oracle=PatternStatistics.fit([self.INTERIOR]),
+        )
+        assert len(attempts) == 1
+        assert attempts[0].hypergraph is not None
+        assert attempts[0].hypergraph.n_nodes == STAR.n
+
+    def test_the_oracle_falls_back_when_the_pendant_form_is_malformed(self):
+        # A malformed pattern yields nothing from attach_fresh; the ranked path
+        # must still be tried rather than the slot silently lost.
+        ranked = [(0, 2, (1, 1))]
+        unit = EvalUnit(truth=MIXED, minus=MIXED, hidden=MIXED.facts[0], kind=KIND_PENDANT)
+        context = CollectionContext(
+            name="tiny",
+            collection=KBCollection(
+                name="tiny",
+                records=(MIXED,),
+                type_names=("a", "b", "c"),
+                pred_names=("p", "q", "r"),
+            ),
+            n_types=3,
+            n_preds=3,
+            k=3,
+            records=[MIXED],
+            hypergraphs=[],
+        )
+        attempts = propose_patterns(
+            context,
+            unit,
+            ranked,
+            prefer_root=False,
+            k_proposals=1,
+            pendant_oracle=PatternStatistics.fit([STAR]),
+        )
+        assert len(attempts) == 1
+        assert attempts[0].hypergraph is not None

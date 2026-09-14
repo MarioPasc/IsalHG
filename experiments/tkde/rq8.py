@@ -1135,6 +1135,7 @@ def propose_patterns(
     k_proposals: int,
     attachment_ranks: int = 3,
     fresh_fallback: bool = False,
+    pendant_oracle: PatternStatistics | None = None,
 ) -> list[Proposal]:
     """Attach the top-``k`` ranked patterns to ``K-``, in rank order.
 
@@ -1151,10 +1152,19 @@ def propose_patterns(
         if len(_accepted(attempts, base)) >= k_proposals:
             break
         extended = None
-        for rank in range(max(attachment_ranks, 1)):
-            extended = attach(unit.minus, pattern, prefer_root=prefer_root, rank=rank)
-            if extended is not None:
-                break
+        # Amendment A3: which SHAPE to attach in is learned, not fixed. When the
+        # training split says this pattern is mostly pendant, the pendant form is
+        # proposed first -- on a star that is always the correct attachment, and
+        # the old rule (existing constants of matching type first) was wrong
+        # there by construction, which made the baseline a constant rather than
+        # an attacher.
+        if pendant_oracle is not None and pendant_oracle.prefers_pendant(pattern):
+            extended = attach_fresh(unit.minus, pattern)
+        if extended is None:
+            for rank in range(max(attachment_ranks, 1)):
+                extended = attach(unit.minus, pattern, prefer_root=prefer_root, rank=rank)
+                if extended is not None:
+                    break
         if extended is None and fresh_fallback:
             # Amendment A2: every ranked attachment reproduced a fact the record
             # already carries, so instantiate the pattern over fresh constants
@@ -1177,22 +1187,55 @@ class PatternStatistics:
     frequency: dict[Pattern, int]
     cooccurrence: dict[Pattern, dict[Pattern, int]]
     vocabulary: tuple[Pattern, ...]
+    pendant: dict[Pattern, int] = field(default_factory=dict)
 
     @classmethod
     def fit(cls, records: Sequence[KBRecord]) -> PatternStatistics:
-        """Count pattern frequency and pattern-given-pattern co-occurrence."""
+        """Count pattern frequency, co-occurrence, and the pendant/interior split.
+
+        The third statistic is Amendment A3. A fixed attachment rule — try
+        existing constants of matching type, fall back to fresh only on a
+        duplicate — attaches in the one place a star completion never goes, so
+        the baseline was being compared as a constant against an arm that learns
+        attachment from data. Here the *shape* of each pattern's instances is
+        counted on the training split too: **pendant** when every operand other
+        than the hub occurs in no other fact, **interior** when some non-hub
+        operand is shared.
+        """
         frequency: dict[Pattern, int] = {}
         cooccurrence: dict[Pattern, dict[Pattern, int]] = {}
+        pendant: dict[Pattern, int] = {}
         for record in records:
             observed = patterns_of(record)
-            for pattern in observed:
+            interior = set(interior_fact_ids(record))
+            for index, pattern in enumerate(observed):
                 frequency[pattern] = frequency.get(pattern, 0) + 1
+                if index not in interior:
+                    pendant[pattern] = pendant.get(pattern, 0) + 1
             for context_pattern in set(observed):
                 bucket = cooccurrence.setdefault(context_pattern, {})
                 for pattern in observed:
                     bucket[pattern] = bucket.get(pattern, 0) + 1
         vocabulary = tuple(sorted(frequency, key=lambda p: (-frequency[p], p)))
-        return cls(frequency=frequency, cooccurrence=cooccurrence, vocabulary=vocabulary)
+        return cls(
+            frequency=frequency,
+            cooccurrence=cooccurrence,
+            vocabulary=vocabulary,
+            pendant=pendant,
+        )
+
+    def prefers_pendant(self, pattern: Pattern) -> bool:
+        """Whether this pattern's training instances are mostly pendant.
+
+        Ties go to pendant, and an unseen pattern counts as pendant: with no
+        evidence that a pattern reaches into the existing structure, attaching
+        it to the hub with fresh operands is the conservative reading, and it is
+        the form a star completion always takes.
+        """
+        total = self.frequency.get(pattern, 0)
+        if total == 0:
+            return True
+        return self.pendant.get(pattern, 0) * 2 >= total
 
     def by_frequency(self, record: KBRecord, limit: int) -> list[Pattern]:
         """``pattern_freq``: the commonest training patterns, type-conditioned.
@@ -1364,6 +1407,9 @@ def run_unit(
     # Amendment A2, opt-in so the campaign's existing non-star rows keep the
     # construction they were measured under.
     fresh_fallback = bool(config.get("attach_fresh_fallback", False))
+    # Amendment A3, opt-in so earlier rows keep the construction they were
+    # measured under.
+    data_driven_attach = bool(config.get("attach_data_driven", False))
     seed = unit_seed(config, unit.seed_index)
 
     want_star = unit.stratum == STRATUM_STAR
@@ -1425,6 +1471,7 @@ def run_unit(
                 prefer_root=want_star,
                 rng=random.Random(f"rq8|{arm}|{context.name}|{seed}|{position}"),
                 fresh_fallback=fresh_fallback,
+                data_driven_attach=data_driven_attach,
             )
             outcome = score(
                 eval_unit,
@@ -1538,6 +1585,7 @@ def _propose(
     prefer_root: bool,
     rng: random.Random,
     fresh_fallback: bool = False,
+    data_driven_attach: bool = False,
 ) -> list[Proposal]:
     """Dispatch one arm's proposal routine."""
     if arm in OW_ARM_MODEL:
@@ -1594,6 +1642,7 @@ def _propose(
         prefer_root=prefer_root,
         k_proposals=k_proposals,
         fresh_fallback=fresh_fallback,
+        pendant_oracle=statistics if data_driven_attach else None,
     )
 
 

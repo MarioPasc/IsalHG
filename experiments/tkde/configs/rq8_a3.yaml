@@ -1,0 +1,85 @@
+# RQ8, Amendment A3 --- the counting baseline's attachment, learned from data.
+#
+# Pre-registered in docs/article/D_ART3/experiments/RQ8_PILOT.md §3a-ter and
+# T-KBaa (D-KBaa9), BEFORE this run. Identical to rq8.yaml in every parameter
+# except two: `attach_fresh_fallback` and `attach_data_driven` are both on.
+#
+# Why the baseline needed repairing a second time. Under A2 the counting arms
+# could finally propose on a star, but the *shape* of the attachment was still a
+# fixed rule --- existing constants of matching type, highest degree first, with
+# fresh constants only as a last resort on a duplicate. On a star with repeated
+# operand types that first choice is almost always wrong: the correct attachment
+# is fresh constants pendant to the hub. Measured under A2: `pattern_cooc` got
+# the pattern right 62.4 % of the time and then placed it wrongly 93.5 % of the
+# time. A fixed rule compared against an arm that learns attachment from data is
+# not a baseline. Here the counting arms learn it too: for each pattern the
+# training split gives the fraction of its instances that are pendant (every
+# non-hub operand occurring in no other fact) versus interior (some non-hub
+# operand shared), the majority form is proposed, ties go to pendant, and an
+# interior-majority pattern keeps the highest-degree matching-type rule with its
+# three-position retry. `attach_fresh_fallback` stays on underneath, so an
+# interior-majority pattern whose every rank duplicates still gets A2's escape.
+#
+# Nothing changes for the ordered-walk arms. They share the seed, the draws and
+# the acceptance predicate they had under tags c5380cde / 7f25205b, so their
+# rows must come out byte-identical --- that equality is the amendment's own
+# before/after control.
+#
+# Why both strata and both collections. The attacher is shared by every counting
+# arm in every stratum, so A3 moves the non-star and NDC numbers too; leaving
+# them at their c5380cde values would report one stratum under a repaired
+# baseline and the rest under the old one. The full 81 units are re-run and the
+# analyzer is given --supersede so A3 replaces, rather than pools with, the
+# earlier measurement of the same (collection, stratum, seed, arm, hidden_kind)
+# keys.
+
+rq: RQ8
+experiment: completion
+seed_count: 27
+seed_offset: 0
+
+collections: [ndc_classes, wd50k66]
+strata:
+  ndc_classes: [non_star]
+  wd50k66: [non_star, star]
+
+attach_fresh_fallback: true
+attach_data_driven: true
+
+m_min: 4
+min_pool: 20
+train_frac: 0.8
+units_per_member: 2
+max_eval_units: 200
+
+k_proposals: 10
+resamples: 20
+ngram_order: 3
+ngram_order_ho: 6
+max_len: 200
+max_new_tokens: 60
+
+arms:
+  - ow_ngram
+  - ow_ngram_1f
+  - ow_ngram_ho
+  - ow_ngram_ho_1f
+  - fact_ngram
+  - incidence_ngram
+  - pattern_freq
+  - pattern_cooc
+  - random_pattern
+
+# 27 seeds x (1 ndc stratum + 2 wd50k strata) = 81 units, one shard each.
+n_shards: 81
+
+smoke:
+  seed_count: 2
+  collections: [ndc_classes]
+  strata:
+    ndc_classes: [non_star]
+  max_eval_units: 4
+  units_per_member: 1
+  k_proposals: 3
+  resamples: 4
+  n_shards: 1

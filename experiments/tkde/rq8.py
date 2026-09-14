@@ -974,6 +974,66 @@ def propose_incidence(
 # --- counting arms ----------------------------------------------------------
 
 
+def attach_fresh(record: KBRecord, pattern: Pattern) -> KBRecord | None:
+    """Instantiate ``pattern`` over **fresh** constants, pendant to the hub.
+
+    Amendment A2. The deterministic heuristic cannot express "another instance
+    of a repeated pattern": on a star, whose facts frequently share a pattern,
+    it resolves to the hub plus the highest-degree matching constant --- a fact
+    the record already carries --- and is refused, and the rank retries cannot
+    rescue it because a star has few distinct constants of the required type.
+    Measured consequence at 27 seeds: ``pattern_cooc`` scored **exactly 0.0000**
+    on the star stratum, which is not a recommender losing but a recommender
+    unable to propose.
+
+    Here the hub takes one slot and every remaining operand is a newly created
+    constant of the required type. A fact over fresh constants cannot duplicate
+    an existing one, so this always yields a proposal, and it is connected
+    because the hub is in it. Strictly in the baseline's favour.
+
+    Parameters
+    ----------
+    record : KBRecord
+        ``K-``.
+    pattern : Pattern
+        ``(predicate, arity, ascending operand types)``.
+
+    Returns
+    -------
+    KBRecord or None
+        The extended record, or ``None`` for a malformed pattern.
+    """
+    predicate, arity, types = pattern
+    if arity < 2 or len(types) != arity:
+        return None
+    root = root_of(record)
+    wanted = list(types)
+    root_type = record.types[root]
+    # The hub anchors the fact. It takes a slot of its own type when the pattern
+    # offers one, so the instantiated fact stays faithful to the pattern; when it
+    # does not, the hub still anchors and one operand type is spent on it, which
+    # is the same compromise the type-mismatch path already makes.
+    if root_type in wanted:
+        wanted.remove(root_type)
+    else:
+        wanted.pop()
+    types_out = list(record.types)
+    operands = [root]
+    for label in wanted:
+        operands.append(len(types_out))
+        types_out.append(label)
+    fact: Fact = (predicate, tuple(sorted(set(operands))))
+    if len(fact[1]) != arity or fact in record.facts:
+        return None
+    return compact(
+        f"{record.kb_id}+fresh{predicate}",
+        types_out,
+        [*record.facts, fact],
+        meta=dict(record.meta),
+        require_connected=False,
+    )
+
+
 def attach(
     record: KBRecord, pattern: Pattern, *, prefer_root: bool, rank: int = 0
 ) -> KBRecord | None:
@@ -1074,6 +1134,7 @@ def propose_patterns(
     prefer_root: bool,
     k_proposals: int,
     attachment_ranks: int = 3,
+    fresh_fallback: bool = False,
 ) -> list[Proposal]:
     """Attach the top-``k`` ranked patterns to ``K-``, in rank order.
 
@@ -1089,16 +1150,23 @@ def propose_patterns(
     for pattern in ranked:
         if len(_accepted(attempts, base)) >= k_proposals:
             break
+        extended = None
         for rank in range(max(attachment_ranks, 1)):
             extended = attach(unit.minus, pattern, prefer_root=prefer_root, rank=rank)
-            if extended is None:
-                continue
-            attempts.append(
-                _as_proposal(
-                    extended.to_hypergraph(n_types=context.n_types, n_preds=context.n_preds)
-                )
-            )
-            break
+            if extended is not None:
+                break
+        if extended is None and fresh_fallback:
+            # Amendment A2: every ranked attachment reproduced a fact the record
+            # already carries, so instantiate the pattern over fresh constants
+            # rather than let the arm emit nothing. Without this the baseline
+            # cannot propose "another instance of a repeated pattern" and scores
+            # exactly 0.0000 on the star stratum.
+            extended = attach_fresh(unit.minus, pattern)
+        if extended is None:
+            continue
+        attempts.append(
+            _as_proposal(extended.to_hypergraph(n_types=context.n_types, n_preds=context.n_preds))
+        )
     return attempts
 
 
@@ -1293,6 +1361,9 @@ def run_unit(
     train_frac = float(config.get("train_frac", 0.8))
     per_member = int(config.get("units_per_member", 2))
     limit = int(config.get("max_eval_units", 200))
+    # Amendment A2, opt-in so the campaign's existing non-star rows keep the
+    # construction they were measured under.
+    fresh_fallback = bool(config.get("attach_fresh_fallback", False))
     seed = unit_seed(config, unit.seed_index)
 
     want_star = unit.stratum == STRATUM_STAR
@@ -1353,6 +1424,7 @@ def run_unit(
                 max_new=max_new,
                 prefer_root=want_star,
                 rng=random.Random(f"rq8|{arm}|{context.name}|{seed}|{position}"),
+                fresh_fallback=fresh_fallback,
             )
             outcome = score(
                 eval_unit,
@@ -1465,6 +1537,7 @@ def _propose(
     max_new: int,
     prefer_root: bool,
     rng: random.Random,
+    fresh_fallback: bool = False,
 ) -> list[Proposal]:
     """Dispatch one arm's proposal routine."""
     if arm in OW_ARM_MODEL:
@@ -1514,7 +1587,14 @@ def _propose(
         ranked = statistics.at_random(depth, rng)
     else:
         raise RQ8Error(f"unknown arm {arm!r}")
-    return propose_patterns(context, unit, ranked, prefer_root=prefer_root, k_proposals=k_proposals)
+    return propose_patterns(
+        context,
+        unit,
+        ranked,
+        prefer_root=prefer_root,
+        k_proposals=k_proposals,
+        fresh_fallback=fresh_fallback,
+    )
 
 
 # ---------------------------------------------------------------------------

@@ -183,12 +183,23 @@ seeds, counts verified against `configs/rq8.yaml`. Full numbers with provenance:
   **Clause 3 fails as written** — `incidence_ngram` validity 0.1906
   [0.1811, 0.2009], not below the RQ6-ported 0.05 ceiling. Reported failed with
   its reason; the number was not moved (D-KBaa4).
-- **H8.2's star control is uninformative as built, and that is stated rather
-  than claimed as a win.** Ours 0.1156 against `pattern_cooc` 0.0000
-  (p = 5.4e-06) only because the deterministic attachment is starved on stars:
-  a star's facts share patterns, so the attachment reproduces an existing fact
-  and is refused. The zero measures this baseline's implementation on stars,
-  not counting as such.
+- **H8.2, after Amendment A2 repaired the baseline: ours still leads, so it is a
+  RESULT.** The first measurement had `pattern_cooc` at exactly 0.0000 — a
+  recommender unable to propose, not one losing. With the fresh-constant
+  fallback it reaches **0.0404**; ours is **0.1156** free-running and **0.1846**
+  matched, p = 5.5e-06, rank-biserial +1.000, 27 seeds. Run tag `7f25205b`,
+  merged with `c5380cde` under the duplicate-key guard (243 star rows
+  superseded = 27 × 9, exactly the cell). **The amendment is its own control:
+  every ours-arm is byte-identical before and after**, so the fallback touched
+  only the arms it was meant to.
+  Decomposition, and it is §0's mechanism at its cleanest: the recommender gets
+  the **pattern** right 2.3× as often (0.6243 against 0.2719) and still loses
+  2.9×, because its **attach-miss is 0.935** while **ours is exactly 0.000** on
+  624–997 one-fact opportunities per arm. A pendant completion emitted by the
+  ordered walk chains its new constant onto the placed frontier by construction,
+  so the attachment cannot be wrong; `ow_ngram_1f`'s pattern@10 and hit@10 are
+  identical (0.1846) for that reason. **Design §0 expected counting to tie or
+  win on stars; measured, it does not.**
 
 Two analyzer corrections were needed to read the campaigns honestly, both in
 `analyze_rq8.py`:

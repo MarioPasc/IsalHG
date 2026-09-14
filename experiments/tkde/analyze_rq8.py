@@ -471,7 +471,15 @@ def build_tables(
 # ---------------------------------------------------------------------------
 
 
-def load_tagged(root: Path, table: str, run_tag: str | None) -> Any:
+#: The key that identifies one measurement. Two run tags may be merged only if
+#: no key appears under both --- that is the difference between *merging* two
+#: disjoint strata and *pooling* two measurements of the same thing.
+MEASUREMENT_KEY: tuple[str, ...] = ("collection", "stratum", "seed", "arm", "hidden_kind")
+
+
+def load_tagged(
+    root: Path, table: str, run_tag: str | list[str] | None, *, supersede: bool = False
+) -> Any:
     """``load_table`` restricted to one run tag.
 
     Two RQ8 campaigns share a results directory --- the free-running arms and
@@ -513,24 +521,77 @@ def load_tagged(root: Path, table: str, run_tag: str | None) -> Any:
             f"{base} holds {len(tags)} run tags ({sorted(tags)}); pass --run-tag to "
             "pick one. Pooling them would mix two measurements of the same arms."
         )
-    if run_tag is not None:
-        paths = [p for p in paths if f"__{run_tag}-" in p.name]
+    wanted = [run_tag] if isinstance(run_tag, str) else run_tag
+    if wanted is not None:
+        paths = [p for p in paths if any(f"__{tag}-" in p.name for tag in wanted)]
+
+    # Read tag by tag, in the order the caller gave, so "later supersedes
+    # earlier" is well defined rather than an accident of filename sort order.
+    order = wanted if wanted is not None else sorted(tags)
     frames = []
-    for path in paths:
-        try:
-            frames.append(pd.read_csv(path))
-        except (OSError, ValueError) as exc:
-            logger.warning("unreadable rows file %s: %s", path, exc)
-    frames = [f for f in frames if not f.empty]
-    return pd.concat(frames, ignore_index=True) if frames else pd.DataFrame()
+    for tag in order:
+        for path in [p for p in paths if f"__{tag}-" in p.name]:
+            try:
+                frame = pd.read_csv(path)
+            except (OSError, ValueError) as exc:
+                logger.warning("unreadable rows file %s: %s", path, exc)
+                continue
+            if not frame.empty:
+                frame = frame.assign(_run_tag=tag)
+                frames.append(frame)
+    if not frames:
+        return pd.DataFrame()
+    merged = pd.concat(frames, ignore_index=True)
+
+    if supersede and wanted is not None and len(wanted) > 1:
+        key = [column for column in MEASUREMENT_KEY if column in merged.columns]
+        if key:
+            before = len(merged)
+            # `keep="last"` is the whole semantics: the last tag on the command
+            # line wins the cells it covers. Amendment A2 re-ran the star
+            # stratum with the baseline repaired, so its rows replace the star
+            # rows of the earlier campaign while the non-star rows survive
+            # untouched.
+            merged = merged.drop_duplicates(subset=key, keep="last").reset_index(drop=True)
+            dropped = before - len(merged)
+            if dropped:
+                logger.warning(
+                    "superseded %d row(s) from earlier tags; %s wins the cells it covers",
+                    dropped,
+                    wanted[-1],
+                )
+    merged = merged.drop(columns=["_run_tag"], errors="ignore")
+
+    # Merging several tags is legitimate only when they measure disjoint cells
+    # --- Amendment A2 re-runs the star stratum alone, so its rows join the
+    # non-star rows of the earlier tag without either being measured twice. A
+    # duplicated measurement key means the tags overlap, and that is pooling.
+    if not supersede and wanted is not None and len(wanted) > 1:
+        key = [column for column in MEASUREMENT_KEY if column in merged.columns]
+        if key:
+            duplicated = merged.duplicated(subset=key, keep=False)
+            if bool(duplicated.any()):
+                offenders = merged.loc[duplicated, key].drop_duplicates().head(5)
+                raise RQ8AnalysisError(
+                    f"run tags {wanted} overlap on {int(duplicated.sum())} rows sharing "
+                    f"{key}; merging them would pool two measurements of the same "
+                    f"cell. First offenders:\n{offenders.to_string(index=False)}"
+                )
+    return merged
 
 
-def analyze(root: Path, experiment: str, run_tag: str | None = None) -> dict[str, Any]:
+def analyze(
+    root: Path,
+    experiment: str,
+    run_tag: str | list[str] | None = None,
+    *,
+    supersede: bool = False,
+) -> dict[str, Any]:
     """Read one RQ8 run and write ``summary.json`` / ``stats.json`` / ``tables.md``."""
-    units = load_tagged(Path(root), "units", run_tag)
+    units = load_tagged(Path(root), "units", run_tag, supersede=supersede)
     if units.empty:
         raise RQ8AnalysisError(f"no RQ8 unit rows under {Path(root) / RQ_FOLDER}")
-    census = load_tagged(Path(root), "census", run_tag)
+    census = load_tagged(Path(root), "census", run_tag, supersede=supersede)
 
     metrics = ("hit_at_10", "pattern_at_10", "validity", "connectivity")
     scores = {metric: seed_scores(units, metric) for metric in metrics}
@@ -561,7 +622,8 @@ def analyze(root: Path, experiment: str, run_tag: str | None = None) -> dict[str
 
     # Each run tag gets its own artefact directory, so the two campaigns'
     # summaries and tables cannot overwrite one another.
-    folder = experiment if run_tag is None else f"{experiment}/_tag_{run_tag}"
+    stamp = run_tag if isinstance(run_tag, str) else "+".join(run_tag or ())
+    folder = experiment if not stamp else f"{experiment}/_tag_{stamp}"
     paths = io.RunPaths(root=Path(root), rq=RQ_FOLDER, experiment=folder)
     io.write_summary(paths, summary)
     io.write_stats(paths, {"hypotheses": hypotheses, "intervals": intervals})
@@ -576,11 +638,25 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--experiment", default=EXPERIMENT)
     parser.add_argument(
         "--run-tag",
+        action="append",
         default=None,
         help=(
-            "eight-hex run tag to analyse. Required when the results directory "
-            "holds more than one campaign, because pooling two runs of "
-            "overlapping arms would corrupt the paired statistics."
+            "eight-hex run tag to analyse; repeatable. Required when the results "
+            "directory holds more than one campaign, because pooling two runs of "
+            "overlapping arms would corrupt the paired statistics. Several tags "
+            "are merged only when they measure disjoint cells --- an Amendment A2 "
+            "star re-run beside the non-star rows of an earlier tag --- and a "
+            "duplicated (collection, stratum, seed, arm, kind) key is refused."
+        ),
+    )
+    parser.add_argument(
+        "--supersede",
+        action="store_true",
+        help=(
+            "when several --run-tag overlap, let the LAST one win the cells it "
+            "covers instead of refusing. Opt-in on purpose: an Amendment A2 "
+            "re-run legitimately replaces a stratum, and silently pooling two "
+            "measurements of one cell must never be the default."
         ),
     )
     parser.add_argument("--log-level", default="INFO")
@@ -590,7 +666,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     root = args.root if args.root is not None else corpora_io.results_root()
-    result = analyze(Path(root), str(args.experiment), args.run_tag)
+    result = analyze(Path(root), str(args.experiment), args.run_tag, supersede=args.supersede)
     for name, block in result["hypotheses"].items():
         logger.info("%s: %s", name, block.get("verdict", "reported as scope"))
         if block.get("fallback"):

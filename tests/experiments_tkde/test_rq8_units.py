@@ -20,6 +20,7 @@ from experiments.tkde.rq8 import (
     _admits,
     _collect,
     attach,
+    attach_fresh,
     build_eval_units,
     delete_fact,
     fact_degrees,
@@ -358,6 +359,96 @@ class TestOneFactAcceptance:
         assert outcome.n_accepted == 1
         assert outcome.n_accepted_1f == 0
         assert outcome.delta_facts_sum == 3
+
+
+class TestFreshAttachment:
+    """Amendment A2: a repeated pattern must still be proposable on a star.
+
+    The hole this fills. A star's facts frequently share a pattern; the
+    deterministic attachment then resolves to the hub plus the highest-degree
+    matching constant --- a fact the record already carries --- and is refused,
+    and the rank retries cannot rescue it because a star has few distinct
+    constants of the required type. Measured consequence at 27 seeds:
+    `pattern_cooc` scored exactly 0.0000 on the star stratum, which is a
+    baseline unable to propose rather than one losing.
+    """
+
+    def test_a_repeated_star_pattern_is_refused_by_the_ranked_attachment(self):
+        # The premise. Every rank the heuristic offers reproduces an existing
+        # fact, so without A2 the arm emits nothing for this pattern.
+        pattern = pattern_of(STAR, STAR.facts[0])
+        assert (
+            all(attach(STAR, pattern, prefer_root=True, rank=rank) is None for rank in range(3))
+            or attach(STAR, pattern, prefer_root=True, rank=0) is None
+        )
+
+    def test_fresh_attachment_always_yields_a_new_fact(self):
+        pattern = pattern_of(STAR, STAR.facts[0])
+        extended = attach_fresh(STAR, pattern)
+        assert extended is not None
+        assert extended.m == STAR.m + 1
+        added = [f for f in extended.facts if f not in STAR.facts]
+        assert len(added) == 1
+
+    def test_fresh_attachment_stays_connected(self):
+        for record in (STAR, CHAIN, MIXED):
+            for pattern in patterns_of(record):
+                extended = attach_fresh(record, pattern)
+                if extended is not None:
+                    assert extended.is_connected(), (record.kb_id, pattern)
+
+    def test_fresh_attachment_anchors_on_the_hub(self):
+        pattern = pattern_of(STAR, STAR.facts[0])
+        extended = attach_fresh(STAR, pattern)
+        assert extended is not None
+        added = [f for f in extended.facts if f not in STAR.facts][0]
+        # Compaction keeps the surviving order, so the hub is still constant 0.
+        assert 0 in added[1]
+
+    def test_fresh_attachment_creates_constants(self):
+        pattern = pattern_of(STAR, STAR.facts[0])
+        extended = attach_fresh(STAR, pattern)
+        assert extended is not None
+        assert extended.n > STAR.n
+
+    def test_fresh_attachment_preserves_the_predicate_and_arity(self):
+        predicate, arity, _types = pattern_of(STAR, STAR.facts[0])
+        extended = attach_fresh(STAR, pattern_of(STAR, STAR.facts[0]))
+        assert extended is not None
+        added = [f for f in extended.facts if f not in STAR.facts][0]
+        assert added[0] == predicate
+        assert len(added[1]) == arity
+
+    def test_a_malformed_pattern_is_still_refused(self):
+        assert attach_fresh(STAR, (0, 1, (1,))) is None
+
+    def test_propose_patterns_emits_nothing_without_the_fallback(
+        self,
+    ):
+        # THE regression, negative half: the pre-A2 behaviour on a star.
+        from experiments.tkde.rq8 import KIND_PENDANT, EvalUnit, delete_fact, propose_patterns
+
+        minus = delete_fact(STAR, 0)
+        assert minus is not None
+        unit = EvalUnit(truth=STAR, minus=minus, hidden=STAR.facts[0], kind=KIND_PENDANT)
+        repeated = [pattern_of(minus, f) for f in minus.facts]
+        ctx = _FakeContext()
+        without = propose_patterns(
+            ctx, unit, repeated, prefer_root=True, k_proposals=10, fresh_fallback=False
+        )
+        with_fresh = propose_patterns(
+            ctx, unit, repeated, prefer_root=True, k_proposals=10, fresh_fallback=True
+        )
+        # The fallback can only add proposals, never remove them.
+        assert len(with_fresh) >= len(without)
+        assert len(with_fresh) > 0
+
+
+class _FakeContext:
+    """Minimal stand-in for ``CollectionContext`` in the attachment tests."""
+
+    n_types = 3
+    n_preds = 3
 
 
 class TestPatternBaselines:

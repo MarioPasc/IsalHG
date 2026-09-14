@@ -139,21 +139,78 @@ Amendment A1" misstates what was pre-registered when, and must not be used.
 | `wd50k66` | `incidence_ngram` | 0.0002 | [0.0000, 0.0009] |
 | `wd50k66` | `random_pattern` | 0.0015 | [0.0006, 0.0030] |
 
-## 5. H8.2 — the star control, which did not behave as pre-stated
+## 5. H8.2 — the star control, repaired under Amendment A2, and ours still leads
 
-Design §4 expected `pattern_cooc ≥ ow_ngram` on stars. Measured on
-`wd50k66/star`, pendant hidden facts: **ours 0.1156, `pattern_cooc` 0.0000**,
-Δ = +0.1156, p = 5.4 × 10⁻⁶ — ours ahead on the control.
+**First measurement, and why it could not be reported.** On `wd50k66/star`
+(pendant hidden facts) ours scored 0.1156 and `pattern_cooc` **exactly
+0.0000** — not a recommender losing, a recommender unable to propose. A star's
+facts frequently share a pattern; the deterministic attachment resolves that
+pattern to the hub plus the highest-degree matching constant, which is a fact
+the record already carries, so it is refused, and the rank retries cannot rescue
+it because a star has few distinct constants of the required type.
 
-**This is reported with its mechanism caveat, not as a win.** `pattern_cooc`
-scores exactly zero because on a star the attachment heuristic is starved: a
-star's facts frequently share a pattern, the deterministic attachment then
-reproduces a fact the record already carries, and the proposal is refused. The
-three-deep rank retry does not rescue it because a star has few distinct
-constants of matching type. So the 0.0000 measures **this implementation of the
-counting baseline on stars**, not counting as such. The honest reading is that
-the star control is uninformative as built, and the paper should say so rather
-than claim the control was won.
+**Amendment A2 (pre-registered before re-measurement,
+`../experiments/RQ8_PILOT.md` §3a-bis).** When every ranked attachment would
+duplicate, the pattern is instantiated over **fresh constants**, pendant to the
+hub. Strictly in the baseline's favour. Star units only, same 27 seeds, run tag
+**`7f25205b`**, merged with the non-star rows of `c5380cde` under a
+duplicate-key guard (243 star rows superseded = 27 seeds × 9 arms, exactly the
+cell re-run).
+
+**The amendment is its own control: our arms did not move at all.**
+
+| arm | star hit@10 before A2 | after A2 |
+|---|---|---|
+| `ow_ngram` | 0.1156 | **0.1156** |
+| `ow_ngram_1f` | 0.1846 | **0.1846** |
+| `ow_ngram_ho` | 0.1220 | **0.1220** |
+| `ow_ngram_ho_1f` | 0.1785 | **0.1785** |
+| `fact_ngram` | 0.0287 | 0.0287 |
+| `pattern_cooc` | 0.0000 | **0.0404** |
+| `pattern_freq` | 0.0000 | **0.0261** |
+| `random_pattern` | 0.0000 | 0.0009 |
+
+The fallback touches only the arms that were being refused, exactly as designed.
+
+**H8.2 after the repair: ours 0.1156 against `pattern_cooc` 0.0404**,
+Δ = +0.0752, p = 5.5 × 10⁻⁶, rank-biserial **+1.000** over 27 seeds. The matched
+arm `ow_ngram_1f` reaches **0.1846**, 4.6× the recommender.
+
+**Per the pre-registration, this is a result, not a control.** Design §0 expected
+that "on stars the missing statement is a pattern-prediction contest where a
+co-occurrence recommender is expected to tie or win". With the recommender able
+to propose, it still does not: it loses 0.0404 to 0.1156 free-running and to
+0.1846 matched.
+
+**And the decomposition says exactly why — this is §0's mechanism in its purest
+form.** `wd50k66/star/pendant`, after A2:
+
+| arm | hit@10 | pattern@10 | **attach-miss ∣ 1f** | denom |
+|---|---|---|---|---|
+| `ow_ngram` | 0.1156 | 0.2719 | **0.000** | 624 |
+| `ow_ngram_1f` | 0.1846 | 0.1846 | **0.000** | 997 |
+| `ow_ngram_ho_1f` | 0.1785 | 0.1785 | **0.000** | 964 |
+| `pattern_cooc` | 0.0404 | **0.6243** | 0.935 | 3,371 |
+| `pattern_freq` | 0.0261 | 0.3785 | 0.931 | 2,044 |
+| `fact_ngram` | 0.0287 | 0.3296 | 0.475 | 295 |
+
+The recommender gets the **pattern** right 2.3× as often as we do (0.6243
+against 0.2719) and still loses by 2.9×, because when it has the right pattern
+it puts it in the wrong place 93.5 % of the time. **Our attachment-miss rate on
+stars is exactly 0.000** — every ordered-walk arm, every one-fact proposal, 624
+to 997 opportunities each. That is not a tuning artefact: a pendant completion
+emitted by the ordered walk chains its new constant onto the placed frontier by
+construction, so the attachment cannot be wrong. `ow_ngram_1f`'s `pattern@10`
+and `hit@10` are identical (0.1846) for the same reason — with attach-miss zero,
+pattern-right implies hit.
+
+**Citable sentence.** On star-shaped records the completion model is a *worse*
+pattern predictor than item–item co-occurrence (0.272 against 0.624) and still
+proposes the true missing fact 2.9× more often (0.116 against 0.040;
+p = 5.5 × 10⁻⁶, rank-biserial 1.000, 27 seeds), because the language attaches
+correctly by construction — attachment-miss 0.000 against the recommender's
+0.935 — after the recommender was given a repaired attachment that lifted it off
+exactly zero.
 
 ## 6. H8.3 — validity and connectivity
 

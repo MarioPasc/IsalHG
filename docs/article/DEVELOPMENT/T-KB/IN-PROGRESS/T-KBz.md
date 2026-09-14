@@ -78,6 +78,43 @@ against each other so the word-space claim is bounded rather than asserted.
   under the median rises with `N`, and the `N = 5` shortfall is a *sub-record*
   rather than an arbitrary object. Every consensus row carries
   `sub_record_drop`.
+- **D-KBz8 (orchestrator, 2026-09-14, after campaign 2308421).** 37 of 122 tasks
+  hit the 8 h wall; 358 of 648 units written. The re-price from the campaign's
+  own logs put a unit at 0.19–3.13 h in eleven cells and at or beyond the wall in
+  seven. **Cause: the exact-HGED judge, not the ball.** At `N = 15` the ball is
+  127 s of a ≥ 540 s collection; the rest is ~20 judge calls per collection on
+  the merges' large wrong records, which grow with `N` because
+  `align_merge_iter` admits a constant once ≥ N/2 members carry an unmatched one
+  of the same type and pattern. 17.8 % of judged rows already fell back to
+  `bipartite_ged_path` after burning the full 60 s budget.
+  **The declared restricted-ball fallback was NOT applied**, because it addresses
+  ~20 % of the cost and would have looked like a remedy without being one.
+  Ruled instead (option B): the seven heavy cells re-run under a **shorter oracle
+  budget, 8 s**, which is a measured parameter and therefore its own run tag
+  (`1efdcf54` against the frozen `ef0c58b4`). All 27 seeds per heavy cell, not
+  only the missing ones, because a cell split across two budgets is two
+  instruments averaged; the analyzer refuses that (`check_one_tag_per_cell`) and
+  the first pass's 18 heavy-cell units are superseded with
+  `--supersede-tag ef0c58b4`. The primary metric, exact recovery, is
+  certificate-based and untouched by the judge's budget; the secondary,
+  fact distance (H3.2), is tested within cell and now footnotes its
+  exact-vs-bipartite rate per cell.
+  Arrays: **2311518** light (40 units, 6 h, 32G, frozen tag), **2311519** empty
+  (79 structurally-empty units, 1 task, 1 h, 8G, frozen tag), **2311520** heavy
+  (189 units, 6 h, **64G**, new tag). 64G because 2308421 peaked at 25.9 GB
+  against 32G on a heavy task; there was no OOM in my array.
+- **The pricing error, recorded rather than smoothed over.** The pre-submission
+  estimate of 1.6–3.3 h per task was extrapolated from a two-collection smoke at
+  `N = 5` on `ndc_classes`, and `N = 9` / `N = 15` were never measured — both
+  pricing runs were killed by my own later code changes. The submission went
+  ahead on the sound reasoning that deferral is safe (it was; no row is wrong),
+  but the honest label at that moment was "unpriced", not a range.
+- **A launcher defect, found by triggering it.** `rq3v2_launcher.sh` read only
+  `$1`, so `--resume-heavy --dry-run` submitted a 189-task array while reporting
+  a dry run. The three recovery arrays above were launched that way; their
+  parameters were verified correct after the fact (`scontrol`: 6 h/32G, 1 h/8G,
+  6 h/64G, arrays 40/1/189) so nothing had to be cancelled. The launcher now
+  parses every argument and refuses an unknown one.
 - **D-KBz7 (orchestrator, 2026-09-13, pre-registration amendment).** The word
   metric of the median is the **indel** distance
   (`|w₁| + |w₂| − 2|LCS|`), not Levenshtein. It is the metric of the ball the arm

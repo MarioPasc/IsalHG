@@ -57,15 +57,58 @@ START_CUTOFF_S="${TKDE_START_CUTOFF_S:-21600}"
 WORKER="${SCRIPT_DIR}/rq3v2_worker.sh"
 [[ -f "${WORKER}" ]] || { echo "ERROR: worker not found: ${WORKER}" >&2; exit 1; }
 
+# ---------------------------------------------------------------------------
+# The recovery pass after campaign 2308421 (37 of 122 tasks hit the 8 h wall).
+#
+# The re-price from that campaign's own logs put one unit at 0.19-3.13 h in the
+# LIGHT cells and at or beyond the 8 h wall in the HEAVY ones, so the two halves
+# cannot share a submission. The cause is the exact-HGED judge, not the ball: at
+# N = 15 the ball is 127 s of a >= 540 s collection, and the remaining ~410 s is
+# ~20 judge calls on the merges' large wrong records, which grow with N because
+# align_merge_iter admits constants at >= N/2 agreement. The declared
+# restricted-ball fallback would save about a fifth of that and was therefore NOT
+# applied; the orchestrator ruled the oracle budget down instead (option B).
+#
+# LIGHT cells keep the frozen 60 s budget and the original tag: they resume.
+# HEAVY cells re-run ALL 27 seeds under a shorter budget, which is a measured
+# parameter and so carries its own tag. All 27, not only the missing ones,
+# because the analyzer refuses a cell measured half under one oracle budget and
+# half under another; the first pass's partial rows for those cells are
+# superseded at analysis time with --supersede-tag.
+LIGHT_CELLS="ndc_classes|non_star_N5_t1:ndc_classes|non_star_N5_t2:ndc_classes|non_star_N9_t1:wd50k66|non_star_N5_t2:wd50k66|non_star_N9_t1:wd50k66|star_N9_t2:wd50k66|star_N15_t1"
+EMPTY_CELLS="ndc_classes|star_N5_t1:ndc_classes|star_N5_t2:ndc_classes|star_N9_t1:ndc_classes|star_N9_t2:ndc_classes|star_N15_t1:ndc_classes|star_N15_t2"
+HEAVY_CELLS="ndc_classes|non_star_N9_t2:ndc_classes|non_star_N15_t1:ndc_classes|non_star_N15_t2:wd50k66|non_star_N9_t2:wd50k66|non_star_N15_t1:wd50k66|non_star_N15_t2:wd50k66|star_N15_t2"
+
+# Worst case for the heavy budget, stated so the choice is checkable: at N = 15 a
+# unit is 50 collections x ~20 judge calls = 1,000 calls. Every one timing out at
+# 8 s is 8,000 s, plus the measured ball at 127 s x 50 = 6,350 s, plus merges and
+# medoids at well under 1 s each: about 14,500 s = 4.0 h against a 6 h wall.
+HEAVY_TIMEOUT_S="${TKDE_HEAVY_TIMEOUT_S:-8}"
+
 MODE="submit"
 SMOKE=0
-case "${1:-}" in
-    --dry-run)   MODE="dry" ;;
-    --test-only) MODE="test" ;;
-    --smoke)     SMOKE=1 ;;
-    "")          ;;
-    *)           echo "ERROR: unknown option ${1}" >&2; exit 2 ;;
-esac
+RESUME_KIND=""
+# Every argument is read, not just the first. The earlier single-`case "${1:-}"`
+# form silently DROPPED a trailing flag: `--resume-heavy --dry-run` submitted a
+# 189-task array while reporting a dry run (2026-09-14). A mode flag that can be
+# ignored is how a campaign gets launched by someone who believes they previewed
+# it, so an unknown or unreachable argument is now a refusal.
+while (( $# )); do
+    case "$1" in
+        --dry-run)      MODE="dry" ;;
+        --test-only)    MODE="test" ;;
+        --smoke)        SMOKE=1 ;;
+        --resume-light) RESUME_KIND="light" ;;
+        --resume-empty) RESUME_KIND="empty" ;;
+        --resume-heavy) RESUME_KIND="heavy" ;;
+        *)              echo "ERROR: unknown option $1" >&2; exit 2 ;;
+    esac
+    shift
+done
+if [[ "${SMOKE}" == "1" && -n "${RESUME_KIND}" ]]; then
+    echo "ERROR: --smoke and --resume-* are different submissions; pass one" >&2
+    exit 2
+fi
 
 # A path under FSCRATCH here would be written to at run time and the job would
 # die when the quota refused it. Refuse at submission instead.
@@ -104,6 +147,40 @@ if [[ "${SMOKE}" == "1" ]]; then
         --output="${LOGS_DIR}/tkde-rq3v2-smoke_%j.out"
         --error="${LOGS_DIR}/tkde-rq3v2-smoke_%j.err"
         --export="ALL,${COMMON_EXPORT},TKDE_SMOKE=1,TKDE_N_SHARDS=1,TKDE_N_TASKS=1,TKDE_RUN_ANALYZERS=1,TKDE_START_CUTOFF_S=1200"
+        "${WORKER}"
+    )
+elif [[ -n "${RESUME_KIND}" ]]; then
+    # One unit per task everywhere except the empty cells, so the start cutoff is
+    # irrelevant (the first unit is always exempt) -- except there, where one task
+    # holds them all and must be allowed to work through them.
+    CUTOFF_R=1
+    case "${RESUME_KIND}" in
+        light)
+            CELLS="${LIGHT_CELLS}"; RESUME=1; TIMEOUT_S=""
+            N_UNITS="${TKDE_N_UNITS:-40}"; WALL_R="0-06:00:00"; MEM="32G"; THROTTLE_R=40 ;;
+        empty)
+            # Structurally empty by gate G0: one cell_empty row each, seconds of
+            # work. They go in ONE task rather than 79, which is the only reading
+            # of SCBI's floor that makes sense for work that cannot be lengthened.
+            CELLS="${EMPTY_CELLS}"; RESUME=1; TIMEOUT_S=""
+            N_UNITS=1; WALL_R="0-01:00:00"; MEM="8G"; THROTTLE_R=1; CUTOFF_R=3000 ;;
+        heavy)
+            # No --resume: all 27 seeds per cell must sit under the new tag.
+            CELLS="${HEAVY_CELLS}"; RESUME=0; TIMEOUT_S="${HEAVY_TIMEOUT_S}"
+            # 64G, not 32G: the first campaign peaked at 25.9 GB on 2308421_39,
+            # a heavy task, and a 6 GB margin on the cells that grow fastest is
+            # not a margin.
+            N_UNITS="${TKDE_N_UNITS:-189}"; WALL_R="0-06:00:00"; MEM="64G"; THROTTLE_R=32 ;;
+    esac
+    THROTTLE=$(( THROTTLE_R < N_UNITS ? THROTTLE_R : N_UNITS ))
+    ARGS=(
+        --array="1-${N_UNITS}%${THROTTLE}"
+        --time="${WALL_R}"
+        --mem="${MEM}"
+        --job-name="tkde-rq3v2-${RESUME_KIND}"
+        --output="${LOGS_DIR}/tkde-rq3v2-${RESUME_KIND}_%A_%a.out"
+        --error="${LOGS_DIR}/tkde-rq3v2-${RESUME_KIND}_%A_%a.err"
+        --export="ALL,${COMMON_EXPORT},TKDE_SMOKE=0,TKDE_N_SHARDS=${N_UNITS},TKDE_N_TASKS=${N_UNITS},TKDE_RUN_ANALYZERS=0,TKDE_START_CUTOFF_S=${CUTOFF_R},TKDE_ONLY_CELLS=${CELLS},TKDE_RESUME=${RESUME},TKDE_HGED_TIMEOUT_S=${TIMEOUT_S}"
         "${WORKER}"
     )
 else

@@ -173,6 +173,7 @@ ROW_COLUMNS: tuple[str, ...] = (
     "exact_recovery",
     "fact_dist",
     "fact_dist_judge",
+    "judge_timeout_s",
     "medoid_cost",
     "LB",
     "ratio",
@@ -1887,6 +1888,60 @@ def enumerate_units(config: Mapping[str, Any]) -> list[Unit]:
     return units
 
 
+def select_units(
+    units: Sequence[Unit],
+    *,
+    only_cells: Sequence[str] = (),
+    resume_root: Path | None = None,
+    tag: str | None = None,
+) -> list[Unit]:
+    """Narrow the unit list for a resume pass.
+
+    Both filters are **operational**: they say which of the already-enumerated
+    units this submission runs, never what any of them measures.  They are CLI
+    arguments and not configuration keys, so the run tag is untouched and a
+    resumed unit joins the units the first pass wrote instead of forming a second
+    experiment beside them.
+
+    Parameters
+    ----------
+    units : Sequence[Unit]
+        The full enumeration.
+    only_cells : Sequence of str, optional
+        Keep only units whose ``<collection>|<cell>`` matches one of these.
+        Empty keeps every cell.
+    resume_root : Path or None, optional
+        Drop units already written under ``tag`` at this results root.
+    tag : str or None, optional
+        The run tag to test against; required with ``resume_root``.
+
+    Returns
+    -------
+    list[Unit]
+        The units to run, in enumeration order.
+
+    Raises
+    ------
+    RQ3v2Error
+        If ``resume_root`` is given without ``tag``, or a named cell matches
+        nothing --- a typo there would silently run an empty campaign.
+    """
+    chosen = list(units)
+    if only_cells:
+        wanted = {name.strip() for name in only_cells if name.strip()}
+        chosen = [unit for unit in chosen if f"{unit.collection}|{unit.cell}" in wanted]
+        seen = {f"{unit.collection}|{unit.cell}" for unit in units}
+        unknown = wanted - seen
+        if unknown:
+            raise RQ3v2Error(f"--only-cells names cells that do not exist: {sorted(unknown)}")
+    if resume_root is not None:
+        if tag is None:
+            raise RQ3v2Error("resume_root needs the run tag to test against")
+        paths = io.RunPaths(root=Path(resume_root), rq=RQ_DIR, experiment=EXPERIMENT)
+        chosen = [unit for unit in chosen if not unit_is_done(paths, unit, tag)]
+    return chosen
+
+
 def unit_is_done(paths: io.RunPaths, unit: Unit, tag: str) -> bool:
     """True when this unit's tagged row file exists and parses.
 
@@ -1935,6 +1990,9 @@ def run_unit(
         "cell_t": unit.t,
         "N": unit.n_members,
         "t": unit.t,
+        # On the row, not only in the manifest: the analyzer merges two tags cell
+        # by cell and must be able to see, per row, which oracle budget scored it.
+        "judge_timeout_s": _budget(config.get("hged_timeout_s")) or "",
     }
     if not pool:
         # A structurally empty stratum is a measured fact of gate G0 (no NDC
@@ -2030,6 +2088,8 @@ def run_shard(
     *,
     data_root: Path | None,
     start_cutoff_s: float | None,
+    only_cells: Sequence[str] = (),
+    resume: bool = False,
 ) -> dict[str, Any]:
     """Execute one shard of the RQ3 v2 unit list.
 
@@ -2060,7 +2120,16 @@ def run_shard(
     paths = io.RunPaths(root=out, rq=RQ_DIR, experiment=EXPERIMENT)
     paths.ensure()
 
-    units = enumerate_units(config)
+    # The filters run BEFORE the shard split, so a resume pass shards only the
+    # work that is left and every task carries a real unit. Sharding the full 648
+    # and skipping inside would give most tasks nothing to do, which is the
+    # scheduler load SCBI's two-hour floor exists to prevent.
+    units = select_units(
+        enumerate_units(config),
+        only_cells=only_cells,
+        resume_root=Path(out) if resume else None,
+        tag=tag,
+    )
     mine = [unit for i, unit in enumerate(units) if i % count == index - 1]
 
     collections: dict[str, KBCollection] = {}
@@ -2180,6 +2249,27 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--census", action="store_true", help="print the G0 census and exit")
     parser.add_argument("--data-root", type=Path, default=None)
     parser.add_argument("--start-cutoff-s", type=float, default=None)
+    parser.add_argument(
+        "--only-cells",
+        default="",
+        help="comma-separated <collection>|<cell> names to run; operational, not a config key",
+    )
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="drop units already written under this run tag at --out",
+    )
+    parser.add_argument(
+        "--hged-timeout-s",
+        type=float,
+        default=None,
+        help=(
+            "override the exact-oracle budget. This is a MEASURED parameter, not an "
+            "operational one: it is folded into the configuration before the run tag is "
+            "computed, so a run under a different budget carries a different tag and can "
+            "never be pooled with one under the frozen budget."
+        ),
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
 
@@ -2196,8 +2286,21 @@ def main(argv: Sequence[str] | None = None) -> int:
     elif args.pilot:
         config = _apply_overlay(config, "pilot")
 
+    if args.hged_timeout_s is not None:
+        config = {**config, "hged_timeout_s": float(args.hged_timeout_s)}
+    cells = tuple(name for name in str(args.only_cells).split(",") if name.strip())
     if args.count:
-        print(len(enumerate_units(config)))
+        root = Path(args.out) if args.out is not None else results_root()
+        print(
+            len(
+                select_units(
+                    enumerate_units(config),
+                    only_cells=cells,
+                    resume_root=root if args.resume else None,
+                    tag=run_tag(config),
+                )
+            )
+        )
         return 0
 
     if args.census:
@@ -2224,6 +2327,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         _parse_shard(args.shard),
         data_root=args.data_root,
         start_cutoff_s=args.start_cutoff_s,
+        only_cells=cells,
+        resume=bool(args.resume),
     )
     logger.info(
         "shard %s (tag %s): %d units, %d rows, %d dropped, %.1f s",

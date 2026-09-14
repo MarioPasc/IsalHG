@@ -49,6 +49,7 @@ NUMERIC_COLUMNS: tuple[str, ...] = (
     "n_ties",
     "n_decoded",
     "n_decoded_connected",
+    "judge_timeout_s",
     "medoid_cost",
     "LB",
     "ratio",
@@ -103,6 +104,122 @@ def load_rows(root: Path, run_tag: str | None = None) -> pd.DataFrame:
         if frame.empty:
             raise RQ3v2AnalysisError(f"no rows carry run_tag {run_tag!r}")
     return frame
+
+
+def supersede_tag(frame: pd.DataFrame, tag: str) -> pd.DataFrame:
+    """Drop ``tag``'s rows in any cell another tag also measured.
+
+    The heavy cells were re-scored under a shorter exact-oracle budget, so they
+    carry a second tag; the partial rows the first pass had written for those
+    cells are superseded and must not be pooled with the re-score.  Naming the
+    superseded tag explicitly, rather than letting the analyzer prefer whichever
+    tag has more seeds, keeps the decision in the command line and in the doc
+    where a reader can see it.
+
+    Cells that only ``tag`` measured are untouched --- superseding is per cell,
+    not wholesale.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        The loaded rows.
+    tag : str
+        The tag to yield where another tag also covers the cell.
+
+    Returns
+    -------
+    pandas.DataFrame
+        The surviving rows.
+    """
+    key = ["collection", "stratum", "cell_N", "cell_t"]
+    tags = frame.groupby(key)["run_tag"].agg(lambda s: set(s.astype(str)))
+    contested = {cell for cell, found in tags.items() if len(found) > 1 and tag in found}
+    if not contested:
+        return frame
+    cells = frame[key].apply(tuple, axis=1)
+    drop = cells.isin(contested) & (frame["run_tag"].astype(str) == tag)
+    logger.info(
+        "superseding tag %s in %d contested cells; %d rows dropped",
+        tag,
+        len(contested),
+        int(drop.sum()),
+    )
+    return frame[~drop]
+
+
+def check_one_tag_per_cell(frame: pd.DataFrame) -> dict[str, Any]:
+    """Refuse a table whose cells are not each measured under a single tag.
+
+    Two tags may legitimately coexist in one campaign --- the heavy cells were
+    re-scored under a shorter exact-oracle budget, which is a measured parameter
+    and therefore a different tag --- but a *cell* measured partly under one
+    budget and partly under another is two experiments averaged together, and no
+    footnote repairs that.  The merge is therefore by cell, and a cell carrying
+    two tags is an error rather than a warning.
+
+    Parameters
+    ----------
+    frame : pandas.DataFrame
+        The loaded rows.
+
+    Returns
+    -------
+    dict
+        Per cell, its tag and the oracle budget that scored it.
+
+    Raises
+    ------
+    RQ3v2AnalysisError
+        If any cell carries more than one run tag.
+    """
+    key = ["collection", "stratum", "cell_N", "cell_t"]
+    tags = frame.groupby(key)["run_tag"].agg(lambda s: sorted(set(s.astype(str))))
+    offenders = {str(cell): found for cell, found in tags.items() if len(found) > 1}
+    if offenders:
+        raise RQ3v2AnalysisError(
+            "these cells carry more than one run tag, so they mix two oracle budgets "
+            f"and cannot be pooled: {offenders}"
+        )
+    budgets = frame.groupby(key)["judge_timeout_s"].agg(
+        lambda s: sorted({v for v in s.astype(str) if v and v != "nan"})
+    )
+    return {
+        str(cell): {"run_tag": tags.loc[cell][0], "judge_timeout_s": budgets.loc[cell]}
+        for cell in tags.index
+    }
+
+
+def fallback_rate_by_cell(frame: pd.DataFrame) -> pd.DataFrame:
+    """Per cell, how often the exact oracle gave way to the bipartite judge.
+
+    The footnote every table carrying a fact distance needs: a cell scored under
+    a short oracle budget reports more bipartite readings, and the reader is
+    entitled to know which cells those are rather than being told the axis is
+    "exact HGED" and left to assume it everywhere.
+    """
+    rows = frame[frame["fact_dist_judge"].notna() & (frame["fact_dist_judge"] != "")]
+    if rows.empty:
+        return pd.DataFrame()
+    grouped = rows.groupby(["collection", "stratum", "cell_N", "cell_t"])
+    return (
+        pd.DataFrame(
+            {
+                "n_scored": grouped.size(),
+                "frac_exact": grouped["fact_dist_judge"].apply(
+                    lambda s: float((s == "exact_hged").mean())
+                ),
+                "frac_bipartite": grouped["fact_dist_judge"].apply(
+                    lambda s: float((s == "bipartite_ged_path").mean())
+                ),
+                "judge_timeout_s": grouped["judge_timeout_s"].apply(
+                    lambda s: ",".join(sorted({str(v) for v in s if str(v) not in ("", "nan")}))
+                ),
+                "run_tag": grouped["run_tag"].apply(lambda s: ",".join(sorted(set(s.astype(str))))),
+            }
+        )
+        .reset_index()
+        .sort_values(["collection", "stratum", "cell_N", "cell_t"])
+    )
 
 
 def method_label(frame: pd.DataFrame) -> pd.Series:
@@ -447,22 +564,34 @@ def summarize(frame: pd.DataFrame) -> dict[str, Any]:
     }
 
 
-def analyze(root: Path, out: Path, run_tag: str | None) -> dict[str, Any]:
+def analyze(
+    root: Path, out: Path, run_tag: str | None, superseded: str | None = None
+) -> dict[str, Any]:
     """Run the full analysis and write ``summary.json``, ``stats.json`` and ``tables.md``."""
     frame = load_rows(root, run_tag)
-    if len(frame["run_tag"].astype(str).unique()) > 1 and run_tag is None:
-        logger.warning(
-            "rows carry %d distinct run tags; pass --run-tag to analyze one configuration",
-            len(frame["run_tag"].astype(str).unique()),
-        )
+    if superseded:
+        frame = supersede_tag(frame, superseded)
+    tags = sorted(frame["run_tag"].astype(str).unique())
+    if len(tags) > 1 and run_tag is None:
+        # Expected in this campaign: the heavy cells were re-scored under a
+        # shorter oracle budget. Legitimate per cell, fatal within one --- which
+        # check_one_tag_per_cell enforces below.
+        logger.info("merging %d run tags cell by cell: %s", len(tags), tags)
     paths = io.RunPaths(root=out, rq=RQ_DIR, experiment=EXPERIMENT)
     paths.ensure()
+    # Raises rather than warns: a cell averaged over two oracle budgets is two
+    # experiments, and no footnote repairs that.
+    per_cell_tags = check_one_tag_per_cell(frame)
     summary = summarize(frame)
+    summary["tag_by_cell"] = per_cell_tags
     stats = hypotheses(frame)
     tables = {
         "Headline --- exact recovery and fact distance": headline_table(frame),
         "Capability --- what each arm can do": capability_table(frame),
         "Cost of the two consensus arms (H3.5)": cost_table(frame),
+        "Judge fallback rate per cell (footnote to every fact-distance column)": (
+            fallback_rate_by_cell(frame)
+        ),
         "Realised edit mix": edit_mix_table(frame),
     }
     io.write_summary(paths, summary)
@@ -490,6 +619,15 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--root", type=Path, default=None, help="results root the rows are under")
     parser.add_argument("--out", type=Path, default=None, help="where to write the outputs")
     parser.add_argument("--run-tag", default=None)
+    parser.add_argument(
+        "--supersede-tag",
+        default=None,
+        help=(
+            "drop this tag's rows in any cell another tag also measured; the heavy cells "
+            "were re-scored under a shorter oracle budget and their partial first-pass rows "
+            "are superseded"
+        ),
+    )
     parser.add_argument("--log-level", default="INFO")
     args = parser.parse_args(argv)
 
@@ -498,7 +636,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
     root = args.root or results_root()
-    result = analyze(root, args.out or root, args.run_tag)
+    result = analyze(root, args.out or root, args.run_tag, args.supersede_tag)
     print(json.dumps(result["summary"], indent=2))
     print()
     print(_verdicts(result["stats"]))

@@ -296,7 +296,122 @@ python -m experiments.tkde.rq3v2 --config experiments/tkde/configs/rq3v2.yaml \
 ```
 
 <!-- PILOT-TABLE-START -->
-**Status at hand-off: running, table not yet filled.** Fill it with
+## The measured price, from campaign 2308421 itself
+
+The local pilot is superseded: the campaign measured the same quantity at the
+campaign's own scale, on the campaign's own hardware, over 358 units. Median
+wall-clock **per unit** (each unit = 50 collections), taken from the tasks' own
+`unit done` timestamps — not from the rows' `secs`, which both over- and
+under-count (the exact-HGED judge runs outside the timer, and the three ball arms
+each carry the one bundled enumeration).
+
+| cell | median h/unit | status |
+|---|---|---|
+| wd50k66 star N5 t1 | 0.19 | clean |
+| wd50k66 star N9 t1 | 0.55 | clean |
+| wd50k66 star N5 t2 | 0.61 | clean |
+| ndc_classes non-star N5 t1 | 0.76 | clean |
+| wd50k66 non-star N5 t1 | 0.97 | clean |
+| ndc_classes non-star N5 t2 | 1.90 | clean |
+| wd50k66 star N15 t1 | 1.94 | clean |
+| wd50k66 star N9 t2 | 2.24 | clean |
+| ndc_classes non-star N9 t1 | 2.39 | clean |
+| wd50k66 non-star N5 t2 | 2.42 | clean |
+| wd50k66 non-star N9 t1 | 3.13 | clean |
+| ndc_classes non-star N9 t2 | ≥ 6.42 | **censored at the 8 h wall** |
+| ndc_classes non-star N15 t1 | ≥ 7.47 | **censored** |
+| wd50k66 star N15 t2 | ≥ 7.49 | **censored** |
+| wd50k66 non-star N9 t2 | ≥ 7.59 | **censored** |
+| ndc_classes non-star N15 t2 | — | no unit ever completed |
+| wd50k66 non-star N15 t1 | — | no unit ever completed |
+| wd50k66 non-star N15 t2 | — | no unit ever completed |
+
+Every censored median sits just under 27,600 s, which is the wall minus
+teardown. Those four rows are not measurements of the work; they are
+measurements of the wall.
+
+**Where the time goes, and it is not the ball.** Median seconds per *collection*,
+from the rows:
+
+| | N = 5 | N = 9 | N = 15 |
+|---|---|---|---|
+| bundled ball (all three arms, one enumeration) | 33.4 | 85.7 | 127.0 |
+| `consensus_fact` | 0.28 | 0.85 | 2.70 |
+| all twelve medoids together | ~0.01 | ~0.01 | ~0.01 |
+
+At `N = 15` a unit is ≥ 27,000 s over 50 collections, i.e. ≥ 540 s per
+collection, of which the ball is 127 s. The remaining ~410 s is the **exact-HGED
+judge**: about 20 calls per collection (12 medoids + 4 merges + 4 consensus) at
+~20 s each, and 46,463 of 261,169 judged rows (17.8 %) already fall back to
+`bipartite_ged_path` *after* burning the full 60 s budget. The cost grows with
+`N` because the merges return larger wrong records at larger `N` —
+`align_merge_iter` admits a constant once ≥ N/2 members carry an unmatched one of
+the same type and pattern — and exact HGED on a large wrong record is
+exponential.
+
+**The declared restricted-ball fallback was therefore not applied.** It addresses
+the ball, which is ~20 % of the cost at `N = 15`, and would have left those cells
+well over the wall while looking like a remedy. The lever that matches the cause
+is the oracle budget.
+
+### The pricing error, stated plainly
+
+The estimate in this document before the campaign — 1.6–3.3 h per *task* of
+about five units — was wrong by one to two orders of magnitude on the heavy
+cells. It was extrapolated from a two-collection smoke at `N = 5` on
+`ndc_classes` (12.6 s per collection; the truth at that cell is 55 s) and `N = 9`
+and `N = 15` were never measured at all: both pricing runs that would have
+measured them were killed by later code changes of my own. The submission went
+ahead on the reasoning that a deferral is safe, which it was — no row is wrong —
+but the honest label at that moment was "unpriced", not a range.
+
+---
+
+## The recovery pass (2026-09-14)
+
+| array | job | cells | units | tasks | wall | mem | tag |
+|---|---|---|---|---|---|---|---|
+| light | 2311518 | the 7 cells at ≤ 3.13 h/unit | 40 missing | 40, one unit each | 6 h | 32G | `ef0c58b4` (frozen) |
+| empty | 2311519 | the 6 `ndc_classes` star cells | 79 missing | 1 | 1 h | 8G | `ef0c58b4` (frozen) |
+| heavy | 2311520 | the 7 cells at ≥ 6.4 h/unit | all 189 (27 seeds × 7) | 189, one unit each | 6 h | 64G | `1efdcf54` (8 s oracle) |
+
+**Why the heavy cells re-run all 27 seeds and not only the 171 missing.** The
+oracle budget is a *measured* parameter, so a shorter budget is a different run
+tag. A cell scored half under the 60 s budget and half under the 8 s one is two
+instruments averaged together, which no footnote repairs, so the analyzer refuses
+it (`check_one_tag_per_cell`). The 18 heavy-cell units the first pass did write
+are superseded at analysis time with `--supersede-tag ef0c58b4`, which drops that
+tag's rows **only** in cells another tag also measured.
+
+**Why 8 s.** At `N = 15` a unit is 50 collections × ~20 judge calls = 1,000
+calls. Every one timing out at 8 s is 8,000 s; the measured ball is 127 s × 50 =
+6,350 s; merges and medoids are under 1 s each. Worst case ≈ 14,500 s = 4.0 h
+against a 6 h wall.
+
+**Why 64G on the heavy array.** The first campaign peaked at 25.9 GB
+(`2308421_39`, a heavy task) against `--mem=32G`. A 6 GB margin on the cells that
+grow fastest is not a margin. There was **no** OOM in 2308421 — that belonged to
+another job in the wave.
+
+**Coverage arithmetic, which closes exactly:** 358 written + 40 light + 79 empty
+= 477 under the frozen tag, of which the 18 heavy-cell units are superseded →
+459 = 17 cells × 27. Plus 189 = 7 cells × 27 under the heavy tag. Total 648.
+
+Fill the tables, once all three arrays land, with
+
+```
+python -m experiments.tkde.analyze_rq3v2 --root <root> --supersede-tag ef0c58b4
+```
+
+⚠ **Do not run the hypothesis tests on partial coverage.** A partial table must
+not be read.
+
+---
+
+## The local pilot (superseded)
+
+Kept for the record only; the campaign's own price above replaces it. Fill it, if
+anyone wants it, with
 
 ```
 python -m experiments.tkde.analyze_rq3v2 \

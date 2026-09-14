@@ -100,6 +100,27 @@ inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
   failure: satisfied on `wd50k66`, not on `ndc_classes`. RQ8 remains a
   supporting exhibit; 27 seeds decide whether the `wd50k66` lead survives Holm.
   Full table: `RQ8_PILOT.md` §3c.
+- **D-KBaa8 — Amendment A2: the star control was a hole in the baseline
+  (pre-registered 2026-09-14, orchestrator-directed, written before
+  re-measurement).** At 27 seeds `pattern_cooc` scored **exactly 0.0000** on
+  `wd50k66/star` against ours at 0.1156. A recommender that never once proposes
+  the right completion across 27 seeds is not losing a contest, it is unable to
+  enter one. Mechanism: a star's facts frequently share a pattern, the
+  deterministic attachment resolves that pattern to the hub plus the
+  highest-degree matching constant — a fact the record already carries — and the
+  attachment is refused; the three-deep rank retry cannot rescue it because a
+  star has few distinct constants of the required type. **The baseline cannot
+  express "another instance of a repeated pattern", which is exactly what a star
+  completion is.** Amendment: when the attachment and its retries would
+  reproduce an existing fact, instantiate the pattern with **fresh constants**
+  (hub takes one slot, the rest newly created of the required type) — a fact
+  over fresh constants cannot duplicate. Strictly in the baseline's favour.
+  **Only the star units are re-run**, same 27 seeds, own run tag, merged by
+  stratum: the fallback fires only where the old path emitted nothing, and on
+  non-star units the counting arms already filled 9.9–10.0 of 10 slots, bounding
+  A2's effect there at ≈ 1 %. Both outcomes are declared in advance — if ours
+  still leads, the star stratum stops being a control and becomes a result; if
+  the recommender leads, it is the design's expected control and is reported so.
 - **D-KBaa6 — two prefix constructions that would otherwise have measured the
   harness.** The incidence prefix drops its `("END",)` terminator (with it,
   validity reads 1.0000 instead of 0.1718 and the H8.3 contrast inverts); every

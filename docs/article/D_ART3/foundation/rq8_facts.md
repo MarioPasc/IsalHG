@@ -102,12 +102,19 @@ against 0.0185** — 2.5–2.6× — with rank-biserial **+0.989** and **+1.000*
 27 paired seeds. This is the one place in RQ8 where ours wins outright, and it
 is Holm-clean.
 
-**Citable sentence.** On the relational stratum of WD50K(66), a completion model
-over the ordered-walk language proposes the true missing fact in its top ten
-2.6× more often than an item–item co-occurrence recommender (0.0481 against
-0.0185; Holm-corrected paired Wilcoxon over 27 seeds, p = 1.3 × 10⁻⁵,
-rank-biserial 1.000), while on NDC-classes the recommender leads 0.3185 to
-0.1922.
+**Citable sentence — the amendment history belongs in the sentence, not a
+footnote.** H8.1 **as originally registered**, over the free-running arm, is
+**not supported on either corpus**. Under **Amendment A1, registered before
+re-measurement**, it is **supported on WD50K(66)'s relational stratum** — a
+completion model over the ordered-walk language proposes the true missing fact
+in its top ten 2.6× more often than an item–item co-occurrence recommender
+(0.048 against 0.019; Holm-corrected paired Wilcoxon over 27 seeds,
+p = 1.3 × 10⁻⁵, rank-biserial 1.000) — and **not supported on NDC-classes**,
+where the recommender leads 0.3185 to 0.1922 on what the mechanism table (§7)
+shows to be a pattern-prediction gap, not an attachment gap.
+
+Any shorter form of this claim that omits "as originally registered" or "under
+Amendment A1" misstates what was pre-registered when, and must not be used.
 
 ### 4.3 hit@10 with 95 % BCa intervals — interior, non-star
 

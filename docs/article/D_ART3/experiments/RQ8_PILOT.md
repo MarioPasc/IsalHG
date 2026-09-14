@@ -281,6 +281,51 @@ Two documentation mismatches the same review found, corrected here:
   so the extra depth is never reached in practice and cannot be inflating the
   recommender.
 
+## 3a-bis. Amendment A2 — the star control was a hole in the baseline (pre-registered 2026-09-14, before re-measurement)
+
+**Declared before the re-run it governs.** At 27 seeds the star control came out
+backwards: on `wd50k66/star` ours scored 0.1156 and `pattern_cooc` scored
+**exactly 0.0000**. A recommender that never once proposes the right completion
+on 27 seeds is not losing a contest; it is unable to enter one.
+
+**The mechanism, and why it is the baseline's defect and not a finding.** A star
+is a hub plus pendant facts, and a star's facts frequently **share a pattern** —
+same predicate, same arity, same operand types, different leaf. The attachment
+heuristic is deterministic: given that pattern it resolves to the hub plus the
+highest-degree constant of the matching type, which *is* a fact the record
+already carries, so the attachment is refused (§3's "an attachment reproducing
+an existing fact is refused"). The three-deep rank retry does not rescue it,
+because a star has few distinct constants of the required type. The baseline
+therefore **cannot express "another instance of a repeated pattern"**, which is
+precisely what a star completion is. The 0.0000 measures this implementation on
+stars, not counting as such.
+
+**What is amended, fixed here before re-measurement.** When the deterministic
+attachment — and its rank retries — would reproduce a fact the record already
+carries, the pattern is instead instantiated with **fresh constants**: the hub
+takes one slot (pendant attachment) and every remaining operand is a newly
+created constant of the required type. A fact over fresh constants cannot
+duplicate an existing one, so the arm always has a proposal to make. This is
+strictly **in the baseline's favour**; it takes nothing from ours.
+
+**Scope of the re-run, and why it is only the star units.** The fallback fires
+only where the old path emitted nothing, and on the non-star stratum that is
+nearly never: at 27 seeds the counting arms already filled **9.9–10.0 of 10**
+slots there (`pattern_cooc` 9.9 on `ndc_classes`, 10.0 on `wd50k66`;
+`pattern_freq` and `random_pattern` 10.0 on both). At most ≈ 0.1 slots per unit
+are lost to refusal on non-star units, so A2 can move those numbers by ≈ 1 % at
+the very most, and the non-star tables of §3c and the campaign stand unchanged.
+**Only `wd50k66/star` is re-run**, same 27 seeds, under its own run tag; the
+analyzer merges the star rows with the non-star rows **by stratum**, refusing
+any merge in which a `(collection, stratum, seed, arm, kind)` key appears under
+two tags — so merging can never become pooling.
+
+**What the re-measurement can show, both stated in advance.** If ours still
+leads on stars once the recommender can propose, that is a **result** and the
+star stratum stops being a control. If the recommender takes the lead, that is
+the **expected control** of the design and it is reported as such. Either way
+the 0.0000 is retired.
+
 ## 3c. Gate G8.1, amended — the matched comparison
 
 *Same three pilot seeds (80900–80902), same 200 interior units per corpus, run

@@ -1,8 +1,10 @@
 # T-KBab — the `w°` swap: RQ2 census and RQ5 clustering on `isal_ow_struct`
 
-**Status:** IN-PROGRESS (2026-09-13 13:23 CEST) · declared 2026-09-13 by D-ART6,
+**Status:** DONE (2026-10-04 10:20 CEST, agent `harvest`, wave
+`2026-10-04-harvest`) · declared 2026-09-13 by D-ART6,
 wave `2026-09-13-headline-w0`, agent `rq8`. Pre-registration:
-`../../../D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md` §5.
+`../../../D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md` §5. Both swapped
+tables are measured; closing evidence for RQ2_ow at the end.
 
 ## What
 
@@ -134,3 +136,37 @@ is complete only when rows exist; `rq2_ow_facts.md` §4 is the pending list.
   `../../../D_ART3/foundation/rq8_facts.md`.
 - The `wstar_orbit` rows these supersede are kept on disk, per the N=60→240
   precedent; nothing is deleted.
+
+## Closing evidence — RQ2_ow (2026-10-04, agent `harvest`)
+
+**Jobs 2311593 (13/13 COMPLETED) and 2311604 (9/9 COMPLETED).** Harvested to
+`/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE_ow/RQ2_wellposedness/wellposedness/`
+(257 files, 85 row files, all tag `f14fffbc`, git `81e07a9`) and analysed with the
+unmodified `analyze_rq2.py`. Unit count matches `configs/rq2_ow.yaml` exactly
+(42 exact0, 33 census, 3 bipartite, 6 oracle, 1 HyperCOT timing). Full table:
+`../../../D_ART3/foundation/rq2_ow_facts.md` §4.
+
+- **The pre-stated expectation held, and the censoring half with it.**
+  `isal_ow_struct`: 0 false merges and the exact partition on all three
+  collections — 557 classes on all 1,381 `ndc_classes` members, 1,156 on all
+  1,745 `ndc_substances`, 3,682 on all 3,988 `wd50k66` — with **0 members
+  censored**; 100/100 isomorphic pairs at distance 0 on each. `wstar_orbit` had
+  given 530 / 1,086 / 3,677 on the 1,311 / 1,661 / 3,983 members it survived at
+  60 s. The two rows are the true partition of different member sets and are
+  never to be compared without both denominators.
+- **The run reproduces the campaign bit-for-bit** on all 30 shared arm ×
+  collection census rows of the campaign's full-member tag `a5ff6092`, and the
+  arm-independent steps (bipartite asymmetry 0.441 / 0.578 / 0.4905, triangle
+  violations, false zeros, the oracle ceiling, the smallest violating triple)
+  at the same rates.
+- **Found while cross-checking:** the campaign's `tables.md` pools two census
+  tags (`a5ff6092`, every member; `da0ff0af`, restricted to `wstar_orbit`'s
+  survivors) in one table, which is how `rq2_wellposedness_facts.md` §1 came to
+  put a 557-class split beside a 530-class `wstar_orbit` row; and **HyperCOT never
+  ran** in either RQ2 campaign (every row is a missing-environment error, so the
+  "HyperCOT timing (gated)" medians are time-to-failure). Both are recorded in
+  `rq2_ow_facts.md` §4.2–§4.3; the campaign fact base is not this task's to edit.
+
+**Acceptance.** Both swapped tables are re-measured on `w°` and written to their
+fact bases (`rq2_ow_facts.md`, `rq5_ow_facts.md`); the `wstar_orbit` comparison
+D-KBab4 could not make is now traced in T-KBad. Moved to `CLOSED/`.

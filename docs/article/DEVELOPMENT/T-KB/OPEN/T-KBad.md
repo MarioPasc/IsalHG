@@ -3,6 +3,11 @@
 **Status:** OPEN (2026-09-14 10:02 CEST) · filed by agent `rq8`, wave
 `2026-09-13-headline-w0`, on the orchestrator's instruction. **Filed, not
 investigated** — this agent was told to record the question and stop.
+**Update 2026-10-04 10:20 CEST (agent `harvest`, wave `2026-10-04-harvest`):
+provenance located (checks 1–3 done, below); left OPEN because the numbers T-KBf
+attributes to `wstar_orbit` are another arm's, the real `wstar_orbit` rows say
+something different and unexplained, and check 4 is a decision this agent does
+not own.**
 
 ## What was found
 
@@ -71,3 +76,79 @@ which is a stronger cross-check than the single-arm delta would have been.
 - T-KBab (the `w°` swap) and `../../../D_ART3/foundation/rq5_ow_facts.md` §3,
   which records the absence and what was substituted.
 - The RQ5_ow run that surfaced it: job 2308368, 65 units, COMPLETED.
+
+## Finding (2026-10-04, agent `harvest`)
+
+**Check 1 — where `wstar_orbit` RQ5 rows exist.** `rows_clustering__*.csv`
+under every `results/IEEETKDE*` root, drive and Picasso `~/results/` alike
+(identical counts on both):
+
+| root | clustering files | containing `wstar_orbit` |
+|---|---|---|
+| `IEEETKDE` (the campaign this task names) | 66 | 0 |
+| **`IEEETKDE_isal`** | 66 (65 under `RQ5_patterns/rows/`) | **55 of the 65** (27 + 27 balanced seed files, 1 full-collection file) |
+| `IEEETKDE_ow` | 66 (Picasso 65) | 0 |
+| `_isal_consensus`, `_isal_merged`, `_isal_preview`, `_isal_reach1`, `_isal_reach1b`, `_isal_reachprime` | 0 | 0 |
+
+**Check 2 — the run and its configuration.** `IEEETKDE_isal/RQ5_patterns/shard_0_1/manifest.json`:
+job **2265389** (T-KBf's "RQ5 full", line 771), git **`afab7c5`**, 65 units,
+2026-09-09 11:15–12:20 UTC, `matrices_root …/IEEETKDE_isal`. RQ5 rows carry **no
+run tag** (`"tag": ""`), so the `run_tag` comparison this task asked for cannot
+be made; the configuration was compared instead. `configs/rq5.yaml` at
+`afab7c5` lists `wstar_orbit` in all three experiments. `wstar_orbit` entered
+`rq5.yaml` at **`4c3eaeb`** (2026-09-09, "apply the D-ART5 arm set to RQ2-RQ7
+configs"). The `IEEETKDE` campaign this task found empty is job **2215162**, git
+`3b7ee68`, 2026-09-05, whose `rq5.yaml` lists `fact_rank_roles` and no
+`wstar_orbit`. **Candidate explanation 1 is the correct one for `IEEETKDE`, and
+candidate 3 for T-KBf's numbers.**
+
+**Check 3 — the quoted values against the rows.** Every RQ5 number in T-KBf
+("RQ5 analysed — negative on every clause", lines 1128–1174) is reproduced
+exactly by `IEEETKDE_isal/RQ5_patterns/analysis/stats.json` (written 2026-09-10
+15:06): ν = 0.1015 with 1,553 negative eigenvalues; hubness skew 5.408; H5b
+0.030 vs 0.089 / 0.040 (`wd50k100_balanced`), 0.042 vs 0.053 / 0.049
+(`wd50k66_balanced`), `r_rb` −1.000 / −0.878 / −1.000 / −0.952; H5c 0.064
+[0.061, 0.068] vs 0.030 [0.025, 0.036]. **But "ours" in that analysis is
+`fact_rank`, not `wstar_orbit`**: `experiments/tkde/analyze_rq5.py` sets
+`OURS = "fact_rank"` (at `afab7c5` and at HEAD), and its docstring states H5a–H5c
+for `fact_rank`. Recomputed from the rows with the analyzer's aggregation (mean
+over seeds of the PAM ARI), `fact_rank` is 0.0304 on `wd50k100_balanced` — the
+quoted "ours" — while `wstar_orbit` is:
+
+| experiment | `wstar_orbit` ARI / NMI | best other arm, ARI | `fact_rank` ARI |
+|---|---|---|---|
+| `wd50k100_balanced` (27 seeds, 140 members) | **0.1561** / 0.3435 | `degree_seq_l1` 0.0889 | 0.0304 |
+| `wd50k66_balanced` (27 seeds, 280 members) | **0.1707** / 0.4460 | `netlsd` 0.0743 | 0.0418 |
+| `wd50k66_full` (1 run, 3,487 of 3,492 members) | **0.0633** / 0.1776 | `hpd_jsd` 0.0167 | 0.0075 |
+
+So T-KBf's sentence "RQ5 finds the degree-sequence floor leading over
+`wstar_orbit` on knowledge bases" is **wrong as written**: the floor leads over
+`fact_rank`; on the same rows `wstar_orbit` has the highest ARI and NMI of every
+arm in every experiment. Separately, H5c's "best competitor 0.064 against ours
+0.030" compares `hpd_jsd` on `wd50k66_balanced` with `fact_rank` on
+`wd50k100_balanced` (`hpd_jsd` is not in the `wd50k100` design); the
+same-experiment `fact_rank` value is 0.042.
+
+**Verdict.** The derivation is locatable; the attribution is not. The T-KBf RQ5
+numbers are `fact_rank`'s, from `IEEETKDE_isal/RQ5_patterns/analysis/stats.json`
+(job 2265389, `afab7c5`). No fact base this agent read quotes a `wstar_orbit`
+RQ5 number with a correct source.
+
+## What remains (why this stays OPEN)
+
+1. **Correct T-KBf's RQ5 paragraph** (its owner; not edited here — T-KBf is
+   outside this agent's write set): relabel "ours" as `fact_rank` and drop the
+   `wstar_orbit` sentence, or replace it with the rows above.
+2. **Explain `wstar_orbit`'s RQ5 lead before quoting it.** `w*_c` and `w°` are
+   both complete invariants on the same structures, yet on the same balanced
+   design `wstar_orbit` reaches ARI 0.156 / 0.171 where `isal_ow_struct`
+   (RQ5_ow, job 2308368) stays below 0.08. A two-fold gap between two complete
+   canonical forms of the same objects needs a mechanism (what each arm encodes —
+   e.g. vertex labels — and which members each matrix covers) before either
+   number enters a table. Until then both "RQ5 is negative for the canonical
+   string" and "`w*_c` leads RQ5" are unsupported.
+3. **Check 4 — whether `wstar_orbit` belongs in `rq5.yaml` at all** under
+   D-ART6 is the orchestrator's / PI's decision; `configs/` is read-only for this
+   agent. Item 2 bears on it.
+4. The H5c cross-experiment comparison in `analyze_rq5.py` is a separate
+   analyzer issue; it should be logged with `task-handoff` by whoever owns RQ5.

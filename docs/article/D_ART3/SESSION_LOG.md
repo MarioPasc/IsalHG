@@ -528,3 +528,58 @@ emptiness guard for `common.sh`.
 agents' latest heads; new suites 192 passed; ruff 38 / mypy 20 unchanged.
 The capability table's completion column is filled from `rq8_facts.md`; the
 consensus column waits for RQ3 v2.
+
+## 11. 2026-10-04 — the harvest, and what it does to the headline set
+
+Nothing was decided or merged between 2026-09-14 and today (D-ART6 still
+awaits the PI; RQ4 was never resumed). At the writing orchestrator's request
+one Opus 5.5 agent harvested the finished jobs (wave `2026-10-04-harvest`,
+merged at `dc89d8a`; log `.claude/notes/2026-10-04-harvest/harvest.md`), and
+the writer received `WRITING_BRIEF_2026-10-04.md` and
+`FRAMING_CHECK_2026-10-04.md`.
+
+**RQ2 on `w°` — closed, and better than the `w*_c` census.** 0 false merges,
+0 members censored, exact partition 557 / 1,381, 1,156 / 1,745, 3,682 / 3,988
+(classes / members). The earlier 530 / 1,086 / 3,677 were `w*_c` on the
+members it survived. The bipartite edit-path splits 557 → 574, 1,156 → 1,290,
+3,682 → 3,839. HyperCOT never ran in either RQ2 campaign (missing environment).
+Source: `foundation/rq2_ow_facts.md` §4.
+
+**RQ3 v2 — closed on 11 complete cells, and it is not a headline for the
+language.** The word-space consensus beats the anonymous merges (0.21–0.73 vs
+0.00–0.10, Holm p ≤ 8.3 × 10⁻⁶) and every medoid on fact distance, with a
+certified ratio at or below the same-metric medoid's. But H3.5, the ablation
+added on 2026-09-13 so that "why the language?" would be answered by the
+table, fails: the same consensus in fact space recovers 0.984 against 0.433
+and is cheaper. H3.3 fails (0.385 vs the identity oracle's 0.921); H3.6 is
+not supported as stated; the coverage-first arm beats the registered indel
+median on 6 of 11 cells. The pre-registered fallback applies: the consensus
+is a property of a complete invariant plus fact edits, not of the instruction
+language. Seven heavy cells never completed. The pattern-vote baseline
+recovers stars only 0.02–0.05 of the time and needs an audit before H3.4 is
+read. Source: `foundation/rq3v2_facts.md`.
+
+**Two corrections to §10 of this log.** (1) The heavy cells timed out because
+of the consensus ball (enumeration + scoring: 99.1–99.7 % of wall on every
+written unit), not the exact-HGED judge; the 2026-09-14 diagnosis and the
+ruling to lower the judge budget addressed the wrong cause, and that re-run
+bought 11 units. (2) The "17.8 % judge fallback" was the oracle's size
+ceiling (sources with more than 10 constants always fall back), not timeouts.
+
+**RQ5 provenance (T-KBad, OPEN).** The `w*_c` RQ5 numbers quoted in T-KBf
+were the retired fact-rank word's (analyzer label). The real `w*_c` rows give
+ARI 0.156 / 0.171 / 0.063, the highest of every arm, against < 0.08 for `w°`;
+unexplained (possibly the censored-member subset), not to be quoted, and
+relevant to D-ART6.
+
+**The headline set after the harvest.** RQ6 (generation, unconditional);
+RQ7 (no search frontier; cost against the search form only); RQ2 (exactness
+with full coverage — a family property the certificate shares); RQ1 pendant
+*removals*; RQ8 on WD50K's relational stratum. RQ3 moves to the supplement.
+The pattern is unchanged and now covers every experiment: the language wins
+on validity, domain membership and attachment; whatever only needs a complete
+invariant, the certificate or a fact-space method does as well or better.
+
+**Open.** PI's word on D-ART6; merge of `integration/2026-09-13-headline-w0`
+into `feature/isal-kb-word`; T-KBz (seven incomplete cells, pattern-vote
+audit); T-KBad; T-KBy (timing defect); D-KBg1 (supplement counts).

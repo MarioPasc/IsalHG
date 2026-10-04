@@ -183,7 +183,49 @@ served. `TestStaleRowGuard`, five cases.
       *(Restarted after the indel amendment; the ball choice is already recorded
       in `RQ3V2_PILOT.md` with its arithmetic, and the campaign does not wait on
       it because a slow cell degrades into a deferral, not a wrong row.)*
-- [ ] H3.1–H3.6 verdicts written into `rq3v2_facts.md` §6 after the harvest.
+- [x] H3.1–H3.6 verdicts written into `rq3v2_facts.md` (§7 after the harvest's
+      renumbering) — on the 11 complete cells only, with the untestable cells
+      named (2026-10-04, agent `harvest`).
+- [ ] Every non-empty design cell complete at 27 seeds under one tag. **Not met:**
+      7 of 18 are partial or absent (below).
+
+## Closing evidence — the harvest (2026-10-04 10:20 CEST, agent `harvest`)
+
+All four arrays harvested to
+`/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE_ow/RQ3v2_golden_record/anonymous_consensus/`
+(490 row files: 477 `ef0c58b4`, 13 `1efdcf54`) and analysed with
+`--supersede-tag ef0c58b4 --expected-seeds 27`; outputs in that directory's
+`_analysis_ef0c58b4+1efdcf54/`. Fact base: `../../../D_ART3/foundation/rq3v2_facts.md`
+§6–§12; appended summary in `RQ3V2_PILOT.md` § "The harvest".
+
+- **Coverage.** 2311518 40/40, 2311519 done, **2311520 11 COMPLETED / 178
+  TIMEOUT, 13 units written** (one more finished 17 s after its cancel and was
+  lost). 11 cells complete, 4 partial (`ndc` non-star N9 t2 11/27, N15 t1 2/27;
+  `wd` non-star N9 t2 3/27; `wd` star N15 t2 3/27), 3 absent (`ndc` non-star N15
+  t2; `wd` non-star N15 t1, t2), 6 empty by construction.
+- **Verdicts (complete cells).** H3.1 supported on the tested cells, not testable
+  at N = 15 and at non-star N = 9, t = 2; H3.2 supported vs 11 medoids
+  (`hypercot` unscored); H3.3 not supported (0.385 vs oracle 0.921); H3.4 not
+  supported (no tie, 0.491 vs `pattern_vote` 0.032 — baseline unaudited); H3.5
+  not supported (0.433 vs `consensus_fact` 0.984, cheaper too) → the declared
+  fallback applies; H3.6 not supported as stated (monotone 4/4, but most N = 5
+  misses are not sub-records).
+- **D-KBz8's cause does not survive 2311520.** At an 8 s judge the heavy units
+  still exceeded 6 h because the ball is 99.1–99.7 % of each written unit's
+  wall; the judge and all untimed work is 2–7 s per unit. The 127 s/collection
+  basis of the 8 s arithmetic came from the one easy N = 15 cell, and the
+  "17.8 % fallback after 60 s" is the `n > 10` ceiling.
+- **Analyzer repaired** (crash under pandas 3; no coverage gate; H3.2 family
+  missing the indel medoid; H3.6 confounded by composition under partial
+  coverage), each with a failing-first test in
+  `tests/experiments_tkde/test_rq3v2_analysis.py`.
+
+**Why this stays IN-PROGRESS.** Seven heavy cells are incomplete, so H3.1's
+"every N" is undecided and nothing at relational N = 15 exists; completing them
+at the registered ball needs ~1.1–2.9× the 6 h wall per unit (or a smaller
+ball), a resubmission decision this harvest did not take. Two items also need an
+owner before the prose: the `pattern_vote` audit behind H3.4, and what the paper
+says now that a representation-free consensus wins H3.5.
 
 ## Out of scope
 

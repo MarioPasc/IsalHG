@@ -499,3 +499,54 @@ by an order of magnitude.
 | Analysis | `python -m experiments.tkde.analyze_rq3v2 --root <root>` |
 | Tests | `python -m pytest tests/experiments_tkde/test_rq3v2.py -q` |
 | Picasso | `bash slurm/tkde/rq3v2_sync.sh` then, on the login node, `bash slurm/tkde/rq3v2_launcher.sh --smoke` and `… rq3v2_launcher.sh` |
+
+---
+
+## The harvest (2026-10-04, agent `harvest`)
+
+*Appended; nothing above is edited. The numbers are in
+`../foundation/rq3v2_facts.md` §6–§12, which is the verdict of record.*
+
+**Coverage closed short.** 490 row files (477 `ef0c58b4`, 13 `1efdcf54`). The
+light (2311518, 40/40) and empty (2311519) arrays completed; the heavy array
+2311520 wrote 13 of 189 units (11 COMPLETED, 178 TIMEOUT, one finished unit
+lost because it ended 17 s after the time-limit cancel and its copy-back never
+ran). After superseding `ef0c58b4` where `1efdcf54` also measured: **11 cells
+complete, 4 partial, 3 absent, 6 empty by construction.** All seven heavy cells
+are incomplete and none is tested; the "every N" of H3.1 is therefore not
+established, and nothing is claimed at non-star `N = 15` or at non-star
+`N = 9, t = 2`.
+
+**The re-price above was wrong about the cause, and so was "Why 8 s".** The
+heavy pass ran with the judge at 8 s and still exceeded 6 h, because the cost
+is the ball: on the 13 written units `consensus_ow` is 99.1–99.7 % of the wall
+and the judge with every other untimed step is 2–7 s per unit; 145 judge
+timeouts in 6,252 started collections. The 127 s per collection at `N = 15`
+that both the re-price and the 8 s arithmetic rested on was a median pooled over
+the `N = 15` units 2308421 had written, 27 of 35 of them from the one easy cell
+(`wd50k66` star `N = 15, t = 1`, 96.7 s); on the heavy cells the ball is a median
+278–340 s per collection with a tail to the 1,800 s method budget. And the
+"17.8 % fall back after the full 60 s" is the `n > 10` ceiling: rows with a
+source above `n = 10` are judged bipartite 100 % of the time, rows at or below it
+2.5 %. In 2311520 the judge was not the lever; the ball at `t = 2` and non-star
+`N = 15` is. How much of 2308421's time the 60 s judge took cannot be read from
+the rows (it runs outside the timers) and was not re-derived from that job's
+logs; what is established is that the fallback share once read as timeouts is
+the ceiling. Nothing was resubmitted.
+
+**The analyzer needed three repairs before it could be run.** It crashed on the
+real tree (pandas 3 keeps a missing `judge_timeout_s` a float under
+`astype(str)`); it had no coverage gate, so a hypothesis test would have pooled
+partial cells; and its H3.2 family omitted the like-for-like indel medoid. A
+fourth change reads H3.6 within corpus × stratum × t series, because under
+partial coverage the pooled per-`N` mean changes composition with `N`. Each has a
+failing-first test in `tests/experiments_tkde/test_rq3v2_analysis.py`; the rule
+for H3.6 was fixed before any per-`N` number was read.
+
+**Verdicts in one line each** (complete cells only): H3.1 supported on the tested
+cells, not testable at `N = 15` and non-star `N = 9, t = 2`; H3.2 supported
+against 11 medoids (`hypercot` unscored); H3.3 not supported (0.385 vs oracle
+0.921); H3.4 not supported (no tie: 0.491 vs 0.032, with the `pattern_vote`
+construction unaudited); H3.5 not supported (0.433 vs `consensus_fact` 0.984,
+which is also cheaper); H3.6 monotone in 4/4 series but most small-`N` misses
+are not sub-records, so not supported as stated.

@@ -11,14 +11,29 @@
 %   Complete   exact at zero on isomorphism classes: theorem (Thm A / C;
 %              nauty) or counterexample (WL: Prop 9; NetLSD/HPD: measured
 %              merges; bipartite assignment: false zeros, Prop 8).
-%   Merges     false merges on wd50k66, 7,949,355 non-isomorphic pairs
-%              (RQ2 census, rq2_wellposedness_facts.md §1).  "0*" = zero
-%              measured but not guaranteed (WL is provably incomplete).
+%   Merges     false merges on wd50k66, 7,949,355 non-isomorphic pairs,
+%              all 3,988 members (RQ2 census, rq2_wellposedness_facts.md
+%              §1, campaign tag a5ff6092; reproduced bit-for-bit by the
+%              w° run, tag f14fffbc, rq2_ow_facts.md §4.2).  w°: 0,
+%              measured with 0 members censored (rq2_ow_facts.md §4.1;
+%              results/IEEETKDE_ow/RQ2_wellposedness/wellposedness/,
+%              jobs 2311593/2311604).  "0*" = zero measured but not
+%              guaranteed (WL is provably incomplete).  Bipartite
+%              edit-path "splits 157": 0 merges but 3,839 classes for
+%              3,682 true on wd50k66 (rq2_ow_facts.md §4.2; the NDC
+%              figures are in the dagger footnote).  HyperCOT "n/m":
+%              not in either RQ2 census, and every HyperCOT row of both
+%              RQ2 runs failed on the missing pinned environment
+%              (rq2_ow_facts.md §4.3) -- no number exists.
 %   Metric     metric on isomorphism classes.  "pseudo" = metric on the
 %              vector, pseudometric on classes.  Bipartite edit-path:
 %              38 % asymmetric, 1.4 % triangle violations (Prop 8).
 %   Matrix     wall-clock of the full 3,988 x 3,988 wd50k66 matrix, s
-%              (rq7_envelope_facts.md §8; cluster).  DAGGER: the rows
+%              (rq7_envelope_facts.md §8; cluster).  WL: 564 s, median of
+%              3 reps (578.4 / 564.2 / 553.6), pair phase only
+%              (results/IEEETKDE_isal/RQ7_envelope/envelope/
+%              rows_nscaling__4c8b759f-nscaling-wl_l1-N3988-000of001.csv).
+%              DAGGER: the rows
 %              certificate was timed through a Python loop (T-KBy);
 %              at matched implementation it is at parity with w°
 %              (1.09-1.19x).  Re-measure after the fix and replace.
@@ -30,9 +45,16 @@
 %              definable on the representation.
 %   Cons.      the consensus is a decoded object that need not be a
 %              member (RQ3 v2).  Medoids under any distance return a
-%              member.  \todo until RQ3 v2 lands.
-%   Compl.     a completion operation is definable (RQ8).  \todo until
-%              RQ8 lands.
+%              member (exact recovery <= 0.003 in every cell).  w°: the
+%              PILCROW footnote, every number from
+%              foundation/rq3v2_facts.md §7, §9, §11 (results/IEEETKDE_ow/
+%              RQ3v2_golden_record/anonymous_consensus/_analysis_ef0c58b4+
+%              1efdcf54/; jobs 2308421, 2311518, 2311519, 2311520).
+%              Scope: 11 complete cells only; nothing at relational N=15.
+%   Compl.     a completion operation is definable (RQ8); the SECTION
+%              footnote, from foundation/rq8_facts.md.
+%   w*_c row, Cons./Compl.: no RQ3 v2 or RQ8 arm runs w*_c, so these two
+%              marks are not measured; left as found (flagged 2026-10-04).
 %   Pend./Int. fraction of single edits within two symbols, delete a
 %              fact, pendant / interior (RQ1 M1, published_tables.md).
 %              Vectors: no symbol scale ("n/a"); they are continuous.
@@ -55,7 +77,7 @@ fraction of generated samples that are valid and connected; \emph{cons.}
 whether the consensus is a decoded object; \emph{compl.} whether a completion
 is definable; \emph{pend./int.} the fraction of single fact deletions within
 two symbols, pendant and interior. A dash is a property the representation
-cannot have; the reason is in the text.}
+cannot have; the reason is in the text. \emph{n/m}: not measured.}
 \label{tab:kb-representation-properties}
 \scriptsize
 \setlength{\tabcolsep}{3pt}
@@ -68,23 +90,25 @@ Representation & Family & Complete & Merges & Metric & Matrix (s) & Closed & Gen
 \midrule
 exact structure edit distance & edit distance & \checkmark & 0 & \checkmark & NP-hard & -- & -- & -- & -- & -- & -- \\
 bipartite GED, assignment & edit distance & -- & false zeros & pseudo & 634 & -- & -- & -- & -- & -- & -- \\
-bipartite GED, edit path & edit distance & \checkmark$^{\dagger}$ & 0 (splits 17) & -- & 953 & -- & -- & -- & -- & -- & -- \\
-WL histogram & feature map & -- & $0^{*}$ & pseudo & \todo & -- & -- & -- & -- & n/a & n/a \\
+bipartite GED, edit path & edit distance & \checkmark$^{\dagger}$ & 0 (splits 157) & -- & 953 & -- & -- & -- & -- & -- & -- \\
+WL histogram & feature map & -- & $0^{*}$ & pseudo & 564 & -- & -- & -- & -- & n/a & n/a \\
 NetLSD (Levi) & spectral & -- & 185{,}917 & pseudo & 40.6 & -- & -- & -- & -- & n/a & n/a \\
 hyperedge portrait divergence & portrait & -- & 212{,}179 & pseudo & 1{,}486 ($N{=}2{,}000$) & -- & -- & -- & -- & n/a & n/a \\
-HyperCOT & optimal transport & \checkmark (local opt.) & \todo & \checkmark (theory) & gated & -- & -- & -- & -- & n/a & n/a \\
+HyperCOT & optimal transport & \checkmark (local opt.) & n/m$^{\|}$ & \checkmark (theory) & gated & -- & -- & -- & -- & n/a & n/a \\
 nauty certificate (bytes) & canonical labelling & \checkmark & 0 & \checkmark & 24.2 & -- & -- & -- & -- & 0.000 & 0.000 \\
 nauty certificate (rows) & canonical labelling & \checkmark & 0 & \checkmark & $\approx$ parity$^{\ddagger}$ & -- & -- & -- & -- & 0.000 & 0.000 \\
 size baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a & n/a \\
 degree-sequence baseline & declared floor & -- & -- & -- & 12.6 & -- & -- & -- & -- & n/a & n/a \\
 \midrule
 \textsc{IsalHG} $w^{*}_c$ (search) & canonical program & \checkmark & 0 & \checkmark & 1{,}734 & \checkmark & \checkmark & \checkmark & \checkmark & 0.771 & 0.139 \\
-\textbf{\textsc{IsalHG} $w^{\circ}$ (ordered walk)} & \textbf{canonical program} & \textbf{\checkmark} & \textbf{0} & \textbf{\checkmark} & \textbf{1.39} & \textbf{\checkmark} & \textbf{1.000} & \textbf{\todo} & \textbf{\checkmark}$^{\S}$ & \textbf{0.732} & \textbf{0.087} \\
+\textbf{\textsc{IsalHG} $w^{\circ}$ (ordered walk)} & \textbf{canonical program} & \textbf{\checkmark} & \textbf{0} & \textbf{\checkmark} & \textbf{1.39} & \textbf{\checkmark} & \textbf{1.000} & \textbf{\checkmark}$^{\P}$ & \textbf{\checkmark}$^{\S}$ & \textbf{0.732} & \textbf{0.087} \\
 \bottomrule
 \end{tabular*}
 \vspace{2pt}
 \begin{flushleft}\scriptsize
-$^{\dagger}$ exact at zero but not a metric, and it splits 557 true classes into 574 on NDC (RQ2).
+$^{\dagger}$ exact at zero but not a metric, and with no false merge it still splits the true partition: 3{,}682 classes into 3{,}839 on WD50K(66) (all 3{,}988 members), 557 into 574 on NDC-classes (all 1{,}381) and 1{,}156 into 1{,}290 on NDC-substances (all 1{,}745) (RQ2; \texttt{foundation/rq2\_ow\_facts.md} \S4.2).
+$^{\|}$ not measured: HyperCOT is outside the RQ2 census, and every HyperCOT computation of both RQ2 runs failed on its missing pinned environment, so no HyperCOT distance exists to count merges from (\texttt{foundation/rq2\_ow\_facts.md} \S4.3).
+$^{\P}$ RQ3 v2: the consensus is a decoded knowledge base that is not one of the $N$ inputs in $0.899$ of $15{,}774$ collections and is connected in all of them; its certified ratio (cost over Prop.~3's lower bound) is at or below the same-metric medoid's on every collection ($1.19$--$1.39$ against $1.26$--$1.51$). On the relational stratum it recovers the source exactly $0.21$--$0.73$ of the time against $0.00$--$0.10$ for the three anonymous merges (27 seeds, Holm $p \le 8.3\times10^{-6}$), for $N\in\{5,9\}$ at one edit and $N=5$ at two, word radius $2$; $N=15$ is not measured on that stratum. It does not approach the oracle that reads the identities ($0.39$ vs $0.92$), and a fact-space consensus, which has no word, recovers $0.98$ at lower cost. Source: \texttt{foundation/rq3v2\_facts.md}.
 $^{\ddagger}$ the rows serialisation was timed through a Python loop; at matched implementation it is within $1.1$--$1.2\times$ of $w^{\circ}$ (T-KBy); the number is replaced after the fix.
 $^{\S}$ RQ8: completions valid and connected $1.000$ by Prop.~C.8; on WD50K(66)'s relational stratum the fact-count-matched model proposes the true missing fact in its top ten $0.048$ $[0.042, 0.056]$ against $0.019$ $[0.014, 0.024]$ for the best counting baseline (27 seeds, Holm $p = 1.3\times10^{-5}$); on NDC-classes the counting baseline leads ($0.32$ vs $0.19$) and on star-shaped records it leads ($0.62$ vs $0.18$), both pattern-prediction gaps. Source: \texttt{foundation/rq8\_facts.md}.
 \end{flushleft}

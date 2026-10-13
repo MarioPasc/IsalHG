@@ -10,9 +10,9 @@
 | Branch | `worktree-agent-a1a377c3e23505bac` |
 | Worktree | `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-a1a377c3e23505bac` |
 | Base commit | `518824a80baf3238e1e565aafd6aaee0271c0bbc` |
-| Head commit | (filled at close) |
-| Started / finished | `2026-10-13T14:30+0200` / (filled at close) |
-| Status | in progress |
+| Head commit | code at `e75e406`; the log commit that follows it is the branch head |
+| Started / finished | `2026-10-13T14:30+0200` / `2026-10-13T15:45+0200` |
+| Status | complete |
 
 ## 1. Prompt as received
 
@@ -120,7 +120,10 @@ At most 15 lines: STATUS, BRANCH, WORKTREE, HEAD, LOG, TESTS (counts + command),
 3. Pilot (`ndc_classes` full, 500-member seeded `wd50k66` subsample); message `main` with the table.
 4. Full run on four collections; analysis; figure; log; commit.
 
-**Deviations from the plan:** (filled at close)
+**Deviations from the plan** (every one is also in section 7):
+1. *Bootstrap of the compressor sizes.* The pre-registration said "resample members with replacement, recompress, percentile CI". The pilot showed that this is biased: a resample repeats about 37 % of its lines, a compressor codes an exact repeat of an earlier line almost for free, and the resampled size per KB came out 18-29 % below the full-collection size (pilot, `wd50k66` 500 members, ratio of replicate mean to point estimate: xz 0.72-0.83, zstd 0.71-0.82, bzip2 0.81-0.88 depending on the arm), by different amounts for different arms, which distorts ratios between arms. The final runs recompress the *distinct* members drawn (about 63 % of the collection, in collection order), charge each replicate its own dictionary, and report the 95 % replicate interval translated to the full-collection point (`ci_low + (point - replicate mean)`). The raw replicate quantiles and the replicate mean are kept in `compressors_*.csv` (`ci_low`, `ci_high`, `boot_mean`). The bootstrap resample indices are shared across arms, so the ratio intervals are paired. 200 replicates, seed 20261013. The pilot directory (`pilot/`) still holds the biased version and is superseded.
+2. *No `incid_flat` arm.* The pre-registration listed `fact_flat`/`incid_flat`. In flat form the canonical fact list and the canonical incidence list are the same field stream, so there is one arm, `fact_flat`; it is the flat competitor in HB2.
+3. *Strata.* Stratified tests use the two coders `fixed_obs` and `ngram3` only (the other coders are in the medians table); everything else as pre-registered.
 
 ### 2.1 PRE-REGISTRATION (written 2026-10-13T14:55+0200, before any code-length, bits, compression or delta number existed; do not edit below this line after results)
 
@@ -164,41 +167,137 @@ The learned coders and the compressors are the primary coders; both fixed-width 
 
 ## 3. Changes made
 
-(filled at close)
+**Created**
+| Path | Purpose |
+|---|---|
+| `scripts/newpos/compression/__init__.py` | package marker |
+| `scripts/newpos/compression/serialize.py` | the 12 arms (symbol sequences), strata, observed and theoretical alphabets, fixed-width coder, literal text |
+| `scripts/newpos/compression/coders.py` | CV folds, held-out n-gram coder with the single escape scheme |
+| `scripts/newpos/compression/compressors.py` | renderings (`ids`, `cp`, `lit`), `xz`/`zstd`/`bzip2` sizes, distinct-member bootstrap, `zstd --patch-from` deltas |
+| `scripts/newpos/compression/decode.py` | decoders of every arm back to a hypergraph (losslessness evidence) |
+| `scripts/newpos/compression/measure.py` | per-collection driver: per-KB bits, compressor sizes + bootstrap, deltas |
+| `scripts/newpos/compression/analyze.py` | tables, paired tests, Holm families, verdict flags and matrices, `tables.md`, `stats.json` |
+| `scripts/newpos/compression/fig_bits.py` | the figure (bits vs fact-count bin per collection; compressor bytes per KB) |
+| `scripts/newpos/compression/run_all.py` | runs the four collections, then analysis and figure |
+| `tests/newpos/test_compression.py` | 33 unit tests |
+| `.claude/notes/2026-10-13-newpos-w1/compression.md` | this log |
+
+Results (outside the repo), `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/NEWPOS_2026-10-13/compression/`: `perkb_<c>.csv` (per KB: collection, kb_id, structure, fact_bin, n, m, representation, L, bits_fixed_obs, bits_fixed_theo, bits_ngram{1,2,3}, bits_ngram{1,2,3}_theo, unseen_ngram{1,2,3}), `ngram_seeds_<c>.csv` (CV spread, 5 seeds x 3 orders x 12 arms), `compressors_point_<c>.csv` (every rendering x compressor), `compressors_<c>.csv` (chosen renderings, CIs), `compressors_boot_<c>.npz` (replicates), `deltas_<c>.csv`, `alphabets_<c>.json`, `members_<c>.json`, `tables.md`, `stats.json`, `tests_per_kb.csv`, `fig_bits.pdf`, `log_<c>.txt`, `run_all*.log`; `pilot/` holds the superseded pilot.
+
+**Modified**: none outside the owned paths.
+
+**Removed**: none.
+
+**Commits**
+| SHA | Message |
+|---|---|
+| `9f9ef2d` | `docs(notes): compression pre-registration` |
+| `95cc9ef` | `feat(newpos): description-length experiment (serializers, coders, compressors, analysis)` |
+| `2b3270d` | `fix(newpos): distinct-member bootstrap for compressor CIs, verdict matrices, lint` |
+| `e75e406` | `fix(newpos): translate compressor bootstrap interval to the point estimate` |
+| (next) | `docs(notes): compression work log` |
 
 ## 4. Tests
 
-(filled at close)
+**Tests created or extended** (all `pytest.mark.unit`, file `tests/newpos/test_compression.py`)
+| Test | What it verifies | Why it matters |
+|---|---|---|
+| `test_every_arm_is_deterministic_and_isomorphism_invariant` (4 vocabularies) | every arm is identical on a relabelled, fact-reordered copy and on a repeat call | an arm that depends on ids or insertion order is not a code of the class |
+| `test_arms_equal_the_symbols_the_registered_distances_compare` | `w_o`, `cert_bytes`, `cert_rows`, `fact` equal the `fingerprint` of `isal_ow_struct`, `nauty_cert`, `nauty_cert_rows`, `fact_rank` | the five spec'd arms are the compared sequences, not re-implementations |
+| `test_every_arm_decodes_to_an_isomorphic_knowledge_base` (3 vocabularies) | all arms decode (`decode.py`) to a KB isomorphic to the input | losslessness of every arm, including the supplementary renderings |
+| `test_certificate_bytes_have_a_whole_number_of_words` | length divisible by 4 | `cert_u32` is well defined |
+| `test_fixed_width_single_slot_formula`, `..._slot_wise_...` | `(L+1) log2(|A|+1)` and the slot-wise rule | the fixed-width coder is the spec'd formula |
+| `test_walk_alphabet_size_matches_brute_force_enumeration` | `|Sigma_HG(k)|` from the closed form equals an enumeration validated by `core.instructions.validate` | the theoretical alphabet follows the grammar |
+| `test_ngram_code_length_is_minus_log2_of_the_model_probability` | `core_bits == -log2 p` of `TokenNGram.logprob`; escape reserve `(1-eps)` accounted | the learned coder reuses the library probabilities |
+| `test_escape_scheme_is_finite_on_an_unseen_token_and_prices_by_alphabet` | finite bits on an unseen token; escape cost `-log2 eps + log2 U`, larger for the larger declared alphabet | the one escape scheme is well defined |
+| `test_kfold_assignment_*`, `test_cross_validation_*` | folds partition the members, are seeded; each member is scored by a model that never saw it | no train/test leakage |
+| `test_star_classification`, `test_fact_bins` | star definition on sunflower, single fact, path, double overlap; bin edges | strata are the specified ones |
+| `test_codepoint_table_*`, `test_frequency_ids_*`, `test_compressor_sizes_and_self_patch`, `test_choose_renderings_charges_the_dictionary` | renderings, compressors, `zstd --patch-from`, spec vs self-contained choice | the compressor numbers measure what they claim |
+
+**Coverage of the behaviour that matters:** serialization invariance and decodability, the coder formulas, the escape, the strata. **Not tested, and why:** the bootstrap, the Wilcoxon/Holm wiring and the Markdown rendering are exercised by the full run (outputs inspected) but have no unit test; the pandas/matplotlib code is script-level; `measure.py` multiprocessing is not unit-tested.
 
 ## 5. Test results
 
-(filled at close)
+**Command:** `~/.conda/envs/isalhg/bin/python -m pytest tests/newpos/test_compression.py -q` and `~/.conda/envs/isalhg/bin/python -m ruff check scripts/newpos/compression tests/newpos/test_compression.py`
+
+```
+33 passed in 0.17s
+All checks passed!
+```
+
+**Result:** 33 passed, 0 failed, 0 skipped · **Duration:** 0.17 s · **Run at:** `e75e406`
+
+**Failures and their resolution:** none in the final suite. Earlier the first test run failed at import (a wrong class name `NautyLevi_EditAlias` I had typed); fixed to the right import.
 
 ## 6. Verification beyond unit tests
 
-(filled at close)
+| Circumstance | What was run | Evidence | Outcome |
+|---|---|---|---|
+| Real data, losslessness | `decode_arm` of every arm of 300 seeded members per collection (4 collections), isomorphism by `PynautyLeviBackend` | 13,800 arm decodes (3,600 / 3,000 / 3,600 / 3,600) | 0 failures; `ndc_classes` has 10 arms (no type-elided arms, 4 types) |
+| Real data, certificate decode | `bytes_to_rows` inverts `nauty_certificate_bytes` (little-endian 64-bit words, MSB-first bits, colour cells in increasing colour order) | rows equal `nauty_certificate_rows` adjacency on the first member, then every decode above | confirmed |
+| Full run | `run_all.py` on `wd50k66` (3,988), `ndc_classes` (1,381), `ndc_substances` (1,745), `wd50k100` (1,837), 4 workers | measure 157 / 63 / 102 / 109 s per collection; analysis about 3 min; 5 CV seeds x 3 orders x 12 arms; 200 bootstrap replicates; 29 MB of results | complete |
+| Reconciliation of the notes | median/mean `L` per arm | `wd50k66`: `w_o` 6 / 13.5, rows 12 / 15.1, 4-byte integers 35 / 40.0, bytes 140 / 159.9; `ndc_classes`: `w_o` 9 (8 without the root-type symbol) / 15.1, rows 12 / 13.1, 4-byte integers 35 / 36.3 | "6/8 vs 12 rows" is a median comparison against rows; "13.8 vs 40" is a mean comparison against 4-byte integers; both reproduce |
+| Pilot vs full | ngram3 medians, 500-member pilot vs 3,988 | `w_o` 31.7 -> 29.1, `cert_rows` 78.6 -> 72.1, `fact` 49.6 -> 48.2 | the pilot was close; the order of the arms did not change |
+| Bootstrap bias | pilot replicate mean / point estimate of the compressed size | 0.71-0.88 (with-replacement) | replaced by the distinct-member bootstrap, see section 2 |
+| Degenerate intervals | `bca_ci` falls back to percentile when BCa is undefined | 167 medians of discrete data (token lengths, bits) reported with the percentile interval (`method` recorded in `stats.json`) | disclosed |
+| Order of events | pre-registration committed (`9f9ef2d`) -> serializers/coders written -> 200-member smoke run of `ndc_classes` (plumbing only; I read its medians) -> 150-member decode check -> pilot -> message to `main` -> full run | the pre-registered hypotheses, arms, coders, verdict rule were not edited after any number was seen | |
+| Environment | Python 3.11.15, numpy 2.4.6, pandas 3.0.3, scipy 1.17.1, rapidfuzz 3.14.5, `xz`/`zstd 1.5.7`/`bzip2` binaries | | |
 
 ## 7. Decisions, assumptions, open questions
 
-(filled at close)
+**Decisions with a real trade-off**
+- *Self-contained compressor number as the verdict basis.* The spec number (best of `ids`/`cp`, dictionary uncharged) gives large-alphabet arms (`w_o` with labels, `fact`, rows) a free dictionary; the self-contained number charges it (or uses the dictionary-free literal text). Both are reported; the verdict uses the self-contained one. Cost: it is the less favourable basis for `w_o` on some arms; buys: it cannot be gamed by an uncharged table.
+- *Distinct-member bootstrap* instead of with-replacement (section 2). Cost: the replicate interval refers to about 63 % of the collection and is translated to the point estimate (an approximation; a larger collection would compress slightly better per KB); buys: removes an 18-29 % downward bias that differs across arms.
+- *Observed alphabet is the primary escape/fixed-width basis*, theoretical reported alongside (`ngram*_theo`, `fixed_theo`), as `main` asked.
+- *`incid` is `flatten` of the canonical relabelling* (sorted facts), because `flatten(H)` itself uses the record's ids and fact order and is not a code of the class.
+- *Certificate integers in three forms* (`cert_ints` plain with separators = the required integer granularity; `cert_ints_ut` upper-triangle, slot-tagged = the best honest integer rendering; `cert_u32` = the T-KBx 4-byte words), all in the verdict, as `main` ruled.
+
+**Assumptions I proceeded on**
+- `k = k_max = 10` for the theoretical walk alphabet, and the collection envelope (largest `n`, largest `n + m`) for the size-dependent alphabets (`cert_rows`: `(|Sigma_V|+|Sigma_E|) x 2^{N_max}`). If a different envelope is wanted, `fixed_theo` changes; the learned and compressor verdicts do not.
+- The held-out cross-entropy excludes the n-gram's parameters (as specified). A two-part code would charge the model, which favours small alphabets (cert bytes); not measured.
+- The `ndc_classes` median `L(w_o) = 9` counts the root-type `("seed", t)` symbol, because `ordered_symbols` prepends it on a non-trivial vocabulary (as the spec requires); without it the median is 8.
+
+**Open questions for the orchestrator**
+- Whether the strict rule should include `fixed_theo` against `cert_ints_ut` at all: it is the only reason the pre-registered headline fails against the certificate on `ndc_classes` (w_o 188.3 vs 125.1 bits; 4 types make `|Sigma_HG(10)| = 466,055`, 18.8 bits per walk token). Nothing was changed; the verdict stands as pre-registered.
+- A permission block: my `pkill` of the first full run (started with the biased bootstrap) was denied, so I let it finish and re-ran everything with the fixed code; nothing else was affected.
 
 ## 8. Coordination
 
 **Messages received (verbatim) :**
 > From main — amendment to your pre-registration, to be written into your log BEFORE you look at any result (if you already have pilot numbers, say so in the log and say which you saw): (1) Tokenization dependence (project lesson L9, docs/article/D_ART3/foundation/lessons.md — read it): any certificate comparison depends on symbol granularity. Report the certificate under THREE granularities — bytes (`nauty_cert`), rows (`nauty_cert_rows`, one symbol per Levi node), and integers (the certificate as a sequence of canonical-adjacency integers / neighbour indices, if the code exposes one; otherwise derive it from the canonical labelling and document how). The headline claim is made ONLY if w° wins under every granularity and every coder; if the verdict flips with the tokenization, report all and claim none. Do not use any timing from the rows arm (known defect T-KBy); timings are out of scope anyway. (2) Fixed-width alphabet: state both alphabets in the pre-registration and report both — (a) the observed token alphabet over the collection, and (b) the theoretical alphabet: for w°, |Σ_HG(k)| including labels (all V_{i,j}/C_i/P_i/N_i/W tokens with every admissible label combination for the collection's k, |Σ_V|, |Σ_E|) — compute the count from the token grammar in src/isalhg/core/instructions.py; for the certificate, the full symbol range of its granularity (256 for bytes; the number of possible rows/integers for N Levi nodes). The learned (n-gram) code and the generic compressors are less sensitive to this choice and remain the primary coders. (3) Context: two existing measurements disagree — docs/article/D_ART3/prose.md §2.2 says medians of 6 (WD50K) / 8 (NDC) instructions vs 12 certificate rows; ledger item T-KBx measured a mean of 13.8 walk tokens vs 40 certificate integers on a 400-member WD50K sample. Report median AND mean raw token length per granularity, per collection and stratum, so both statements can be reconciled.
 
-**Messages sent:** (filled at close)
+**Messages sent:** (1) to `main`, after the pilot: the pilot table (medians per arm and coder, compressor bytes/KB, length reconciliation, HB3 reading, verdict flags and the two honest negatives); outcome: `main` replied to proceed with the four full collections and stated the verdict rule (every reported granularity counts, including `cert_ints_ut` and `cert_u32`; report per coder, per granularity, per collection; keep the raw HB3 numbers beside the net-of-overhead ones).
+
+**Messages received and how they changed the work:** (a) the amendment above: added the integer certificate granularity (`cert_ints`, `cert_ints_ut`, `cert_u32`), the theoretical alphabets and `fixed_theo`, the median/mean length tables, and the all-granularities verdict rule, all before any result; (b) the reply after the pilot (proceed; every granularity counts; report per coder/granularity/collection; keep raw and net HB3): the verdict matrices in `tables.md` and the raw + net patch columns follow it.
 
 **Contracts I depend on and confirmed unchanged:** `experiments.tkde.corpora` loader and `experiments.tkde.stats` helpers (read-only use); `TokenNGram` private `_distribution`/`_context_of`/`_index` used by the escape wrapper (a library change to those would break `coders.py`).
 
 ## 9. Deliberately not done
 
-(filled at close)
+- Neural-coder fold-in (`neural-gen`'s held-out NLL as a fourth coder) — `main` said it may ask later; the per-KB CSV has the same `kb_id` order as the frozen collection, so a column can be joined.
+- Timing of any arm (rows arm has the known defect T-KBy; out of scope).
+- A two-part (model-charged) code and an entropy-coded refinement of the fixed-width code.
+- `incid_flat` (merged into `fact_flat`, see section 2); a theoretical-alphabet escape for the compressors (not applicable).
+- Editing `docs/`, the paper, or any library code (the escape wrapper reads `TokenNGram._distribution`, `_index` and `_context_of`; a change to those private names would break `coders.py`).
 
 ## 10. Risks and follow-ups
 
-(filled at close)
+| Item | Severity | Detail | Suggested owner |
+|---|---|---|---|
+| `fixed_theo` convention | medium | the strict headline fails only because of it on `ndc_classes` (cert_ints_ut) and `wd50k100` (cert_ints_ut, median diff +11.6 bits but P(w fewer) = 0.525, not significant); the size-dependent theoretical alphabets use the collection envelope | `main`, decide how the paper states the fixed-width coder |
+| Large KBs | medium | for `m >= 9` on the WD50K collections the walk has more tokens than the certificate rows or fact list (`wd50k66`, `m >= 13`: `L(w_o)` median 51 vs 35), and under `fixed_obs` w_o does not win there (494.5 vs 477.2 rows, 469.8 fact); under `ngram3` and the compressors it still wins | writing |
+| Fact list | medium | HB2 is not won against the fact list: on `ndc_classes` the margin under `ngram3` is 20.6 vs 20.2 median bits, w_o does not win against `fact_noT` under `fixed_obs` on the three trivial-type collections, and edit distance of versions is smaller for the fact list | writing |
+| Edit distance across granularities | medium | token edit distance has a different unit for bytes, rows, integers and walk tokens; the zstd patch bytes (unit-free) and the net-of-overhead column are the comparable HB3 measures | writing |
+| n-gram order 3 on atomic tokens | low | large atomic alphabets (`fact`, rows) pay for unseen tokens (unseen-event fraction up to 0.22 for `fact_noT`); the flat arms and the orders 1-2 rows show the effect | |
+| Pilot directory | low | `pilot/` holds the superseded biased bootstrap | |
 
 ## 11. Self-assessment against the definition of done
 
-(filled at close)
+| # | Criterion | Met | Evidence |
+|---|---|---|---|
+| 1 | scripts produce per-KB rows CSV, collection-level compressor CSV with bootstrap CIs, deltas CSV, `tables.md`, `stats.json` | yes | `perkb_*.csv`, `compressors_*.csv`, `deltas_*.csv`, `tables.md`, `stats.json` in the results dir (collections: `wd50k66`, `ndc_classes`, `wd50k100`, `ndc_substances`) |
+| 2 | figure (PDF): median bits per KB vs fact-count bin per collection (learned code) plus compressor bytes/KB panel | yes | `fig_bits.pdf`, viewed |
+| 3 | pilot first, message `main` before the full run | yes | message sent after the pilot; `main` replied to proceed |
+| 4 | tests pass, everything committed, tree clean, log committed | yes | 33 passed; ruff clean; commits listed in section 3 |
+
+**Overall:** the numbers are complete and every claim in the summary below traces to a CSV/JSON in the results directory. Result in one paragraph (details in `tables.md`): against every certificate granularity (bytes, 4-byte words, rows, plain integers, upper-triangle integers) `w_o` needs fewer bits under the held-out 3-gram code in all four collections (median bits per KB, `wd50k66` / `ndc_classes` / `wd50k100` / `ndc_substances`: `w_o` 29.1 / 20.6 / 30.0 / 22.8 against rows 72.1 / 25.3 / 94.3 / 71.6, plain integers 117.4 / 103.7 / 155.2 / 112.9, upper-triangle integers 57.1 / 51.0 / 69.2 / 54.1, bytes 206.1 / 195.0 / 234.7 / 179.2) and under xz, zstd and bzip2 (xz bytes per KB `w_o` 6.5 / 3.3 / 6.9 / 6.5 against 10.5 / 5.2 / 11.3 / 10.7 for the best certificate form). The strict pre-registered headline (every granularity, every coder, both primary collections) is NOT met: against `cert_ints_ut` on `ndc_classes` the theoretical-alphabet fixed-width code favours the certificate (188.3 vs 125.1 bits), and the equal-granularity check `w_flat` vs `cert_ints_ut` fails under the order-1 n-gram on `ndc_classes` (120.9 vs 116.1). Against the canonical-rank fact list and the incidence list `w_o` wins on the learned codes and compressors in the primary collections but not convincingly (HB2 not met). HB3: `w_o` deltas are smaller than every certificate form on zstd patch bytes in both strata and both collections (one non-significant cell: `cert_rows`, constant-preserving, `ndc_substances`), but on constant-preserving pairs of `ndc_classes` the certificate has the smaller token edit distance, as predicted; the fact list has smaller deltas than `w_o`. Scrutinise first: the `fixed_theo` convention, the distinct-member bootstrap, and the large-KB strata.

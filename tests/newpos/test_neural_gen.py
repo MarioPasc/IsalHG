@@ -353,3 +353,47 @@ class TestSummarize:
         assert interval["method"] == "student_t"
         assert interval["low"] < 0.2 < interval["high"]
         assert summarize.ci95([0.5, 0.5, 0.5])["method"] == "degenerate"
+
+    def test_sensitivity_table_pairs_frozen_and_sensitivity_on_the_same_seeds(self) -> None:
+        import summarize
+
+        def unit(seed: int, lr: float, usable: float) -> dict:
+            return {
+                "collection": "c",
+                "serialization": "fact",
+                "seed": seed,
+                "usable_per_draw": usable,
+                "residual_ood_rate": 1 - usable,
+                "vun_per_draw": usable / 2,
+                "test_bits_per_kb": 10.0,
+                "best_epoch": 3,
+                "epochs_run": 9,
+                "stopped_early": True,
+                "config": {"lr": lr, "patience": 10, "max_epochs": 60},
+            }
+
+        frozen = [unit(1, 2e-3, 0.1), unit(2, 2e-3, 0.3), unit(3, 2e-3, 0.9)]
+        sensitivity = [unit(1, 5e-4, 0.5), unit(2, 5e-4, 0.5)]
+        text = summarize.render_sensitivity(frozen, sensitivity)
+        assert "| c | fact | frozen | 2 | 0.2000 |" in text
+        assert "| c | fact | sensitivity | 2 | 0.5000 |" in text
+
+
+class TestRunGrid:
+    def test_seed_schedule_and_unit_order(self) -> None:
+        import run
+
+        assert run.parse_seeds("pilot") == [60000, 60001, 60002]
+        assert run.parse_seeds("all")[-1] == 60026 and len(run.parse_seeds("all")) == 27
+        assert run.parse_seeds("5,7") == [5, 7]
+        units = run.build_units(["a", "b"], ["ow", "fact"], [1, 2])
+        assert [u.seed for u in units] == [1, 1, 1, 1, 2, 2, 2, 2]
+        shards = [units[i::3] for i in range(3)]
+        assert sorted(u.stem for s in shards for u in s) == sorted(u.stem for u in units)
+
+    def test_bad_shard_is_rejected(self) -> None:
+        import run
+
+        with pytest.raises(ng_data.NeuralGenError):
+            run.parse_shard("3/3")
+        assert run.parse_shard("1/3") == (1, 3)

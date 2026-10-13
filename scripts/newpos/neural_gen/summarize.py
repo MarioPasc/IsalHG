@@ -343,14 +343,72 @@ def write_units_csv(units: Sequence[Mapping[str, Any]], path: Path) -> None:
             writer.writerow([unit.get(col, "") for col in UNIT_COLUMNS])
 
 
+def render_sensitivity(
+    frozen: Sequence[Mapping[str, Any]], sensitivity: Sequence[Mapping[str, Any]]
+) -> str:
+    """Side-by-side table of the frozen recipe and a sensitivity recipe on the same seeds."""
+    seeds = {u["seed"] for u in sensitivity}
+    frozen_cells = group([u for u in frozen if u["seed"] in seeds])
+    sens_cells = group(sensitivity)
+    cfg = next(iter(sensitivity))["config"]
+    lines = [
+        "# Sensitivity recipe against the frozen shared recipe (same seeds)",
+        "",
+        f"Sensitivity: lr {cfg['lr']}, patience {cfg['patience']}, max epochs {cfg['max_epochs']}; "
+        f"seeds {sorted(seeds)}. Mean over seeds. `capped` = units that ran all max epochs "
+        "without early stopping.",
+        "",
+        "| collection | serialization | recipe | n | usable/draw | residual r | VUN/draw | test bits/KB | best epoch | epochs run | capped |",
+        "|---|---|---|---|---|---|---|---|---|---|---|",
+    ]
+    for (collection, serialization), rows in sorted(sens_cells.items()):
+        for label, cell in (
+            ("frozen", frozen_cells.get((collection, serialization), [])),
+            ("sensitivity", rows),
+        ):
+            if not cell:
+                continue
+            mean = {
+                key: float(np.mean(_vector(cell, key)))
+                for key in (
+                    "usable_per_draw",
+                    "residual_ood_rate",
+                    "vun_per_draw",
+                    "test_bits_per_kb",
+                    "best_epoch",
+                    "epochs_run",
+                )
+            }
+            capped = sum(1 for u in cell if not u["stopped_early"])
+            lines.append(
+                f"| {collection} | {serialization} | {label} | {len(cell)} "
+                f"| {mean['usable_per_draw']:.4f} | {mean['residual_ood_rate']:.4f} "
+                f"| {mean['vun_per_draw']:.4f} | {mean['test_bits_per_kb']:.2f} "
+                f"| {mean['best_epoch']:.1f} | {mean['epochs_run']:.1f} | {capped}/{len(cell)} |"
+            )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def main(argv: Sequence[str] | None = None) -> None:
     """Command line entry point."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, default=DEFAULT_RESULTS_DIR)
+    parser.add_argument(
+        "--frozen-dir",
+        type=Path,
+        default=None,
+        help="with --results-dir pointing at a sensitivity directory: also write the comparison "
+        "against this frozen-recipe directory",
+    )
     args = parser.parse_args(argv)
     units = load_units(args.results_dir)
     if not units:
         raise SystemExit(f"no *.summary.json in {args.results_dir}")
+    if args.frozen_dir is not None:
+        comparison = render_sensitivity(load_units(args.frozen_dir), units)
+        (args.results_dir / "comparison_vs_frozen.md").write_text(comparison, encoding="utf-8")
+        print(comparison)
     stats = aggregate(units)
     write_units_csv(units, args.results_dir / "units.csv")
     (args.results_dir / "stats.json").write_text(

@@ -121,6 +121,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("--seeds", default="pilot", help="pilot | all | comma-separated seeds")
     parser.add_argument("--out-dir", type=Path, default=DEFAULT_RESULTS_DIR)
     parser.add_argument("--n-draws", type=int, default=N_DRAWS)
+    parser.add_argument("--lr", type=float, default=ng_model.GRUConfig.lr)
+    parser.add_argument("--patience", type=int, default=ng_model.GRUConfig.patience)
     parser.add_argument("--shard", default="0/1")
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--force", action="store_true")
@@ -151,7 +153,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     import torch
 
     torch.set_num_threads(1)
-    failures = run_shard(mine, args.out_dir, ng_model.GRUConfig(), args.n_draws, args.force)
+    config = ng_model.GRUConfig(lr=args.lr, patience=args.patience)
+    failures = run_shard(mine, args.out_dir, config, args.n_draws, args.force)
     return int(failures > 0)
 
 
@@ -167,6 +170,10 @@ def _forwarded(args: argparse.Namespace) -> list[str]:
         str(args.out_dir),
         "--n-draws",
         str(args.n_draws),
+        "--lr",
+        repr(args.lr),
+        "--patience",
+        str(args.patience),
     ]
     return [*forwarded, "--force"] if args.force else forwarded
 

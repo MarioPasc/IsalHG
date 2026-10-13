@@ -1,5 +1,13 @@
 # NEWPOS — searching for new comparative experiments where the language wins
 
+> **Timestamp correction (2026-10-13 15:35 CEST, read from `date`).** Earlier
+> versions of this log carried clock times on most entries (e.g. "16:15",
+> "18:05"). Apart from the opening time, those were my estimates, not readings,
+> and they were wrong: the whole session through the wave's completion ran
+> from 14:32 to about 15:35. They are removed. Entries are in chronological
+> order. "Pre-registered, before running" means that, in this session, the entry
+> was written before the command that produced its numbers was executed.
+
 **Owner:** `[IsalHG-Article-Iterator]` · **Opened:** 2026-10-13 14:32 CEST ·
 **Branch:** `feature/newpos-experiments` (cut from `integration/2026-09-13-headline-w0` @ `216dd41`).
 
@@ -58,7 +66,7 @@ consensus.
 
 *(appended below as they run)*
 
-### P-C3a — version linkage on NDC-classes, nearest-neighbour ranking (2026-10-13 14:40)
+### P-C3a — version linkage on NDC-classes, nearest-neighbour ranking
 
 **Hypothesis.** Consecutive quarterly versions of a drug class's record differ
 mostly by products entering or leaving with new co-classes (pendant edits); `w°`
@@ -95,7 +103,7 @@ the win is not clean against every competitor: HPD has the higher MRR overall
 cost is within 0.02 of `w°` on hit@1. **Status: PROMISING, not yet a win.**
 Untested: significance; 1-to-1 assignment linkage; larger gaps between versions.
 
-### P-C2a — exact metric similarity search (2026-10-13 14:45)
+### P-C2a — exact metric similarity search
 
 **Hypothesis.** Pendant locality spreads `d_I`'s distance distribution, so
 `d_I` has a lower intrinsic dimensionality `ρ = μ²/2σ²` (Chávez et al. 2001)
@@ -129,7 +137,7 @@ bipartite edit path, used as if it were a metric, returns a wrong 10-NN set for
 48–65 % of queries under pivot pruning, a concrete consequence of its
 non-metricity worth one sentence in H1.
 
-### P-C3b — version linkage replication on NDC-substances (2026-10-13 14:55)
+### P-C3b — version linkage replication on NDC-substances
 
 Same protocol as P-C3a on the second quarterly series (`ndc_substances`, one
 constant type, 885 consecutive pairs → 1,770 queries, candidates median 36, max
@@ -155,7 +163,7 @@ the size/degree confound of lesson L1. Version linkage by nearest neighbour is
 without a design that removes the degree confound (none is pre-registered; I am
 not fishing for one).
 
-### Wave `2026-10-13-newpos-w1` (launched 2026-10-13 ~15:10)
+### Wave `2026-10-13-newpos-w1`
 
 Base `518824a`. Three Sonnet 5.5 (xhigh) workers in isolated worktrees (the
 project's `CLAUDE_CODE_SUBAGENT_MODEL=sonnet` pins subagents to Sonnet). Each has
@@ -173,7 +181,7 @@ orchestrator before its full run. Work logs land in
 Shared contract: one JSONL sample format (frozen in both generation prompts) so
 `genbench-ngram`'s evaluator scores the GRU samples after the merge.
 
-**Amendment to `compression`'s pre-registration (sent ~15:20, before any result
+**Amendment to `compression`'s pre-registration (sent before any result
 was relayed; prompted by `[Opus-Article-Orchestrator]` and lesson L9).** The
 certificate is reported under three granularities (bytes, rows, integers). The
 compactness claim is made only if `w°` wins under every granularity and every
@@ -183,7 +191,7 @@ theoretical one (`|Σ_HG(k)|` with labels; the certificate's full symbol range).
 Median and mean token lengths are reported, to reconcile prose.md §2.2 (6/8
 instructions vs 12 rows) with T-KBx (13.8 tokens vs 40 integers).
 
-### Review by `[IsalHG-Fable-Review]` (received ~15:35) and the amendments it caused
+### Review by `[IsalHG-Fable-Review]` and the amendments it caused
 
 - C (GRU) must run whatever the outcome; pre-register both outcomes ("guaranteed
   vs learned" with the residual rate printed). → sent to `neural-gen`.
@@ -202,7 +210,7 @@ instructions vs 12 rows) with T-KBx (13.8 tokens vs 40 integers).
   bytes 0.184 (WD50K ladder goes the other way), never measured against the
   floors or the vector representations.
 
-### P-C7 — does version distance track the amount of change? (pre-registered 2026-10-13 15:40, before running)
+### P-C7 — does version distance track the amount of change? (pre-registered, before running)
 
 **Hypothesis.** On natural consecutive version pairs, the distance between the
 two versions increases with the true number of changed facts (`delta` in the
@@ -215,7 +223,7 @@ the paired difference ρ(`w°`) − ρ(arm) bootstrapped on the same resamples.
 not a clean win (reported whole either way). **Script:**
 `scripts/newpos/probe_change_tracking.py`.
 
-**Result (15:50; output `scratchpad/newpos/c7_tracking.txt`).** Spearman ρ with
+**Result (output `scratchpad/newpos/c7_tracking.txt`).** Spearman ρ with
 95 % cluster-bootstrap CI; Δ = ρ(`w°`) − ρ(arm) with its paired CI (bold = CI
 excludes 0).
 
@@ -248,7 +256,7 @@ sentence at most).** It reproduces the RQ1 M2 figure Fable cited (`w°` 0.556 vs
 rows 0.275 / bytes 0.184 on the NDC natural pendant series) with a slightly
 different pair set.
 
-### `genbench-ngram` pilot (3 seeds; received ~16:05)
+### `genbench-ngram` pilot (3 seeds)
 
 Evaluator reproduces RQ6 exactly on the all-decoded arms (validity,
 connectivity, five JSDs: max relative difference 0). Star definition reproduces
@@ -275,7 +283,7 @@ WD50K, 0.689 vs 0.687 on NDC).** The LCC repair, however, destroys stars
 (star fraction 0.327 vs 0.534 on WD50K). 27-seed run authorised to make the
 negative citable.
 
-### P-C8 — one-edit near-duplicate detection (pre-registered 2026-10-13 16:15, before running)
+### P-C8 — one-edit near-duplicate detection (pre-registered, before running)
 
 **Rationale.** C3/C7 suggest `w°` is the only representation that is both
 *exact at zero* (no false merges, unlike WL / NetLSD / HPD / bipartite
@@ -309,8 +317,8 @@ have ≥ 1 — it may be near-perfect by construction (at cubic cost and without
 the metric axioms). If it wins, that is the result. **Script:**
 `scripts/newpos/probe_near_duplicates.py`.
 
-**Result — probe (16:25, `probe_near_duplicates.py`), then hardened (16:45,
-`scripts/newpos/neardup.py`; results
+**Result — probe (`probe_near_duplicates.py`), then hardened
+(`scripts/newpos/neardup.py`; results
 `D/results/NEWPOS_2026-10-13/neardup/neardup_<collection>.json` + truth files).**
 Hardening, decided before the hardened run: the truth is keyed by the **nauty
 certificate**, not by our word (`--key both` asserts both keys give the same
@@ -357,7 +365,7 @@ Pendant locality keeps the true neighbours within 1–2 instructions, where the
 certificate moves 11–13 rows. **Status: STRONG CANDIDATE.** Next: confirmatory
 replication on the two collections this probe has not seen.
 
-### P-C8-rep — confirmatory replication (pre-registered 16:50, before running)
+### P-C8-rep — confirmatory replication (pre-registered, before running)
 
 **H-ND-rep.** On `ndc_substances` (all arms; the `w°` matrix built by
 `build_ow_matrix.py`) and `wd50k100` (cached arms only: certificate bytes, fact
@@ -366,7 +374,7 @@ all arms. Same script, same settings, truth keyed by the certificate. **Kill:**
 any arm with MRR or AP ≥ `w°`'s on either collection. The protocol is
 unchanged from P-C8.
 
-**Result (17:00; output `scratchpad/newpos/c8_rep.txt`, JSONs in the neardup
+**Result (output `scratchpad/newpos/c8_rep.txt`, JSONs in the neardup
 results dir).**
 
 | collection (positives: pendant / interior) | `w°` MRR [CI] | best other MRR | `w°` AP | best other AP | `w°` AP pendant / interior |
@@ -393,7 +401,7 @@ added or removed together with its value). There `w°` leads every
 representation on every collection, by 2× on NDC and 7–50× on WD50K. The
 unconditional claim fails on NDC-substances and is stated as such.
 
-**WD50K(100) completed (17:20).** The missing competitor matrices (rows,
+**WD50K(100) completed.** The missing competitor matrices (rows,
 NetLSD, HPD, bipartite assign/path) were built locally with the registry
 defaults (same `params: {}` as the campaign manifests; 1.3 s / 3.5 s / 53 s /
 65 s / 106 s). `w°` MRR **0.685** [0.662, 0.709] vs bipartite path 0.257, fact
@@ -413,7 +421,7 @@ The search form is better on NDC-classes, consistent with its insertion
 locality (RQ1). There it beats the bipartite edit path that ties `w°`. Both Isal
 programs lead every non-Isal representation on WD50K by about 5×.
 
-### C8 status summary (17:25)
+### C8 status summary
 
 | collection | `w°` MRR | best non-Isal MRR | verdict |
 |---|---|---|---|
@@ -422,7 +430,7 @@ programs lead every non-Isal representation on WD50K by about 5×.
 | NDC-classes | **0.416** | 0.413 (bipartite path) | tie with the edit path (p = 0.19); `w*_c` 0.525 beats it |
 | NDC-substances | **0.717** | 0.701 (bipartite path) | tie with the edit path; AP lost to degree-seq (0.459 vs 0.430) |
 
-### Second review by `[IsalHG-Fable-Review]` on C8 (received ~17:35) and what it changed
+### Second review by `[IsalHG-Fable-Review]` on C8 and what it changed
 
 1. Defensible for TKDE as "near-duplicate retrieval under anonymization". The
    strongest objection: radius-1 positives are found *exactly* by enumeration
@@ -444,7 +452,7 @@ programs lead every non-Isal representation on WD50K by about 5×.
 4. `wd50k100` and `ndc_substances` are "controls" in the draft's setup;
    promoting them needs the data section updated.
 
-### P-C8-strata — stratified per-query retrieval (17:45; `neardup.py`, output `scratchpad/newpos/c8_strata.txt`)
+### P-C8-strata — stratified per-query retrieval (`neardup.py`, output `scratchpad/newpos/c8_strata.txt`)
 
 Per query, its positives are its pendant (or interior) one-edit partners. Its
 partners of the other kind are removed from the candidate list, counting
@@ -473,7 +481,7 @@ condition). `w°` vs the best arm: NDC-cl 0.133 vs fact list 0.742; NDC-sub
 fact list 0.532. The certificate (0.20–0.55) also beats `w°` on every interior
 stratum.
 
-### P-C8-r2 — radius-2 stratum (18:00; `scripts/newpos/neardup_r2.py`, outputs `scratchpad/newpos/c8_r2_*.txt`, `neardup_r2_<collection>.json`)
+### P-C8-r2 — radius-2 stratum (`scripts/newpos/neardup_r2.py`, outputs `scratchpad/newpos/c8_r2_*.txt`, `neardup_r2_<collection>.json`)
 
 Truth: non-isomorphic pairs not within radius 1 that are reached by two
 down-edits, or that share a down-neighbour (delete on one side, insert on the
@@ -497,7 +505,7 @@ record that omission.
 Pooled over all two-edit pairs, it is first on all four and significant on
 three; on NDC-substances it ties the bipartite edit path.
 
-### Verdict on C8 (18:05) — the new positive experiment
+### Verdict on C8 — the new positive experiment
 
 **Near-neighbour retrieval of structural near-duplicates.** Under anonymization
 a KB's versions and near-copies can only be found by structure. Using each
@@ -516,7 +524,7 @@ absolute movement against one competitor into a task against all ten.
 **Status: POSITIVE — candidate for the main text** (deliverable:
 `NEWPOS_2026-10-13/C8_NEAR_DUPLICATE_RETRIEVAL.md`).
 
-### `genbench-ngram` final (27 seeds; verified 18:30, verdict ACCEPT)
+### `genbench-ngram` final (27 seeds; verdict ACCEPT)
 
 Verification: 2 commits (`93e0190` code, `0824502` log) touching only its
 ownership set; 89 tests re-run green in its worktree; ruff clean; tree clean.
@@ -541,7 +549,7 @@ advantage is already in the paper's spirit (the joint rate); against a trivial
 largest-component repair it holds on WD50K and ties on NDC. The guarantee
 ("no repair step") is the defensible claim, as the paper already states.
 
-### `compression` final (four collections; verified 19:05, verdict ACCEPT)
+### `compression` final (four collections; verdict ACCEPT)
 
 Verification: 5 commits, with the pre-registration `9f9ef2d` committed before
 the code `95cc9ef`; only its ownership set touched; 33 tests re-run green; ruff
@@ -582,7 +590,7 @@ sentence plus a supplement table): "under a learned code and under generic
 compressors, the word needs 1.2–2.4× fewer bits than the best rendering of the
 certificate" (n-gram 1.23–2.37×; xz 1.58–1.65×). It is not a headline, and it is not a win against the fact list.
 
-### `neural-gen` final (27 seeds; verified 19:20; uncapped sensitivity requested)
+### `neural-gen` final (27 seeds; uncapped sensitivity requested)
 
 Verification: 5 commits, with the pre-registration `6845e65` committed before
 the code `30bf26d`; only its ownership set touched; 30 tests re-run green in
@@ -617,7 +625,16 @@ Results `D/results/NEWPOS_2026-10-13/neural_gen/` (162 `.jsonl.gz`, `summary.md`
   collections, which agrees with `compression`'s n-gram coder.
 - The first sensitivity run (lr 5e-4) was capped at 60 epochs, so it does not
   settle undertraining on NDC. An uncapped symmetric run (max 200 epochs,
-  3 seeds, all arms) was requested from the agent at 19:20.
+  3 seeds, all arms) was requested from the agent.
+
+**Uncapped symmetric sensitivity (lr 5e-4, patience 10, ≤ 200 epochs, 3
+seeds, all arms; `neural_gen/sensitivity_lr5e-4_e200/`).** All 18 units stopped
+early (0 at the cap). Out-of-domain rate, frozen → sensitivity: NDC fact list
+0.296 → 0.284; NDC incidence 0.343 → 0.419 (worse); WD50K fact list 0.933 →
+0.949 (worse); WD50K incidence 0.653 → 0.646. Every interval overlaps the
+frozen recipe's interval, and test bits/KB move by ≤ 1.8. **The
+undertraining objection is closed:** a longer, gentler schedule does not move
+any baseline toward the domain.
 
 **Reading: POSITIVE support for H4.** It answers "an n-gram is a toy": under an
 identical neural model the guarantee is unchanged, and the baselines still leave

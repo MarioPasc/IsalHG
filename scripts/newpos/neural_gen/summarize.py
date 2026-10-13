@@ -344,7 +344,9 @@ def write_units_csv(units: Sequence[Mapping[str, Any]], path: Path) -> None:
 
 
 def render_sensitivity(
-    frozen: Sequence[Mapping[str, Any]], sensitivity: Sequence[Mapping[str, Any]]
+    frozen: Sequence[Mapping[str, Any]],
+    sensitivity: Sequence[Mapping[str, Any]],
+    heading: str = "#",
 ) -> str:
     """Side-by-side table of the frozen recipe and a sensitivity recipe on the same seeds."""
     seeds = {u["seed"] for u in sensitivity}
@@ -352,13 +354,13 @@ def render_sensitivity(
     sens_cells = group(sensitivity)
     cfg = next(iter(sensitivity))["config"]
     lines = [
-        "# Sensitivity recipe against the frozen shared recipe (same seeds)",
+        f"{heading} Sensitivity recipe against the frozen shared recipe (same seeds)",
         "",
         f"Sensitivity: lr {cfg['lr']}, patience {cfg['patience']}, max epochs {cfg['max_epochs']}; "
         f"seeds {sorted(seeds)}. Mean over seeds. `capped` = units that ran all max epochs "
         "without early stopping.",
         "",
-        "| collection | serialization | recipe | n | usable/draw | residual r | VUN/draw | test bits/KB | best epoch | epochs run | capped |",
+        "| collection | serialization | recipe | n | usable/draw | residual r [95 % CI over seeds] | VUN/draw | test bits/KB | best epoch | epochs run | capped |",
         "|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for (collection, serialization), rows in sorted(sens_cells.items()):
@@ -380,9 +382,10 @@ def render_sensitivity(
                 )
             }
             capped = sum(1 for u in cell if not u["stopped_early"])
+            r = ci95(_vector(cell, "residual_ood_rate"))
             lines.append(
                 f"| {collection} | {serialization} | {label} | {len(cell)} "
-                f"| {mean['usable_per_draw']:.4f} | {mean['residual_ood_rate']:.4f} "
+                f"| {mean['usable_per_draw']:.4f} | {r['mean']:.4f} [{r['low']:.4f}, {r['high']:.4f}] "
                 f"| {mean['vun_per_draw']:.4f} | {mean['test_bits_per_kb']:.2f} "
                 f"| {mean['best_epoch']:.1f} | {mean['epochs_run']:.1f} | {capped}/{len(cell)} |"
             )
@@ -401,6 +404,14 @@ def main(argv: Sequence[str] | None = None) -> None:
         help="with --results-dir pointing at a sensitivity directory: also write the comparison "
         "against this frozen-recipe directory",
     )
+    parser.add_argument(
+        "--sensitivity-dir",
+        type=Path,
+        action="append",
+        default=[],
+        help="append a frozen-vs-sensitivity section for this directory to summary.md; the "
+        "frozen tables above it are computed from --results-dir only",
+    )
     args = parser.parse_args(argv)
     units = load_units(args.results_dir)
     if not units:
@@ -415,6 +426,13 @@ def main(argv: Sequence[str] | None = None) -> None:
         json.dumps(stats, indent=2, sort_keys=True, default=str), encoding="utf-8"
     )
     markdown = render_markdown(stats)
+    for directory in args.sensitivity_dir:
+        sensitivity_units = load_units(directory)
+        if sensitivity_units:
+            markdown += (
+                f"\n---\n\nSensitivity directory `{directory.name}`.\n\n"
+                + render_sensitivity(units, sensitivity_units, heading="##")
+            )
     (args.results_dir / "summary.md").write_text(markdown, encoding="utf-8")
     print(markdown)
 

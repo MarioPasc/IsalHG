@@ -21,8 +21,10 @@ the ordered-walk word `w°` ranks the true neighbour first far more often than
 every competitor on all four collections, at radius 1 and at radius 2. MRR is
 0.45–0.78 for `w°` against at most 0.53 for the best competitor, with
 Holm-corrected p < 1e-32 everywhere. When they differ by an **interior** edit,
-the nauty certificate, the canonical-rank fact list and the bipartite edit path
-rank better, exactly as H2 predicts. Pooled over all edits, `w°` has the top
+`w°` is beaten by 4–8 of the 10 competitors (6 / 4 / 6 / 8 on WD66 / WD100 /
+NDC-cl / NDC-sub; always by both certificate renderings, the fact list and the
+bipartite edit path; on NDC-substances even by NetLSD and the size floor),
+exactly as H2 predicts. Pooled over all edits, `w°` has the top
 MRR on all four collections, but it ties the bipartite edit path on both NDC
 series, and the pre-registered pooled-AP criterion failed on NDC-substances.
 

@@ -585,6 +585,15 @@ clean; tree clean. Results `D/results/NEWPOS_2026-10-13/compression/`
   free. Final CIs use distinct drawn members, translated to the point estimate
   (documented in its log).
 
+**Correction (after `[Opus-Article-Orchestrator]`'s check against
+`compression/perkb_*.csv`).** "Not convincing against the fact list" overstated
+the loss. Under the held-out 3-gram code `w°` is shorter than the fact list on
+WD66 (29.1 vs 48.2), WD100 (30.0 vs 49.7) and NDC-sub (22.8 vs 31.4), and longer
+only on NDC-cl (20.6 vs 20.2). The registered every-coder criterion is not met.
+Likewise, in C8's interior stratum `w°` is beaten by 6 / 4 / 6 / 8 of the 10
+competitors (WD66 / WD100 / NDC-cl / NDC-sub), not only by the three arms named
+in the C8 verdict below.
+
 **Reading: compactness against the certificate is a qualified POSITIVE** (one
 sentence plus a supplement table): "under a learned code and under generic
 compressors, the word needs 1.2–2.4× fewer bits than the best rendering of the

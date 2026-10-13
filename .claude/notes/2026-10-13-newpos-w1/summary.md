@@ -117,7 +117,7 @@ All three ran on Sonnet 5.5 (`sonnet55-xhigh`; the project's
 | Check | Command | Result |
 |---|---|---|
 | New suites | `pytest tests/newpos -q` (env `isalhg-newpos-gru`) | 163 passed |
-| Full suite (non-slow) | `pytest tests/ -q -m "not slow"` (env `isalhg`) | see the appended line below |
+| Full suite (non-slow) | `pytest tests/ -q -m "not slow"` (env `isalhg`) | 3,368 passed, 7 failed, 30 skipped (8 min 34 s). All 7 failures (`test_rq36_smoke` ×5, `test_rq45_smoke` ×1, `test_tkde_isal_arms::test_engine_word_cpp_matches_pointer_word`) **reproduce on the untouched base `216dd41`** (`pytest tests/experiments_tkde tests/integration/test_tkde_isal_arms.py` in a base worktree: the same 7 failed, 703 passed). They pre-date this wave. The last is a test-order dependency: the C++ canonicalizer runs before a forked child, which then deadlocks. None touches `tests/newpos`. |
 | Lint | `ruff check tests/newpos scripts/newpos/{genbench,compression,neural_gen}` | all checks passed |
 | `src/` untouched | `git diff --stat 216dd41..HEAD -- src/` | empty |
 

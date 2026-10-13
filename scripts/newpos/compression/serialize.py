@@ -289,7 +289,7 @@ def encode_member(H: SparseHypergraph, arms: Sequence[str] = ARMS) -> dict[str, 
     out: dict[str, tuple[Symbol, ...]] = {}
     shared: dict[str, Any] = {}
 
-    def need(key: str) -> Any:
+    def need(key: str) -> Any:  # noqa: ANN401 - heterogeneous cache
         if key not in shared:
             shared[key] = {
                 "w": lambda: ordered_symbols(H),
@@ -435,7 +435,7 @@ def fixed_width_bits(
 # ---------------------------------------------------------------------------
 
 
-def _compact(value: Any) -> str:
+def _compact(value: object) -> str:
     if isinstance(value, Token):
         return value.serialize()
     if isinstance(value, tuple):

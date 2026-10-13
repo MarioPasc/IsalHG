@@ -209,8 +209,8 @@ def main(argv: list[str] | None = None) -> None:
         0.5,
         0.075,
         "Top: lines are bootstrap 95 % intervals of the median; hollow markers have fewer than "
-        f"{MIN_BIN} members.\nBottom: bars are the full-collection point; lines are the 95 % interval "
-        "over distinct-member bootstrap replicates (about 63 % of the members each).",
+        f"{MIN_BIN} members.\nBottom: bars are the full-collection point; lines are the 95 % "
+        "interval over distinct-member bootstrap replicates (about 63 % of the members each).",
         ha="center",
         fontsize=7.5,
         color=INK_2,

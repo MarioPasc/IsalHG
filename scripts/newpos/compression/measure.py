@@ -28,9 +28,9 @@ import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from experiments.tkde import corpora as C  # noqa: E402
-from scripts.newpos.compression import compressors as K  # noqa: E402
-from scripts.newpos.compression import serialize as S  # noqa: E402
+from experiments.tkde import corpora  # noqa: E402
+from scripts.newpos.compression import compressors as comp  # noqa: E402
+from scripts.newpos.compression import serialize as ser  # noqa: E402
 from scripts.newpos.compression.coders import cross_validated_bits  # noqa: E402
 
 logger = logging.getLogger("compression.measure")
@@ -52,16 +52,16 @@ _STATE: dict[str, Any] = {}
 def prepare(
     collection: str, root: Path, subsample: int | None, subsample_seed: int
 ) -> dict[str, Any]:
-    """Load a collection, encode every member under every arm, and cache the result in ``_STATE``."""
-    col = C.load_collection(collection, root=root)
+    """Load a collection, encode every member under every arm, and cache it in ``_STATE``."""
+    col = corpora.load_collection(collection, root=root)
     if subsample is not None and subsample < len(col.records):
         rng = np.random.default_rng(subsample_seed)
         keep = np.sort(rng.choice(len(col.records), size=subsample, replace=False))
         ids = [col.records[int(i)].kb_id for i in keep]
-        col = C.subset(col, ids, name=col.name)
-    hypergraphs = C.hypergraphs(col)
+        col = corpora.subset(col, ids, name=col.name)
+    hypergraphs = corpora.hypergraphs(col)
     n_v, n_e = hypergraphs[0].n_vertex_labels, hypergraphs[0].n_edge_labels
-    info = S.CollectionInfo(
+    info = ser.CollectionInfo(
         name=collection,
         k=col.k_max,
         n_v=n_v,
@@ -69,10 +69,10 @@ def prepare(
         n_max=max(H.n_nodes for H in hypergraphs),
         big_n_max=max(H.n_nodes + H.n_edges for H in hypergraphs),
     )
-    arms = [a for a in S.ARMS if S.arm_available(a, n_v)]
+    arms = [a for a in ser.ARMS if ser.arm_available(a, n_v)]
     sequences: dict[str, list[tuple[Any, ...]]] = {a: [] for a in arms}
     for H in hypergraphs:
-        encoded = S.encode_member(H, arms)
+        encoded = ser.encode_member(H, arms)
         for arm in arms:
             sequences[arm].append(encoded[arm])
     members = [
@@ -80,13 +80,13 @@ def prepare(
             "kb_id": rec.kb_id,
             "n": H.n_nodes,
             "m": H.n_edges,
-            "star": S.is_star(H),
-            "fact_bin": S.fact_bin(H.n_edges),
+            "star": ser.is_star(H),
+            "fact_bin": ser.fact_bin(H.n_edges),
         }
         for rec, H in zip(col.records, hypergraphs, strict=True)
     ]
-    alpha_obs = {a: S.observed_alphabet(a, sequences[a]) for a in arms}
-    alpha_theo = {a: S.theoretical_alphabet(a, info) for a in arms}
+    alpha_obs = {a: ser.observed_alphabet(a, sequences[a]) for a in arms}
+    alpha_theo = {a: ser.theoretical_alphabet(a, info) for a in arms}
     _STATE.update(
         collection=col,
         info=info,
@@ -181,8 +181,8 @@ def run_perkb(out: Path, procs: int, seeds: tuple[int, ...]) -> None:
     rows: list[dict[str, Any]] = []
     for arm in arms:
         seqs = sequences[arm]
-        fixed_obs = [S.fixed_width_bits(arm, s, _STATE["alpha_obs"][arm]) for s in seqs]
-        fixed_theo = [S.fixed_width_bits(arm, s, _STATE["alpha_theo"][arm]) for s in seqs]
+        fixed_obs = [ser.fixed_width_bits(arm, s, _STATE["alpha_obs"][arm]) for s in seqs]
+        fixed_theo = [ser.fixed_width_bits(arm, s, _STATE["alpha_theo"][arm]) for s in seqs]
         for i, (member, seq) in enumerate(zip(members, seqs, strict=True)):
             row: dict[str, Any] = {
                 "collection": _STATE["info"].name,
@@ -227,21 +227,21 @@ def run_perkb(out: Path, procs: int, seeds: tuple[int, ...]) -> None:
 
 
 def _point_task(arm: str) -> list[dict[str, object]]:
-    return K.point_sizes(arm, _STATE["sequences"][arm])
+    return comp.point_sizes(arm, _STATE["sequences"][arm])
 
 
 def _boot_task(task: tuple[str, str, str, str]) -> tuple[str, np.ndarray]:
     arm, kind, which, rendering = task
     seqs = _STATE["sequences"][arm]
-    ids = K.frequency_ids(seqs)
-    table = K.codepoint_table(len(ids))
-    chunks = K.render_lines(arm, seqs, rendering, ids, table)
+    ids = comp.frequency_ids(seqs)
+    table = comp.codepoint_table(len(ids))
+    chunks = comp.render_lines(arm, seqs, rendering, ids, table)
     member_symbols = symbol_texts = None
     if which == "self_contained" and rendering in ("ids", "cp"):
         member_symbols = [frozenset(ids[s] for s in seq) for seq in seqs]
         ordered = sorted(ids, key=ids.__getitem__)
-        symbol_texts = [S.symbol_text(arm, sym).encode() for sym in ordered]
-    sizes = K.bootstrap_sizes(chunks, kind, _STATE["boot_index"], member_symbols, symbol_texts)
+        symbol_texts = [ser.symbol_text(arm, sym).encode() for sym in ordered]
+    sizes = comp.bootstrap_sizes(chunks, kind, _STATE["boot_index"], member_symbols, symbol_texts)
     return f"{arm}|{kind}|{which}", sizes
 
 
@@ -255,7 +255,7 @@ def run_compressors(out: Path, procs: int, reps: int, boot_arms: list[str] | Non
         point_rows = [r for chunk in pool.map(_point_task, arms, chunksize=1) for r in chunk]
     logger.info("compressor point sizes: %.0fs", time.perf_counter() - t0)
     _write_csv(out / f"compressors_point_{name}.csv", point_rows)
-    chosen = K.choose_renderings(point_rows)
+    chosen = comp.choose_renderings(point_rows)
 
     index = np.random.default_rng(BOOT_SEED).integers(0, n, size=(reps, n))
     _STATE["boot_index"] = index
@@ -283,7 +283,7 @@ def run_compressors(out: Path, procs: int, reps: int, boot_arms: list[str] | Non
                 int(point["dict_bytes"]) if which == "self_contained" else 0
             )
             sizes = boot.get(f"{arm}|{kind}|{which}")
-            low, high = K.percentile_ci(sizes) if sizes is not None else (float("nan"),) * 2
+            low, high = comp.percentile_ci(sizes) if sizes is not None else (float("nan"),) * 2
             rows.append(
                 {
                     "collection": name,
@@ -313,11 +313,11 @@ def _delta_task(arm: str) -> list[dict[str, Any]]:
 
     seqs = _STATE["sequences"][arm]
     index = {m["kb_id"]: i for i, m in enumerate(_STATE["members"])}
-    ids = K.frequency_ids(seqs)
-    table = K.codepoint_table(len(ids))
-    cps = [K.render_cp_line(s, ids, table) for s in seqs]
+    ids = comp.frequency_ids(seqs)
+    table = comp.codepoint_table(len(ids))
+    cps = [comp.render_cp_line(s, ids, table) for s in seqs]
     rows: list[dict[str, Any]] = []
-    with K.delta_workdir() as tmp:
+    with comp.delta_workdir() as tmp:
         work = Path(tmp)
         for pair_no, pair in enumerate(_STATE["pairs"]):
             a, b = index[pair["a"]], index[pair["b"]]
@@ -330,8 +330,10 @@ def _delta_task(arm: str) -> list[dict[str, Any]]:
                     "constant_preserving": bool(pair["constant_preserving"]),
                     "fact_delta": pair.get("delta"),
                     "arm": arm,
-                    "patch_bytes": K.zstd_patch_size(cps[a].encode(), cps[b].encode(), work),
-                    "self_patch_bytes": K.zstd_patch_size(cps[b].encode(), cps[b].encode(), work),
+                    "patch_bytes": comp.zstd_patch_size(cps[a].encode(), cps[b].encode(), work),
+                    "self_patch_bytes": comp.zstd_patch_size(
+                        cps[b].encode(), cps[b].encode(), work
+                    ),
                     "edit_distance": int(Levenshtein.distance(cps[a], cps[b])),
                     "len_a": len(seqs[a]),
                     "len_b": len(seqs[b]),
@@ -344,7 +346,9 @@ def run_deltas(out: Path, procs: int) -> None:
     """Version-delta sizes between consecutive natural versions, per arm."""
     present = {m["kb_id"] for m in _STATE["members"]}
     pairs = [
-        p for p in C.consecutive_pairs(_STATE["collection"]) if p["a"] in present and p["b"] in present
+        p
+        for p in corpora.consecutive_pairs(_STATE["collection"])
+        if p["a"] in present and p["b"] in present
     ]
     if not pairs:
         logger.info("no consecutive pairs in %s", _STATE["info"].name)

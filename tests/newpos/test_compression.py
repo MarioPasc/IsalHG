@@ -22,8 +22,8 @@ from isalhg.metric_space.distances.isal_ordered import IsalOrderedLevenshtein
 from isalhg.metric_space.representations.nauty_levi_edit import (
     NautyCertRowsDistance,
 )
-from scripts.newpos.compression import compressors as K
-from scripts.newpos.compression import serialize as S
+from scripts.newpos.compression import compressors as comp
+from scripts.newpos.compression import serialize as ser
 from scripts.newpos.compression.coders import EscapedNGram, cross_validated_bits, kfold_assignment
 from scripts.newpos.compression.decode import decode_arm
 
@@ -66,19 +66,19 @@ def _shuffled_copy(H: SparseHypergraph, rng: random.Random) -> SparseHypergraph:
 @pytest.mark.parametrize("n_v,n_e", [(1, 1), (2, 2), (3, 1), (1, 3)])
 def test_every_arm_is_deterministic_and_isomorphism_invariant(n_v: int, n_e: int) -> None:
     H = _kb(n_v, n_e)
-    reference = S.encode_member(H)
-    assert S.encode_member(H) == reference
+    reference = ser.encode_member(H)
+    assert ser.encode_member(H) == reference
     rng = random.Random(7)
     for _ in range(6):
-        assert S.encode_member(_shuffled_copy(H, rng)) == reference
-    assert set(reference) == {a for a in S.ARMS if S.arm_available(a, n_v)}
+        assert ser.encode_member(_shuffled_copy(H, rng)) == reference
+    assert set(reference) == {a for a in ser.ARMS if ser.arm_available(a, n_v)}
 
 
 def test_arms_equal_the_symbols_the_registered_distances_compare() -> None:
     from isalhg.metric_space.representations.nauty_levi_edit import NautyLeviEditDistance
 
     H = _kb(2, 2)
-    enc = S.encode_member(H)
+    enc = ser.encode_member(H)
     assert enc["w_o"] == IsalOrderedLevenshtein().fingerprint(H)
     assert bytes(enc["cert_bytes"]) == NautyLeviEditDistance().fingerprint(H)
     assert enc["cert_rows"] == NautyCertRowsDistance().fingerprint(H)
@@ -88,20 +88,20 @@ def test_arms_equal_the_symbols_the_registered_distances_compare() -> None:
 @pytest.mark.parametrize("n_v,n_e", [(1, 1), (2, 2), (1, 3)])
 def test_every_arm_decodes_to_an_isomorphic_knowledge_base(n_v: int, n_e: int) -> None:
     H = _kb(n_v, n_e)
-    info = S.CollectionInfo("toy", k=10, n_v=n_v, n_e=n_e, n_max=6, big_n_max=10)
+    info = ser.CollectionInfo("toy", k=10, n_v=n_v, n_e=n_e, n_max=6, big_n_max=10)
     backend = PynautyLeviBackend()
-    for arm, sequence in S.encode_member(H).items():
+    for arm, sequence in ser.encode_member(H).items():
         assert backend.are_isomorphic(H, decode_arm(arm, sequence, info)), arm
 
 
 def test_certificate_bytes_have_a_whole_number_of_words() -> None:
-    assert len(S.encode_member(_kb())["cert_bytes"]) % 4 == 0
+    assert len(ser.encode_member(_kb())["cert_bytes"]) % 4 == 0
 
 
 @pytest.mark.parametrize("length,alphabet", [(0, 1), (1, 1), (7, 316), (50, 2**20)])
 def test_fixed_width_single_slot_formula(length: int, alphabet: int) -> None:
     sequence = tuple(range(length))
-    bits = S.fixed_width_bits("w_o", sequence, {S.SINGLE_SLOT: alphabet})
+    bits = ser.fixed_width_bits("w_o", sequence, {ser.SINGLE_SLOT: alphabet})
     assert bits == pytest.approx((length + 1) * math.log2(alphabet + 1), rel=1e-12)
 
 
@@ -110,7 +110,7 @@ def test_fixed_width_slot_wise_charges_each_slot_its_own_alphabet() -> None:
     sizes = {"op": 5, "i": 10}
     sequence = (("op", "P"), ("i", 3), ("op", "W"))
     expected = math.log2(5 + 1) + math.log2(10) + math.log2(5 + 1) + math.log2(5 + 1)
-    assert S.fixed_width_bits("w_flat", sequence, sizes) == pytest.approx(expected, rel=1e-12)
+    assert ser.fixed_width_bits("w_flat", sequence, sizes) == pytest.approx(expected, rel=1e-12)
 
 
 def test_walk_alphabet_size_matches_brute_force_enumeration() -> None:
@@ -130,7 +130,7 @@ def test_walk_alphabet_size_matches_brute_force_enumeration() -> None:
                             n_vertex_labels=n_v,
                             n_edge_labels=n_e,
                         )
-        assert S.walk_alphabet_size(k, n_v, n_e) == count + (n_v if n_v > 1 else 0)
+        assert ser.walk_alphabet_size(k, n_v, n_e) == count + (n_v if n_v > 1 else 0)
 
 
 TOY = [
@@ -202,18 +202,18 @@ def test_cross_validation_codes_each_member_with_a_model_that_never_saw_it() -> 
 def test_star_classification(members: list[set[int]], expected: bool) -> None:
     n = 1 + max(max(m) for m in members)
     H = SparseHypergraph(n_nodes=n, hyperedges=[frozenset(m) for m in members])
-    assert S.is_star(H) is expected
+    assert ser.is_star(H) is expected
 
 
 @pytest.mark.parametrize(
     "m,label", [(3, "m=3"), (4, "m=4-5"), (5, "m=4-5"), (8, "m=6-8"), (12, "m=9-12"), (30, "m>=13")]
 )
 def test_fact_bins(m: int, label: str) -> None:
-    assert S.fact_bin(m) == label
+    assert ser.fact_bin(m) == label
 
 
 def test_codepoint_table_skips_controls_and_surrogates() -> None:
-    table = K.codepoint_table(70_000)
+    table = comp.codepoint_table(70_000)
     assert len(set(table)) == 70_000
     assert all(
         0x21 <= c < 0x110000 and not 0x7F <= c <= 0xA0 and not 0xD800 <= c <= 0xDFFF for c in table
@@ -222,17 +222,17 @@ def test_codepoint_table_skips_controls_and_surrogates() -> None:
 
 
 def test_frequency_ids_rank_by_count_then_first_occurrence() -> None:
-    ids = K.frequency_ids([("x", "y", "y"), ("z", "y", "x")])
+    ids = comp.frequency_ids([("x", "y", "y"), ("z", "y", "x")])
     assert ids == {"y": 0, "x": 1, "z": 2}
 
 
 def test_compressor_sizes_and_self_patch() -> None:
     data = b"V[3;1;2;0,0];" * 400
-    for kind in K.COMPRESSORS:
-        assert 0 < K.compress_size(kind, data) < len(data)
+    for kind in comp.COMPRESSORS:
+        assert 0 < comp.compress_size(kind, data) < len(data)
     with tempfile.TemporaryDirectory() as tmp:
-        same = K.zstd_patch_size(data, data, Path(tmp))
-        other = K.zstd_patch_size(b"unrelated bytes " * 50, data, Path(tmp))
+        same = comp.zstd_patch_size(data, data, Path(tmp))
+        other = comp.zstd_patch_size(b"unrelated bytes " * 50, data, Path(tmp))
     assert same <= other
 
 
@@ -242,5 +242,5 @@ def test_choose_renderings_charges_the_dictionary() -> None:
         {"arm": "a", "compressor": "xz", "rendering": "cp", "bytes": 12, "dict_bytes": 100},
         {"arm": "a", "compressor": "xz", "rendering": "lit", "bytes": 50, "dict_bytes": 0},
     ]
-    picks = K.choose_renderings(rows)[("a", "xz")]
+    picks = comp.choose_renderings(rows)[("a", "xz")]
     assert picks == {"spec": "ids", "self_contained": "lit"}

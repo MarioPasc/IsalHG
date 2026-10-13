@@ -74,7 +74,8 @@ def load_collection_data(res: Path, name: str) -> dict[str, Any]:
         path = res / fname
         data[key] = pd.read_csv(path) if path.exists() else None
     if data["deltas"] is not None:
-        data["deltas"]["net_patch_bytes"] = data["deltas"]["patch_bytes"] - data["deltas"]["self_patch_bytes"]
+        frame = data["deltas"]
+        frame["net_patch_bytes"] = frame["patch_bytes"] - frame["self_patch_bytes"]
     boot = res / f"compressors_boot_{name}.npz"
     data["boot"] = dict(np.load(boot)) if boot.exists() else {}
     return data
@@ -93,7 +94,7 @@ def wide_by_arm(perkb: pd.DataFrame, column: str) -> dict[str, np.ndarray]:
     return out
 
 
-def _clean(value: Any) -> Any:
+def _clean(value: Any) -> Any:  # noqa: ANN401 - JSON tree of mixed types
     """JSON-safe copy (numpy scalars and non-finite floats)."""
     if isinstance(value, dict):
         return {str(k): _clean(v) for k, v in value.items()}
@@ -443,7 +444,7 @@ def analyse_collection(res: Path, name: str) -> dict[str, Any]:
 
 def holm_families(results: dict[str, dict[str, Any]]) -> None:
     """Apply Holm within the pre-registered families (primary and control separately)."""
-    for role, names in (("primary", PRIMARY_COLLECTIONS), ("control", CONTROL_COLLECTIONS)):
+    for names in (PRIMARY_COLLECTIONS, CONTROL_COLLECTIONS):
         present = [n for n in names if n in results]
         for hypothesis in ("HB1", "HB2"):
             rows = [r for n in present for r in results[n]["tests"][hypothesis]]
@@ -457,58 +458,73 @@ def holm_families(results: dict[str, dict[str, Any]]) -> None:
                 apply_holm(result["tests_flat"][hypothesis])
 
 
+def _win_matrix(
+    result: dict[str, Any], tests_key: str, comp_key: str, hypothesis: str
+) -> dict[str, dict[str, bool]]:
+    """Competitor to coder to win flag, per-member coders then compressors (self-contained)."""
+    matrix: dict[str, dict[str, bool]] = {}
+    tests = result[tests_key][hypothesis]
+    for row in tests:
+        matrix.setdefault(row["competitor"], {})[row["coder"]] = row["win"]
+    comp_rows = result["compressors"][f"flat_{hypothesis}" if comp_key == "flat" else hypothesis]
+    for row in comp_rows:
+        if row["number"] == "self_contained":
+            matrix.setdefault(row["competitor"], {})[row["compressor"]] = row["win"]
+    return matrix
+
+
+def _every(mats: dict[str, dict[str, dict[str, bool]]], keep: tuple[str, ...] | None) -> bool:
+    flags = [
+        win
+        for mat in mats.values()
+        for competitor, by_coder in mat.items()
+        if keep is None or competitor in keep
+        for win in by_coder.values()
+    ]
+    return bool(flags) and all(flags)
+
+
 def verdicts(results: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """Win matrices and the pre-registered headline flags."""
+    """Win matrices for every collection; headline flags from the primary collections only."""
     out: dict[str, Any] = {}
-    for hypothesis, competitors, required in (
-        ("HB1", HB1_COMPETITORS, HB1_REQUIRED),
-        ("HB2", HB2_COMPETITORS, ("fact", "incid")),
-    ):
-        matrices: dict[str, dict[str, dict[str, bool]]] = {}
-        for name in PRIMARY_COLLECTIONS:
-            if name not in results:
-                continue
-            mat: dict[str, dict[str, bool]] = {}
-            for row in results[name]["tests"][hypothesis]:
-                mat.setdefault(row["competitor"], {})[row["coder"]] = row["win"]
-            for row in results[name]["compressors"][hypothesis]:
-                if row["number"] == "self_contained":
-                    mat.setdefault(row["competitor"], {})[row["compressor"]] = row["win"]
-            matrices[name] = mat
-        flat_matrices: dict[str, dict[str, dict[str, bool]]] = {}
-        for name in PRIMARY_COLLECTIONS:
-            if name not in results:
-                continue
-            mat = {}
-            for row in results[name]["tests_flat"][hypothesis]:
-                mat.setdefault(row["competitor"], {})[row["coder"]] = row["win"]
-            for row in results[name]["compressors"][f"flat_{hypothesis}"]:
-                if row["number"] == "self_contained":
-                    mat.setdefault(row["competitor"], {})[row["compressor"]] = row["win"]
-            flat_matrices[name] = mat
-
-        def every(
-            mats: dict[str, dict[str, dict[str, bool]]], keep: tuple[str, ...] | None
-        ) -> bool:
-            flags = [
-                win
-                for mat in mats.values()
-                for competitor, by_coder in mat.items()
-                if keep is None or competitor in keep
-                for win in by_coder.values()
-            ]
-            return bool(flags) and all(flags)
-
-        full = every(matrices, None) and every(flat_matrices, None)
+    for hypothesis, required in (("HB1", HB1_REQUIRED), ("HB2", ("fact", "incid"))):
+        matrices = {n: _win_matrix(r, "tests", "w_o", hypothesis) for n, r in results.items()}
+        flat = {n: _win_matrix(r, "tests_flat", "flat", hypothesis) for n, r in results.items()}
+        primary = {n: m for n, m in matrices.items() if n in PRIMARY_COLLECTIONS}
+        primary_flat = {n: m for n, m in flat.items() if n in PRIMARY_COLLECTIONS}
         out[hypothesis] = {
             "matrices_w_o": matrices,
-            "matrices_w_flat": flat_matrices,
-            "required_set_w_o": every(matrices, required),
-            "all_set_w_o": every(matrices, None),
-            "all_set_w_flat": every(flat_matrices, None),
-            "headline": full,
+            "matrices_w_flat": flat,
+            "required_set_w_o": _every(primary, required),
+            "all_set_w_o": _every(primary, None),
+            "all_set_w_flat": _every(primary_flat, None),
+            "headline": _every(primary, None) and _every(primary_flat, None),
         }
     return out
+
+
+def _mark(flag: bool | None) -> str:
+    """W, L or - for a win flag."""
+    return "-" if flag is None else ("W" if flag else "L")
+
+
+def render_verdicts(verdict: dict[str, Any]) -> str:
+    """Markdown matrices: W where the ours-arm wins under the coder, L otherwise."""
+    coders = [*CODERS, *COMPRESSORS]
+    lines: list[str] = []
+    for hypothesis, flags in verdict.items():
+        for label, key in (("w_o", "matrices_w_o"), ("w_flat", "matrices_w_flat")):
+            lines += [f"### {hypothesis} win matrix, ours = {label} (W = win, L = no win)", ""]
+            rows = []
+            for name, matrix in flags[key].items():
+                for competitor, by_coder in matrix.items():
+                    cells = [by_coder.get(c) for c in coders]
+                    rows.append(
+                        [name, competitor, *[_mark(c) for c in cells]]
+                    )
+            lines.append(md_table(["collection", "X", *coders], rows))
+            lines.append("")
+    return "\n".join(lines)
 
 
 # ---------------------------------------------------------------------------
@@ -610,7 +626,8 @@ def render_collection(result: dict[str, Any]) -> str:
     for hypothesis in ("HB1", "HB2"):
         lines += [
             "",
-            f"### {hypothesis}: ours = w_o, one-sided paired Wilcoxon (X - w_o > 0), Holm within family",
+            f"### {hypothesis}: ours = w_o, one-sided paired Wilcoxon (X - w_o > 0), "
+            "Holm within family",
             "",
         ]
         rows = []
@@ -681,7 +698,6 @@ def render_collection(result: dict[str, Any]) -> str:
             "",
         ]
         rows = []
-        n = int(comp["n_members"].iloc[0])
         for arm in arms:
             cells = [arm]
             for kind in COMPRESSORS:
@@ -696,13 +712,15 @@ def render_collection(result: dict[str, Any]) -> str:
                     continue
                 sc, sp = sc.iloc[0], sp.iloc[0]
                 cells.append(
-                    f"{sc['bytes_per_kb']:.2f} [{sc['ci_low']:.2f}, {sc['ci_high']:.2f}] {sc['rendering']} | {sp['bytes_per_kb']:.2f} {sp['rendering']}"
+                    f"{sc['bytes_per_kb']:.2f} [{sc['ci_low']:.2f}, {sc['ci_high']:.2f}] "
+                    f"{sc['rendering']} | {sp['bytes_per_kb']:.2f} {sp['rendering']}"
                 )
             rows.append(cells)
         lines.append(md_table(["arm", *COMPRESSORS], rows))
         lines += [
             "",
-            "Compressor wins of w_o (self-contained number; point ratio < 1 and 95 % paired-bootstrap CI below 1):",
+            "Compressor wins of w_o (self-contained number; point ratio < 1 and 95 % "
+            "paired-bootstrap CI below 1):",
             "",
         ]
         rows = []
@@ -852,11 +870,13 @@ def main(argv: list[str] | None = None) -> None:
     sections.append("")
     for hypothesis, flags in verdict.items():
         sections.append(
-            f"- {hypothesis}: required-set(w_o) = {flags['required_set_w_o']}, all-set(w_o) = {flags['all_set_w_o']}, "
+            f"- {hypothesis}: required-set(w_o) = {flags['required_set_w_o']}, "
+            f"all-set(w_o) = {flags['all_set_w_o']}, "
             f"all-set(w_flat) = {flags['all_set_w_flat']}, HEADLINE = {flags['headline']}"
         )
     sections.append("")
-    for name, result in results.items():
+    sections.append(render_verdicts(verdict))
+    for result in results.values():
         sections.append(render_collection(result))
     (args.res / "tables.md").write_text("\n".join(sections))
     stats = {

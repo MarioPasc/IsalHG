@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-from scripts.newpos.compression import serialize as S
+from scripts.newpos.compression import serialize as ser
 
 Symbol = Hashable
 
@@ -102,7 +102,7 @@ def render_lines(
     if rendering == "lit":
         chunks: list[bytes] = []
         for seq in sequences:
-            line = S.literal_line(arm, seq)
+            line = ser.literal_line(arm, seq)
             chunks.append(line if isinstance(line, bytes) else (line + "\n").encode())
         return chunks
     raise ValueError(f"unknown rendering {rendering!r}")
@@ -111,7 +111,7 @@ def render_lines(
 def dictionary_bytes(arm: str, ids: dict[Symbol, int]) -> bytes:
     """Literal alphabet table, one symbol per line in id order."""
     ordered = sorted(ids, key=ids.__getitem__)
-    return ("\n".join(S.symbol_text(arm, s) for s in ordered) + "\n").encode()
+    return ("\n".join(ser.symbol_text(arm, s) for s in ordered) + "\n").encode()
 
 
 def point_sizes(

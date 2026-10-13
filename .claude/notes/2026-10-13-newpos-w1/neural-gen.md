@@ -10,8 +10,8 @@
 | Branch | `worktree-agent-a9b5d669578441723` |
 | Worktree | `/home/mpascual/research/code/IsalHG/.claude/worktrees/agent-a9b5d669578441723` |
 | Base commit | `518824a80baf3238e1e565aafd6aaee0271c0bbc` |
-| Head commit | the branch HEAD, i.e. the `docs(notes): neural-gen work log` commit that follows code commit `e150855` (it touches only this file) |
-| Started / finished | `2026-10-13T14:45+02:00` / `2026-10-13T15:31+02:00` |
+| Head commit | the branch HEAD, i.e. the `docs(notes): neural-gen work log` commit that follows the last code commit `f998024` (it touches only this file) |
+| Started / finished | `2026-10-13T14:45+02:00` / `2026-10-13T15:41+02:00` |
 | Status | complete |
 
 ## 1. Prompt as received
@@ -173,7 +173,7 @@ Required reporting in both cases:
 
 **Removed:** none.
 
-**Results written (not in git):** `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/NEWPOS_2026-10-13/neural_gen/` holds 162 `*.jsonl.gz` + 162 `*.summary.json` (frozen recipe, 27 seeds), `summary.md`, `units.csv`, `stats.json`, `verify_full.log`, `pilot_run.log`, `full_run.log`, `eval_pilot/`, `analysis_pilot/`, `eval_full/`, `analysis_full/`, and `sensitivity_lr5e-4/` (18 units + `comparison_vs_frozen.md`).
+**Results written (not in git):** `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/NEWPOS_2026-10-13/neural_gen/` holds 162 `*.jsonl.gz` + 162 `*.summary.json` (frozen recipe, 27 seeds), `summary.md`, `units.csv`, `stats.json`, `verify_full.log`, `pilot_run.log`, `full_run.log`, `eval_pilot/`, `analysis_pilot/`, `eval_full/`, `analysis_full/`, `sensitivity_lr5e-4/` (18 units + `comparison_vs_frozen.md`) and `sensitivity_lr5e-4_e200/` (18 units, `comparison_vs_frozen.md`, `evaluation/`, `analysis/`).
 
 **Commits**
 | SHA | Message |
@@ -182,7 +182,9 @@ Required reporting in both cases:
 | `30bf26d` | `feat(newpos): GRU generator over three KB serializations (train, sample, decode, summarize)` |
 | `82cabb4` | `feat(newpos): sensitivity-recipe flags and frozen-vs-sensitivity table for the GRU runs` |
 | `e150855` | `feat(newpos): --max-epochs flag for the GRU grid runner` |
-| (final) | `docs(notes): neural-gen work log` (this file, final text) |
+| `c0cc6a2` | `docs(notes): neural-gen work log` (first full version of this file) |
+| `f998024` | `feat(newpos): residual-rate CI in the sensitivity table and --sensitivity-dir for summary.md` |
+| (final) | `docs(notes): neural-gen work log` (this file, with the uncapped-sensitivity section) |
 
 ## 4. Tests
 
@@ -211,7 +213,7 @@ tests/newpos/test_neural_gen.py ..............................           [100%]
 ============================== 30 passed in 1.83s ==============================
 ```
 
-**Result:** 30 passed, 0 failed, 0 skipped · **Run at:** `e150855` (code identical to the final commit; only this log changed afterwards).
+**Result:** 30 passed, 0 failed, 0 skipped · **Run at:** `f998024` (code identical to the final commit; only this log changed afterwards).
 
 **Lint:** `~/.conda/envs/isalhg/bin/python -m ruff check scripts/newpos/neural_gen tests/newpos/test_neural_gen.py` -> `All checks passed!`; `ruff format --check` clean.
 
@@ -257,7 +259,26 @@ VUN `w°` minus LCC: WD50K -0.1028 [-0.1104, -0.0963] (the repaired fact list is
 
 **Empty-word draws.** Over 540,000 `w°` draws, 76 are the empty word (9 NDC, 67 WD50K): the single-constant, zero-fact KB, connected and decodable. My `usable` counts them (HC1 says 540,000/540,000); the evaluator's `usable` (needs m >= 1) does not, giving 9,998 per 10,000 on WD50K. Both counts are in the per-unit summaries (`n_usable`, `n_zero_fact_usable`).
 
-**Sensitivity recipe (`sensitivity_lr5e-4/`, requested by `main`: lr 5e-4, patience 10, all else unchanged; 3 serializations x 2 collections x 3 pilot seeds).** Same seeds, mean usable/draw, frozen -> sensitivity: NDC fact 0.704 -> 0.486, NDC incidence 0.657 -> 0.322, WD50K fact 0.067 -> 0.051, WD50K incidence 0.347 -> 0.353, `w°` 1.000 -> 1.000 (VUN NDC 0.400 -> 0.522, WD50K 0.831 -> 0.842). Caveat that limits what this run can show: with the epoch cap left at 60, every NDC unit (all three serializations, 3/3 seeds) and the WD50K incidence units ran all 60 epochs at the lower learning rate, so for those cells the sensitivity recipe is a shorter effective training budget, not a longer one. It therefore does not answer "the NDC baselines were undertrained" in either direction; the WD50K fact list, which stops early (best epoch ~4.7) under both recipes, is the one cell where it answers: lowering the learning rate does not raise its yield. A run with a higher epoch cap (`run.py --lr 5e-4 --patience 10 --max-epochs 200 --seeds pilot`) is one command and was not run, because `main` specified the recipe.
+**Sensitivity recipe (`sensitivity_lr5e-4/`, requested by `main`: lr 5e-4, patience 10, all else unchanged; 3 serializations x 2 collections x 3 pilot seeds).** Same seeds, mean usable/draw, frozen -> sensitivity: NDC fact 0.704 -> 0.486, NDC incidence 0.657 -> 0.322, WD50K fact 0.067 -> 0.051, WD50K incidence 0.347 -> 0.353, `w°` 1.000 -> 1.000 (VUN NDC 0.400 -> 0.522, WD50K 0.831 -> 0.842). Caveat that limits what this run can show: with the epoch cap left at 60, every NDC unit (all three serializations, 3/3 seeds) and the WD50K incidence units ran all 60 epochs at the lower learning rate, so for those cells the sensitivity recipe is a shorter effective training budget, not a longer one. It therefore does not answer "the NDC baselines were undertrained" in either direction; the WD50K fact list, which stops early (best epoch ~4.7) under both recipes, is the one cell where it answers: lowering the learning rate does not raise its yield. `main` then requested the uncapped version of this run, reported next.
+
+**Uncapped sensitivity (`sensitivity_lr5e-4_e200/`, requested by `main` after the previous paragraph: lr 5e-4, patience 10, max epochs 200; 3 serializations x 2 collections x 3 pilot seeds; the frozen 27-seed table is untouched, checked byte-for-byte).** All 18 units stopped early (0/3 capped in every cell; best epoch 59-120 for the baselines on NDC and WD50K incidence, 4.7 for the WD50K fact list). Mean over the 3 seeds; `r` with 95 % Student-t CI over 3 seeds (wide by construction); the frozen row is the same 3 seeds from the frozen-recipe run:
+
+| collection | arm | recipe | usable/draw | r [95 % CI] | VUN/draw | test bits/KB | best epoch |
+|---|---|---|---|---|---|---|---|
+| ndc_classes | `w°` | frozen | 1.0000 | 0 | 0.400 | 16.79 | 31.3 |
+| ndc_classes | `w°` | e200 | 1.0000 | 0 | 0.408 | 16.49 | 91.3 |
+| ndc_classes | fact | frozen | 0.7040 | 0.296 [0.073, 0.519] | 0.151 | 24.71 | 37.7 |
+| ndc_classes | fact | e200 | 0.7159 | 0.284 [0.196, 0.373] | 0.141 | 24.14 | 107.3 |
+| ndc_classes | incidence | frozen | 0.6571 | 0.343 [0.216, 0.470] | 0.142 | 27.03 | 52.3 |
+| ndc_classes | incidence | e200 | 0.5811 | 0.419 [0.365, 0.473] | 0.178 | 27.12 | 119.7 |
+| wd50k66 | `w°` | frozen | 1.0000 | 0 | 0.831 | 31.68 | 10.3 |
+| wd50k66 | `w°` | e200 | 1.0000 | 0 | 0.842 | 31.04 | 28.3 |
+| wd50k66 | fact | frozen | 0.0671 | 0.933 [0.887, 0.978] | 0.062 | 80.14 | 4.3 |
+| wd50k66 | fact | e200 | 0.0509 | 0.949 [0.914, 0.984] | 0.050 | 81.89 | 4.7 |
+| wd50k66 | incidence | frozen | 0.3469 | 0.653 [0.604, 0.703] | 0.288 | 57.56 | 21.0 |
+| wd50k66 | incidence | e200 | 0.3542 | 0.646 [0.578, 0.714] | 0.302 | 57.07 | 59.3 |
+
+Reading: no baseline cell moves toward `r = 0`. The largest shifts are -0.012 (NDC fact, r 0.296 to 0.284), +0.076 (NDC incidence, r 0.343 to 0.419, i.e. worse), +0.016 (WD50K fact, worse) and -0.007 (WD50K incidence); every e200 interval overlaps its frozen interval. Held-out bits move by at most 1.8 (NDC incidence 27.0 to 27.1, WD50K incidence 57.6 to 57.1, NDC fact 24.7 to 24.1, WD50K fact 80.1 to 81.9), so the frozen recipe had already reached the same validation optimum, and longer training at a smaller step does not buy a lower residual rate. The HC2 reading is unchanged: `w°` is 1.000 usable by construction; the baselines' residual rates stay at 0.28-0.42 (NDC) and 0.65-0.95 (WD50K), which is outcome (a) of amendment A1. Genbench evaluator on these files (`--repair-lcc-of gru_fact`, usable needs m >= 1, 3 seeds so fidelity statistics are withheld by its >= 10-seed rule): usable per 10,000 / VUN per draw: WD50K `w°` 9,999 / 0.8415, fact 508 / 0.0497, fact + LCC 9,979 / 0.9339, incidence 3,542 / 0.3022; NDC `w°` 10,000 / 0.4083, fact 7,158 / 0.1413, fact + LCC 9,995 / 0.3698, incidence 5,811 / 0.1778. The LCC repair again leads `w°` on WD50K VUN and trails it on NDC (3 seeds, descriptive), as in the frozen run. Files: `sensitivity_lr5e-4_e200/{*.jsonl.gz,*.summary.json,comparison_vs_frozen.md,evaluation/,analysis/}`; the same table is appended to the results directory's `summary.md` below the unchanged 27-seed tables.
 
 ## 7. Decisions, assumptions, open questions
 
@@ -275,7 +296,7 @@ VUN `w°` minus LCC: WD50K -0.1028 [-0.1104, -0.0963] (the repaired fact list is
 - The root type of `w°` draws is drawn from the training members' root types (add-one smoothing is only used for the root-bits line).
 
 **Open questions for the orchestrator:**
-- Is a higher-epoch-cap sensitivity run wanted (see section 6)? It is the only way to say whether the NDC baselines were undertrained.
+- (Closed.) The higher-epoch-cap sensitivity run was requested and run (section 6): the NDC baselines were not undertrained in a way that changes the residual rate.
 - The LCC-repaired fact list leads `w°` on WD50K VUN (0.944 vs 0.842). How the paper frames that (guarantee without a repair step and without distorting the star fraction, versus raw VUN) is an article decision, not mine.
 
 ## 8. Coordination
@@ -286,6 +307,7 @@ VUN `w°` minus LCC: WD50K -0.1028 [-0.1104, -0.0963] (the repaired fact list is
 - Amendment A1 (reviewer): pre-register both outcomes, add residual out-of-domain rate with CI and per-unit training cost; written into the log before any trained-model number was seen (I had trained nothing). Implemented in `summarize.py` and the cost table.
 - Evaluator command (genbench): run `evaluate.py` / `analyze.py` with `--repair-lcc-of gru_fact` on the pilot and report its yield/VUN; done for the pilot and again for the 27-seed files. Its usable definition (m >= 1) led to the `n_zero_fact_usable` field.
 - Sensitivity decision (above): added `--lr/--patience/--max-epochs` to `run.py` and the frozen-vs-sensitivity table.
+- Uncapped-sensitivity request (`main`, after the report): ran `run.py --lr 5e-4 --patience 10 --max-epochs 200 --seeds pilot` into `sensitivity_lr5e-4_e200/`, ran the genbench evaluator on it, added the residual-rate CI to the comparison table and a `--sensitivity-dir` option to `summarize.py` that appends the table to `summary.md` without touching the frozen tables.
 
 **Contracts I depend on and confirmed unchanged:** the frozen JSONL format (checked on all 1,620,000 lines with `verify_samples.py` and by the independent evaluator reading the same files); the decoders in `experiments/tkde/rq6.py`, `src/isalhg/core/fact_word.py`, `src/isalhg/generation/incidence_baseline.py` (imported at the base commit, no edits).
 
@@ -294,14 +316,14 @@ VUN `w°` minus LCC: WD50K -0.1028 [-0.1104, -0.0963] (the repaired fact list is
 - Fidelity metrics beyond the counts (peer `genbench-ngram` owns the evaluator; I only ran it, unmodified, as instructed).
 - Compression analysis (peer `compression`); the bits/KB here are model code lengths on held-out members.
 - Any change to `src/**`, `experiments/**`, or per-serialization hyperparameter tuning. The sensitivity run applies one alternative recipe to all arms.
-- A higher-epoch-cap sensitivity run (not requested; flag available).
+- Fidelity statistics for the sensitivity runs (3 seeds; the evaluator withholds them below 10 seeds).
 - Committing sample files or checkpoints (results dir only; no checkpoints were saved).
 
 ## 10. Risks and follow-ups
 
 | Item | Severity | Detail | Suggested owner |
 |---|---|---|---|
-| NDC baselines possibly undertrained | medium | 6/27 incidence and 3/27 fact NDC units ran all 60 epochs; the lr 5e-4 run is capped at 60 for every NDC unit, so it does not settle this | `main` decides on a `--max-epochs 200` run (one command) |
+| NDC baselines possibly undertrained | low (resolved) | 6/27 incidence and 3/27 fact NDC units ran all 60 epochs under the frozen recipe; the uncapped lr 5e-4 run (3 seeds, max 200 epochs, 0/18 capped) leaves r within -0.012 / +0.076 of the frozen values | none |
 | WD50K fact list overfits a 10,936-symbol role-aware alphabet | medium | usable 0.086 is below the n-gram's 0.126; a role-free fact alphabet (not run) would change this cell | `main` / article scope |
 | LCC repair leads `w°` on WD50K VUN | medium | 0.944 vs 0.842; the repair distorts the star fraction (0.158 vs 0.534) | article framing |
 | Held-out bits are across different codes | low | `w°` omits the root type (+1.64 bits NDC, 0 WD50K, reported separately); incidence is not canonical; compare within a serialization or use the compression peer's accounting | `compression` peer / `main` |
@@ -316,4 +338,4 @@ VUN `w°` minus LCC: WD50K -0.1028 [-0.1104, -0.0963] (the repaired fact list is
 | 2 | pilot (18 units) reported to `main` with table and reading before the 27-seed run; 27 seeds run (or estimate sent) | yes | pilot report sent; 27-seed run complete: 162 units, 0 failed, `verify_samples.py` 162/162 OK; cost 62.6 min of unit time |
 | 3 | tests pass, everything committed, tree clean, log committed | yes | 30 passed; ruff clean; `git status` clean after the final commit |
 
-**Overall:** The pipeline is verified end to end (member round trips, 1.62 M lines re-checked, bit-reproducible, sampler law tested with mutation checks, independent evaluator agrees on yields). HC1 holds on 540,000 draws. HC2 as registered holds in all 8 cells. The scientific picture is less one-sided than the n-gram result: the GRU learns most of the incidence syntax (usable 0.607 / 0.361 against 0.0017 / 0.000085) and part of the fact list's connectivity on NDC, so the residual gap is a gap of 0.30-0.91, not of 0.98-1.00, and outcome (a) of amendment A1 (gap persists, residual rate printed) is the one realised, in all four baseline cells. Scrutinise first: the NDC training-budget question, the role-aware WD50K fact alphabet, and the LCC-repair comparison, where the raw VUN lead of `w°` does not hold on WD50K.
+**Overall:** The pipeline is verified end to end (member round trips, 1.62 M lines re-checked, bit-reproducible, sampler law tested with mutation checks, independent evaluator agrees on yields). HC1 holds on 540,000 draws. HC2 as registered holds in all 8 cells. The scientific picture is less one-sided than the n-gram result: the GRU learns most of the incidence syntax (usable 0.607 / 0.361 against 0.0017 / 0.000085) and part of the fact list's connectivity on NDC, so the residual gap is a gap of 0.30-0.91, not of 0.98-1.00, and outcome (a) of amendment A1 (gap persists, residual rate printed) is the one realised, in all four baseline cells. The NDC training-budget question is closed by the uncapped sensitivity run (0/18 units capped; r moves by -0.012 to +0.076, no baseline cell approaches 0). Scrutinise first: the role-aware WD50K fact alphabet and the LCC-repair comparison, where the raw VUN lead of `w°` does not hold on WD50K.

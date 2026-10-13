@@ -76,6 +76,11 @@ def load_collection_data(res: Path, name: str) -> dict[str, Any]:
     if data["deltas"] is not None:
         frame = data["deltas"]
         frame["net_patch_bytes"] = frame["patch_bytes"] - frame["self_patch_bytes"]
+    if data["comp"] is not None:
+        frame = data["comp"]
+        shift = frame["bytes_per_kb"] - frame["boot_mean"]
+        frame["ci_low_c"] = frame["ci_low"] + shift
+        frame["ci_high_c"] = frame["ci_high"] + shift
     boot = res / f"compressors_boot_{name}.npz"
     data["boot"] = dict(np.load(boot)) if boot.exists() else {}
     return data
@@ -275,6 +280,8 @@ def compressor_rows(
                 if key_a in boot and key_b in boot:
                     ratio = boot[key_b] / boot[key_a]
                     low, high = (float(q) for q in np.quantile(ratio, [0.025, 0.975]))
+                    shift = float(b) / float(a) - float(ratio.mean())
+                    low, high = low + shift, high + shift
                 rows.append(
                     {
                         "ours": ours,
@@ -712,15 +719,16 @@ def render_collection(result: dict[str, Any]) -> str:
                     continue
                 sc, sp = sc.iloc[0], sp.iloc[0]
                 cells.append(
-                    f"{sc['bytes_per_kb']:.2f} [{sc['ci_low']:.2f}, {sc['ci_high']:.2f}] "
+                    f"{sc['bytes_per_kb']:.2f} [{sc['ci_low_c']:.2f}, {sc['ci_high_c']:.2f}] "
                     f"{sc['rendering']} | {sp['bytes_per_kb']:.2f} {sp['rendering']}"
                 )
             rows.append(cells)
         lines.append(md_table(["arm", *COMPRESSORS], rows))
         lines += [
             "",
-            "Compressor wins of w_o (self-contained number; point ratio < 1 and 95 % "
-            "paired-bootstrap CI below 1):",
+            "Compressor wins of w_o (self-contained number; point ratio < 1 and the 95 % "
+            "paired distinct-member-bootstrap interval, translated to the full-collection point, "
+            "below 1):",
             "",
         ]
         rows = []

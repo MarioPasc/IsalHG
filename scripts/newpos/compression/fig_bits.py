@@ -144,8 +144,9 @@ def draw_compressor_panel(ax: plt.Axes, comp: pd.DataFrame, title: str) -> None:
                 continue
             r = row.iloc[0]
             values.append(r["bytes_per_kb"])
-            lows.append(r["ci_low"])
-            highs.append(r["ci_high"])
+            shift = r["bytes_per_kb"] - r["boot_mean"]
+            lows.append(r["ci_low"] + shift)
+            highs.append(r["ci_high"] + shift)
         x = np.arange(len(COMPRESSORS)) + (j - (len(arms) - 1) / 2) * width
         ax.bar(
             x,
@@ -207,15 +208,16 @@ def main(argv: list[str] | None = None) -> None:
     )
     fig.text(
         0.5,
-        0.075,
+        0.095,
         "Top: lines are bootstrap 95 % intervals of the median; hollow markers have fewer than "
         f"{MIN_BIN} members.\nBottom: bars are the full-collection point; lines are the 95 % "
-        "interval over distinct-member bootstrap replicates (about 63 % of the members each).",
+        "replicate interval (distinct-member bootstrap, about 63 % of the members each),\n"
+        "translated to the point.",
         ha="center",
         fontsize=7.5,
         color=INK_2,
     )
-    fig.tight_layout(rect=(0, 0.11, 1, 1))
+    fig.tight_layout(rect=(0, 0.14, 1, 1))
     out = args.out or args.res / "fig_bits.pdf"
     fig.savefig(out)
     print(f"wrote {out}")

@@ -1,0 +1,3302 @@
+# T-KBf — RQ2–RQ7 with the Isal arms (the encoder swap)
+
+**Status:** IN-PROGRESS (2026-09-09 08:47 CEST) · declared 2026-09-07 22:10 CEST by the Isal-refinement
+orchestrator (handoff §5.3). Depends on T-KBe's decision for the headline
+arm; the runs can start with both C++ candidates (`wstar_rank`,
+`isal_ow_struct`) and `wstar_orbit` where budgets allow.
+
+## What
+
+- **Budgeting audit before any submission:** every in-process Isal engine
+  call must fork under a budget or be provably milliseconds. Fixed: RQ1
+  (`BUDGETED_ARMS`), RQ2 (`POINTER_ARMS`). To audit: the RQ7 sweep
+  per-instance path (no `engine_word` at last grep); the N×N matrices for
+  `wstar_rank` (fingerprint-first route in `toolkit/matrix.py` is
+  unbudgeted; arity-10 members censor at 60 s) — implement a
+  censoring-aware fingerprint step and report censored members per L15;
+  `rq3.run_guarded` lacks the fork-health canary.
+- Drop `fact_rank_roles` from every table (fails M0 invariance 43/60).
+- Order: matrices → RQ2 → RQ3 (pilot one NDC cell first) → RQ4 → RQ5 → RQ6
+  (the Isal `ow_ngram` generator; validity and connectivity 1,000/1,000
+  measured locally) → RQ7 (with the `|Aut|` axis). Harvest each into the
+  results root; persist tables.
+- Pre-stated readings: RQ2 exact/metric/polynomial; RQ3 carries over with
+  connected interiors; RQ4/RQ5 at the certificate's level → supplement
+  (author ruling); RQ6 stronger; RQ7 the envelope from `|Aut|` to `m`.
+
+## Acceptance
+
+One Isal row (C++ engine) in every RQ table, with provenance stamps, under
+`results/IEEETKDE/`; the negatives reported with the same directness.
+
+---
+
+## The two research decisions, settled 2026-09-09 08:47 CEST
+
+Both were left unwired by the wave-6 budgeting audit and named in
+`HANDOFF_2026-09-09_isal.md` §4.1 as things to decide before RQ3. Neither is
+PI-level: the decision record answers the second outright and constrains the
+first. Adversarially reviewed by the `[IsalHG-Fable]` session, which corrected
+one of the three reasons and added the disclosure set, the third option and the
+per-method census requirement; its corrections are folded in below.
+
+### D-KBf1 — RQ3 censors at the **collection**, not the member
+
+An arm that cannot canonicalise every member of a collection reports **no**
+medoid for that collection: the row is `censored = 1` with `n_censored_members`
+recorded. Every cross-arm number restricts to the collections the published
+arms all completed (handoff rule 9, the RQ1 `restrict_to_common_units`
+convention one level up).
+
+*Why the collection is the unit.*
+
+1. **The certificate is a statement about the N members.** Prop 3's
+   `LB = Σ_{i<j} d(K_i,K_j)/(N−1) ≤ OPT ≤ cost(M)` bounds the optimum over
+   *that* collection. Recomputed over a survivor subset it certifies a
+   different object while being printed under a column headed "certified
+   ratio" — a false guarantee, and the guarantee is precisely what RQ3 claims
+   over the competitors.
+2. **The medoid is `argmin` over the members.** Dropping members changes both
+   the candidate set and the objective, so two arms scored on different member
+   subsets of one collection are not answering the same question — the defect,
+   one level down, that produced this campaign's three retracted directional
+   claims (design §9 item 8).
+3. **The measured cost lands on Corpus B only.** All 77 `wstar_orbit`
+   censorings at 60 s have max arity ≥ 7 (ndc: 69 at k=10, 1 at k=9; wd50k: 6
+   at k=7, 1 at k=8) and n ≥ 10; Corpus A's window is `4 ≤ n ≤ 12`,
+   `4 ≤ m ≤ 12`, max arity ≤ 6. **Checked rather than assumed** (Fable's
+   challenge): an inserted fact's arity is
+   `max(2, min(rng.choice(_arity_pool(record)), record.n, envelope.k_max))`
+   with `_arity_pool` = the arities *already present in the record*
+   (`src/isalhg/datasets/kb/ladders.py:60`, applied at `:96`, `:176`, `:315`),
+   so a Corpus A variant cannot exceed its source's maximum arity, and the
+   consensus candidates transfer facts between members of that same
+   collection. Corpus A is therefore expected to censor 0 — *expected*, not
+   proved, since search cost is not monotone in `(n, m, k)`; the census runs
+   there too and the number is reported.
+
+*Direction of the bias, disclosed rather than denied.* Collection censoring
+removes the arity-10 classes, plausibly the ones whose quarters change most,
+which raises **every** arm's recovery rate — ours and the competitors' alike,
+since the common-set rule removes the same collections from all of them. It
+flatters the table's absolute numbers, not our arm relative to the others.
+Member-level dropping is not less biased, only differently: within a class the
+censoring hits several quarters (7 of 25, 6 of 16, 4 of 7), and if those are
+the later, larger quarters they are the ones closest to the truth quarter, so
+a survivor medoid would lose its best candidates for a reason unrelated to the
+distance's quality. (A) is the unit where the bias is shared and measurable.
+
+*Three disclosures the RQ3 caption must carry*, in this order:
+1. "every arm is scored on the collections the Isal engine completed at 60 s;
+   the restriction is ours, since the certificate completes everything" — the
+   RQ1 sentence, reused;
+2. for every uncensored arm, its score on the **full** Corpus B beside its
+   score on the common set, so the reader sees whether the removed classes
+   were harder;
+3. the **survivor-medoid sensitivity row** (below), so the reader sees what
+   member-level dropping would have given us.
+
+*The third option, adopted as a supplement row and never in the main table.*
+On the censored collections, `wstar_orbit`'s medoid over the survivors, scored
+on the task axis, **ratio column suppressed**, labelled "not certified, N′ of
+N members". It costs nothing (the survivors' words already exist) and it is
+the only number that bounds the flattery directly. Defining Corpus B as "the
+classes all arms complete" is **rejected**: that launders censoring into the
+corpus definition, which is what L15 exists to forbid.
+
+*Census granularity.* Censoring is recorded per **(collection, method)**, not
+per (collection, arm): the coverage consensus canonicalises hundreds of
+candidates per collection and an arity-10 class is where they are most
+expensive, so a collection can be medoid-complete and consensus-censored. The
+row schema already carries `censored` on both the medoid and the consensus
+rows (`rq3.py` 490/511/527 and 580/638); what is missing is the medoid's
+budget.
+
+*Budget.* The RQ3 medoid screen is the **same 60 s per member** as RQ1 and as
+`matrices.yaml`, or the censoring census is not the one the reader met in RQ1.
+`rq3.yaml` gains `fingerprint_budget_s: 60.0`; the consensus keeps its own
+`consensus_budget_s: 1800` (corpus B), which is a per-call, not per-member,
+guard.
+
+### D-KBf1a — the Corpus B reporting threshold, pre-registered before the count
+
+Committed to disk **before** the 70 censored member ids are joined to the
+series census. Corpus B was thin before censoring (the risk register records
+15 classes with runs ≥ 3 and 2 with ≥ 5 in the constant-preserving regime), so
+the threshold applies **per regime row**, not to Corpus B as a whole.
+
+A regime row is **scored** only if both hold:
+
+- **(a) absolute** — at least **20 collections** in the common set. The Wilson
+  95 % half-width of a recovery rate near 0.5 at n = 20 is ≈ 0.21; below that
+  a rate cannot separate one half from one third, the size of the effect RQ3
+  argues about.
+- **(b) relative** — the common set retains at least **two thirds** of the
+  regime's pre-censoring collections. Below that the restricted set is no
+  longer "the natural NDC series" but a selected sub-series, and the reader is
+  entitled to the competitors' numbers on the series as defined.
+
+If either fails, the row is a **yield statement** — collections completed /
+defined, by `T` bucket and by the class's maximum arity (L15) — the uncensored
+arms' full-corpus scores are printed, the Isal row reads "censored, n of N",
+and **the paired comparison is not made**.
+
+### D-KBf2 — RQ2/RQ4/RQ5 tolerate a censored arm's short matrix
+
+**Not a research decision**: L15 ("DNFs under a fixed per-item budget are
+dropped and counted, yield reported per size bucket, label-correlated
+censoring stated") fixes the mechanics, and the item in RQ2/RQ4/RQ5 *is* the
+member. `matrices.yaml`'s header already declares the behaviour, and
+`matrices.py` already writes the sidecar; what is missing is the consumer.
+
+- The matrix and its manifest describe the **survivors** (`member_order_sha1`
+  and `n` are over `kept_ids`, `matrices.py:733,753`), while `rq4.py:563`,
+  `rq5.py:579` and `rq2.py:363–386` validate against the **full** frozen order
+  and therefore read a censored arm as a cache miss. `read_censoring`
+  (`matrices.py:212`) exists for exactly this and has no consumer outside
+  `matrices.py`.
+- Fix: a loader that, when the sidecar is present, validates against the kept
+  order and returns `(matrix, kept_ids)`; consumers align **by member id**;
+  every cross-arm statistic is computed on the **intersection** of survivor
+  sets, with the per-arm census printed.
+
+*L15's third clause, which bites in RQ4 and RQ5* (Fable): a corrupted member
+carries one more fact than its clean original, so its displacement cost is
+higher and it is marginally likelier to censor. An AUC computed on a set from
+which the positives were preferentially removed is not the AUC claimed.
+**Pre-registered:** RQ4 prints the censoring rate **by label (corrupted vs
+clean) and by corruption type**; RQ5 prints it **by Wikidata type**, since
+arity-heavy types will censor more. Mechanics unchanged; the caption changes.
+
+### D-KBf3 — `wstar_orbit` must have an `N×N` matrix (defect found)
+
+`ISAL_MATRIX_ARMS` (`matrices.py:101`) excludes `wstar_orbit` and
+`isalhg_levenshtein` on the rationale that "a budget is a per-member notion
+that a whole-matrix build has nowhere to record". **Wave 6 made that
+obsolete**: `BUDGETED_MATRIX_ARMS = CPP_ENGINE_ARMS` *includes* `wstar_orbit`,
+`arm_fingerprint_screen` supplies the per-member screen, `build_matrix_censored`
+applies it and the `<arm>.censored.json` sidecar is exactly the place to record
+it. Left as is, **the paper's representation under D-ART5 would have no row in
+RQ4 or RQ5.**
+
+Cost, measured from the frozen RQ1 M3 rows rather than estimated (screen ≈ the
+per-member canonicalisation, censored members charged the full 60 s):
+
+| arm | corpus | members | censored | median | p99 | screen total |
+|---|---|---|---|---|---|---|
+| `wstar_orbit` | wd50k66 | 3,988 | 7 | 5.47 ms | 2.13 s | ≈ 1,002 s |
+| `wstar_orbit` | ndc_classes | 1,381 | 70 | 6.83 ms | 43.18 s | ≈ 5,823 s |
+| `isal_ow_struct` | wd50k66 / ndc | 3,988 / 1,381 | 0 / 0 | 0.54 / 0.53 ms | — | 2 s / 1 s |
+| `nauty_cert_rows` | wd50k66 / ndc | 3,988 / 1,381 | 0 / 0 | 0.14 ms | — | ≈ 1 s |
+
+≈ 1.9 core-hours of screen for both corpora, plus the build's recomputation of
+the survivors — affordable, and dominated by the 77 × 60 s the censored
+members spend. `wstar_orbit` is added to the matrix arms and the stale comment
+corrected.
+
+### The arm set for RQ2–RQ7 (D-ART5, handoff §4.1)
+
+`wstar_orbit` (the one Isal row) · `nauty_cert` + `nauty_cert_rows` (both
+tokenisations, everywhere) · `fact_rank` (the retired comparator's record,
+D-ART4 note (c); supplement only) · `wl_l1`, `netlsd`, `hpd_jsd`,
+`bipartite_ged_path`, `bipartite_ged_assign`, `size_l1`, `degree_seq_l1`.
+**Out:** `wstar_rank` (RQ1 only), `isal_ow_rank`, `isal_ow_rank0` (RQ1 policy
+ablation), `fact_rank_roles` (fails M0). `isal_ow_struct` appears **only in
+RQ7**, as the deterministic cost floor.
+
+### D-KBf1a applied — the count, taken after the rule was committed
+
+Rule committed at `6ebbc2f`; the join was run afterwards
+(`scripts/` scratch, `corpora.consecutive_runs(ndc_classes, 4)` against the
+70 censored `wstar_orbit` member ids of the frozen M3 rows).
+
+| | units | with a censored collection member | surviving | retention |
+|---|---|---|---|---|
+| Corpus B, all runs `T ≥ 4` | **69** | 6 | **63** | **0.913** |
+| `T ≥ 5` subset | 46 | 6 | **40** | 0.870 |
+
+**Both conditions hold on both rows** — (a) 63 ≥ 20 and 40 ≥ 20; (b) 0.913 and
+0.870, both ≥ 2/3 — so Corpus B is **scored**, with the three disclosures, not
+reduced to a yield statement.
+
+The footprint is much narrower than the 27-of-171 class figure implies: the
+censoring touches **3 drug classes** (470, 471, 472), each contributing two
+maximal runs, because most of the 27 censored classes have no run of four
+consecutive encodable quarters at all. The survivor-medoid sensitivity row
+therefore covers 6 units.
+
+Still open at run time, and governed by the same rule: the
+**constant-preserving regime row**, whose thinness predates censoring (128 of
+528 consecutive pairs are constant-preserving, so runs all of whose pairs
+preserve the constant set are rare). It is counted when the RQ3 analyzer
+splits the regimes, and falls to a yield statement if either condition fails.
+
+---
+
+## Execution log
+
+### Cluster tree synced (2026-09-09 08:45, re-synced 08:59 and 09:0x)
+
+`scripts/tkde/sync_to_picasso.sh` at `80472bb`, then again at `d53b686` and
+`6c8d2a4`. Each run rebuilt the extension on the login node and verified it:
+`PIP EXIT 0`, `.so` mtime post-dating the sync, `cpp == python` on the Fano
+plane. Safe because no job was running — `squeue` showed only the long-standing
+admin-held 2132239 (PD).
+
+**Operational rule for the rest of the campaign:** the extension lives in the
+shared conda env (`.../conda_envs/isalhg-tkde/lib/python3.11/site-packages/`),
+so a rebuild swaps the `.so` under any *running* task. Nothing ahead touches
+C++, so every further deploy uses **`sync_to_picasso.sh --no-build`** unless
+`squeue` shows no running campaign job.
+
+### D-KBf3 executed
+
+`ISAL_MATRIX_ARMS = ("wstar_orbit", "isal_ow_struct")`; `matrices.yaml` on the
+D-ART5 arm set; 31 units (was 37). 28 new tests pin the screen/matrix
+agreement, 4 pin the arm set. Suite baseline verified rather than assumed: the
+three affected test files give **8 failed / 151 passed both before and after**,
+the identical eight pre-existing failures; the one failure the change caused
+was the frozen-arm count, fixed at `6c8d2a4`.
+
+**The objection that had to be cleared first.** `fingerprint()` resolves `k` as
+`required_k(H)` and the seed-prefix flag per member; `matrix()` resolves `k` as
+the corpus maximum and the flag over the corpus. If those differ, the screen
+certifies a member for a search the matrix then runs differently and
+*unbudgeted* — the twelve-minute-hang class of defect. Measured on both
+corpora rather than argued:
+
+- **k**: 0 word mismatches over 43 ndc members stratified across
+  `required_k` 2–9 against the corpus `k` of 10; cost ratio corpus-k /
+  per-member-k **median 0.96, max 1.03**. The encoder never names a pointer
+  index above the widest edge's, so surplus pointers are neither written nor
+  searched.
+- **prefix flag**: uniform per corpus — every ndc member carries 4 vertex
+  labels, every wd50k66 member carries 1 — so the member-level and
+  corpus-level flags agree on every member of both.
+
+So the screen's census *is* the matrix's census, and it is RQ1's: `rq1.py:682`
+also uses `required_k(H)` per member. The doubled computation
+(`build_matrix_censored` recomputes the survivors) is real, bounded and
+deliberate. Poisoning was already handled: `_build_censored_child` runs the
+whole build in a forked child that dies, and RQ4/RQ5 read cached `.npy` rather
+than building.
+
+### Submitted
+
+| job | what | submitted | note |
+|---|---|---|---|
+| **2264827** | `tkde-matrices`, 31 units, 32 cpus / 64 GB / 12 h | 2026-09-09 ~09:05 CEST | `--test-only` estimated a start of 2026-09-10T16:28 — the queue holds 4,274 jobs |
+
+Monitor armed on job state only (never on file counts), self-terminating on the
+terminal condition.
+
+### Provenance obligation for the matrices harvest
+
+The `k`-invariance measurement is not a curiosity: it is **the fact that
+licenses RQ4/RQ5's budget to be read from the RQ1 census**. Without it, a
+reviewer is entitled to ask why a matrix built at the corpus `k` may be censored
+by a screen run at each member's own `k`. It must therefore travel with the
+matrices, not only with this ledger entry.
+
+Job **2264827** started before this was written, so its `config.json` stamp
+does not carry the citation. Two follow-ups, both cheap:
+
+1. At harvest, attach to the matrices run record: *"the censoring census is the
+   per-member screen's; screen and build agree because `w°`/`w*_c` are
+   invariant to surplus pointers (0 mismatches / 43 members, `required_k` 2–9
+   at corpus `k` = 10, cost ratio 0.96–1.03) and the vertex-label count is
+   uniform per corpus (ndc 4, wd50k66 1); pinned by
+   `tests/unit/metric_space/test_isal_engine_k_invariance.py`."*
+2. Fold the same sentence into `matrices.py`'s module docstring at the merge of
+   the RQ2–RQ5 consumer wave, so every later run stamps it. Not done inline
+   here: `matrices.py` is held by the consumer agent's worktree.
+
+Raised by `[IsalHG-Fable]`, which also conceded the reuse fix and asked for its
+precise form to be filed rather than applied — parked as **T-KBl**, landing
+window with or after T-KBj, never between RQ1 and RQ2.
+
+### Job 2264827 FAILED in 5 s — the nested-budget defect, and what it says about the smoke
+
+```
+experiments.tkde.config.TkdeConfigError: budgeted matrix unit
+wd50k66/wstar_orbit did not produce a matrix:
+AssertionError: daemonic processes are not allowed to have children
+```
+
+**Mechanism.** The matrices job nests two budgets: `run_unit` forks a child for
+the unit (so the build's in-process canonicalisation cannot poison the runner),
+and inside it `build_matrix_censored` forks one screen per member.
+`run_with_budget_detail` created every child with `daemon=True` — correct for a
+*leaf*, since it ties the child's lifetime to its parent, and wrong for a
+*supervisor*, since Python forbids a daemonic process from having children. The
+unit died on its first screen. Unit 0 (`fact_rank`) was a cache hit, so nothing
+on disk was touched and no compute was wasted.
+
+**Fix** (`c6a9a8c`): `daemon` is a keyword on both budget entry points,
+defaulting to `True`; the single supervisor call site passes `False`. A
+non-daemonic child is still killed on time-out, and SLURM's cgroup reaps it if
+the runner dies outright.
+
+**Why it reached a submission.** `BUDGETED_MATRIX_ARMS` has contained
+`wstar_rank` since wave 3, but **no budgeted arm was ever in `DEFAULT_SPECS`**,
+so the nesting existed from wave 6 and had never executed. Wave 6 unit-tested
+both budget levels in isolation; composition is the only place the defect
+lives. Two guards now:
+
+1. `tests/experiments_tkde/test_budget_nesting.py` — 5 tests reproducing the
+   failure as behaviour and pinning the fix, the default, and that opting out
+   of `daemon` does not weaken the time-out.
+2. `wstar_orbit` added to `SMOKE_SPECS`. **A smoke that omits the only budgeted
+   arm cannot exercise the mechanism the campaign depends on**, which is
+   exactly how this reached the cluster. The rule the smoke encodes is *cover
+   every code path the real run takes*, not every arm.
+
+Verified on the real path before resubmitting: the local 40-member smoke builds
+**11/11 units**, both `wstar_orbit` matrices included (ndc 5.7 s). No sidecar
+was written because nothing censored at that size — the censored branch is
+covered synthetically in the consumer wave.
+
+**Resubmitted as 2264831** at `c6a9a8c`, deployed with `--no-build` (Python-only
+change; the extension is current from the 09:07 rebuild).
+
+### The censoring branch pre-tested before the cluster reached it
+
+Job 2264831 hits `ndc_classes/wstar_orbit` — the first real censoring build in
+the campaign's history — about half an hour after launch. The branch was
+exercised locally first, at a 4 ms budget to force censoring:
+
+| unit | censored | result |
+|---|---|---|
+| `ndc_classes/wstar_orbit` | 12 of 40 | 28×28 matrix; sidecar `n_requested 40, n_censored 12, member_ids 28`; manifest `n = 28` over the kept order |
+| `wd50k66/wstar_orbit` | **40 of 40** | `(0, 0)` matrix, `manifest.n = 0`, **reported as success** |
+
+Two things settled. The sidecar **partitions the frozen order** exactly as the
+consumer loader's assertion requires, so D-KBf2's design is sound against the
+real artefact rather than only against synthetic frames. And the fork canary
+**survived 12 censorings inside the non-daemonic supervisor child** — the risk
+that `guarded_budget_call`'s `cpp_fork_is_healthy(recheck=True)` would fire on a
+censored screen and kill the unit does not materialise, which is what licenses
+the 70 censorings the ndc unit is about to take.
+
+The degenerate row is a genuine silent-wrong-result hazard and is parked as
+**T-KBm** rather than fixed inline: the campaign's 60 s budget censors 7 of
+3,988 and 70 of 1,381, so it is not on the submission path, and changing
+censoring behaviour mid-campaign would break census comparability.
+
+### Matrices 2264831 COMPLETED (3:10:11, 31/31 units) — and it re-measures the census
+
+The `wstar_orbit` screen inside the matrix build is an **independent re-run** of
+the RQ1 M3 census, so it tests the k-invariance argument of D-KBf3 at campaign
+scale rather than on 43 sampled members.
+
+| corpus | matrices job | RQ1 M3 | relation |
+|---|---|---|---|
+| ndc_classes | 70 of 1,381 | 70 | **identical member ids** |
+| wd50k66 | 5 of 3,988 | 7 | **strict subset** — `Q183066`, `Q707986` completed |
+| wd50k100 | 11 of 1,837 | — | new collection |
+
+**This confirms the argument rather than straining it.** A screen running a
+*different*, harder search (the corpus `k`) would censor a **superset**, and
+ndc — the corpus with the whole arity-10 tail — would not match to the id. A
+strict subset on the other corpus is the signature of the same search meeting a
+less loaded node.
+
+**A correction to the record.** T-KBe reports `wstar_orbit` as stable at 77
+across four reads while the unpruned engine drifted 357/354/356/353. Those were
+four reads of **one run's rows**, not four runs. This is the first independent
+re-run, and the arm does drift — by 2 on wd50k66, none on ndc. That is exactly
+what its near-boundary mass predicts (6 completions in [55, 60) s), so the drift
+model stands; only the claim "the published arms never moved" needs the
+qualifier *within a run*. Nothing published moves: `d_I` values are identical
+(same seeds, same words), and censoring decides only which units enter a table.
+The two members are the smallest of the seven (n=22 m=16 and n=20 m=12).
+
+`ndc_substances` carries matrices for the cheap arms from an earlier campaign
+but **no `wstar_orbit`**, so RQ2's own budgeted build — the path fixed at
+`afab7c5` — is exercised on exactly the collection it was written for.
+
+### Submitted
+
+| job | what | note |
+|---|---|---|
+| 2264827 | matrices | FAILED in 5 s, nested-budget defect |
+| **2264831** | matrices, 31 units | **COMPLETED** 3:10:11 |
+| **2265308** | **RQ3 pilot** — one NDC cell | D-ART4 note (b): pilot before the full RQ3, since the consensus canonicalises hundreds of candidates per cell and NDC sources are symmetric |
+| **2265309** | RQ2 non-census kinds | exact0, bipartite, oracle, hypercot |
+| **2265310** | RQ2 census array | `afterok:2264831`, dependency read back and verified |
+
+### The RQ3 pilot earned its place — it caught a silent stale-row defect (T-KBn)
+
+D-ART4 note (b) asks for one NDC cell before the full RQ3, on the grounds that
+the consensus canonicalises hundreds of candidates per cell. It found something
+else, and worse.
+
+Job 2265308 completed in 5 minutes with 0 errors and looked healthy. It was not:
+
+| | pilot on the dirty tree | fresh local run |
+|---|---|---|
+| rows | 44 variants / 20 natural | **58 / 27** |
+| wall-clock | 0.3 s | **80 s** |
+| `wstar_orbit` rows | **0** | matrix built, n=20, 1.32 s |
+| `nauty_cert_rows`, `bipartite_ged_assign` | **0** | present |
+| persisted `config.json` | the **new** 11-arm list | the new list |
+
+RQ3 decides what to skip by reading its own **untagged** aggregated row files,
+so a changed arm set leaves every unit "done": it re-aggregated the 2026-09-05
+rows and wrote a fresh `config.json` naming arms those rows do not contain. On
+the real tree (49,027 pre-D-ART5 rows) the full RQ3 would have produced a
+complete, plausible table **with no Isal row at all**, over a provenance stamp
+saying otherwise.
+
+**Scope of the hazard, checked per runner rather than assumed.** Only RQ3 calls
+`_done_units`. RQ4/RQ5/RQ6/RQ7 do not skip; but RQ4/RQ5/RQ6 do not tag either,
+so they would *overwrite* the pre-D-ART5 rows D-ART4 (1) requires be kept. RQ2
+is correct as it stands — it writes `rows_census__<tag>-<unit>.csv`, and today's
+`ndc_classes-wstar_orbit` sits beside the untagged Sep-5 files rather than
+replacing them.
+
+**Operational fix, following this campaign's own precedent.** RQ3–RQ7 run into a
+clean root `~/results/IEEETKDE_isal/` with `matrices` symlinked to the shared
+build — the same separation T-KBe used for the RQ1 harvest
+(`results/IEEETKDE_isal/RQ1_addressing/`, "not into the campaign's frozen
+record"). Nothing is moved or deleted. The runner defect is filed as **T-KBn**.
+
+**Submitted:** full RQ3 as **2265353** into the clean root. RQ2 (2265309 /
+2265310) continues in the shared tree; its rows are tag-separable and its
+census already carries `wstar_orbit`.
+
+### D-KBf2 verified on real data (RQ5 smoke, job 2265369)
+
+The consumer side was tested only on synthetic frames before this. The smoke
+read the real `wstar_orbit` matrix with its sidecar and behaved as designed:
+
+```
+WARNING matrices  arm wstar_orbit on wd50k66: 5 of 3988 members censored by the matrices job
+WARNING __main__  unit 11 (wd50k66_balanced__seed50000): 1 of 280 selected members censored;
+                  clustering the rest
+```
+
+**The intersection is applied at the scoring level, not merely recorded.** Every
+arm in the unit reports `n_members = 279`, `n_censored_members = 1` — including
+the ten arms that censor nothing:
+
+| arm | n_members | n_censored |
+|---|---|---|
+| `wstar_orbit` | 279 | 1 |
+| `fact_rank`, `nauty_cert`, `nauty_cert_rows`, `wl_l1`, `netlsd`, `hpd_jsd`, `bipartite_ged_{path,assign}`, `size_l1`, `degree_seq_l1` | 279 each | 1 each |
+
+So the uncensored arms are scored on exactly the members the Isal arm could
+represent. This is rule 9 made structural, and it is the property whose absence
+produced the three retracted directional claims of RQ1 (design §9 item 8): there,
+each arm was scored on its own completed subset and an eyeballed ordering was an
+artefact of the differing unit sets.
+
+The D-ART5 arm set is present and complete — 11 arms, `wstar_orbit` among them,
+no `wstar_rank`, no `isal_ow_*`.
+
+**Submitted:** full RQ5 as **2265389**. RQ4's smoke (2265368) carries the more
+delicate L15 requirement — the censoring rate by corrupted-vs-clean and by
+corruption type — and gates the full RQ4.
+
+### RQ4 smoke TIMEOUT (job 2265368) — the anomaly scoring is O(A·N) unbudgeted canonicalisations
+
+The smoke spent its whole 30-minute wall on **one unit**
+(`ndc_classes__spurious_fact_b1__seed40000`, 1,311 members, 11 arms), logging the
+censoring line at 13:07:39 and nothing after.
+
+**Mechanism.** `rq4.anomaly_rows` scores each anomaly against every member
+through `_row_worker`'s
+`[distance.pairwise(anomaly, other) for other in items]`, and the Isal engine's
+`pairwise` **re-canonicalises both sides on every call**. So `wstar_orbit` pays
+O(anomalies × N × 2) canonicalisations with no budget, on the corpus whose p99
+is 43 s and 70 of whose 1,381 members never finish at 60 s. One of those hangs
+the unit for ever.
+
+**The fix was already written — for the wrong arm.** `anomaly_rows`' docstring
+says it itself:
+
+> "`fact_rank` is served from precomputed words (one encoding per member, then
+> token Levenshtein) rather than through `pairwise`, which would re-derive the
+> canonical labelling on both sides of every call."
+
+`WORD_ARM = "fact_rank"` is the representation **D-ART4 retired**. The
+optimisation was never extended to the representation that replaced it, so the
+paper's own arm takes the slow path the comparator was spared. Generalising it
+is delegated (wave `2026-09-09-isal-kb-w9`), together with budgeting the
+canonicalisation and censoring an **anomaly** that does not finish — a case the
+matrices job cannot cover, since an anomaly is a hypergraph that never passed
+through it.
+
+Caught because the RQ4 smoke was run before the full submission. The full RQ4
+carries an 8-hour wall over 1,323 units; unfixed it would have burned it and
+produced nothing.
+
+### RQ3 Corpus A: the deletion variants violate R3 — measured 2026-09-09 14:2x
+
+Job 2265353 censors `wstar_orbit` on **2,616 collections** in its first 647
+units, and the pattern is a mechanism, not noise: **every censored cell is
+`_del` or `_mix`; no `_ins` cell censors at all.**
+
+**Cause: isolated constants, i.e. R3 — not cost.** Measured on 25 sampled
+Corpus A sources with the real generator:
+
+| kind | members | carrying an isolated constant | clean |
+|---|---|---|---|
+| `ins` | 350 | **0 (0 %)** | 350 |
+| `del` | 172 | **168 (97.7 %)** | 4 |
+| `mix` | 350 | **153 (43.7 %)** | 197 |
+
+The correspondence with the censoring pattern is exact.
+
+**The record already ruled the fix, and it was never implemented.**
+
+- R3 (D-ART4 (2)): "Connected only; isolated constants not representable
+  (**RQ3's deletion variants** and RQ6's interiors must respect this)."
+- D-ART4 (3): "**Variant generator: reject stranding deletions (R3).**"
+- `ladders.py::variant_collection` docstring: "the constant set is fixed,
+  **isolated constants are legal**." `DESIGN.md` §4 still says the same — both
+  predate D-ART4 and were never revised.
+
+**Why my D-KBf1 reason (iii) missed it.** Fable forced me to check that reason
+for **arity**, and arity was fine (`_arity_pool` bounds an insertion by the
+arities already in the record). Neither of us checked **connectivity**. The
+Corpus A window bounds `n`, `m` and arity; it says nothing about whether an
+edit leaves a constant in no fact. The lesson is that "outside the censoring
+regime" needed checking against *every* clause of the domain, not the one that
+was challenged.
+
+**The measured consequence of implementing D-ART4 (3) literally** — 40 sampled
+sources, collections keeping the full pre-registered `N` after rejection:
+
+| cell | wd50k66 | ndc_classes |
+|---|---|---|
+| `ins_*` (all four) | **40 / 40** | **40 / 40** |
+| `del_*` (all four) | **0 / 40** | **0 / 40** |
+| `mix_*` (all four) | 0–2 / 40 | 0–6 / 40 |
+
+Structural, not incidental: a constant-preserving deletion removes a fact and
+keeps the constant, and with `n ≤ 12`, `m ≤ 12` most constants sit in exactly
+one fact. `del_N9_t1` cannot be built at all, which the 2026-09-05 `m ≥ N + 1`
+amendment already knew for a different reason.
+
+**Status: not decided, nothing changed, job not cancelled.** The running job's
+`_ins` cells and Corpus B are unaffected and valid. Three options are on the
+table — implement the rejection and lose the deletion cells; keep the corpus and
+report the Isal arm as censored-by-domain there; or let deletions drop the
+stranded constant, abandoning "constant-preserving". D-ART4 (3) rules the
+*mechanism*; it does not rule what happens when the fix makes a pre-registered
+cell infeasible, and that gap is the author's. Put to `[IsalHG-Fable]` for the
+claim question and to the author for the scope call.
+
+### D-KBf5 — RQ3 adopts `reach′` on compacted remainders (author-ruled 2026-09-09)
+
+**Ruling (author, in session):** coherent option (C). Criterion he gave:
+*"keep it scoped inside the Isal paradigm as much as possible and be as general
+as possible within the knowledge-bases domain."*
+
+**What is adopted.** `reach′_F(K, K′) = min{|A| + |B| : compact(K − A) ≅
+compact(K′ − B)}`. A deletion that leaves a constant with no fact removes the
+constant, because a knowledge base **is** its set of facts (prose §2.1), which
+is what `datasets/kb/base.py::compact` already implements and documents. Every
+Corpus A member is then in the domain Prop. C.4 fixes, and all three edit kinds
+survive at the full pre-registered `N` on both corpora.
+
+**Why the one-flag version was rejected — verified, not argued.** Flipping
+`require_connected` in `_variant_member` alone fails by construction:
+
+- `language/reach.py` docstring: "Constants are never deleted, so an isolated
+  constant left behind by a removed fact is legal and **the two remainders
+  always carry the same constant count**."
+- `language/reach.py::compatible`: `if K.n_nodes != K2.n_nodes: return False`.
+
+A compacted deletion member has `n − 1` constants, so it is at **infinite
+reach** from its source; `cov_r` collapses and H3a fails for every deletion
+cell by definition rather than by evidence. `[IsalHG-Fable]` found this and
+withdrew its own earlier (A)+sub-pool proposal; the lines check out.
+
+**The finding that enlarges the ruling.** The same gate already cripples
+**Corpus B**, independently of anything in this campaign. On the 69 natural
+`T ≥ 4` runs:
+
+| | |
+|---|---|
+| member pairs | 1,400 |
+| **at infinite reach under the frozen `compatible()`** | **1,146 (81.9 %)** |
+| runs with ≥ 1 incompatible pair | **60 of 69** |
+
+`DATA`/`DESIGN` already record that constants change in 400 of 528 natural
+consecutive pairs; what was not recorded is that the frozen reach therefore
+returns ∞ on most of them, so the triangle-complete candidate set is mostly
+empty and **the coverage consensus — RQ3's flagship, "a decoded consensus that
+is no member" — has been measuring a crippled method on the real-data corpus.**
+`reach′` repairs that. This is a larger gain than the deletion cells and was
+not part of the case put to the author when he ruled; it is recorded here as
+supporting evidence found immediately after.
+
+**Scope of the change** (verified against the sources):
+1. `language/reach.py` — compact both remainders before keying; replace
+   `compatible()`'s `n_nodes` equality with a test on the constants surviving
+   compaction (or drop it and pay the canonicalisations).
+2. `language/consensus.py` — `node_map` is documented "always the identity,
+   because every candidate is built inside its anchor's constant space"; it
+   must admit a partial map and create an unmapped constant with the donor's
+   type and identity. In the language that is `insert_fact_new_constant`, the
+   one insertion kind the Isal word owns outright (RQ1).
+3. `datasets/kb/ladders.py::_variant_member` — stop passing
+   `require_connected=False` and keep `source.n`.
+4. **Prop. 5 must be re-measured** under `reach′` (its "source unique maximiser
+   12/12, member-to-member reach 0.00–0.02" is cited in `prose.md` §4).
+5. Design record: Corpus A is renamed off "constant-preserving"; `DESIGN.md` §4
+   gains `reach′` with the date; prose §2.1/§4 gain the disclosure sentences.
+
+**A prose caution for T-KBg**, found on the way: `RemainderIndex` keys
+remainders on the **fact word** — chosen because remainders may be disconnected,
+and used as an internal complete invariant, not as a representation claim. The
+prose must say "any complete invariant" there rather than `F°`, or it will
+contradict the code.
+
+**D-ART4 (3) is satisfied in purpose, not in letter:** no member is left outside
+R3's domain, but deletions are resolved by compaction rather than by rejection.
+Recorded so the instruction is not left looking violated.
+
+### The Corpus B demotion was decided by the crippled measurement — gate void
+
+`DESIGN.md` §4's A → A′ gate reads: *"If Corpus B shows the consensus no better
+than the medoid, Corpus B goes to the supplement as the characterized weak
+regime."* It fired. `RESULTS_WALKTHROUGH.md` records the numbers that fired it —
+fact distance 2.60 against 1.84–2.40, exact recovery 0.145 against up to 0.226 —
+and explains them: *"A natural series is not a set of variants of one source, so
+there is nothing for a consensus to converge to."*
+
+Both are void. Those numbers were produced with **81.9 % of Corpus B's member
+pairs at infinite reach**, so the consensus was not given a candidate set to
+work with; and the explanation is an untested causal claim the measurement
+cannot support. The gate is re-run under `reach′`, and **Corpus B's placement is
+undecided rather than "supplement"** until it is. Supersession notes are written
+in place at both sites so neither can be inherited by inertia into T-KBg.
+
+**Fable's hypothesis that the audit's §3.3 is this same gate is wrong**, and the
+reason matters. §3.3 ("the deletion boundary is real, the stated mechanism is
+wrong") concerns **Corpus A** `t = 2` deletion cells, and under the *old*
+generator every Corpus A member keeps `n = source.n` — isolated constants were
+retained — so `compatible()` always passed there and the reach gate never bit.
+§3.3's measured mechanism stands: the source is in the candidate set 108/108 and
+the plain union equals the source 108/108, so the consensus loses to the
+objective's summed-reach criterion or its lexicographic tie-break, "a property
+of the objective, not of the data".
+
+**But §3.3 now needs re-checking for a new reason.** Under `reach′` Corpus A
+deletion members *do* change constant count, so the summed-reach criterion is
+computed over different quantities than when §3.3 tested it. Its conclusion may
+survive or may not; it must be re-run alongside Prop. 5 rather than assumed.
+
+### D-KBf5a — the operative A → A′ gate for Corpus B, pre-registered before the re-run
+
+The rule in `DESIGN.md` §4 is *"If Corpus B shows the consensus no better than
+the medoid, Corpus B goes to the supplement"* — a verdict with **no threshold
+and no test**. It was applied once, informally, on a crippled measurement, and
+the placement of an entire real-data corpus followed. Committed here **before**
+`reach′` produces a single number, so the placement cannot be read as chosen.
+
+**The comparison.** Coverage consensus against the **certified medoid**, on two
+axes: exact fact-level distance to the held-out quarter, and exact-recovery rate.
+
+- **Comparator:** the *best-performing medoid arm on each axis*, not the Isal
+  one — the gate must be conservative against us. `majority_merge` is reported
+  beside them as the reference ceiling and is **not** part of the gate, since it
+  uses constant identities that every other method is denied (`DESIGN.md` §4
+  Methods).
+- **Units:** the common set of Corpus B runs — the D-KBf1 rule, 63 of 69 at
+  present. Corpus B members are real quarters, not generated variants, so the
+  generator change does not move that set; if the re-run's censoring differs,
+  the common set is recomputed and the number stated.
+- **Test:** paired Wilcoxon under the 27-seed harness where seeds exist, sign
+  test on the paired runs where they do not; Holm across the two axes; 0.05.
+- **Verdict:** *"no better"* means the consensus fails to beat the best medoid
+  at Holm-corrected 0.05 **on both** axes. Placement follows from that and from
+  nothing else.
+
+**Both readings pre-stated, so neither is written after the fact.**
+
+- *If the consensus wins under `reach′`:* the explanation of record — "a natural
+  series is not a set of variants of one source, so there is nothing for a
+  consensus to converge to" — is **retracted as an artefact of the reach gate**,
+  and Corpus B becomes the main-text real-data result. The retraction is printed,
+  not silently dropped.
+- *If it still loses:* the explanation **stands**, restated as measured under a
+  working candidate set for the first time, and Corpus B goes to the supplement
+  exactly as the pre-registered rule says.
+
+**One ambiguity resolved rather than left open:** the rule says "the medoid"
+while the campaign now runs eleven medoid arms. Read as the best arm per axis
+(above). Recorded so the reading is not chosen later.
+
+#### D-KBf5a amendment — two pre-named comparisons, not one
+
+The gate above answers *"may Corpus B carry the main text?"*. It does not answer
+the question RQ3 actually asks. Both are pre-named here; neither is chosen after
+the numbers.
+
+**Primary comparison (the paper's claim):** coverage consensus versus
+**`medoid[wstar_orbit]`** — the paper's own metric. RQ3's claim is that *the
+language buys something beyond the metric*: a representative that is a decoded
+object no member wrote, against the best object the same distance can return by
+picking an input. That question is answered by our own medoid, not by the
+strongest competitor, and it is the row the RQ3 table leads with.
+
+**Placement gate (conservative check):** coverage consensus versus the
+**best-performing medoid arm per axis**, as pre-registered above. This decides
+main text versus supplement and nothing else.
+
+**Winner's-curse disclosure, required in the caption.** The best of eleven arms
+chosen per axis *after seeing the numbers* is a selection-biased comparator, and
+the Holm correction across the two axes does not account for that selection: the
+bias grows with the number of arms and runs **against** the consensus. That is
+the right direction for a gate deciding the placement of our own corpus, so it
+is kept — but the caption states plainly that the comparator is the post-hoc
+best of eleven and that the bias runs against us. A reader must not have to
+infer either.
+
+### Wave outcome, 2026-09-09 15:30 — what is banked and what is superseded
+
+| job | what | state | verdict |
+|---|---|---|---|
+| 2264827 | matrices | FAILED 5 s | nested-budget defect, fixed |
+| 2264831 | matrices, 31 units | COMPLETED 3:10:11 | **banked** |
+| 2265308 | RQ3 pilot | COMPLETED | caught T-KBn; rows discarded |
+| 2265309 | RQ2 main | 11/13 done | in progress |
+| 2265310 | RQ2 census | **COMPLETED 9/9** | **banked** |
+| 2265353 | RQ3 full + RQ6 | COMPLETED 2:30:26 | **part banked, part superseded** |
+| 2265368 | RQ4 smoke | TIMEOUT | diagnosed, fix merged |
+| 2265389 | RQ5 full | COMPLETED | **banked** |
+
+**RQ2's headline, on the campaign's most arity-heavy collection.**
+`ndc_substances` / `wstar_orbit`, built by the budgeted path added at `afab7c5`
+(without it the unit hangs rather than screens): 1,661 of 1,745 members
+(84 censored, 4.8 %), 1,378,630 pairs of which 1,373,305 non-isomorphic,
+**0 false merges**, and the induced partition equal to the true one at
+**1,086 = 1,086**. 8,446 s. That is RQ2's exactness result, measured rather
+than inherited from the theorem.
+
+**RQ3's censoring tally confirms the R3 mechanism exactly**, on the full run
+rather than a 25-source sample:
+
+| cell kind | collections censored |
+|---|---|
+| `ins` | **0** |
+| `del` | 982 |
+| `mix` | 1,638 |
+| Corpus B | **6** — classes 470, 471, 472, two runs each |
+
+Insertions never strand a constant, so they never censor; `del` and `mix` do.
+The Corpus B figure is exactly the 6 units D-KBf1a predicted from those three
+classes, so the cost-censoring model and the domain-censoring mechanism are
+cleanly separated in the data.
+
+**Banked from 2265353:** the Corpus A `ins` cells (64,293 Corpus A rows contain
+them) and Corpus B's **medoid** rows. **Superseded:** every `del`/`mix` cell
+(D-KBf5) and every Corpus B **consensus** row (the reach gate). RQ6 ran bundled
+(162 sample, 60 alignment rows) and its **alignment** rows need re-checking
+under `reach′`, since an alignment interior is built from the same machinery;
+its sample rows do not.
+
+### D-KBf5 measured — the gate re-opens Corpus B
+
+`reach′` merged. The Corpus B probe re-run independently from the merged tree
+(`scripts/diagnostics/reach_prime_corpus_b_probe.py`), reproducing the
+implementer's numbers exactly:
+
+| Corpus B, 1,400 pairs / 69 runs, r = 2 | frozen | `reach′` |
+|---|---|---|
+| gate-rejected | **1,146 (81.9 %)** | **387 (27.6 %)** |
+| no finite reach within r = 2 | 1,148 | 446 (31.9 %) |
+| runs carrying such a pair | 60 / 69 | 51 / 69 |
+
+**Consensus, the worst run** (class 389, T = 36, 35 members, 595 pairs):
+1.4 s, 319 candidates, 495 of 595 pairs finite, **coverage 34 of 35** — against
+the frozen 0.4 s, 103 candidates, 112 finite, **coverage 13 of 35**. The
+consensus goes from covering a third of a run to covering all but one member,
+and the 1,800 s guard is cleared by three orders of magnitude, so the array is
+safe. Median run: 0.0 s, 48 candidates against 12.
+
+**Prop. 5 is unchanged — for a reason worth recording.** Unique maximiser 12/12
+at both noise levels, copy-to-copy 0.00–0.02, identical to the published
+numbers. But its probe measures the **token-level** ball and never imports
+`isalhg.language`, so Prop. 5 is *independent of* this change rather than
+validated by it. The prose must not cite it as evidence for `reach′`.
+
+**Three corrections from the implementer, all verified.**
+1. **My suggested gate was wrong.** "Type multiset of constants occurring in
+   ≥ 1 fact" is not a necessary condition, because compaction removes occurring
+   constants — counterexample at `reach′ = 1` with multisets `[0,0,1]` vs
+   `[0,0]`, now a regression test. The shipped gate uses a fact-profile budget
+   and undeletable-type containment, both necessary, and takes `r_max` because
+   the second depends on it.
+2. **"Infinite reach" does not exist under `reach′`**: deleting every fact on
+   both sides always matches, so `reach′ ≤ m + m′`. The reportable quantity is
+   "no finite reach within `r`", and the prose must say that.
+3. `_variant_member` also had to stop reading `source.types` and
+   `source.constant_ids`, not only `source.n` — all stale after a compacting
+   step.
+
+**One consequence left unfixed, filed as T-KBo:** `rq6.Reach1Index._shape()`
+hard-codes the frozen precondition and buckets members by constant count, so it
+withholds exactly the pairs `reach′` admits (`reach(sample, src, 1) == 1` while
+`within_one(sample)` returns `None`). RQ6's `reach1` column must be re-derived;
+nothing else in RQ6 is implicated.
+
+**Every RQ3 and RQ6 result on disk is now stale.** The re-run goes into the
+clean root under the D-KBf5a gate, which was committed before any of these
+numbers existed.
+
+### The RQ4 smoke is a structurally invalid gate — do not read its TIMEOUT as a failure
+
+Job 2265661 (the fix's re-run) sat at 28:43 with no unit complete, the same
+shape as the pre-fix 2265368. It is **not** the same failure, and the process
+table proves it: the parent had **29:15 elapsed against 00:01:06 of CPU
+(3.7 %)**, spawning one short-lived child at a time. That is a sequential
+budgeted-fork warm-up, not a hang — the pre-fix job was burning CPU inside an
+unbounded `pairwise`.
+
+**Why one unit cannot finish in 30 minutes, by design.** `member_words_for_unit`
+memoises pristine members' words **per process, per sub-collection**, so "the
+budgeted fork is paid once each" across the run; only the ~66 corrupted members
+are recomputed per unit. A single-unit smoke therefore pays the whole warm-up —
+for `ndc_classes` / `wstar_orbit` that is the ≈ 5,823 s the matrices job itself
+paid — and amortises it over nothing. The full run has **1,323 units in one
+process** and pays it once.
+
+So the smoke's 30-minute wall can never be met by the first unit, and the
+correct gate is the first two unit timings of the real run: unit 0 pays the
+warm-up, unit 1 shows the steady state. That measurement comes free from the
+submission and is what decides whether the 8-hour wall holds.
+
+Recorded because the obvious reading — "the fix did not work" — is wrong, and
+because the same trap applies to any runner that memoises across units: a
+one-unit smoke measures warm-up, never throughput.
+
+### D-KBf5 verified on the cluster (RQ3 pilot 2267401)
+
+| | pre-`reach′` full run | pilot under `reach′` |
+|---|---|---|
+| collections censored | 2,626 (`del` 982, `mix` 1,638, B 6) | **1** |
+| Corpus A rows | — | 56 (was 44 at the same cell set) |
+| Corpus B rows | — | 27 (was 20) |
+| Corpus A domain censoring | heavy | **0** |
+| Corpus B censoring | — | 1, the residual **cost** censoring |
+| `medoid_survivors` rows | — | **1**, on that one collection |
+| coverage rows carrying a result | — | A 8/8, B **2/2** |
+
+Three things confirmed at once. The R3 domain violation is **gone** — no Corpus
+A collection is censored, so every variant is now a knowledge base and all
+eleven arms including `wstar_orbit` produce medoids. D-KBf1's **cost**
+censoring still fires correctly and independently, on exactly one Corpus B
+collection, with its survivor-medoid supplement row beside it — so the two
+censoring mechanisms remain separated in the data, which was the point of
+giving them different reasons. And the coverage consensus **returns a result on
+every Corpus B unit it was given**, where the frozen reach left it with a
+mostly empty candidate set.
+
+Full RQ3 submitted under `reach′` into `IEEETKDE_isal_reachprime/`, leaving the
+superseded run intact as the record.
+
+### RQ2 complete — the false-merge census, and an OOM that cost nothing
+
+Task `2265309_10` was **OUT_OF_MEMORY**, and it is a non-event for the data:
+the log shows `unit bipartite-ndc_classes done in 7792.2 s: {'bipartite': 8992}`
+and the kill **nine seconds later**, after the rows were written
+(`rows_bipartite__da0ff0af-bipartite-ndc_classes.csv`, 1.46 MB, on disk). The
+job asked for 32 GB and peaked at 33.4 GB — it overran by ~1.4 GB in the
+in-job finalisation. **All 85 of 85 units have rows; nothing is missing.** Only
+`tables.md` / `stats.json` / `summary.json` were lost, and they regenerate from
+the rows; done on the login node.
+
+**The census (`n_false_merges`, and whether the induced partition equals the
+true one):**
+
+| arm | ndc_classes | ndc_substances | wd50k66 | partition |
+|---|---|---|---|---|
+| **`wstar_orbit`** | **0** | **0** | **0** | **exact** (530 / 1,086 / 3,677) |
+| `nauty_cert`, `nauty_cert_rows` | 0 | 0 | 0 | exact |
+| `fact_rank` | 0 | 0 | 0 | exact |
+| `wl_l1` | 0 | 0 | 0 | exact |
+| `bipartite_ged_path` | 0 | 0 | 0 | **splits** — 574 classes against 557 |
+| `netlsd` | 2,516 | 1 | 185,917 | merges |
+| `hpd_jsd` | 7,618 | 9,885 | 212,179 | merges |
+| `bipartite_ged_assign` | 59 | 1,332 | 201,010 | merges |
+| `degree_seq_l1` | 5,397 | 1,332 | 201,010 | merges |
+| `size_l1` | 52,660 | 33,713 | 291,227 | merges |
+
+Two readings the prose must carry. **`wl_l1` merges nothing on these three
+corpora** — refinement-based keys are incomplete on hypergraphs in theory
+(Prop 9), and on *this data* the incompleteness does not materialise; that is a
+measured negative for our own contrast and must be stated as such rather than
+quietly omitted. And **`bipartite_ged_path` fails exactness in the other
+direction**: no merges, but it splits isomorphic pairs into 574 classes where
+557 exist, so "0 false merges" is not "exact at zero".
+
+**D-KBf2's intersection is visible in the table.** Every uncensored arm carries
+two rows — its own full set (557 / 1,156 / 3,682) and the common set restricted
+to `wstar_orbit`'s survivors (530 / 1,086 / 3,677). The reader can see both, and
+the cross-arm comparison is on the second.
+
+**Caveat to clear before the RQ2 tables are quoted:** the analyzer reported
+`certificate validity: read`, and the file it read is the **pre-`reach′`** RQ3
+certificate output, because those rows live in `IEEETKDE/` while the `reach′`
+RQ3 writes to `IEEETKDE_isal_reachprime/`. RQ2 step 4 must be re-run against
+the new certificate file once RQ3 lands. Every other RQ2 section is independent
+of RQ3 and final.
+
+### D-KBf5a applied — the gate says SUPPLEMENT, and the old explanation is refuted
+
+RQ3 under `reach′` (job 2267425, 2:40:19): 62,398 Corpus A rows, 901 Corpus B
+rows, 49,027 certificate rows, and **6 censored collections against 2,626** —
+all six the Corpus B *cost* censorings of classes 470/471/472, **zero `del`/`mix`
+domain censorings**. The R3 violation is gone across the full run.
+
+**The gate, applied exactly as pre-registered** (common set **63 units**, the
+number D-KBf5a named in advance; paired Wilcoxon; Holm across two axes; 0.05):
+
+| | consensus | best medoid | Δ | p |
+|---|---|---|---|---|
+| fact distance | **1.873** | `wl_l1` 1.905 | −0.032 | 0.679 |
+| exact recovery | **0.286** | `wstar_orbit` 0.286 | +0.000 | 1.000 |
+
+Holm 1.358 / 1.000. **The consensus does not beat the best medoid on either
+axis → Corpus B goes to the supplement**, which is what the rule says and what
+it said before any of these numbers existed.
+
+**Primary comparison** (the paper's claim, consensus vs `medoid[wstar_orbit]`):
+fact distance −0.111 (p = 0.265), recovery ±0.000 (p = 1.000). The language
+does not buy a measurable advantage over its own metric on this corpus.
+
+**But the explanation of record is refuted, and that must be printed.** The
+superseded numbers had the consensus at fact distance 2.60 against medoids
+1.84–2.40 and recovery 0.145 against up to 0.226 — *worse than every medoid and
+worse than the merge* — and concluded "a natural series is not a set of variants
+of one source, so there is nothing for a consensus to converge to". Under a
+working candidate set the consensus is **better in point estimate than all
+eleven medoid arms** (1.873 against 1.905–2.270) and **best-equal on recovery**
+(0.286, tying `wstar_orbit` and beating the other ten). It even **beats
+`majority_merge` on recovery** — 0.286 against 0.254 — and that reference uses
+constant identities every other method is denied, though it still leads on fact
+distance (1.667).
+
+So the sentence "the consensus is worse than the medoids and than the majority
+merge" is **false**, and the causal story built on it does not survive. What
+survives is the weaker, measured statement: *on 63 natural runs the consensus is
+not distinguishable from the best medoid at 0.05 on either axis.* The placement
+is unchanged; the reason for it is not the reason previously given.
+
+This is what the pre-registration was for. Had the gate been applied after
+seeing these numbers, "better on all eleven arms but not significantly" could
+have been written up either way.
+
+### The gate is badly underpowered — "no better" is the wrong sentence
+
+Measured on the same 63 paired runs, minimum detectable effect at 80 % power,
+two-sided 0.05:
+
+| comparison | observed Δ | paired SD | MDE | observed / MDE | informative pairs |
+|---|---|---|---|---|---|
+| fact distance vs `wl_l1` | −0.032 | 1.126 | **0.397** | **0.08** | 29 of 63 |
+| fact distance vs `wstar_orbit` | −0.111 | 0.910 | 0.321 | 0.35 | 29 of 63 |
+| recovery vs `wl_l1` | +0.032 | 0.355 | 0.125 | 0.25 | **8 of 63** |
+| recovery vs `wstar_orbit` | ±0.000 | 0.356 | 0.126 | 0.00 | **8 of 63** |
+
+The study can detect a fact-distance difference of about **0.40 tokens**; the
+differences in play are **0.03–0.11**, an eighth to a third of that. On the
+recovery axis only **8 of 63 pairs differ at all** — the other 55 are ties, so
+that axis is close to uninformative at this corpus size.
+
+**Consequence for the wording.** "The consensus is no better than the medoid" is
+not what was measured. What was measured is: *no difference was detected on 63
+paired runs, where the smallest detectable difference is an order of magnitude
+larger than the one observed.* The pre-registered placement rule fires on the
+null and Corpus B goes to the supplement — the rule is honoured — but the
+supplement's text must state the power, or a reader will take a null for a
+finding. This is a defect in how D-KBf5a was written (it treats a
+non-rejection as evidence of no effect) and it is recorded as such rather than
+patched after the fact.
+
+### The forensics — Corpus A carries RQ3, and the tie-break barely fires
+
+Five questions put by `[IsalHG-Fable]` against the gate, answered from rows on
+disk (`scripts/diagnostics/rq3_consensus_forensics.py`).
+
+**Corpus A is the result the paper wants, and it is overwhelming** (4,457 common
+units, `reach′`):
+
+| axis | consensus | medoid (`wl_l1`, `wstar_orbit` alike) | discordant | rank-biserial |
+|---|---|---|---|---|
+| fact distance | **0.269** | 1.521 | 3,901 better / 37 worse of 3,938 | **+0.981** |
+| exact recovery | **0.835** | **0.000** | 3,723 better / **0 worse** of 3,723 | **+1.000** |
+
+The medoid recovers the source **never** — which is H3b holding exactly as
+written ("the medoid's distance to the source is ≥ t by construction, since it
+returns a member"). The consensus recovers it in 83.5 % of runs and is never
+once worse on recovery. So RQ3's claim — *a representative that is a decoded
+object no member wrote does what no method returning an input can* — is
+confirmed at scale on the controlled corpus. The Corpus B tie is a statement
+about the natural series, not about the method.
+
+**The tie-break barely fires**, which bounds what the retired-word defect can
+have cost:
+
+| | consensus rows | `n_ties = 0` (tie-break never fired) |
+|---|---|---|
+| Corpus A | 8,914 | **8,442 (94.7 %)** |
+| Corpus B | 69 | **54 (78.3 %)** |
+
+A run with `n_ties = 0` is invariant-neutral: no candidate was separated by the
+word rule, so its result stands unchanged under any complete invariant. The
+defect can therefore have touched at most 5.3 % of Corpus A runs and 21.7 % of
+Corpus B's — and touching is not the same as changing, since a different word
+may pick the same candidate. Candidates per run: median 118 (max 1,330) on
+Corpus A, median 40 (max 319) on Corpus B.
+
+**The medoid has no tie-break of its own** — `medoid.py` is `int(np.argmin(costs))`
+with no lexicographic fallback, so ties there resolve by member index. Arbitrary,
+but representation-neutral, so the medoid rows are unaffected by any of this.
+
+**Two of the five are not answerable from the rows**: the winner's origin
+(`member:` vs `transfer:`) and the disconnected-candidate count are computed
+inside `consensus.py` and never persisted. They need an instrumented re-run of
+the consensus, not a query. Filed rather than guessed.
+
+**A near-miss recorded.** The first version of this script labelled the sign of
+the recovery axis as though lower were better, and printed "consensus worse in
+3,723 of 3,723 pairs" for what is in fact "better in 3,723 of 3,723". Caught
+before it reached the ledger by checking the printed means against the signs;
+the axis-direction is now explicit per axis in the code.
+
+### The pre-registered hypotheses, measured under `reach′` — H3a's deletion clause fails
+
+**H3a** (≥ 95 % exact recovery on insertion-only and deletion-only, ≥ 80 % on
+mixed, at `r = 2`, `t ∈ {1,2}`), on Corpus A. The deletion cells are scored here
+for the first time on in-domain members:
+
+| kind | t | recovery | n | pre-registered | verdict |
+|---|---|---|---|---|---|
+| `ins` | 1 | 0.995 | 864 | ≥ 0.95 | **pass** |
+| `ins` | 2 | **1.000** | 864 | ≥ 0.95 | **pass** |
+| `mix` | 1 | 0.921 | 864 | ≥ 0.80 | pass |
+| `mix` | 2 | 0.806 | 864 | ≥ 0.80 | pass, barely |
+| `del` | 1 | 0.845 | 406 | ≥ 0.95 | **fail** |
+| `del` | 2 | **0.276** | 595 | ≥ 0.95 | **fail badly** |
+
+**The deletion boundary survives `reach′`.** The audit's §3.3 recorded it at
+0.23–0.81 at two deletions and argued the stated mechanism ("the information is
+gone") was wrong; under `reach′`, with every member in-domain, `del` `t=2` is
+0.276. So the boundary is not an artefact of stranded constants either. Its
+mechanism remains §3.3's — the objective's summed-reach criterion or the word
+tie-break — and §3.3 is on the re-measurement list for exactly that reason.
+
+**H3c** (the consensus matches `majority_merge` on recovery within 5 points):
+majority 0.894 against consensus 0.835 — **5.9 points, so H3c marginally
+fails**. On fact distance the identity-using reference leads 0.116 to 0.269.
+Reported as measured; `majority_merge` uses constant identities every other
+method is denied, which is why it is the ceiling and not a competitor.
+
+**The 37 Corpus A losses, by cell** — `[IsalHG-Fable]` predicted deletion and
+mixed cells before seeing them:
+
+| kind | losses | of | rate |
+|---|---|---|---|
+| `del` | 27 | 1,001 | **2.70 %** |
+| `mix` | 6 | 1,728 | 0.35 % |
+| `ins` | 4 | 1,728 | 0.23 % |
+
+Deletion cells lose **twelve times more often** than insertion cells, and the
+losses split evenly across corpora (ndc 18, wd50k 19). The prediction holds and
+the losses are the same regime as the H3a failure, not a separate phenomenon.
+
+**Scope of the pending consensus change (Fable's item 4):** only `rq3.py`
+imports the consensus objective. RQ6 imports `alignment` and `reach`, not
+`consensus`, so it is touched by `reach′` (already landed; `Reach1Index` filed
+as T-KBo) and not by the tie-break or the disconnected-candidate exclusion.
+
+**A correction I accept.** I argued the disconnected-candidate exclusion "changes
+the candidate set on 100 % of runs" and was therefore a large perturbation.
+Wrong twice: removing *losing* candidates from an argmax is a no-op, so the
+exclusion changes a result only where the **winner** is disconnected — and on
+exactly those runs the current deliverable is already wrong, since the reported
+representative has no Isal string. The blast radius equals the count of
+currently-invalid rows. That count is not persisted and is the first thing the
+instrumented re-run must measure.
+
+### RQ5 analysed — negative on every clause, as pre-stated, and worse than "no claim"
+
+The RQ5 job completed but its analyzer had never been run (its 144 row files had
+no `tables.md`). Run now against `IEEETKDE_isal`:
+
+**H5a — not supported, and the two halves must not be reported together.**
+`ν = 0.1015` with 1,553 negative eigenvalues, so the space **is** non-Euclidean
+and the licence it exists to grant — PAM over centroid methods, metric MDS over
+classical — **holds**. What fails is the hubness clause: `k = 10` occurrence
+skewness **5.408 against a ceiling of 1.5**. The analyzer's own note draws the
+line correctly: a failure of the hubness half does not withdraw the PAM licence.
+The prose must keep them apart or it will report a licence as revoked.
+
+This is also a **standing prediction for RQ4**: hubness that severe is the kNN
+precondition failing, so RQ4's screen should be degraded. RQ4 is running; the
+link is testable rather than asserted.
+
+**H5b — not supported, and the naive floors beat us significantly on all four
+comparisons**, which is stronger than "no claim":
+
+| corpus | floor | ours ARI | floor ARI | rank-biserial |
+|---|---|---|---|---|
+| wd50k100 | `degree_seq_l1` | 0.030 | **0.089** | **−1.000** |
+| wd50k100 | `size_l1` | 0.030 | 0.040 | −0.878 |
+| wd50k66 | `degree_seq_l1` | 0.042 | **0.053** | **−1.000** |
+| wd50k66 | `size_l1` | 0.042 | 0.049 | −0.952 |
+
+A rank-biserial of −1.000 means the degree-sequence floor wins on **every
+seed**, both corpora. D-ART4 (3) pre-stated "expected negative for every arm";
+the measured outcome is that a naive baseline is significantly *better*, and
+that is what goes in the table.
+
+**H5c — not supported.** Best competitor `hpd_jsd` at ARI 0.064
+[0.061, 0.068] against ours 0.030 [0.025, 0.036]; the intervals do not overlap.
+
+**H5d — not evaluable, not null.** The analyzer reports "no `fact_rank_roles`
+comparison" because that arm was disqualified at the M0 gate (247 false splits,
+2,104 invariance violations). The verdict must be printed as *not evaluable
+because the arm failed acceptance*, never as an inconclusive result — those are
+different statements.
+
+**Cross-project consistency worth one sentence.** The metric-space article's S7
+sweep found degree-seq and NetLSD leading A2-ARI over `d_I` on planted families;
+RQ5 finds the degree-sequence floor leading over `wstar_orbit` on knowledge
+bases. Two independent campaigns, different corpora, same conclusion: degree
+structure is the dominant clustering signal and the canonical string does not
+capture it. That is a limitation to state once, plainly, not to rediscover.
+
+### RQ6 — every clause holds, and it is the capability differentiator measured at scale
+
+Analysed from the `reach′` run (`IEEETKDE_isal_reachprime/RQ6_generation/`):
+
+| hypothesis | measured | holds |
+|---|---|---|
+| H6a validity by theorem | **540,000 of 540,000 samples decode** (validity 1.000) | ✔ |
+| H6a baseline rejects | the strict decoder rejects **0.9854 [0.9850, 0.9857]** of 540,000 | ✔ |
+| H6b fidelity | largest mean JSD over the five histograms **0.2118** | ✔ |
+| H6c interiors decode, `fact_rank` | 86 of 86 on wd50k66, 0 pairs censored | ✔ |
+| H6c interiors decode, `isal_ow_struct` | **119 of 119**, 0 censored | ✔ |
+| H6c interiors decode, `pointer` | 86 of 86, 0 censored | ✔ |
+
+**Validity 1.000 against a baseline that rejects 98.5 % of its own samples** is
+the sharpest statement of the closed-alphabet claim the campaign has produced —
+sharper than the 256/1,000-connected figure `prose.md` currently quotes, which
+measures connectivity rather than validity. Both belong; they are different
+properties and the prose should not merge them.
+
+**The "pointer" arm is `w*_c` — the paper's representation, under its
+pre-D-ART5 name.** `rq6._pointer_word` is
+`canonical_string(H, algorithm="canonical", backend="cpp")`, which is the frozen
+tie-complete form. RQ6 needs no separate `wstar_orbit` arm **because orbit
+pruning is value-preserving**: the word is bit-identical (verified 7,013/7,013
+at D-ART5) and only the wall-clock differs, and generation is a statement about
+words. So RQ6's arm set is correct as it stands; what must change is the label
+in the table, from `pointer` to `w*_c`. Recorded so nobody "fixes" RQ6 by adding
+a redundant arm.
+
+Caveat carried: RQ6's **`reach1` column** still needs re-deriving (T-KBo) —
+`Reach1Index` buckets on the frozen precondition. Nothing above depends on it;
+validity, fidelity and the interiors do not use that index.
+
+### RQ3's analyzer verdicts — and a correction to my own H3a reading
+
+The analyzer scores H3a **per cell**, which is how it was pre-registered
+("exact recovery ≥ 0.95 **in every cell**"). My earlier entry aggregated by
+`(kind, t)` and reported *mix* as "pass, barely" at 0.806. **That was wrong** —
+the same pooling error this campaign keeps finding, made by me one level down.
+Per cell:
+
+| hypothesis | claim | measured | holds |
+|---|---|---|---|
+| H3a `ins` | ≥ 0.95 in every cell | min over 8 cells = **0.991** | **yes** |
+| H3a `del` | ≥ 0.95 in every cell | min over 6 cells = **0.130** | no |
+| H3a `mix` | ≥ 0.80 in every cell | min over 8 cells = **0.722** | **no** |
+| H3b | a medoid returns an input, so its distance to the source is ≥ t | fraction of medoid rows with `fact_dist ≥ t` = **1.0000** | **yes** |
+| H3c | recovery within 0.05 of the identity merge | gap **0.0606** | no |
+| H3d | every ratio ≤ 2 − 2/N, and max ≤ 1.7 | **0 of 4,457 exceed the bound**; max **1.7778** | no |
+| H2d | LB ≤ cost under a metric; a non-metric arm may violate | `bipartite_ged_path` = **27** violations | yes |
+
+Three readings worth keeping distinct.
+
+**H3b holds exactly, on every row.** The medoid's distance to the source is
+≥ t in 4,457 of 4,457 — the floor is not a tendency, it is structural, and it
+is what makes the Corpus A consensus result meaningful rather than a better
+score on the same task.
+
+**H3d fails only on its tightness clause.** Prop 3's *theorem* — ratio
+≤ 2 − 2/N — holds on **all 4,457 certificates, zero violations**. What fails is
+the empirical expectation that the measured max would stay under 1.7; it is
+1.7778. The prose must not report "H3d fails" without saying the proved bound
+never broke.
+
+**H2d is RQ2 step 4, already computed here**, and it holds: `bipartite_ged_path`
+violates `LB ≤ cost` 27 times, which is the pre-stated consequence of its not
+being a metric. So the RQ2 step-4 gap is narrower than recorded — the
+certificate-validity verdict exists under `reach′`; what still needs the final
+RQ2 pass is the identity-timing section, which waits on RQ7.
+
+### The per-cell recovery table — and H3a's deletion clause was unachievable by construction
+
+`coverage_r2` against `majority_merge`, the identity-using reference, per cell
+(every medoid arm is 0.000 in every cell, so the floor is omitted):
+
+| collection | kind | t | consensus | merge (identities) |
+|---|---|---|---|---|
+| ndc | ins | 1 | 0.991 | 1.000 |
+| ndc | ins | 2 | **1.000** | **0.995** |
+| wd50k | ins | 1 | **1.000** | 1.000 |
+| wd50k | ins | 2 | **1.000** | 1.000 |
+| ndc | mix | 1 | 0.944 | 1.000 |
+| ndc | mix | 2 | 0.854 | 0.803 |
+| wd50k | mix | 1 | 0.898 | 1.000 |
+| wd50k | mix | 2 | 0.757 | 0.850 |
+| ndc | del | 1 | 0.792 | 1.000 |
+| ndc | del | 2 | **0.130** | **0.208** |
+| wd50k | del | 1 | 0.905 | 1.000 |
+| wd50k | del | 2 | 0.359 | 0.607 |
+
+**On insertions the consensus reaches the identity-using ceiling and once
+exceeds it** — 1.000 against the merge's 0.995 on ndc `ins t=2`, and 1.000 on
+both wd50k insertion cells. A method denied constant identities matches a method
+given them. That is the cleanest statement of RQ3's claim in the campaign.
+
+**H3a's deletion clause asked for something no method achieves.** It required
+≥ 0.95 exact recovery on deletion cells; the identity-using merge itself scores
+**0.208** on ndc `del t=2` and 0.607 on wd50k. So the threshold was not merely
+missed, it was **unachievable by the oracle the design itself names as the
+reference**. The honest report is that the pre-registration was mis-specified on
+that clause, not that the method failed a reachable bar — and the evidence is
+the merge's own number, not ours. This does not rescue our 0.130; it locates it.
+
+**The deletion boundary is a property of the task at `t = 2`.** Both methods
+collapse together (0.130/0.208 on ndc, 0.359/0.607 on wd50k) while both are
+near-perfect at `t = 1` (0.792/1.000, 0.905/1.000). Two deletions from a small
+source destroy the information, which is what the *original* explanation said
+before the audit's §3.3 disputed it — §3.3 disputed it for **Corpus A under the
+old generator**, where the objective's tie-break was implicated. Under `reach′`,
+with the merge's numbers beside ours, the information-loss reading is supported
+for `t = 2` specifically. §3.3 remains on the re-measurement list; this is
+evidence for it, not a substitute.
+
+Note the `mix` minimum the analyzer reports (0.722) is below the lowest cell
+here (0.757) because H3a is scored over both consensus labels, `coverage_r2`
+and `coverage_rt`; 0.722 is a `coverage_rt` cell.
+
+### RQ4's L15 disclosure is live on real data (interim, machinery only)
+
+Verified on 819 completed units — **the machinery, not the science**; RQ4 is
+incomplete (T-KBq) and no conclusion is drawn from a partial corpus.
+
+All nine census columns are present and populated: `censored`,
+`n_censored_members`, `n_censored_anomaly`, `n_censored_clean`,
+`censor_rate_anomaly`, `censor_rate_clean`, `n_censored_word_anomaly`,
+`n_censored_word_clean`, `word_censored_arms`. All eleven D-ART5 arms are
+present, `wstar_orbit` among them, and `censored = 0` on every sampled row (no
+unit lost).
+
+The pair that answers Fable's L15 concern — *are corrupted members
+preferentially censored, so that the AUC is computed on a set whose positives
+were removed?* — is now measurable rather than assumed. Interim shape only:
+`censor_rate_clean` sits tightly around **0.049–0.055** across units while
+`censor_rate_anomaly` ranges **0.029–0.101**, straddling it in both directions.
+The wider spread is expected from the denominators alone (≈ 69 anomalies against
+≈ 1,300 clean members per unit), so nothing here suggests a systematic bias —
+**but that is a shape, not a test.** The paired comparison over the full corpus
+is what the caption will carry, and it is deferred until RQ4 completes.
+
+Recorded now because the columns being *populated* is the thing that could have
+silently failed; the disclosure was pre-registered before the run and is not
+retrofittable.
+
+### RQ6's analyzer names the retired alphabet "ours", and understates the result
+
+Found by a systematic sweep for surviving fact-alphabet couplings, run to test
+rather than assert the pattern that every defect so far sat where the pipeline
+still used the retired representation.
+
+`rq6.py:63` sets `MODEL_OURS = "fact_ngram"`, so the analyzer's H6a verdict
+reads *"every sample **over the fact alphabet** decodes (validity 1.000)"*. Both
+halves of that are true and it is **the wrong arm and the weaker claim**:
+
+| model | validity | connectivity | rejection |
+|---|---|---|---|
+| `fact_ngram` (labelled ours) | 1.0000 | **0.2709** | 0.0000 |
+| `incidence_ngram` (baseline) | 0.0146 | 0.0494 | 0.9854 |
+| **`ow_ngram` (Σ_HG)** | **1.0000** | **1.0000** | 0.0000 |
+
+The fact alphabet is **total but not connected**: 73 % of its samples are
+disconnected knowledge bases, which R3 places outside the Isal domain entirely.
+The Isal alphabet is total **and** connected — validity 1.000 *and*
+connectivity 1.000 — which is Prop. C.4 measured, and is strictly the stronger
+guarantee. `rq6.py:66–68` already says so in a comment; the constant and the
+analyzer verdict disagree with the comment.
+
+**`prose.md` §2.2 already has this right** — "1,000/1,000 samples of the Isal
+generator are connected, against 256/1,000 for a fact-list generator" is this
+measurement (0.271 here). So the prose is safe; what is mislabelled is the
+analyzer's headline, and anyone reading `summary.json` cold would quote the
+weaker number as the paper's.
+
+**Two actions, neither urgent, both before the tables are drawn.** Rename
+`MODEL_OURS` to the Isal model so the verdict quotes Σ_HG, keeping the fact
+alphabet as the retired comparator it is (D-ART4 (1)); and state the connectivity
+column beside validity everywhere, since validity alone is the property the
+retired alphabet also has.
+
+**One question for the arm set, flagged not decided:** `ow_ngram` is the
+**ordered walk**, and D-ART5 puts the ordered walk in RQ7 alone. For generation
+that is defensible — Prop. C.4 is a property of the *alphabet*, not of a
+canonical form, so any Σ_HG word model inherits validity and connectivity — but
+if the paper wants its one Isal row to be `w*_c` throughout, RQ6's model should
+be fitted on `w*_c` words. The measurement would not change (both are Σ_HG);
+only the label would.
+
+### The consensus change landed — the audit number is zero, and the fix nearly broke the medoids
+
+Merged. Three parts, in the order that made each measurable: persist the
+winner's origin, connectivity and out-of-domain counts; exclude candidates
+outside the representation's domain; move the objective's final tie break off
+the retired fact word onto `w*_c`, evaluated lazily over the tied set only. The
+dedup key stays the fact word — deduplication is invariant-neutral, a tie break
+is not.
+
+**The audit answers the question nobody could answer.** Over **323 real Corpus A
+collections across all 24 cells, zero out-of-domain winners** on either corpus:
+731 out-of-domain candidate classes were generated and **every one lost**. So
+the exclusion is a guarantee costing nothing here, not a repair — which is what
+"removing losing candidates from an argmax is a no-op" predicts, now measured
+rather than argued.
+
+| | exclusion | tie break |
+|---|---|---|
+| ndc_classes | 0 | 7 / 160 |
+| wd50k66 | 0 | 6 / 163 |
+| **pooled** | **0** | **13 / 323 (4.0 %)** |
+
+`n_ties` histogram unchanged; **221 of 221 tie-free collections bit-identical**
+— invariant-neutrality holding in the data. Of the 13 movers, 3 land closer to
+truth, 1 further, 9 the same (+3 exact recoveries, none lost). Recorded as
+provenance; **n = 13 supports no claim** and must not be quoted as one.
+
+**Two corrections that changed the work.**
+
+*The domain has two walls, not one.* The empty knowledge base is reachable when
+`A′` takes every fact, and it **wins outright** — it covers every member at
+`r = 2`. Excluding only disconnected candidates would have left the worse defect
+standing. Neither this session nor `[IsalHG-Fable]` saw it.
+
+*The change reintroduced the fork-poisoning hazard.* With `w*_c` in the tie
+break the consensus reaches the C++ engine; Corpus A ran it **unguarded in the
+parent** (`consensus_budget_s: null`), and one in-parent fingerprint flips
+`cpp_fork_is_healthy` to False, after which **every later guarded build is
+written `censored=1` without running** — silent corruption of the medoid rows,
+caused by my own brief. Fixed with `cpp_engine=True` and a Corpus A budget of
+1800 s. The agent also found `run_guarded`'s docstring claim that the medoid
+loop poisons the parent is **false**: `medoid_matrix` forks.
+
+**Flagged for the author, not decided:** D-ART4 (3) says "candidate key = the
+Isal string"; this brief narrowed that to the tie break alone. Nothing is wrong
+— the dedup key is invariant-neutral — but it is a narrower reading than the
+ruling's words, and the agent followed the brief rather than widening scope
+silently.
+
+**Consequence:** RQ3 re-runs under the corrected objective once the suite
+confirms. At 4.0 % movement over 4,457 Corpus A collections, roughly 180
+collections change, so the published numbers move slightly and the re-run is not
+optional.
+
+### The suite's two unexplained failures were load, not a mismatch — D-ART5 stands
+
+The full-suite run over the merged consensus change gave **8 failed / 2,942
+passed**, reproducing the agent's result exactly. Two failures were ones this
+session had not seen before, and they guard D-ART5's own claim:
+`test_orbit_matches_unpruned_wstar_c[wd50k66]` and `[ndc_classes]`.
+
+Settled before submitting anything:
+
+| run | result |
+|---|---|
+| inside the full suite, three ssh monitors + an agent active | **2 failed** |
+| the same two tests alone | **2 passed** (254 s) |
+
+The test compares only where the unpruned arm completes, then requires 12
+successful comparisons. A value mismatch would be **deterministic** and would
+have failed in isolation too; it did not. So the failing assert is the count
+guard — under load more members exhaust the 60 s budget, fewer pairs are
+comparable, and the test fails having found no disagreement at all. Filed as
+**T-KBr**.
+
+Neither recent merge could have caused it either: the consensus change touched
+`rq3.py`, `consensus.py`, `language/__init__.py`; the `reach′` change touched
+`reach.py`, `consensus.py`, `ladders.py`. The test calls `budget.engine_word`
+directly, through neither path.
+
+**And the claim never depended on this test.** D-ART5 rests on 7,013/7,013
+identical words, 130,788 identical single-edit distances and 5,174 ladder
+pairs, with the matrices job independently reproducing RQ1's censoring census to
+the member id. The 25-member contract check is the weakest evidence for that
+claim, not the strongest — which is exactly why a load-sensitive verdict on it
+is worth fixing rather than tolerating.
+
+### Correction — the empty knowledge base is real but narrow, and it never happened in the corpus
+
+`[IsalHG-Fable]` challenged the arithmetic of "the empty KB wins outright" and
+was right to. The bound is `|A′| + |B′| ≤ r = 2`, so `K_i − A′` is empty only
+when `K_i` carries at most two facts, and ∅ covers a member only when that
+member's facts can all be deleted inside the same budget. Corpus A sources carry
+`4 ≤ m ≤ 12`, so ∅ can only arise from a member already reduced to `m ≤ 2` by a
+`t = 2` deletion, and can only win when **every** member of the collection is at
+`m ≤ 2`.
+
+The fixture confirms the bound rather than straining it. `EMPTY_WINNER` in
+`tests/unit/language/test_consensus_domain_tiebreak.py:129` is documented as
+*"two two-fact members"* — both members at `m = 2`, `r = 2`. It was found by a
+search over **random** variant collections (seed 20260910), not in Corpus A.
+
+**And it never occurred in the real corpus:** the audit over 323 Corpus A
+collections across all 24 cells found **zero** out-of-domain winners of any
+kind, empty or disconnected.
+
+So the accurate statement is: *the domain has two walls, and the exclusion
+guards both; on the real corpus neither was ever breached.* My earlier wording
+let "wins outright" imply it was happening in Corpus A. It was not, no bound is
+violated, and the candidate set is the pre-registered one. The guard stays —
+∅ is out of domain for the same reason a disconnected candidate is — but it is a
+**guarantee, not a repair**, and the rows were never wrong.
+
+### No fork-poisoning residue is possible
+
+Fable asked whether any harvested deliverable contains rows from a run made
+after `w*_c` entered the tie break and before `cpp_engine=True` landed.
+
+**There was no such window.** Both changes are in the same commit, `60c9b98` —
+the tie break, `cpp_engine=True` and the Corpus A `consensus_budget_s: 1800`
+were never separately deployed. The first cluster run on this code is the RQ3
+pilot 2275979, submitted after the merge. Nothing on disk can carry poisoned
+rows.
+
+Its detector is still worth having as a **standing** check rather than for this
+instance: RQ3's medoid screen runs the same engine at the same 60 s budget on
+the same members as RQ1, so its censored set should be RQ1's restricted to the
+collections in play, and a count materially above that is poisoning rather than
+cost. That is a cheap in-run assertion and catches the class, not the case.
+Folded into T-KBm's acceptance, which already covers censoring that reports
+success it did not earn.
+
+### Pre-registered validity check on `winner_origin` — committed before the re-run lands
+
+Proposed by `[IsalHG-Fable]` and recorded here **before any value of the new
+field has been looked at**, so it can fail.
+
+**The prediction.** On Corpus A, `winner_origin` must read `transfer` on **at
+least 83.5 %** of runs.
+
+**Why it is forced, not expected.** `variant_collection` builds members that are
+pairwise non-isomorphic *and* non-isomorphic to the source (`ladders.py`:
+`fingerprints = {source_fingerprint}`, and a candidate whose fingerprint is
+already present is rejected). So no member lies in the source's isomorphism
+class. Exact recovery is `|F(out) △ F(truth)| = 0`, i.e. the winner *is* the
+source — stronger than isomorphic. And `origin` labels a class by how it was
+first produced, keeping `member` only for a class first produced as a member,
+which the source's class cannot be. Therefore **exact recovery implies a
+transfer winner**, and the transfer fraction is bounded below by the measured
+recovery rate of 0.835. Plausibly higher, since a transfer candidate that is not
+the source can also win.
+
+**What a failure would mean.** A transfer fraction materially below 0.835 does
+not describe the corpus — it means either the new field is wrong or the recovery
+number is. Either way the distribution must not be used to write the Corpus B
+supplement until it is resolved.
+
+**Why this is a test of the instrument and not a finding.** Corpus A's answer is
+derivable from what is already measured, which is exactly what makes it a
+validity check. **Corpus B is where the measurement is informative**, because
+nothing there predicts it: whether the consensus returns an input or a decoded
+object no member wrote is the question that decides what the supplement can
+claim, and D-KBf5a's gate result — a tie against the best medoid — reads very
+differently depending on the answer. A tie achieved by returning inputs is a
+medoid with extra steps; a tie achieved by returning decoded objects is the
+capability claim holding on real data.
+
+### The pilot under the corrected objective — instrumentation live, prediction consistent
+
+Pilot 2275979 (`IEEETKDE_isal_consensus/`), 8 coverage rows:
+
+| field | value |
+|---|---|
+| `winner_origin` | `transfer:i,j` on **8 of 8** |
+| transfer fraction | **1.0000** |
+| exact recovery | 1.0000 |
+| `winner_connected` | **1.0 on all 8** |
+| `n_disconnected_candidates` | 0 on some collections, **10** on another |
+
+The pre-registered check is **consistent**: transfer 1.0000 ≥ the 0.835 bound.
+It is also a *weak* instance — recovery is 1.0 on this tiny smoke, so the bound
+is trivially met. The real test is the full run, where recovery is 0.835 and the
+bound has room to fail.
+
+The instrumentation works end to end: one collection generated **10 disconnected
+candidates**, all were excluded, and its winner is connected — the guard doing
+its job on real data rather than on a fixture. Medoid rows correctly carry empty
+values for the coverage-only columns.
+
+**A mis-read of my own, recorded because it is the second today.** I first
+reported `winner_connected` as "not all 1" and treated it as a possible defect
+in the fix. The field serialises as `'1.0'`, not `'1'`, and my one-liner
+compared against the wrong string; every winner was connected. The earlier one
+was the recovery-axis sign convention in `rq3_consensus_forensics.py`, which
+printed "consensus worse in 3,723 of 3,723" for what was "better in 3,723 of
+3,723". Both were caught by checking values against the summary rather than
+trusting the summary — which is the only reason neither reached the ledger as a
+finding. Ad-hoc analysis one-liners are the least-reviewed code in this campaign
+and have now been wrong twice; anything they produce that would change a
+conclusion gets re-derived from a committed script.
+
+### RQ6's `reach1` is a lower bound, not a measurement — and it cannot be re-derived
+
+RQ6 runs **bundled inside RQ3**, so job 2276107 is producing RQ6 rows now with
+T-KBo unfixed. Two facts settle what to do.
+
+**It cannot be repaired from disk.** `rows_samples.csv` carries only aggregates —
+`reach1_frac`, `reach1_eligible`, `reach1_hits` — and the sampled hypergraphs
+are not persisted. Re-deriving the column needs generation re-run.
+
+**The current value is a lower bound.** `Reach1Index` buckets members by the
+frozen precondition (constant count + type multiset) and so **withholds exactly
+the pairs `reach′` admits**, which can only suppress hits. The measured
+`reach1_frac = 0.0508` (45 hits of 885 eligible) is therefore a floor: the true
+value under `reach′` is **≥ 0.0508**. Reported that way it is honest; reported
+as a measurement it is not.
+
+**The fix does not cost an RQ3 re-run.** `slurm/tkde/rq6_launcher.sh` runs RQ6
+standalone, so T-KBo can be fixed and RQ6 re-run on its own — the RQ3 rows from
+2276107 stand regardless, since nothing in RQ3 reads `reach1`.
+
+Nothing else in RQ6 is implicated: validity 1.000, connectivity, fidelity and
+the alignment interiors do not use the index. The headline results are unchanged.
+
+### RQ7's `|Aut|` axis is populated with real spread (interim, machinery only)
+
+Verified on 8,100 sampled sweep rows from 176 completed row files — **machinery,
+not science**; RQ7 is incomplete and no conclusion is drawn.
+
+`aut_bucket` carries genuine spread rather than being a constant column:
+
+| stratum | rows |
+|---|---|
+| `< 1e3` | 7,520 |
+| `1e3–1e6` | 430 |
+| `≥ 1e7` | 150 |
+
+That is D-ART4 (3)'s *"cells over `(m, k, |Aut|)`, since `|Aut|` is the measured
+frontier, not `m`"* actually measured. A constant column here would have looked
+identical in every summary and invalidated the symmetry axis silently, which is
+why it is worth checking before the analysis rather than during it.
+
+All five sweep arms are present — `isalhg_levenshtein` (the no-nauty cell),
+`wstar_orbit` (oracle), `isal_ow_struct` (order-only cost floor), `nauty_cert`
+(the certificate) and `fact_rank` (the retired comparator) — so RQ7 measures the
+full four-cell nauty ablation of D-ART4 (3b) on the cost axis, which is where
+D-ART5's claim that the envelope moves *from `|Aut|` to `(m, k)`* gets tested.
+Censoring is 494 of 8,100 (6.1 %), expected since the sweep deliberately
+includes cells past the frontier.
+
+### D-ART5 arm-set audit across every RQ — one apparent gap, checked and defensible
+
+D-ART5 requires one Isal row per table and both certificate tokenisations riding
+along everywhere. Audited across all configs:
+
+| config | `wstar_orbit` | `nauty_cert` | `nauty_cert_rows` |
+|---|---|---|---|
+| rq1, rq1_cpp | ✔ | ✔ | ✔ |
+| rq2 (`exact0_arms`, `census_arms`) | ✔ | ✔ | ✔ |
+| rq3 (`medoid_arms`) | ✔ | ✔ | ✔ |
+| rq4 (`arms`) | ✔ | ✔ | ✔ |
+| rq7 (`nscaling_arms`) | ✔ | ✔ | ✔ |
+| **rq7 (`sweep_arms`)** | ✔ | ✔ | **absent** |
+
+**rq5** and **rq6** list no distance arms and are correct as they stand: RQ5
+takes its arms from the shared matrices (its rows carry all eleven, verified),
+and RQ6's arms are *generative models* — a certificate does not generate, so
+the question does not arise.
+
+**The rq7 sweep gap is defensible, and recorded so it is not re-discovered as a
+defect.** The sweep measures **per-instance canonicalisation cost and
+feasibility**, and the two tokenisations share the same nauty call — they differ
+only in how its output is written, which is a *pairwise* cost (measured 51 µs
+against 57 µs in `matrices.yaml`), not a canonicalisation one. The place the
+tokenisation genuinely matters is the locality and compactness comparison
+(D-ART4 (1)'s "the bytes-only comparison is a tokenisation confound", and
+Prop 1's "12 rows of the canonical adjacency certificate"), and that is measured
+in **RQ1**, which carries both. Adding `nauty_cert_rows` to the sweep would buy
+a near-duplicate cost curve.
+
+### T-KBp built — and the two tails nest, which sharpens the prediction
+
+The 600 s tail runner is merged (standalone module, launcher, analyzer; rows
+outside every RQ tree per D-ART5 decision 2). Not submitted — four campaign jobs
+are in flight.
+
+**My brief named the wrong input, for a reason I created.** I said to read the
+censored ids from the matrices sidecars. Those hold **170** members over **four**
+collections (ndc 70, ndc_substances 84, wd50k100 11, wd50k66 5) — the matrices
+job's censoring, not the 77 D-ART5 speaks of — and **there is no `wstar_rank`
+sidecar at all**, because removing `wstar_rank` from `ISAL_MATRIX_ARMS` under
+D-ART5 is what stopped one being written. So the brief asked for data an earlier
+decision of mine had made unavailable, and the *refutable* clause about the 53
+was unmeasurable that way. The runner defaults to the RQ1 merged M3 census,
+which D-ART5 names in words and which reproduces 77 and 53 exactly.
+
+**Two facts the ledger did not have**, verified independently from the census:
+
+| | |
+|---|---|
+| `rank ⊆ orbit` | **true — zero rank-only censorings** |
+| orbit \ rank | **24** members orbit censors and rank completes |
+| union / calls at 600 s | 77 / 130 |
+| orbit tail by arity | **69 of 77 at k = 10**, all at k ≥ 7 |
+| orbit tail by symmetry | **69 of 77 at \|Aut\| < 10³** |
+
+The last row re-derives D-ART5's R2 sentence to the member, from the census
+rather than from the wave log.
+
+**The nesting sharpens T-KBe's prediction rather than threatening it.** The
+prediction was that orbit should recover a material fraction of its 77 while
+rank should not recover most of its 53. Now that the 53 are known to be a strict
+subset of the 77 — the hardest core, on which *both* engines fail, with rank
+additionally completing 24 that orbit cannot — the two clauses are no longer
+independent. Rank is strictly the stronger completer on this tail, so "most of
+the 53 still censored at 600 s" is a claim about the hardest 53 of orbit's 77,
+not about a different population. That is a cleaner statement than the ledger
+carried, and it is the form the analyzer must report against.
+
+**Three defects its self-review caught**, each committed separately: a recursive
+glob that would have scored smoke rows with real ones; a cutoff-truncated shard
+that the recovery sweep would have **skipped** rather than redone, because this
+runner writes one row file per shard unlike RQ7; and last-writer-wins provenance
+across 15 shards.
+
+Suite: 2,942 passed / 8 failed at base → **3,038 passed / 8 failed**, failure
+sets identical by `diff`, +96 exactly the new test file.
+
+---
+
+## RQ3 consensus 2276107 — the winner_origin check, and my own third and fourth misreads
+
+**The reported Corpus B "recovery collapse to 0.0000" was my bug.** It is
+withdrawn. True Corpus B consensus recovery is **0.2794** (19 of 68), against
+0.286 before the objective correction — the corrected objective moved Corpus B
+recovery by **one run**, not to zero.
+
+**The root cause is a defect in the rows, not only in my one-liner.** The two
+corpora serialise the same column with different dtypes:
+
+| column | Corpus A | Corpus B |
+|---|---|---|
+| `exact_recovery` | `'0'` / `'1'` | `'0.0'` / `'1.0'` |
+| `censored` | `'0'` only | `'0'` / `'1'` |
+
+Corpus B has 7 censored units whose `exact_recovery` is blank, so the column is
+inferred `float64`; Corpus A censors nothing, so it stays `int64`. **The dtype of
+a results column depends on whether any unit in that corpus happened to be
+censored** — a property of wall-clock, not of the experiment. A `== "1"` test is
+therefore correct on one corpus and silently empty on the other, which is exactly
+how this passed review. Filed as **T-KBs**.
+
+**Both corpora pass the pre-registered `winner_origin` check** (D-KBf1a,
+committed before the field was read; re-derived from
+`scripts/diagnostics/rq3_consensus_forensics.py`, not inline):
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| uncensored coverage runs | 8,914 | 68 |
+| winner_origin transfer / member | 8,320 / 594 | 26 / 42 |
+| transfer fraction | 0.9334 | 0.3824 |
+| exact recovery | 0.8378 | 0.2794 |
+| **transfer ≥ recovery** | **PASSES** | **PASSES** |
+| `n_ties == 0` | 8,442 / 8,914 | 54 / 68 |
+| `winner_connected` | 1.0 everywhere | 1.0 everywhere |
+
+The tie-break never fires in 95% (A) and 79% (B) of runs, so most runs are
+invariant-neutral and stand unchanged under any complete invariant.
+
+**Consensus vs medoid, with the significance the design demands.** Design §9
+item 8 forbids reading a direction off a point estimate, so the script now
+reports an exact two-sided sign test on the discordant pairs (verified against
+`scipy.stats.binomtest`, 0 mismatches over every `disc ≤ 59`; summed in log
+space because at Corpus A's counts the direct ratio underflows and "p = 0" would
+be a false statement):
+
+| corpus | arm | axis | discordant | rank-biserial | p | verdict |
+|---|---|---|---|---|---|---|
+| A | wl_l1 | recovery | 3734/4457 (3734–0) | +1.000 | ~1e-1124 | directional |
+| A | wl_l1 | fact_dist | 3951/4457 (3913–38) | +0.981 | ~1e-1097 | directional |
+| A | wstar_orbit | recovery | 3734/4457 | +1.000 | ~1e-1124 | directional |
+| A | wstar_orbit | fact_dist | 3951/4457 | +0.981 | ~1e-1097 | directional |
+| B | wl_l1 | fact_dist | 29/63 (13–16) | −0.103 | 0.711 | **null** |
+| B | wl_l1 | recovery | 7/63 (4–3) | +0.143 | 1 | **null** |
+| B | wstar_orbit | fact_dist | 31/63 (15–16) | −0.032 | 1 | **null** |
+| B | wstar_orbit | recovery | 9/63 (4–5) | −0.111 | 1 | **null** |
+
+**No direction is asserted on Corpus B in either sense.** The widest CI is
+[0.189, 0.733].
+
+**Corpus A's medoid axis may not discriminate between representations at all.**
+On every arm-independent measure the two Isal-relevant medoid arms agree:
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| `medoid_cost` identical | **0 / 4,457** | 3 / 63 |
+| `fact_dist` identical | **4,457 / 4,457** | 41 / 63 |
+| `exact_recovery` identical | **4,457 / 4,457** | 57 / 63 |
+
+`medoid_cost` differing everywhere shows the arms genuinely ran different
+metrics; `fact_dist` and `exact_recovery` agreeing everywhere shows they landed
+on fact-indistinguishable objects anyway. If that reading survives, Corpus A's
+entire signal is consensus-vs-medoid and none of it is arm-vs-arm — which would
+mean the Corpus B tie is not evidence against the capability claim, because
+Corpus A never tested it. **Not yet assertable:** the rows carry no column naming
+the selected member (`source_id` / `collection_id` only), so "fact-equivalent" is
+measured and "identical" is not. With Fable.
+
+**Fourth instance of the same failure mode, caught before it was reported.** My
+first version of that arm check fell back to `winner_id`/`medoid_id`/
+`representative_id`, none of which exist, compared `"?"` to `"?"`, and
+"confirmed" agreement in 4457/4457 units for an entirely vacuous reason. The
+number above is a different measurement on fields that exist. The rule I wrote
+after the first instance — re-derive from a committed script anything that would
+change a conclusion — did not prevent instances two, three or four, because all
+four were checks of *my own* reasoning rather than campaign outputs. The check
+now lives in the committed script with the coercion documented as its purpose.
+
+### The Corpus A medoid axis is a structural floor — D-KBf5a's comparison restated
+
+Taken to `[IsalHG-Fable]`, which supplied the mechanism and two falsifiable
+consequences; both measured, both hold.
+
+**Fable's correction to my own pre-registered check, accepted.** The bound
+`transfer ≥ recovery` is a check on **Corpus A only**. There, members are
+non-isomorphic to the source by construction, so a run recovering the source
+cannot have won with a member. On Corpus B the members are quarters 1..T−1 of a
+natural series and consecutive quarters are frequently identical (77 of 528
+consecutive pairs at Δ = 0 in the frozen census), so a member winner *can*
+recover the truth. **Corpus B's 0.3824 ≥ 0.2794 is struck as a check** and kept
+as a description; the script's docstring records this.
+
+**The mechanism.** Every Corpus A member is exactly `cell_t` constant-preserving
+fact edits from the source, so every member sits at fact distance `t` and none is
+the source. Any method restricted to returning an input scores `fact_dist = t`
+and `exact_recovery = 0` *whatever representation it ranks with*. Two
+consequences, both measured:
+
+| consequence | Corpus A | Corpus B |
+|---|---|---|
+| all **11** medoid arms identical on `fact_dist` | **4,457 / 4,457** | 26 / 63 |
+| all **11** identical on `exact_recovery` | **4,457 / 4,457** | 52 / 63 |
+| per-cell median `fact_dist` = cell's `t` | **12 / 12 cells exact** | n/a (no `cell_t`) |
+
+Cells: `N5_t1_{del,ins,mix}` median 1.000 (n = 362/432/432), `N5_t2_*` median
+2.000 (416/432/432), `N9_t1_*` median 1.000 (44/432/432), `N9_t2_*` median 2.000
+(179/432/432). Nothing cancelled. The medoid's mean of 1.521 is the t=1/t=2
+mixture over unequal cell sizes, **not** a property of any metric.
+
+**What this costs the result, and it is not nothing.** Both Corpus A axes compare
+a language-scale method against a floor, not against a representation. The result
+survives and remains the point of RQ3, but the sentence must be:
+
+> No method restricted to returning an input can score below `t`; the consensus
+> scores 0.269.
+
+**not** "the consensus beats the medoid under our metric" — written the second
+way a reviewer finds the floor and reads the result as inflated. **Corpus A's
+eleven medoid arms are one row in the table, not eleven, because they are
+provably one number.** The earlier reading — that arm agreement said something
+about representations — is withdrawn; it says the axis is constant. Corpus B,
+where the arms *do* separate, is the only place the representation is exercised.
+
+**The existence result, and why the raw recovery rate would have overstated it.**
+Cross-tabulating `winner_origin` against `exact_recovery` (an existence check,
+deliberately not a test — n = 1 suffices and subsetting to the 26 transfer runs
+would be selection on the outcome):
+
+| | Corpus A | Corpus B |
+|---|---|---|
+| member, not recovered | 594 | 26 |
+| member, **recovered** | 0 | **16** |
+| transfer, not recovered | 852 | 23 |
+| transfer, **recovered** | **7,468** | **3** |
+
+**Three runs on real natural series won with a transfer and reproduced the
+held-out quarter exactly** — a decoded knowledge base no member wrote, matching
+the truth. No member-returning method can do this at all. That is H3b on real
+data.
+
+It also shows what the raw rate hides: **Corpus B's 19 recoveries decompose as 16
+member + 3 transfer.** Sixteen are runs where a member happened to equal the
+truth. Reporting 0.2794 as evidence for the capability would have counted them.
+
+**The capability sentence for the natural corpus,** both halves together: the
+coverage objective finds a transferable candidate in 26 of 68 runs, and in the
+remainder the consensus returns an input — so the capability the method exists
+for is exercised on about two runs in five. When the winner *is* a member the
+method has not reduced to the medoid; it is selecting under (coverage,
+`sum_reach`), a different objective, and on Corpus B the two demonstrably
+disagree (identical `fact_dist` in only 41 of 63).
+
+**A false alarm I caught in my own check:** it flagged Corpus B's per-cell test
+as DEVIATES. A natural series carries no planted edit budget, so there is no `t`
+and no floor to expect — the code was inventing a failure. It now says so.
+
+**Not re-running for the winner id.** It would only answer the mechanism
+question, and the mechanism no longer carries a claim; plumb it through the next
+instrumented run, where it is nearly free.
+
+### The natural-series floor — the Corpus B statement RQ3 can actually make
+
+`scripts/diagnostics/rq3_corpus_b_truth_in_members.py`, on the corrected
+consensus rows. The subset is defined **from the data** — does the held-out
+quarter equal any earlier one? — not from the winner's origin, so it is
+pre-statable and carries none of the confounding that conditioning on the
+method's own output would.
+
+**The predicate is fact equality, not isomorphism.** `exact_recovery` is
+`fact_distance(identity_facts_of_record(x), truth_facts) == 0`, so the subset
+uses exactly that. A floor stated over isomorphism would be a claim about a
+different relation than the one being floored — and it happens to be far
+cheaper: one pass over the corpus, no iso test.
+
+| Corpus B, 69 units / 68 uncensored coverage runs (join complete 68/68) | |
+|---|---|
+| truth already equals some member | **28 units** |
+| truth matches **no** member | **40 runs** |
+
+| subset | winner | recovered | not |
+|---|---|---|---|
+| **TRUTH_ABSENT** | member | **0** | 17 |
+| **TRUTH_ABSENT** | transfer | **3** | 20 |
+| truth_in_members | member | 16 | 9 |
+| truth_in_members | transfer | 0 | 3 |
+
+**The statement.** On the 40 natural runs where the held-out quarter equals no
+earlier quarter, **every method restricted to returning an input recovers it zero
+times by construction, and the coverage consensus recovers it three times.** This
+is the natural-series analogue of Corpus A's structural floor, and it needs no
+power argument — it is an existence result against a provable zero.
+
+**The table validates itself.** All 16 member-recoveries fall in
+`truth_in_members`; there are **zero** member-recoveries under `TRUTH_ABSENT`. A
+member cannot recover a truth equal to no member, so that cell had to be empty
+and is. The predicate therefore matches the measurement's.
+
+**The ratio a reader would otherwise compute.** Raw, transfer winners recover
+3/26 and member winners 16/42 — 11% against 38%, which reads as the capability
+underperforming. Conditioned on the hard subset it inverts:
+
+| on the 40 TRUTH_ABSENT runs | recovered |
+|---|---|
+| member winners | **0 of 17** |
+| transfer winners | **3 of 23** |
+
+Member winners recover **only where recovery is free**. The 16 sit entirely in
+the subset where the truth was already in the collection. The sentence is not
+"11% against 38% with a regime caveat"; it is that on the runs where recovery is
+not free, input-returning methods recover nothing **by construction** and the
+consensus recovers three.
+
+**The "by construction" must survive every restatement.** The zero is the
+stratum's *definition*, not a measurement — a member cannot equal a truth that
+equals no member. Only the 3 is measured. Dropped, the sentence invites the
+obvious reply that we defined a subset where one method must fail and then
+reported that it failed. The claim lives entirely in the **asymmetry**: the
+constraint binds one method and not the other. (I dropped it once already in a
+restatement; Fable caught it.)
+
+**Corpus A's `member, recovered = 0 of 594` is H3b passing**, not an empty cell,
+and will be named as a check that passed.
+
+**Still to do:** pull the 3 natural runs by class id and quarter as a worked
+figure — a capability claim with one instance shown reads differently from the
+same claim as a count.
+
+**The one non-tautological comparison the stratum allows — and it is null.** On
+the TRUTH_ABSENT runs both methods emit an output at nonzero fact distance, so
+comparing them there has no structural constraint doing the work. Paired
+`fact_dist`, consensus vs every medoid arm, 40 pairs (37 for `wstar_orbit`, whose
+censored rows drop out):
+
+| arm | consensus | medoid | discordant | p |
+|---|---|---|---|---|
+| bipartite_ged_assign | 2.875 | 3.150 | 26/40 (13–13) | 1 |
+| bipartite_ged_path | 2.875 | 3.125 | 26/40 (13–13) | 1 |
+| degree_seq_l1 | 2.875 | 3.150 | 26/40 (13–13) | 1 |
+| fact_rank | 2.875 | 3.000 | 25/40 (12–13) | 1 |
+| hpd_jsd | 2.875 | 2.800 | 24/40 (11–13) | 0.839 |
+| nauty_cert | 2.875 | 3.075 | 27/40 (14–13) | 1 |
+| nauty_cert_rows | 2.875 | 3.050 | 26/40 (13–13) | 1 |
+| netlsd | 2.875 | 2.925 | 29/40 (15–14) | 1 |
+| size_l1 | 2.875 | 3.125 | 26/40 (13–13) | 1 |
+| wl_l1 | 2.875 | 2.825 | 25/40 (11–14) | 0.690 |
+| **wstar_orbit** | 2.865 | 3.081 | 23/37 (13–10) | 0.678 |
+
+**All eleven null.** So the honest reading, per rule 7: on the hard runs the
+consensus buys **exactly the three recoveries and nothing else** — no
+fact-distance advantage over any medoid arm, including its own. The means favour
+the consensus on 9 of 11 arms, but every discordant split is within noise and no
+direction is claimed.
+
+**Exploratory, and it does not move D-KBf5a.** The stratum is defined from the
+data and is pre-statable in principle, but it was defined *after* the full-set
+null was seen. That is on the record here. D-KBf5a's gate is committed on the
+full set and stays where it is regardless of this table.
+
+**A corpus finding that belongs in the data description, not only here.** In
+**28 of 69 units (41%)** the held-out quarter already equals an earlier one. Two
+runs in five can therefore be won by any method that returns a member, without
+doing anything — which compresses every difference between methods and explains
+the gate's null directly. The overall Corpus B recovery rate of 0.279 is
+**mostly measuring how often an NDC drug class is static between quarters**, a
+property of the data and not of any method. → to be stated where Corpus B is
+described (`DATA.md` / DESIGN §3), not only where the result is.
+
+### The oracle bound replaces eleven arm tests — and falsifies the corpus explanation
+
+Raised by `[IsalHG-Fable]`: eleven pairwise coin-flips is the weakest way to
+present a null. The structural comparator is
+`min_i fact_dist(K_i, truth)` — the **best achievable input**, selected with
+knowledge of the truth. It upper-bounds every method restricted to returning an
+input, needs no arm, and is the *same object* as Corpus A's floor (there all
+members sit at `t`, so the bound **is** `t`).
+
+| Corpus B, TRUTH_ABSENT stratum (n = 40) | mean | at zero | median of nonzero |
+|---|---|---|---|
+| consensus | 2.875 | **3/40 (0.075)** | 3.00 |
+| oracle bound (best input) | **2.050** | 0/40 | 2.00 |
+| worst input | 4.225 | 0/40 | 4.00 |
+
+| all 68 runs | mean | at zero | median of nonzero |
+|---|---|---|---|
+| consensus | 1.912 | 19/68 (0.279) | 2.00 |
+| oracle bound | **1.206** | 28/68 (0.412) | 2.00 |
+
+**The consensus loses to the bound on the mean and on the bulk.** It is below the
+bound in 3 of 40 — and since the bound is strictly positive on this stratum,
+scoring zero *is* scoring below it, so those 3 are exactly the 3 exact hits:
+
+> **The consensus beats the best achievable input on exactly the runs where it
+> lands exactly on the truth, and never otherwise.**
+
+The capability is **mass at a point that is structurally unreachable for every
+input-returning method**; everywhere else the consensus is the worse choice. That
+is the honest characterisation, it needs no mean, and it is what the table says.
+
+**The corpus explanation for the cross-arm null is FALSIFIED.** The pre-stated
+reading was that a small within-unit spread would floor Corpus B's medoid axis
+the way Corpus A's is. Measured, it is not small:
+
+| | |
+|---|---|
+| within-unit range of member-to-truth distance | median 2.00, mean 2.03, max 5 |
+| units with zero spread | **4 / 68** |
+| interval any input-returning arm's mean must occupy (hard stratum) | **[2.050, 4.225]**, width **2.175** |
+| interval the eleven arms actually span | 2.800–3.150, width **0.35** |
+
+The arms use **16% of the room they have**. The corpus does not force them
+together; they had space to disagree and did not. **Corpus A and Corpus B do not
+unify:** on A the medoid axis is pinned at `t` and the arms are provably one
+number; on B the axis is wide open and the arms cluster anyway. The second is a
+property of the representations, not of the corpus, and is the more interesting
+statement.
+
+**Process note.** The script's own summary line asserted the corpus explanation
+before the number existed — I had written the expected reading into the output
+text. It now reports the two widths and tells the reader to compare them. Same
+failure mode as the rest of the session: the conclusion written ahead of the
+measurement.
+
+### Correction: the oracle is not a competitor, and the arms sit at chance
+
+**My previous sentence over-conceded** and `[IsalHG-Fable]` caught it. "Everywhere
+else the consensus is the worse choice" is true against the oracle bound and
+**false against anything anyone can run** — no method achieves 2.050, which is
+selected with the truth in hand. The achievable field is the eleven arms. The
+honest statement has **three** terms:
+
+> On the hard stratum the consensus's bulk is **comparable to every actual
+> method** (2.875 against arms spanning 2.800–3.150), **worse than an
+> unachievable oracle** (2.050), and **distinguished by mass at a point no
+> input-returning method can reach** (3/40 at zero, against 0/40 for every arm).
+
+Written the earlier way a reader concludes the consensus is dominated. It is not:
+it is ordinary on the bulk and unique at zero. The oracle stays in the table
+because it is the structural bound that makes the 3 meaningful, but it does not
+stand in for the competitors.
+
+**The mechanism behind the cross-arm null — measured.** The representation-free
+landmark is the expected score of picking a member uniformly at random:
+
+| hard stratum (n = 40) | mean |
+|---|---|
+| oracle bound (best input) | 2.050 |
+| consensus | 2.875 |
+| **random member (chance)** | **3.090** |
+| the eleven arms | 2.800 – 3.150 |
+| worst input | 4.225 |
+
+The arms **straddle chance** (four of eleven score *worse* than 3.090; their mean
+is ≈3.03). So the statement is not "the representations agree" but:
+
+> **No representation's medoid does better than picking a quarter at random.**
+
+**And there is a real defence, not a face-saving one.** The medoid minimises
+summed distance to the other members — a **centrality** criterion, with no reason
+to anticipate a held-out *later* quarter. Scoring at chance on a **prediction**
+axis is what a centrality criterion should do. Corpus B's medoid axis measures
+prediction while the medoid optimises centrality, and no representation bridges
+that gap. That is a finding about the **task**, not a failure of the arms.
+
+**The real relationship between the two corpora** (replacing the false
+unification): on Corpus A the medoid axis is **pinned** and the arms are provably
+one number; on Corpus B the axis is **wide open** and the arms land **at
+chance**. Both say the medoid axis carries no information about representations —
+for entirely different reasons.
+
+**A second self-validating cell.** The oracle bound scores zero on **28 of 68**,
+which is exactly the `truth_in_members` count. It had to be — the best input is
+exact precisely when the truth is among the members — and it is. Together with
+the empty `TRUTH_ABSENT × member × recovered` cell, that is two cells which had
+to come out a particular way and did; they are what make the rest of the table
+credible.
+
+### T-KBo closed — `reach1` re-derived, and a pre-registered check on the re-run
+
+**The fix.** `Reach1Index` bucketed on the *frozen* precondition (constant count
++ type multiset). Under `reach′` a deletion compacts away constants it isolates,
+so the count is not preserved and the gate withheld exactly the pairs the
+definition admits. Verified on the regression pair: `reach′ = 1` while the old
+bucket lookup returns `None`. It also compared `fact_word(sample)` — an
+**uncompacted** word — against `RemainderIndex` keys, which are **compacted**.
+
+**The one-line reason the old gate was wrong:** *the fact count survives
+compaction because compaction removes only constants; the constant count does
+not.*
+
+**The predicate.** `reach′` is by definition the least `|A| + |B|` whose
+compacted remainders agree, so a shared remainder word within budget *is* the
+answer — not a heuristic. The test is `ds + dm ≤ 1` on a **shared** word, and the
+arithmetic is load-bearing: testing whether the two level-1 *sets* intersect
+would admit `K−a ≅ K2−b`, i.e. `reach′ = 2`. Since each `d` is 0 or 1 the sum
+rule admits exactly `(0,0)`, `(1,0)`, `(0,1)`. Documented so a later reader does
+not "simplify" it into a set intersection.
+
+**Performance — measured before queueing, not after.** The obvious fact-count
+bucket is sound but *not selective*:
+
+| | 3-bucket window | reduction |
+|---|---|---|
+| `ndc_classes` (N=1,381) | median 6, max 1,302, expected **1,112** | **1.2×** |
+| `wd50k66` (N=3,988) | median 158, max 2,458, expected 1,502 | 2.7× |
+
+`ndc_classes` has only 14 distinct fact counts, so three adjacent buckets hold
+nearly the whole collection. No proof about the bucket's *correctness* would have
+revealed this. Replaced with an inverted index over compacted remainder words:
+**build 0.2 s / 1.3 s, 0.3–0.4 ms per call** on perturbed non-member probes
+returning a real mix of True/False/None — ~0.4 s per 1,000-sample unit.
+
+**A worthless first timing, caught:** my initial probe used *members* as samples,
+so every call hit the exact-match path and returned True 200/200. The number was
+right for the wrong reason.
+
+**`None` semantics, named before the run** (raised by `[IsalHG-Fable]`): `None`
+means *no member lies within the fact-count budget of this sample* — out of the
+comparison domain, a **censoring category**, reported as a census
+(`reach1_eligible` / `reach1_hits`), never coerced. The samples path already did
+this correctly. The **completion** path did not: `analyze_rq6.completion_table`
+counted a blank `reach1` as a measured failure via `fillna(0)` against a
+denominator of `len(group)`. Fixed; each rate is now over the completions where
+the quantity was computed, with `<name>_n` and `<name>_not_computed` beside it.
+
+**PRE-REGISTERED CHECK on job 2279064** (root `IEEETKDE_isal_reach1/`), recorded
+before the rows exist. RQ6 persists no per-sample data, but sampling is
+deterministic — **verified**, not assumed: refitting from scratch and resampling
+at the same seed gives byte-identical output, and a different seed differs, so
+the seed is genuinely wired. The re-run is therefore a **re-derivation over the
+same samples**. Therefore:
+
+> **Every non-`reach1` column must come back bit-identical to the superseded
+> rows.** If `validity`, `connectivity`, the JSD columns or `novelty` move, the
+> change touched something it should not have and this is not a column swap.
+
+**The pointer-word alarm was a false one, and checking it prevented a real
+error.** A smoke timeout on the alignment pairs looked like the decodability
+exhibit losing the paper's own representation. Measured:
+
+| | |
+|---|---|
+| `wd50k66` alignment window (n≤10, m≤8) | 2,736 of 3,988 members |
+| censored `wd50k66` members in the frozen M3 census | 7 |
+| **censored members inside the window** | **0 of 2,736** (max arity in window: 8) |
+
+The window excludes every censored member by construction. The timeouts came
+from the *smoke*, whose alignment block is `ndc_classes` at `pointer_budget_s:
+20` and whose config comment says in advance that it exists "to prove the guard
+fires and the row is censored". **And the proposed remedy — drawing pairs from
+the uncensored set — is the move D-ART5 item 2 forbids**, which rules that the
+budget is the pre-registration precisely so a published row is not "a property of
+a budget rather than of the representation". Rule 10's grep caught it: the fifth
+already-ruled item this campaign, and the first where the check prevented an
+*action* rather than an escalation.
+
+#### The exception list for 2279064, enumerated before the rows exist
+
+`[IsalHG-Fable]`: "every non-`reach1` column bit-identical" needs its exception
+list written *first*, or a difference gets adjudicated after the fact.
+
+**Exactly three columns may move,** all in `rows_samples`:
+
+| may move | why |
+|---|---|
+| `reach1_frac` | the quantity being re-derived |
+| `reach1_eligible` | the eligibility gate changed (fact-count window, not the frozen precondition) |
+| `reach1_hits` | the index changed |
+
+**Everything else must be bit-identical**, including two things worth naming
+because they look like they should move and must not:
+
+- **`rows_completion.reach1`** — it calls `reach()` **directly**
+  (`rq6.py:833`), never `Reach1Index`. My change cannot touch it. If it moves,
+  something else did.
+- **`rows_alignment`** in its entirety — the alignment path does not use the
+  index.
+
+Also fixed: `n_samples`, `n_valid`, `n_rejected`, `n_connected`, `validity`,
+`connectivity`, `rejection_rate`, `jsd_*`, `novelty`, and in `rows_completion`
+`valid`, `iso_original`, `n_prefix`, `n_removed`.
+
+**The direction is predicted, not just the identity.** The old index was
+*strictly more restrictive* than the definition: it only ever considered members
+of identical `(constant count, type multiset)`, and the new one answers exactly
+"does some member sit at `reach′ ≤ 1`". So the new answer set contains the old
+one, and the eligibility gate is strictly more permissive. Therefore:
+
+> `reach1_eligible` **≥** old, and no sample's answer flips `True → False`.
+> Hits may only be gained. A decrease in either falsifies the fix.
+
+The analyzer's derived outputs (`fidelity_table` rows for `reach1_frac`,
+`completion_table`'s `reach1_*`) move as a consequence and are not part of the
+bit-identity check.
+
+### Applying the N-consumed rule to my own scripts — and a finding it produced
+
+`[IsalHG-Fable]`'s rule ("every check reports the rows it consumed, and a check
+whose N differs from the expected N fails") applied to
+`rq3_consensus_forensics.py` found the same defect it was written for.
+
+**The defect.** `recovery_forensics` keyed on `(collection_id, method, arm)`.
+Corpus A writes **two** coverage rows per unit — `radius="2"` and `radius="t"` —
+so 62,398 eligible rows collapsed onto 57,941 keys and **4,457 were dropped by
+last-wins**, one per unit. Corpus B has a single radius, which is exactly why the
+defect was invisible there. Separately, `winner_origin_report` counted 8,914
+uncensored coverage rows and reported a rate over **rows**, silently pooling two
+radii into one number.
+
+**Every reported value is unchanged.** Re-derived per radius from all 62,398
+rows:
+
+| | radius `2` | radius `t` |
+|---|---|---|
+| uncensored coverage rows | 4,457 | 4,457 |
+| transfer / member | 4,160 / 297 | 4,160 / 297 |
+| transfer fraction | 0.9334 | 0.9334 |
+| exact recovery | 0.8378 | 0.8378 |
+| consensus vs medoid, `fact_dist` | 0.264 vs 1.521, 3,951 discordant | identical |
+| consensus vs medoid, recovery | 0.838 vs 0.000, 3,734 discordant | identical |
+
+So the denominator label was wrong (a per-row rate presented as a per-unit rate)
+while every number was right. The script now keys on `radius`, refuses to run if
+rows would collapse, and reports each radius alone.
+
+**The finding.** The two radii are not duplicates — they differ where the corpus
+says they should:
+
+| | |
+|---|---|
+| units where `n_candidates` and `secs` are identical across radii | **2,323** |
+| units with `cell_t = 2` | **2,323** |
+| units with `cell_t = 1` | 2,134 |
+| units where `fact_dist`, `exact_recovery`, `winner_origin`, `n_ties`, `medoid_cost` are identical | **4,457 / 4,457** |
+
+For the 2,323 `t = 2` units radius `t` *is* radius 2, so the work is literally
+the same. For the 2,134 `t = 1` units the radii genuinely differ — different
+candidate pools, different runtimes — **and the outcome is identical anyway**.
+
+**CORRECTED (same session, `[IsalHG-Fable]`): the N is 2,134, not 4,457, and
+this answers a pre-registered question rather than reporting an invariance.**
+
+DESIGN §412 sets the two radii up as a question, verbatim: *"Default radius
+`r = 2` (budget unknown to the method); `r = t` reported as the known-budget
+variant."* So the comparison asks whether a method **told the true edit budget**
+beats one that is not.
+
+On the **2,323** units with `t = 2` the two arms are literally the same run
+(`radius "t"` *is* 2), so their agreement is a tautology and is evidence of
+nothing. The genuine comparison is the **2,134** units with `t = 1`, where the
+radii differ in pool *and* in the coverage objective's threshold:
+
+> **Knowing the true edit budget confers no advantage on any of the 2,134 units
+> where the two settings actually differ** — identical `fact_dist`,
+> `exact_recovery`, `winner_origin`, `n_ties` and `medoid_cost` on every one.
+> (The remaining 2,323 units are identical by construction and are named, not
+> counted.)
+
+**Verified on the honest subset, not inferred from the pooled 4,457** — and it
+is non-vacuous in every unit:
+
+| on the 2,134 units with `t = 1` | |
+|---|---|
+| `n_candidates` **differs** across the radii | **2,134 / 2,134** |
+| `fact_dist` identical | 2,134 / 2,134 |
+| `exact_recovery` identical | 2,134 / 2,134 |
+| `winner_origin` identical | 2,134 / 2,134 |
+| `n_ties` identical | 2,134 / 2,134 |
+| `medoid_cost` identical | 2,134 / 2,134 |
+
+So on every one of the genuine-comparison units the two settings really did
+search different candidate pools, and returned the same winner anyway. The
+comparison is non-vacuous in all 2,134 and unanimous in all 2,134.
+
+Quoting 4,457 would have inflated the evidence by more than a factor of two with
+a number that had to come out that way — the same discipline as the empty
+`TRUTH_ABSENT × member × recovered` cell and the oracle's 28 zeros.
+
+Two things my first phrasing got wrong. "Insensitive to the search radius"
+**understated** it — the radius is not only the candidate pool but the coverage
+objective's threshold, so the two runs optimise *different objectives over
+different pools* and still land on the same winner. And it **overstated** it —
+every radius tested here is at or above the true budget, so nothing measured says
+a radius *below* `t` behaves the same way, and the design never asked for one.
+
+Consequence for the table: the radius column may be collapsed, with the caption
+carrying the reason and the honest N (2,134) so a reader sees a measurement
+rather than an editorial choice.
+
+### The pre-registered check fired — and caught a 2.18× bias in my own fix
+
+Job **2279064** landed. `scripts/diagnostics/rq6_reach1_rederivation_check.py`,
+committed before the rows existed, returned **28 violations**.
+
+**Bit-identity held exactly where predicted**, which is the part that validates
+the method: `rows_completion` 600 rows, `rows_alignment` 60, `rows_rejections`
+358 — all bit-identical. So sampling really is deterministic, the re-run really
+was a re-derivation over the same samples, and the change really did touch only
+the index. Only the three allowed columns moved.
+
+**The direction prediction was falsified.** `reach1_eligible` fell in 28 units.
+
+| collection | model | elig old | elig new | hits old | hits new |
+|---|---|---|---|---|---|
+| ndc | fact_ngram | 8,068 | 26,515 | 352 | 1,238 |
+| ndc | incidence_ngram | 2,367 | 2,713 | 8 | 88 |
+| ndc | ow_ngram | 12,458 | 26,697 | 2,545 | 4,382 |
+| wd50k | fact_ngram | 24,113 | 26,192 | 1,720 | 7,560 |
+| **wd50k** | **incidence_ngram** | **2,764** | **1,266** | 0 | 76 |
+| wd50k | ow_ngram | 25,572 | 26,647 | 3,191 | 7,321 |
+
+**Two things were wrong, and only the second is a defect.**
+
+*My reasoning.* The old and new gates are **incomparable**, not nested. The old
+required an identical constant count *and* type multiset while ignoring fact
+count; the new bounds fact count while ignoring constants and types. "Strictly
+more permissive" was never true. I asserted a containment I had not checked —
+inside the very artefact whose purpose is to hold me to what was checked.
+
+*The defect it exposed.* The fact-count window is a **necessary** condition for
+`reach′ ≤ 1`, so an empty window is a **proof** that no member lies within reach
+1 — a definite `False`, not an inability to answer. Returning `None` dropped
+those samples from the denominator:
+
+| `wd50k66` / `incidence_ngram` | |
+|---|---|
+| reported | 76 / 1,266 = **0.0600** |
+| true | 76 / 2,764 = **0.0275** |
+| overstatement | **2.18×** |
+
+**It overstated in our favour, on the arm the paper argues against** — the
+direction nobody would have questioned.
+
+**This also corrects the `None` semantics I named before the run.** I said `None`
+meant "out of the comparison domain, a censoring category". Under the *frozen*
+reach that was right: a differing constant count left the relation undefined.
+Under `reach′` there is no undefined case, so the tri-state has no third referent.
+`within_one` now returns a plain `bool`, every decoded sample is answerable, and
+the denominator is the decoded subset itself.
+
+Re-running as **2279079** into `IEEETKDE_isal_reach1b/`. The first `reach1` root
+is kept as the superseded run whose entire value was catching this.
+
+**Worth recording as a method point:** a pre-registered prediction that rested on
+an unchecked assumption *still did its job*. It failed loudly and the failure
+pointed at a real bias. That is a stronger argument for pre-registration than a
+prediction that holds would have been.
+
+#### Pre-registered prediction for 2279079, written before it lands
+
+The `None` → `False` fix makes **every decoded sample answerable**, so
+`reach1_eligible` must become exactly the decoded subset size:
+
+| cell | predicted `reach1_eligible` | 2279064 gave |
+|---|---|---|
+| ndc / `ow_ngram` | **27,000** (27 seeds × 1,000) | 26,697 |
+| ndc / `fact_ngram` | **27,000** | 26,515 |
+| wd50k / `ow_ngram` | **27,000** | 26,647 |
+| wd50k / `fact_ngram` | **27,000** | 26,192 |
+| ndc / `incidence_ngram` | **5,135** (= `n_valid`) | 2,713 |
+| wd50k / `incidence_ngram` | **2,764** (= `n_valid`) | 1,266 |
+
+Any cell missing its target means the fix is incomplete. Unlike the falsified
+prediction, this one follows from the code rather than from an assumed
+containment between two gates.
+
+#### `reach1` shares connectivity's denominator defect — and the joint rate factorises
+
+Raised by `[IsalHG-Fable]`, and it is the same structure one table over.
+`reach1` counts over `decoded[:reach1_subset]` — the **valid** subset. At
+validity 1.0000 that is 1,000 per seed of 10,000 drawn; for `incidence_ngram` it
+is however few decoded, which is why **2,764** appeared as a denominator and is
+exactly that cell's `n_valid`.
+
+No re-run is needed to state it, because the joint rate factorises:
+
+> `P(valid AND within reach 1) = validity × reach1_frac`
+>
+> `wd50k66` / `incidence_ngram`: 0.0102 × 0.0275 = **0.00028**
+
+So the table carries three columns — validity, reach1 **given valid**, and the
+joint — exactly as Prop 2 now does. Third table today whose tell was one arm's
+denominator being smaller than the others for a reason nobody had stated.
+
+**Direction is reported per arm, never as one claim.** Overstating
+`incidence_ngram`'s reach1 makes the *baseline* look better, so that defect ran
+**against** us and its correction runs **for** us — the direction that gets waved
+through. The eligible counts move both ways between runs, so no single sentence
+covers them and the table prints the correction factor per arm and per
+collection.
+
+### tail600 — how the 16 shards get evaluated, fixed before they land
+
+**A correction to my own reading first.** On the first shard (8 rows) I wrote
+that two recoveries "confirm the mechanism T-KBe predicted". They do not, and
+the sentence replaced a **differential** prediction with a general one — *"a 10×
+budget recovers some members"* — which is nearly unfalsifiable and which the data
+would satisfy whatever it showed. `[IsalHG-Fable]` caught it. It is the
+session's own failure mode applied to the session's own summary.
+
+**What was actually pre-registered** (T-KBe §"Pre-stated expectation", T-KBp):
+
+| arm | expectation | basis |
+|---|---|---|
+| `wstar_orbit` | a **material fraction** of its 77 finishes by 600 s | 32 completions in [30, 60) s, 6 in [55, 60) — a population that dense below the budget should continue above it |
+| `wstar_rank` | **most of its 53 still censored** at 600 s | **zero** completions in [30, 60) — the tail is arity-10 displacement enumeration, exponential in arity, not a slow tail of a feasible search |
+
+**The refutable form:** if most of the 53 complete at 600 s, the bimodality is an
+artefact of the budget rather than of the mechanism, and D-ART5's claim that the
+residual tail is **displacement rather than symmetry** needs rewriting — which
+propagates to R2 and to RQ7's envelope sentence.
+
+**Thresholds, sharpened now rather than after.** "Most" is unambiguous (> 50 %).
+"A material fraction" is not, so it is fixed here, before any of the 16 shards
+are read:
+
+1. `wstar_rank` recovery **< 50 %** of 53 (i.e. ≥ 27 still censored) — the
+   pre-registered claim holds; **≥ 50 %** refutes it and the D-ART5 rationale is
+   rewritten, not reinterpreted.
+2. `wstar_orbit` recovery **≥ 25 %** of 77 counts as "material" — the value already committed as `MATERIAL_FRACTION` in `analyze_tail600.py`, which predates this note and is therefore the pre-registration. (I first wrote 20 % here; the code is stricter and the code wins.)
+3. The claim is **differential**, so the test is orbit-vs-rank recovery on a
+   2×2 table (Fisher exact, two-sided, α = 0.05). Both arms recovering at a
+   comparable rate refutes the mechanism *even if both are high* — that is the
+   reading a per-arm rate alone would hide.
+
+**Current state: not evidence, and recorded so it cannot be absorbed later.**
+One shard of 16 has landed: 8 rows, 4 per arm. One of the two recoveries is
+`wstar_rank` at 124.7 s, which points *slightly against* clause 1. At four rank
+rows that is noise and no direction is claimed — it is written down now precisely
+so that, when all 16 land, the sentence is evaluated as written rather than
+softened to fit.
+
+### Suite: no regression from the day's changes
+
+Full run, 33 minutes under load: **3,063 passed / 8 failed / 30 skipped**,
+against the session-opening baseline of 3,038 / 8. **+25 tests, same eight
+failures** — the failure set is the documented one, unchanged:
+
+| failing test | task |
+|---|---|
+| `test_rq36_smoke.py` ×5 (`CollectionContext`, deploy stamps) | **T-KBt** |
+| `test_rq45_smoke.py::test_deploy_stamps_name_both_trees` | deploy stamps |
+| `test_cpp_orbit_corpus.py` ×2 | **T-KBr** — load-sensitive, and this run *was* the load |
+
+T-KBr predicted exactly this: the orbit contract test fails inside a loaded full
+suite and passes alone. Its verdict depending on machine load is the defect
+T-KBr exists to fix; the claim it guards is not at risk.
+
+## tail600 COMPLETE — the pre-registration is refuted on all four clauses
+
+Job **2279006**, all 16 shards, **130 rows = 130 distinct (member, arm) calls =
+the pre-registered work list exactly** (77 orbit + 53 rank). Evaluated **once**,
+on the complete set, with `analyze_tail600`; the interim set was never scored.
+
+| arm | re-run | completed at 600 s | still censored | completion |
+|---|---|---|---|---|
+| `wstar_orbit` | 77 | 19 | 58 | **24.7 %** |
+| `wstar_rank` | 53 | **27** | 26 | **50.9 %** |
+
+**The rank engine recovers 2.1× as often as the orbit engine — the opposite of
+the prediction.**
+
+| clause | verdict | |
+|---|---|---|
+| material fraction (orbit ≥ 25 %) | **REFUTED** | 24.7 %; **by exactly one member** — 20/77 = 25.97 % would have passed |
+| most still censored (rank > 50 %) | **REFUTED** | 49.1 % censored, i.e. most *completed* |
+| displacement-not-budget | **REFUTED** | 50.9 % completed |
+| **differential** | **REFUTED — INVERTED** | −26.3 %, 95 % CI **[−41.6 %, −9.4 %]**, Fisher p = **0.00279** |
+
+**The differential is the load-bearing one and it is significant in the wrong
+direction.** This is not an underpowered null: the interval excludes zero and
+sits entirely on the inverted side. The three-state verdict earns its keep here —
+had it been the two-state version this would still read REFUTED, but the interval
+is what shows it is a *reversal* rather than an absence.
+
+### What this rewrites
+
+T-KBe and T-KBp pre-stated the consequence, so this is the refutable clause
+firing, not a surprise:
+
+> *"If most of the 53 complete at 600 s, the bimodality is an artefact of the
+> budget rather than of the mechanism, and D-ART5's claim that the residual tail
+> is **displacement rather than symmetry** needs rewriting."*
+
+Most of the 53 completed. **So the `wstar_rank` tail is not arity-10 displacement
+enumeration that a tenfold budget cannot touch — it is a slow tail of a feasible
+search.** The bimodality at 60 s (zero completions in [30, 60) with 53 censored)
+was a property of where the budget fell, not of the mechanism.
+
+Propagates to: **D-ART5's R2 rationale**, and RQ7's envelope sentence.
+
+**What is *not* affected.** The published rows stay at 60 s — D-ART5 decision 2
+rules the budget is the pre-registration, and this run is characterisation,
+never a row (`kind = tail_characterisation`, outside every RQ tree). The
+censoring counts themselves (77 / 53) are unchanged; what changes is the
+*explanation* offered for the residual tail.
+
+**Honest note on clause 1.** It failed by **one member**. 19 of 77 is 24.68 %
+against a 25 % threshold committed in code before any shard was read. It is
+refuted as written and I am not softening it — but a reader should know the
+margin is a single member, because "orbit does not recover materially" and
+"orbit recovers 24.7 % against a 25 % bar" are different sentences and only the
+second is honest at this margin.
+
+### tail600 — confound ruled out, and what the inversion actually means
+
+**The node-load confound is ruled out**, checked before write-up because the
+comparison is wall-clock across two arms on a shared cluster:
+
+| | |
+|---|---|
+| shards carrying **both** arms | **16 of 16** — zero segregated |
+| `host_cpu` | identical for all 130 calls (Xeon Gold 6230R) |
+| **within-shard direction** | rank > orbit in **10** shards, orbit > rank in **2**, 4 ties |
+
+So the arms are interleaved within every task, any per-node slowness hits both
+equally, and **the inversion is consistent within shards** rather than a pooling
+artefact.
+
+**Stronger than "consistent": it is significant within the stratification.** A
+paired sign test on the 12 discordant shards gives **two-sided exact p = 0.0386**
+(95 % CI on P(rank favoured | discordant) = [0.552, 0.953]); verified against
+`scipy.stats.binomtest`, which returns the same 0.0386.
+
+**Two tests, answering two different objections on the same data:**
+
+| test | what it answers |
+|---|---|
+| pooled Fisher, −26.3 % CI [−41.6 %, −9.4 %], p = 0.00279 | the size of the effect |
+| **stratified sign test, 10 of 12 shards, p = 0.0386** | **load-independence** — it holds each shard's node and conditions fixed |
+
+The second stands on its own without the pooled result, which is the point: a
+reader who suspects node conditions is answered by a test that never pools across
+them, rather than by an assurance that the hardware was the same. Identical
+hardware under *different load* is exactly the case that would have manufactured
+this differential spuriously, and it is closed by design rather than by
+argument.
+
+**The inversion is what the two complexity classes predict** (`[IsalHG-Fable]`).
+A tenfold budget buys very different progress depending on how cost grows:
+
+- **`wstar_orbit` is a tie-complete *search*.** Its censored members are the ones
+  where that search explodes; 10× the time is ~3.3 doublings of an exponential,
+  which barely dents them → **24.7 %**.
+- **`wstar_rank` is a deterministic greedy *walk*.** Its censored members are
+  merely large; 10× the time is roughly a doubling of tractable size → **50.9 %**.
+
+**This is better evidence for the design's own thesis than the prediction would
+have been**: that **the search, not the alphabet and not the arity, is what
+costs**. The four-cell reading gains a measured cost dimension — order alone is
+microseconds, the tie key is expensive but tractable, the search is intractable
+on its own tail.
+
+**What the prediction got wrong, and it is a shared error.** It inferred the
+*unobserved* distribution from the observed one: 32 orbit completions in [30, 60)
+implied its censored members sat just over the line, rank's zero implied its sat
+far over. But completions in [30, 60) describe the right tail of the members that
+**finished**; a censored member's recorded seconds are the budget by construction
+and say nothing about how far past it the true cost sits. For an exponential
+process across varying arity that spread is orders of magnitude.
+
+### What is rewritten, precisely — and what is not
+
+**The sentence that dies is the *explanation*, not the census.** "The rank key
+does not remove it either" is **refuted**: the rank key helps substantially. The
+corrected R2 reading is that the **orbit** engine's residual tail is the search
+itself, which a tenfold budget barely moves, while the **rank** engine's is
+expensive but tractable. RQ7's envelope sentence inherits the same correction.
+
+**D-ART5 does not reopen.** Its rationale weighed cost explicitly, and the
+censoring difference between the arms is 24 members at 60 s and would be 32 at
+600 s. The decision rested on the definitional argument and on locality, not on
+the two tails sharing a mechanism.
+
+### Clause 1 was never resolvable at n = 77
+
+19/77 = 0.247, **95 % Wilson CI [0.164, 0.354]** — the 25 % threshold sits
+**inside its own confidence interval**. The clause was decided by a coin from the
+moment it was written with a fixed cut and no power consideration. It stands
+**REFUTED as written** — a pre-registered threshold is not softened after the
+fact — and the interval is printed beside it so nobody leans on the verdict in
+either direction.
+
+### RQ7, pre-registered against the CORRECTED mechanism — written before the sweep lands
+
+`[IsalHG-Fable]`, and recorded now so it can be **evaluated rather than fitted**.
+
+**RQ7's pre-stated reading predates tonight's correction.** It says the envelope
+moves from `|Aut|` to `(m, k)` — written when the residual tail was attributed to
+**displacement alone**. The corrected mechanism is **displacement × branch
+factor**. So RQ7 must be read against the corrected explanation, or the envelope
+paragraph and the R2 paragraph will say different things about the same cost —
+the exact inheritance drift the coherence pass caught in the manuscript tonight.
+
+**And RQ7 can *test* the mechanism rather than inherit it.** The sweep runs the
+search-based arm and the ordered walk side by side over arity and size — which is
+*the search against no search at all*. Pre-stated, refutably:
+
+| if the corrected mechanism holds | if it does not |
+|---|---|
+| the two arms' costs **diverge with increasing `k`**, in a way no polynomial fit captures for the search arm while the walk stays essentially linear | the two **track each other up to a constant** |
+| the divergence tracks **arity**, not `|Aut|` — the tail sits at low symmetry (69 of 77 below 10³) | the divergence tracks `\|Aut\|` |
+
+**If they track each other up to a constant, the multiplication reading is in
+trouble and the paragraph needs revisiting *before* it is written.**
+
+**Instrumentation gap — checked, and it is absent.** RQ7's schema records `secs`,
+`tokens_or_bytes`, `m`, `k`, `n`, `aut_bucket`, `censored`: wall-clock and size,
+and **no proxy for search work** — no branches explored, tie sets entered or
+nodes visited. So the branch factor stays an **inference from a cost
+differential** rather than a direct measurement. Filed as **T-KBw**; it is a
+small addition, and the point of filing it now is not to discover later that the
+one number that would have settled the mechanism was never written down.
+
+### The recovery sweep is replicating tail600, and so far exactly
+
+`2279007` — the `afterany` recovery sweep — is a **second full pass over the same
+16 shards**, and tail600 has no skip, so it re-runs and **overwrites** the rows
+the verdict was computed from. Checked rather than assumed, because a result
+whose inputs change under it is worth catching before someone else finds the
+mismatch.
+
+| | as evaluated | on disk now |
+|---|---|---|
+| `wstar_orbit` completed | 19 / 77 | **19 / 77** |
+| `wstar_rank` completed | 27 / 53 | **27 / 53** |
+| rows | 130 | 130 |
+
+One shard (002) has been rewritten so far. Diffed **per member**, not by
+aggregate — matching totals would not prove matching outcomes:
+
+| | |
+|---|---|
+| key set (`collection`, `member_id`, `arm`) | **identical** |
+| columns that differ | **`secs` only**, in 4 of 8 rows |
+| outcome columns (`censored`, value, error) | **none differ** |
+
+So the sweep reproduces the censoring outcome of **every member**, on different
+nodes at a different hour, with only wall-clock varying. That is what a 600 s
+budget on an exponential search should do — a member far from the boundary lands
+the same side of it every time — and it is a **replication** of the measurement
+rather than a re-run of the job.
+
+**Worth re-checking when the sweep finishes** (8 running, 1 pending at the time
+of writing): if all 16 shards reproduce, the tail600 verdict carries an
+independent replication on top of its two tests, which is more than the
+pre-registration asked for. If any shard's outcomes move, that is a boundary
+member and it is worth naming.
+
+#### Replication complete: all 16 shards, zero censoring flips
+
+The recovery sweep `2279007` finished all 16 shards. Diffed **per member**
+against the rows the verdict was computed from:
+
+| | |
+|---|---|
+| files / rows / key set | 16 → 16, 130 → 130, **identical** |
+| columns differing | **`secs` only, in 46 rows** |
+| **censoring flips** | **0** |
+| `wstar_orbit` completed | 19/77 → **19/77** |
+| `wstar_rank` completed | 27/53 → **27/53** |
+
+**The 46 is a self-check:** 19 + 27 = 46 is exactly the number of *completions*.
+A censored row records `secs = 600.0` by construction and cannot differ, so every
+row that *could* vary did vary, and **not one changed its outcome**.
+
+So the tail600 result is **replicated member-for-member on an independent second
+pass**, on different nodes some hours later. Every member landed the same side of
+the 600 s boundary twice.
+
+**What this adds.** The verdict already carried two tests answering two
+objections — the pooled Fisher for effect size, the stratified sign test for
+load-independence. It now also carries a replication, which answers a third
+objection nobody raised: that a budget-threshold measurement might be unstable at
+the boundary. It is not, here: **no member of either arm sits close enough to
+600 s for machine conditions to move it.** That is worth one clause, because it
+is the property a reviewer would reasonably doubt about any wall-clock cutoff and
+it was obtained for free from a sweep that exists for a different purpose.
+
+#### Zero flips is a bound, not luck — and the 60 s near-boundary mass is gone
+
+`[IsalHG-Fable]`: zero flips across two runs is an *observation*; the distance to
+the cutoff is what makes it a *bound*.
+
+| arm | completions | median | **slowest** | headroom | within 120 s of the cutoff |
+|---|---|---|---|---|---|
+| `wstar_orbit` | 19 | 139.1 s | **355.8 s** | 244.2 s (**41 %** of budget) | **0** |
+| `wstar_rank` | 27 | 163.6 s | **210.0 s** | 390.0 s (**65 %**) | **0** |
+
+**Not one completion sits within 120 s of the 600 s cutoff**, and the slowest has
+244 s of headroom. So the claim upgrades from *"no member flipped across two
+runs"* to **"no member is near enough to the boundary for run-to-run variance to
+reach it"** — a reason rather than evidence, and it no longer depends on having
+happened to run twice.
+
+**And the structure that motivated the whole prediction has inverted.** At 60 s
+the orbit arm had **32 completions in [30, 60)** — the dense near-boundary mass
+that made "a material fraction should finish at 600 s" reasonable. At 600 s it
+has **zero in [480, 600)**. The population that sat just over the 60 s line has
+completed; what remains is *far* over, on both arms.
+
+That is the same bimodality the prediction was built on, one budget up, and it is
+why a further tenfold budget would be a poor investment: there is no near-boundary
+mass left to harvest.
+
+### RQ7 — the sweep is complete, and the envelope does not move: it disappears
+
+**Run root** `results/IEEETKDE_isal/RQ7_envelope/envelope` (job 2271960; **not**
+the `_merged` tree, which carries no envelope sweep). 369 files, newest 02:01.
+Reading: `scripts/diagnostics/rq7_envelope_reading.py`, whose four claims and
+their refutation conditions were written into its docstring **before it read a
+row**. All five arms complete: 7,776 rows each on the grid
+(6 `m` × 4 `k` × 3 `|Σ_E|` × 2 `|Σ_V|` × 2 density × 27 seeds), 7,938 for
+`fact_rank` / `nauty_cert` including the 162 extension cells.
+
+**The headline.** The handoff pre-stated *"RQ7 the envelope moves from `|Aut|` to
+`(m, k)`"*. Censoring per arm × `aut_bucket` at the 60 s budget — a **total**
+tabulation, every row of all 7,776 classified, nothing selected:
+
+| `aut_bucket` | `isalhg_levenshtein` | `wstar_orbit` | `isal_ow_struct` |
+|---|---|---|---|
+| `<1e3` | 2094/6734 (31.1 %) | 1953/6734 (29.0 %) | **0/6734** |
+| `1e3–1e6` | 548/615 (89.1 %) | 400/615 (65.0 %) | **0/615** |
+| `≥1e7` | **427/427 (100 %)** | 392/427 (91.8 %) | **0/427** |
+
+The ordered walk censors **zero of 7,776**, including all 427 instances at
+`|Aut| ≥ 1e7` where the pointer alphabet fails *every single one*. So the
+pre-stated reading understates what happened: it is not that the envelope moves
+off `|Aut|` onto `(m, k)` — **the ordered walk has no symmetry frontier at
+all**, and the sentence should say so. This is the one RQ7 number that needs no
+interval: it is a census of every row, not an estimate from a sample of them.
+
+**H7a — the frontier is `m`, not `n` — confirmed, but only by the join.**
+Marginally the density step (a pure `n` move at fixed `m`) looked comparable to
+an `m` doubling: 1.017 against 1.278 in median `|log₂|` cost ratio. The join
+overturns that: **every dense cell sits in `aut_bucket <1e3`**, so all the
+symmetry lives in the sparse cells and the pooled density gap was partly a
+symmetry gap. Conditioned on `<1e3`, censoring is monotone in `m` in both series —
+
+| `wstar_orbit`, `<1e3` only | m=10 | 20 | 40 | 80 | 120 | 160 |
+|---|---|---|---|---|---|---|
+| sparse (median n = 1.5 m) | 0.005 | 0.142 | 0.371 | 0.447 | 0.477 | 0.526 |
+| dense (median n = 0.5 m) | 0.000 | 0.009 | 0.153 | 0.432 | 0.588 | 0.633 |
+
+— while the density effect is **non-monotone and changes sign at m ≈ 100**
+(sparse censors more below it, dense more above). A variable that reverses
+direction across the grid is not the frontier; `m` is. **Fifth time this session
+that a marginal and its join disagreed** (L26).
+
+**H7c — withheld, not estimated.** Two array tasks are still running
+(`isal_ow_struct` at N=250, `wstar_orbit` at N=3,988), so both Isal arms have a
+truncated `N` range and the script refuses to fit a slope on it. The competitors
+are in: pair-phase log-log slopes 1.913 / 1.924 (bipartite GED assign / path),
+1.872 (WL), against 1.706 (`nauty_cert`) — the `N²` term is where the
+pre-registration put it.
+
+Two further readings — H7b's range claim, refuted at the `m` extension but
+arguably not in its mechanism, and the within-cell symmetry-sensitivity figure,
+whose search-arm cell count is thin and selected by surviving censoring — are
+**with `[IsalHG-Fable]` before they are written**, per §7.
+
+#### The join `[IsalHG-Fable]` asked for — it separates symmetry from size, and reconciles RQ1 with RQ7
+
+The censoring table above is marginal in `|Aut|`. Joined against `(m, k)`:
+
+**1. The `≥1e7` bucket is entirely a large-`m` bucket.** All 427 instances have
+`m ≥ 80` (min 80, median 160, max 160); **not one** sits at `m ∈ {10, 20, 40}`.
+So "orbit censors 92 % at high symmetry" is confounded exactly as suspected:
+every high-symmetry instance in this sweep is also a large one.
+
+**2. But symmetry still moves censoring at fixed size.** Within the 15 `(m, k)`
+cells carrying two `aut_bucket` levels at n ≥ 5, censoring **rises in 9 and
+falls in 0**:
+
+| `(m,k)` | `<1e3` | `1e3–1e6` | `≥1e7` |
+|---|---|---|---|
+| (40,4) | 88/310 = 0.28 | 14/14 = 1.00 | — |
+| (80,3) | 29/239 = 0.12 | 42/46 = 0.91 | 39/39 = 1.00 |
+| (120,3) | 86/209 = 0.41 | 1/34 = 0.03 | 81/81 = 1.00 |
+| (160,2) | 0/277 = 0.00 | 0/25 = 0.00 | **0/22 = 0.00** |
+
+The pooled median rise is only +0.006 because most cells are saturated at 0.00
+or 1.00; the unsaturated ones move by 0.6–0.7.
+
+**3. Arity is the gate, symmetry modulates inside it.** `k = 2` censors
+**0.000 at every `m` and every symmetry level** — including 0/22 at `m = 160`
+with `|Aut| ≥ 1e7`. `k = 5` saturates by `m = 80`. So `[IsalHG-Fable]`'s
+pre-registered prediction (divergence tracks arity rather than `|Aut|`) is
+**partly confirmed and its "rather than" is too strong**: arity gates whether
+censoring happens at all, and within the gate symmetry moves it further. Recorded
+as that, not as refuted and not as confirmed.
+
+| `wstar_orbit` censoring | m=10 | 20 | 40 | 80 | 120 | 160 |
+|---|---|---|---|---|---|---|
+| k=2 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 | 0.000 |
+| k=3 | 0.000 | 0.000 | 0.009 | 0.340 | 0.519 | 0.648 |
+| k=4 | 0.000 | 0.034 | 0.315 | 0.756 | 0.926 | 0.997 |
+| k=5 | 0.009 | 0.269 | 0.670 | 0.981 | 1.000 | 1.000 |
+
+**4. RQ1 and RQ7 do not contradict each other — they describe disjoint regions.**
+RQ1: orbit pruning takes censoring at `|Aut| ≥ 1e7` from 36 to **zero** on real
+corpora. RQ7: orbit censors **392/427** in the same bucket. Both are correct,
+because the real members are not where the synthetic high-symmetry mass is:
+
+| collection | n | median m | p90 | max | members at m ≥ 80 |
+|---|---|---|---|---|---|
+| `ndc_classes` | 1,381 | 3 | 5 | **30** | **0** |
+| `ndc_substances` | 1,745 | 4 | 16 | 41 | **0** |
+| `wd50k100` | 1,837 | 5 | 11 | 27 | **0** |
+| `wd50k66` | 3,988 | 5 | 11 | 29 | **0** |
+| `wd50k66_full` | 4,554 | 5 | 18 | 303 | **39** (0.86 %) |
+
+Every `≥1e7` sweep instance has `m ≥ 80`. **No member of any of the four gated
+collections — `ndc_classes` (1,381), `ndc_substances` (1,745), `wd50k100`
+(1,837), `wd50k66` (3,988): 8,951 members in all, every one read — reaches
+`m ≥ 80`**, and at the real median (`m ≈ 5`) the sweep censors 0.000 for every
+arity. One qualification belongs in the same breath rather than in a footnote:
+**`wd50k66_full` — the ungated variant of `wd50k66` — has 39 members (0.86 %) at
+`m ≥ 80`**, which is why the sentence is about the *gated* collections and not
+about real knowledge bases in general. The paper carries this reconciliation
+explicitly — both numbers are going in, and unreconciled they are a gift to a
+reviewer.
+
+*Resolved 03:21.* This claim was held at two collections while `ndc_classes` and
+`wd50k100` were partial. Both are now whole, and **`ndc_classes`'s two unread
+large-`m` blocks did not move it**: its maximum is still `m = 30` and its
+`m ≥ 80` count is still zero. The floor turned out to be the value — which is
+the outcome that was *not* safe to assume, since the unread blocks were the
+large end.
+
+**Yield on the real collections** (60 s budget, one row per member):
+
+| collection | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` | status |
+|---|---|---|---|---|
+| `ndc_classes` | 1381/1381 = 1.000 | **1381/1381 = 1.000** | 1263/1381 = 0.915 | complete |
+| `ndc_substances` | 1745/1745 = 1.000 | **1745/1745 = 1.000** | 1489/1745 = 0.853 | complete |
+| `wd50k100` | 1837/1837 = 1.000 | **1837/1837 = 1.000** | 1571/1837 = 0.855 | complete |
+| `wd50k66` | 3988/3988 = 1.000 | **3988/3988 = 1.000** | 3742/3988 = 0.938 | complete |
+
+Median cost on completed members: `fact_rank` 0.156–0.199 ms, `isal_ow_struct`
+0.573–0.696 ms (**3.5×** the certificate, same order), `isalhg_levenshtein`
+4.2–14.4 ms. **The ordered walk canonicalizes every one of the 8,951 members
+of all four gated collections — 1381/1381, 1745/1745, 1837/1837, 3988/3988 — at
+sub-millisecond median cost.** The phrasing was held while two collections were
+partial; it is now earned rather than assumed.
+
+#### H7b, reported as the measurement rather than as a surviving half
+
+`[IsalHG-Fable]` is right that "the mechanism claim is untouched" overstates it:
+this measurement is *consistent with* one canonical-labelling call and with other
+accounts of a cost growing in `m`; it does not test the mechanism. And the
+refutation runs **in our favour** — H7b is a claim about how strong the
+competitor is, so bounding its range makes the competitor look worse at scale,
+which is the direction to state most conservatively. So the hypothesis is not
+defended; the measurement is reported in its place:
+
+> Both certificate arms complete every instance with **no censoring anywhere**,
+> at a worst-cell median of **7.2 ms** (`fact_rank`) / **6.8 ms**
+> (`nauty_cert`) on the main grid, rising to **6.24 s** / **6.28 s** at
+> `m = 1,280`.
+
+#### The within-cell symmetry spread is a floor, and the selection says which way
+
+`wstar_orbit`'s 12 usable cells are the ones where it *did not* censor — i.e.
+where symmetry cost it least; its symmetry-sensitive cells censored out of the
+measurement. So **3.84× is a lower bound** on the search/walk ratio (0.565
+against 0.147 log₂ units, n = 12), and it is quoted only with that direction in
+the same clause. The censoring table carries the claim — total over 7,776 per
+arm, nothing selected; the spread corroborates it conservatively.
+
+### ⚠ Two collections were read partial, and the slice is not random
+
+Raised by `[IsalHG-Fable]`, who noticed the yield table gives `ndc_classes` at
+**828** where RQ1's census gives **1,381**. The corpora manifest is
+authoritative: 1,381. The yield pass shards a collection by contiguous
+`block_slice`, and for `ndc_classes` only blocks **002, 003, 004 of 005** have
+landed; for `wd50k100`, block **000 of 002** (manifest: 1,837). Nothing failed —
+array tasks 60 and 64 are still running.
+
+**The slice is ordered in `m`, descending.** Measured on the collections that
+*are* complete, block medians run 6, 6, 5, 4, 4, 3 (`ndc_substances`) and
+5, 5, 4, 4, 4, 5 (`wd50k66`). So the direction differs per collection and must
+be stated per collection:
+
+| collection | read | blocks present | missing | which end |
+|---|---|---|---|---|
+| `ndc_classes` | 828 / 1,381 (60 %) | 2, 3, 4 | **0, 1** | its **largest** members |
+| `wd50k100` | 919 / 1,837 (50 %) | 0 | 1 | its smallest members |
+
+So `ndc_classes`'s observed maximum of `m = 30` is a **floor**, and its
+`m ≥ 80` count of zero is **not yet established** — the unread blocks are
+exactly where a large member would be. `wd50k100`'s zero is on the larger half
+and is the better-supported of the two. Neither carries a yield claim until its
+blocks land.
+
+**What this cost, and why the guard did not fire.** The sweep's expected row
+counts were declared up front (7,776 / 7,938) and verified; the yield's were
+not, so "828/828 = 1.000" reported a rate over whatever had arrived. The rule
+that catches this is L26's — *declare the input* — applied to one half of the
+same script and not the other. `rq7_envelope_reading.py` now asserts every
+collection against the manifest and names the absent blocks, since the blocks
+present cannot report the ones that never landed.
+
+**What the partial read does and does not reach.** Stated as a boundary so no
+reader re-checks the rest of this document:
+
+| affected | unaffected |
+|---|---|
+| the yield table's `ndc_classes` and `wd50k100` rows | **the sweep: 0 of 7,776, verified per arm** |
+| the `m`-distribution table's two partial rows | the arity gate (`k=2` at 0.000 everywhere) |
+| the reconciliation's population, now named | the within-cell symmetry rises (9 of 15, 0 falling) |
+| | the whole `(m,k)` × `aut_bucket` join |
+| | H7a's frontier reading (sweep rows only) |
+| | H7b's certificate-arm measurement (sweep rows only) |
+
+Every affected figure draws on `rows_yield_members`; nothing in the sweep
+analysis touches those rows.
+
+**RESOLVED 2026-09-11 03:21 — array 2271960 is 74/74 COMPLETED.** All five
+collections are now whole (1,381 / 1,745 / 1,837 / 3,988 / 4,554), and the
+outcome is worth recording because it was **not** the safe assumption:
+
+| | partial read | complete |
+|---|---|---|
+| `ndc_classes` members | 828, then 1,105 | **1,381** |
+| its max `m` | 30 (a *floor*) | **30** |
+| its members at `m ≥ 80` | 0, unestablished | **0**, established |
+| `isal_ow_struct` yield | 828/828, no claim | **1381/1381** |
+
+The unread blocks were the large-`m` end, so the floor could have moved and did
+not. That is the reason the claim was held rather than shipped with a hedge: a
+hedge would have been indistinguishable from this result, and only the
+measurement separates them.
+
+One correction the completion also forced: `wd50k66_full` has **39** members at
+`m ≥ 80`, not the 41 stated earlier. The 41 was **reconstructed from a rounded
+rate** — 0.009 × 4,554 — rather than counted. A count derived from a displayed
+percentage is not a count, and the rounding that makes a rate readable is
+exactly what makes it unusable in the other direction.
+
+**The claim that survives unchanged.** The 0-of-7,776 sweep censoring is
+untouched: the sweep is complete and verified per arm. The real-corpus yield
+claim currently rests on `wd50k66` (3,988) and `ndc_substances` (1,745) read
+whole at the time — 5,733 members — and is restated to all four (8,951) now
+that the rest has landed.
+
+### RQ7 COMPLETE — H7c measured, and the walk does the whole matrix in 1.39 s
+
+Array 2271960 finished 74/74 at 03:21. The withheld N-scaling cells landed.
+
+**The full 3,988 × 3,988 matrix on `wd50k66`** (median of 3 reps; censored and
+skipped reps excluded, not averaged in):
+
+| arm | whole matrix | canon | pair phase | serialisation |
+|---|---|---|---|---|
+| `fact_rank` | **1.11 s** | 0.221 | 0.889 | fact-rank word |
+| **`isal_ow_struct`** | **1.39 s** | 0.414 | 0.971 | Isal tokens |
+| `size_l1` | 2.81 s | 0.004 | 2.804 | — (scalar) |
+| `degree_seq_l1` | 12.62 s | 0.017 | 12.602 | — (vector) |
+| `nauty_cert_rows` | **13.87 s** | 0.328 | 13.541 | **certificate, one symbol per row** |
+| `nauty_cert` | 24.19 s | 0.234 | 23.960 | **certificate, bytes** |
+| `netlsd` | 40.61 s | 10.757 | 29.850 | — (vector) |
+| `wl_l1` | 564.21 s | none | 564.208 | — (histogram) |
+| `bipartite_ged_assign` | 10.6 min | none | 634.016 | — (assignment) |
+| `bipartite_ged_path` | 15.9 min | none | 952.501 | — (search) |
+| `wstar_orbit` | 28.9 min | 1737.537 | *< noise* | Isal tokens |
+| `hpd_jsd` | **≥ 60 min** | — | **censored at the 1 h cap** | — (divergence) |
+
+**No speed claim against the certificate survives, in either tokenisation — and
+the reading is parity, not a reversal.** Measured on `wd50k66`, 400 identical
+members, same machine, min of 3 reps, 160,000 ordered pairs:
+
+| | secs | s/pair |
+|---|---|---|
+| `nauty_cert_rows` `matrix()` — **Python double loop** | 0.0561 | 3.51e-07 |
+| `isal_ow_struct` `matrix()` | 0.0236 | 1.47e-07 |
+| `nauty_cert_rows` bare `cdist` | 0.0052 | 3.25e-08 |
+| `isal_ow_struct` bare `cdist` | 0.0044 | 2.73e-08 |
+
+| comparison | ratio | what it measures |
+|---|---|---|
+| both bare `cdist` | rows **1.19×** | **parity** — the representations |
+| both `matrix()` | rows **2.38×** | the rows arm's Python loop |
+| rows `cdist` vs walk `matrix()` | 0.22× | **not a comparison** |
+
+Two real findings and one retracted. **Real:** `nauty_cert_rows.matrix()` fills
+the upper triangle in a Python loop while `isal_ow_struct` and `nauty_cert` call
+`process.cdist` — a **10.8×** penalty over a bare `cdist` on its own
+fingerprints, against the walk's 5.4×, and it falls on the arm D-ART4 designates
+as the *non-confounded* comparator (→ T-KBy). **Also real:** every arm's
+`matrix()` carries substantial overhead above a bare `cdist` — 5.4× for the walk
+— which every RQ matrix pays. **Retracted:** an earlier revision of this section
+read "the row-tokenised certificate is 4.5× *faster* than the Isal word", from
+comparing a bare `cdist` on precomputed row fingerprints against a full
+`matrix()` call on the walk. Those are different operations. At equal
+implementation the two are **at parity**; `[IsalHG-Fable]` caught it against this
+section's own cdist table, which had said 1.09× four lines above.
+
+And the byte figure is an artefact in the other direction. Three tokenisations of
+the *same* canonical form, all via `cdist`, span **19.2×**:
+
+| handed to `rapidfuzz` as | mean L | s/pair | ratio to the walk |
+|---|---|---|---|
+| bytes | 160.5 | 6.22e-07 | 20.9× |
+| 4-byte integers | 40.1 | 7.94e-08 | 2.66× |
+| adjacency rows | 15.2 | 3.24e-08 | **1.09×** |
+| *(walk tokens)* | 13.7 | 2.98e-08 | 1× |
+
+So the pair-phase cost of this canonical form is **whatever its serialisation
+says it is**, and a multiplier against it states a tokenisation choice rather
+than a property of either representation. **L17 already ruled this out** —
+*"concede identity and deduplication speed to nauty/bliss/Traces … never build a
+claim on canonicalization speed"* — and the headline had drifted into exactly the
+claim the lesson base forbids. It does not need a reversal to retire; parity
+retires it.
+
+**What survives, and it is the paper's actual claim.** `isal_ow_struct` 1.39 s
+against `wstar_orbit` **28.9 min — 1,252×**. Same alphabet, same tokenisation,
+same distance, same `matrix()` path — so the wrapper overhead appears on both
+sides and cancels — same corpus: **the search is what costs, and the same
+language without it is three orders of magnitude cheaper.** Nothing in this
+correction touches it.
+
+The certificate comparison is reported as a table of tokenisations with the
+implementation penalty named, and **carries no multiplier in either direction**.
+
+Second only to `fact_rank`, which the paper no longer claims (D-ART4).
+
+**H7c's ordering holds; two of its magnitudes do not.** It predicted "seconds for
+`fact_rank`, minutes for the embeddings, hours for bipartite GED". NetLSD is
+**seconds** (40.6), bipartite GED is **minutes** (10.6 / 15.9). Both misses make
+the competitors *faster* than predicted, so — as with H7b — the measurement is
+reported and the hypothesis is not defended.
+
+*Mechanism: measured, and it is length — at the granularity the library
+actually sees.* The gap is in the pair phase (0.971 s against 23.960 s,
+**24.7×**). Measured on `wd50k66` itself, 400–500 member samples:
+
+| | median | mean | max |
+|---|---|---|---|
+| `isal_ow_struct` (**tokens**) | 6 | 13.8 | 141 |
+| `nauty_cert` (**bytes**) | 140 | 159.7 | 460 |
+| `nauty_cert` (**4-byte integers**) | 35 | 39.9 | 115 |
+| `fact_rank` (tokens) | 12 | 15.1 | 53 |
+
+**400 of 400 certificate lengths are divisible by 4** — it is a sequence of
+4-byte big-endian integers, so its natural symbol count is `bytes/4`. But
+`rapidfuzz` is handed the **bytes**, and a runtime is governed by what the
+algorithm iterates over, so the byte length is the one in the cost model:
+Myers' `O(L₁·⌈L₂/64⌉)` predicts 481.6 against the walk's 13.7, i.e. ≈35×,
+against 24.7× measured — with the residual in the expected direction, since the
+walk's arm sits 41× above its own compute floor and cannot scale down
+proportionally.
+
+**Re-timed at each granularity** (500 members, `process.cdist`, same machine):
+
+| handed to `rapidfuzz` as | mean L | s/pair | ratio to the walk |
+|---|---|---|---|
+| bytes | 160.5 | 6.23e-07 | **20.9×** |
+| 4-byte integers | 40.1 | 7.95e-08 | **2.67×** |
+| walk tokens | 13.7 | 2.98e-08 | 1× |
+
+**Granularity alone accounts for 7.83× of the certificate's measured cost.** At
+its own symbol granularity the certificate costs **2.67×** the Isal word — which
+is the 2.9× length ratio, and is the representation-level number.
+
+**This is why D-ART4 requires both tokenisations, and it is a point in favour of
+the methodology rather than a caveat.** The byte comparison *overstates* the
+certificate's cost, because bytes are a finer granularity than the
+representation's own symbols; the row figure is the one that is not an artefact
+of how the comparator was serialised for the comparison. So the paper reports
+both and **the claim rests on the row tokenisation**, never on the byte one.
+
+*(The lengths previously quoted here — 3,886 tokens against 11,692 bytes — are
+from the **sweep** at `m = 160`, not from `wd50k66`, whose members have median
+`m = 5`. Quoting them beside a `wd50k66` matrix timing invited the inference that
+the matrix could not be doing full pairwise work; `[IsalHG-Fable]` made it, and
+the figures were mine to put there. A first correction then went too far the
+other way, using the natural-unit ratio to declare the length mechanism
+disconfirmed — the same error one turn later, in the opposite direction. The
+measurement above settles it.)*
+
+**Compactness at member granularity** — a statement the paper has not previously
+had: on real members the ordered walk's median word is **6 tokens** against the
+certificate's **140 bytes / 35 symbols**.
+
+**`wstar_orbit` is not a power law, so it gets no exponent.** Canon totals
+against a constant doubling of `N`: 16.4 → 48.3 → 292.0 → 907.9 → 1,737.5 s,
+i.e. steps of **2.95×, 6.04×, 3.11×, 1.91×**. A fitted 1.771 summarises that
+away; the cost is dominated by a few expensive members, so what matters is
+*which* enter at each `N`. The series is reported instead.
+
+Canonicalization is ≈ linear on every arm that has one (0.80–1.03), as H7c said.
+The whole-matrix slope reaches ≈ 1.9 only where the pair phase dominates; for
+`fact_rank` and `isal_ow_struct` the matrix is fast enough at N = 3,988 that
+fixed overhead still flattens the curve, so their sub-linear slopes are an
+artefact of the range rather than evidence against an `N²` pair phase.
+
+**Full yield, all five collections whole:**
+
+| collection | n | `fact_rank` | `isal_ow_struct` | `isalhg_levenshtein` |
+|---|---|---|---|---|
+| `ndc_classes` | 1,381 | 1.000 | **1.000** | 0.915 |
+| `ndc_substances` | 1,745 | 1.000 | **1.000** | 0.853 |
+| `wd50k100` | 1,837 | 1.000 | **1.000** | 0.855 |
+| `wd50k66` | 3,988 | 1.000 | **1.000** | 0.938 |
+| `wd50k66_full` | 4,554 | 1.000 | not run | not run |
+
+**The ordered walk canonicalizes 8,951 of 8,951 members** at 0.600–0.696 ms
+median, against 0.166–0.199 ms for the certificate — **3.5×, the same order of
+magnitude**. That is the measurement R6 anticipated ("no longer conceded for the
+ordered/greedy programs, whose cost is one nauty call"), and per
+`[IsalHG-Fable]` it belongs in the paragraph where the concession is made, not
+in a results table. → folded at T-KBg.
+
+### RQ2 step 5 — identity timing, the concession, measured
+
+The last outstanding RQ2 section (DESIGN §3 procedure 5, *"canonicalization time
+per member: `pynauty` certificate vs `fact_rank` vs `pointer`, from RQ7's
+pass"*). Unblocked now that RQ7's N-scaling has landed.
+
+**Basis.** `wd50k66`, N = 3,988, the **canonicalisation phase** of the N-scaling
+pass — every arm through the same tight loop, same machine, same corpus, same
+code path. Read from the frozen snapshot
+(`results/frozen/rq7_envelope_2271960_reading/`).
+
+| arm | canon total | per member | vs the certificate |
+|---|---|---|---|
+| `size_l1` | 0.004 s | 0.0010 ms | 0.02× |
+| `degree_seq_l1` | 0.019 s | 0.0047 ms | 0.08× |
+| `fact_rank` | 0.221 s | 0.0555 ms | 0.95× |
+| `nauty_cert` | 0.234 s | 0.0587 ms | **1.00×** |
+| `nauty_cert_rows` | 0.328 s | 0.0823 ms | 1.40× |
+| **`isal_ow_struct`** | 0.414 s | **0.1039 ms** | **1.77×** |
+| `netlsd` | 10.757 s | 2.6974 ms | 45.9× |
+| **`wstar_orbit`** | 1737.537 s | **435.69 ms** | **7,420×** |
+
+**The concession, stated as L17 requires and now with its number.** Identity and
+deduplication speed are conceded to nauty — and the ordered walk costs **1.77× a
+single certificate call per member**, the same order of magnitude. That is
+coherent with what the walk *is*: it makes a nauty call and adds the walk on top,
+so 1.77× is one call plus 77 %. R6 anticipated exactly this ("no longer conceded
+for the ordered/greedy programs, whose cost is one nauty call"); this is the
+anticipation met.
+
+**And the same table prices the search form.** `wstar_orbit` costs **7,420×** the
+certificate per member — which is the concession in its original, undiminished
+form, and the reason the paper's representation is the ordered walk rather than
+the tie-complete one. The two Isal arms differ by **4,193×** on the same corpus
+and code path.
+
+#### Correction — 7,420× is a **mean**, and the median ratio is 7.5×
+
+`[IsalHG-Fable]` asked whether the table above is means. It is: 435.6914 ms ×
+3,988 = 1,737.537 s, exactly the recorded canon total, so every figure is
+*total / N*. For the arms that do not have a heavy tail that is harmless — but
+`wstar_orbit` has one, and the mean is **622× its own median**.
+
+Measured per member, 200 random `wd50k66` members (**local machine**, so read the
+ratios, not the absolute values — the cluster runs ~3× slower):
+
+| arm | median | mean | p90 | p99 | max |
+|---|---|---|---|---|---|
+| `canonical_ranks` *(the shared nauty call)* | 0.0155 | 0.0209 | 0.0338 | 0.054 | 0.379 |
+| `nauty_cert` | 0.0171 | 0.0210 | 0.0343 | 0.055 | 0.080 |
+| `nauty_cert_rows` | 0.0191 | 0.0233 | 0.0392 | 0.062 | 0.063 |
+| `fact_rank` | 0.0215 | 0.0259 | 0.0418 | 0.067 | 0.068 |
+| **`isal_ow_struct`** | **0.0349** | 0.0447 | 0.0790 | 0.128 | 0.148 |
+| **`wstar_orbit`** | **0.1281** | **79.7200** | 14.5285 | **1413.7** | **6464.7** |
+
+**The two questions need different statistics, so both are reported with labels.**
+
+* **Mean** (= total ÷ N) — what an `N`-member corpus costs to canonicalise. The
+  right number for the matrix and for planning a run. `wstar_orbit`: **7,420×**
+  the certificate.
+* **Median** — what *a member* costs. The right number for the concession's
+  sentence about identity speed. `wstar_orbit`: **7.5×** the certificate
+  (0.1281 / 0.0171).
+
+**Three orders of magnitude between them**, and the earlier entry quoted only the
+mean. The tail is real and is the paper's subject — p99 1.41 s, max 6.46 s, from
+a median of 0.13 ms — but *"the tie-complete form costs 7,420× a certificate call
+per member"* misdescribes the typical member by a factor of a thousand. Note the
+canon loop applies **no per-member budget** (`_matrix_timing` calls
+`fingerprint(H)` directly), so these means are not a function of a cutoff — the
+hard members contribute their true cost.
+
+**The 1.77× is safe, as predicted.** The walk and both certificate arms censor
+nothing and have no tail, so their mean and median agree: 1.77× (cluster mean)
+against 2.04× (local median). Only the search arm needed the correction.
+
+#### The decomposition — what the language itself costs (**cluster**, sd022)
+
+All three of `nauty_cert`, `nauty_cert_rows` and `isal_ow_struct` make the
+**same** canonical-labelling call on the same coloured Levi graph and differ only
+in what they do with the result, so a multiple between them hides a shared term.
+Timing the bare call splits it. Run **on the cluster** (`sd022`, `cpu_partition`,
+`TKDE_THREADS=1`) so these sit beside the campaign's numbers rather than needing
+a machine caveat — `scripts/diagnostics/rq2_identity_decomposition.py`,
+200 `wd50k66` members, seed 70000, **medians**:
+
+| arm | median | mean | p99 | max | on top of the shared call |
+|---|---|---|---|---|---|
+| **`canonical_ranks`** *(the shared call)* | **0.0401 ms** | 0.0815 | 0.141 | 6.566 | — |
+| `nauty_cert` | 0.0450 | 0.0547 | 0.134 | 0.216 | +0.0048 (**1.12×**) |
+| `nauty_cert_rows` | 0.0510 | 0.0613 | 0.160 | 0.168 | +0.0108 (**1.27×**) |
+| `fact_rank` | 0.0559 | 0.0672 | 0.168 | 0.175 | +0.0157 (**1.39×**) |
+| **`isal_ow_struct`** | **0.0982** | 0.1260 | 0.338 | 0.742 | **+0.0580 (2.45×)** |
+| `wstar_orbit` ‡ | 0.3639 | **287.68** | 3975.6 | **24525.0** | *(not applicable — see ‡)* |
+
+**The concession's sentence, as a quantity rather than a multiple:** *the Isal
+ordered walk costs **0.058 ms** on top of a **0.040 ms** canonical-labelling call
+that every arm in the comparison pays anyway* — 2.45× that call, where
+serialising the certificate to bytes costs 1.12× of it and to adjacency rows
+1.27×. That is stronger than "1.77× the certificate" because it no longer assumes
+the certificate's own serialisation is negligible: it measures it, at roughly a
+tenth of the shared call. (Suggested by `[IsalHG-Fable]`.)
+
+**‡ `wstar_orbit` is not in this decomposition, because it does not make the
+shared call.** It is the *oracle-only* cell of the ablation: nauty supplies
+`autgrp` of the prefix-individualised Levi graph at every residual tie and never
+a canonical labelling — the repo says so in as many words
+(`isal_engine.py`: *"nauty is an automorphism oracle only, so the value **is** the
+frozen `w*_c`"*; `orbit_oracle.py`: *"Stabiliser orbits … via `pynauty.autgrp`"*,
+with an `autgrp_calls` counter). That is precisely why D-TA2 can sanction orbit
+pruning as value-preserving while forbidding a rank-refined tie set: **the pruned
+search never consults an order.**
+
+Subtracting `canonical_ranks` from it would subtract a call it never makes, and
+would read as "one canonical labelling plus eight more in own work" when the
+truth is a *different nauty entry point invoked an unbounded number of times*.
+The subtraction yields a number only because both are milliseconds — the failure
+this column exists to prevent. So its cost is quoted **absolutely**: median
+**0.3639 ms**, which is **8.1×** the certificate's 0.0450 ms — an arm-to-arm
+comparison that needs no shared term. (Caught by `[IsalHG-Fable]`.)
+
+**Ratios are portable, absolutes are not.** The same decomposition on a local
+workstation gives the walk at 2.25× the shared call against the cluster's 2.45×,
+and the median walk/certificate ratio 2.04× against 2.18× — while every absolute
+is ~2.3× smaller. So the ratios carry the argument and the milliseconds are
+quoted only with their machine.
+
+**`wstar_orbit`'s tail is worse on the cluster than the earlier local sample
+showed**: mean/median divergence **790.6×** (against 622× locally), p99 3.98 s,
+**max 24.5 s** from a median of 0.36 ms. Its *median* ratio to the certificate is
+**8.1×**; its *mean* ratio, which is what `total / N` reports, is 7,420×.
+
+**`fact_rank` sits at 1.39× the shared call, ahead of both certificate
+serialisations and behind the walk.** It is the retired arm, and this is the
+third axis on which it matches or beats us; rule 7 puts it in the table with the
+rest rather than in a footnote.
+
+**A second basis exists and is not comparable across arms.** The RQ7 *yield* rows
+measure per-member time through the harness path (a forked budget guard per
+member) and give `fact_rank` 0.187 ms, `isal_ow_struct` 0.654 ms,
+`isalhg_levenshtein` 4.235 ms on the same corpus. Those are **3.4×** and **6.3×**
+their canon-loop values respectively — the overhead is *not constant across
+arms*, so it cannot be divided out, and the two bases must not be mixed in one
+comparison. The concession is quoted from the canon-loop table, where every arm
+shares a path; the yield table is quoted only for yield.
+
+**Provenance caveat (inherited).** These are RQ7 numbers, and RQ7's recovery
+array 2271961 was still running when the snapshot was frozen. The rows are
+per-row identical between frozen and live across 70,791 rows, and RQ7's skip
+(`rq7.py:606`) is why; but until 2271961 is terminal this is *"the rows the
+published numbers were computed from"*, not *"the campaign's final state"*. The
+three-way diff is re-run at terminal.
+
+**Scope.** `wd50k66` only — the N-scaling pass runs on that collection alone. The
+per-member yield across all four gated collections (0.600–0.696 ms for the walk,
+0.166–0.199 ms for `fact_rank`) is the harness-path figure and is reported as
+such.
+
+### D-KBf5a's SUPPLEMENT verdict is PROVISIONAL pending the RQ3 re-run
+
+Raised by `[IsalHG-Fable]`, verified here. The gate was applied (§"D-KBf5a
+applied") and returned **SUPPLEMENT** on the `reach′` run. **The tie-break and
+disconnected-candidate corrections landed after that**, and RQ3 re-runs under the
+corrected objective — roughly **180 of 4,457** Corpus A collections change, and
+the ledger already states the published numbers move and the re-run is not
+optional.
+
+**Why this one is not a typical provisional number.**
+
+1. **Its inputs are the most exposed rows in the campaign.** The tie defect can
+   have touched at most **5.3 % of Corpus A** runs but **21.7 % of Corpus B**
+   ones, so the corrected objective can move a materially larger share on exactly
+   the corpus the gate is about. The global 4.0 % figure understates the exposure
+   here by a factor of four.
+2. **The output is not a table cell, it is a structural decision** — whether the
+   paper's only natural real-data corpus appears in the main text or the
+   supplement.
+
+**The obligation, written so it is applied rather than remembered.** When RQ3
+lands, **apply D-KBf5a's pre-registered rule to the new numbers**; do not confirm
+the standing verdict. The distinction matters because the expected outcome is
+that it survives — it is a tie by a wide margin — and *expecting an outcome is the
+register this campaign exists to refuse*. A rule re-applied can return the same
+answer; a rule remembered cannot return a different one.
+
+Until then the ledger's SUPPLEMENT reads as settled and nothing in it says which
+rows produced it. **It is provisional, and its basis is the `reach′` run.**

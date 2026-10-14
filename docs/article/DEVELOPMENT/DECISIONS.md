@@ -288,3 +288,414 @@
   *[Resolved 2026-07-18: PI chose (b) promote, extended to the full
   Kaski–Östergård catalog (orders 3–15); executed same day — see
   `T-M0/CLOSED/T-M0c.md`.]*
+
+- **D-ART4** — **[PI-RULED 2026-09-06; author decisions (1)–(3) recorded the
+  same day, assessed below]** *The paper's representation is the instruction
+  string of the Isal family.* This reverses the encoding half of D-ART3 v7 /
+  `../D_ART3/START_HERE.md` §6.0 (the fact-rank word adopted on 2026-09-04 under
+  a fact-list reading of "F4"). Background and the PI's three questions answered
+  with measurements: `../D_ART3/experiments/PI_QA_2026-09-06_isal_string.md`;
+  the worked example of the three encodings on one record:
+  `../D_ART3/experiments/ENCODINGS_WORKED_EXAMPLE.md`; the campaign audit:
+  `../D_ART3/experiments/RESULTS_AUDIT_2026-09-06.md`.
+
+  **(1) Remove the fact-rank word from the paper** — *author decision, ACCEPTED
+  with one refinement.* The fact-rank word is retired as a representation, and
+  with it the addressing arms (`fact_degree_key`, `fact_local_key`,
+  `fact_local_colour`, `fact_rank_roles`), the addressing-frontier result and
+  Prop 13 (all fact-alphabet results), and the two RQ1 gate amendments (moot).
+  Nothing on disk is deleted (`results/IEEETKDE/` keeps every row as the
+  record); the rows simply do not appear in the article. *Refinement:* the
+  certificate baseline must be kept in **two standard tokenisations** — the
+  raw certificate bytes (`nauty_cert`) and the canonical adjacency rows
+  (`nauty_cert_rows`, already implemented and run in RQ2/5/7) — because the
+  bytes-only comparison is a tokenisation confound (audit §1.2 item 2). A
+  canonical adjacency list under a canonical labelling is nauty's own
+  canonical form written row-wise, i.e. a standard object, not something we
+  made up; it is the honest per-token comparator for locality and cost.
+  *Consequence to own in the prose:* against that comparator the Isal string
+  is less local and slower; the paper's advantages are the language
+  operations (decoded consensus, generation, decodable interiors — RQ3, RQ6)
+  and its own completeness theorem. The paper is written as "a language vs a
+  certificate".
+
+  **(2) Restrictions of the Isal methodology on knowledge bases** — recorded
+  for iteration (numbers in the PI Q&A):
+  - **R1 locality.** `w*_c` = lex-min over walks ⇒ an edit that moves the seed
+    or a tie rewrites the walk: normalised single-edit response 0.49–0.79 vs
+    0.08–0.25 (certificate bytes); within two tokens 0.03–0.86.
+  - **R2 cost on symmetric inputs.** C++ engine, 60 s: censored 5.7 % (WD50K)
+    / 12.3 % (NDC classes); censoring tracks `|Aut(Levi)|` (0.00 at ≤ 10,
+    0.41–0.48 at 10³–10⁶, 1.00 at ≥ 10⁸) more than `m` (at 9–12 facts:
+    symmetric 0.53 vs asymmetric 0.02). Real KBs are symmetric by nature.
+  - **R3 domain.** Connected only; isolated constants not representable
+    (RQ3's deletion variants and RQ6's interiors must respect this).
+  - **R4 roles / argument order** not carried (facts are sets); shared with
+    every set-based encoding; future work.
+  - **R5 alphabet scoping.** One `k` per collection; fingerprint
+    `(seed label, w*_c)` on labelled inputs.
+  - **R6 identity speed** vs canonical-labelling engines: conceded.
+
+  **(2a) "A canonical string over something other than the lex-min over
+  walks"** — *assessed: yes, and it is the lever that addresses R1 and R2
+  together.* Theorem A's proof is parametric in the iso-invariant rule that
+  fixes the string; nothing forces the lex-min over all walks. Options, in
+  order of promise:
+  - *(i) Canonical-order walk.* Obtain an iso-invariant total order of the
+    constants by individualisation–refinement (the canonical-labelling
+    paradigm; Isal-native if implemented, borrowed from nauty otherwise) and
+    emit the program deterministically along it: constants enter through `V`
+    in order, facts in order through `V`/`C`, pointers moved with `P`/`N`.
+    Completeness immediate. Locality = the order's stability under edits,
+    measured for nauty's order at 0.68–0.85 of edits leaving it intact, with
+    a few-token response otherwise. Symmetry handled by the same machinery
+    (orbit pruning is native to individualisation–refinement). **Hypothesis
+    unique to Isal, to be measured:** pointer moves are *relative* addresses,
+    so inserting a constant should cost O(1) tokens where absolute
+    addressing (ranks / adjacency rows) renumbers everything after it — a
+    potential locality advantage over every rank-based serialisation.
+  - *(ii) Lex-min over a restricted walk family* (e.g. a BFS/DFS from the
+    refinement root with children ordered by refinement colour — the gSpan
+    DFS-code family): still a lex-min, but over a tree-shaped family whose
+    minimum moves less under edits.
+  - *(iii) Status quo* (`w*_c`): locality bounded by the avalanche; only
+    typical-case gains from pruning.
+  Theoretical ceiling for all three: every complete invariant is
+  discontinuous near symmetric inputs (the frontier prose survives); the
+  target is typical-case locality.
+
+  **(2b) The sibling engines' pruning** — *checked in the sources; would not
+  help the symmetric tail.* IsalGraph `pruned_canonical_string`
+  (`core/native/src/canonical.cpp`): structural-triplet candidate filter +
+  branch-and-bound on string length. IsalSR (`core/native/src/canonical.cpp`,
+  `wl.cpp`): candidate key `(label, WL hash)`, all tied candidates explored,
+  lex-min. Both are *invariant-based*: they discard candidates an invariant
+  distinguishes and explore every candidate it cannot. Automorphic nodes share
+  every invariant, so on symmetric records the filter is a no-op (the IsalHG
+  `greedy_min_wl_pruned` docstring states the same for vertex-transitive
+  designs), and the IsalHG C++ engine already carries this class (neighbour-
+  degree seed cascade, structural tuples, cost-class enumeration + bound,
+  Rounds 9–11 of `docs/engineering/CPP_OPTIMIZATION_LOG.md`). What R2 needs is
+  **stabiliser-orbit pruning** — one branch per orbit of the automorphism
+  group fixing the placed prefix — which is value-preserving (Prop 6.0 of the
+  completeness proof) and unimplemented in all three engines. Practical route:
+  an automorphism oracle at tie points (`pynauty.autgrp` on the Levi graph
+  with the placed constants individualised), giving bit-identical `w*_c` with
+  polynomial oracle calls in place of exponential branching; nauty then
+  appears as a *pruning subroutine*, not as the canonical form — the PI must
+  accept that, or orbit detection is implemented natively (research). Option
+  (2a)(i) sidesteps R2 entirely.
+
+  **(3) Re-think the RQs** — *assessed: re-aim, do not restart.* The seven
+  questions are about knowledge-base collections and are encoder-agnostic
+  (`DESIGN.md` §0); that is the campaign's asset. Changes:
+  - **RQ0 (new, thesis).** Why a language rather than a certificate: the
+    capability matrix (decode any string, edit, prefix, interior, generate,
+    consensus as a decoded object) filled by theorem or counterexample for
+    every arm. Makes the paper's fight explicit.
+  - **RQ1 → canonical-string design within the Isal language.** Arms:
+    `w*_c` (60 s; 600 s on the censored tail), the canonical-order walk
+    (2a-i) in its Isal-native and borrowed-order forms, `nauty_cert`,
+    `nauty_cert_rows`. Axes: exactness, single-edit response (absolute
+    tokens first), zero-shift fraction, the relative-vs-absolute addressing
+    hypothesis under constant-set changes, cost and censoring by `|Aut|`.
+  - **RQ2** unchanged; the Isal arm brings its own theorem.
+  - **RQ3** unchanged (the consensus is fact-level; candidate key = the Isal
+    string; interiors connected by construction — stronger). The deletion
+    boundary's mechanism must be corrected regardless (audit §3.3). Variant
+    generator: reject stranding deletions (R3).
+  - **RQ4** keep the iso-twin exactness consequence; the standard-corruption
+    AUC is pre-stated as characterisation (the certificate already behaves
+    like every canonical-string metric there: expected negative).
+  - **RQ5** licences (`ν`, hubness) + one exhibit; no task claim (expected
+    negative for every arm).
+  - **RQ6** unchanged and stronger: validity *and connectivity* by
+    construction under `S2H`.
+  - **RQ7** the envelope gains the symmetry axis: cells over
+    `(m, k, |Aut|)`, since `|Aut|` is the measured frontier, not `m`.
+  Corpus policy: connected-only; censored members dropped and reported per
+  bucket, or the source window restricted — decided from the RQ1 table.
+
+  **Also noted.** (a) The retired fact-rank rows remain evidence: the RQ4/RQ5
+  negatives hold for `nauty_cert` too and will hold for any canonical-string
+  metric. (b) Before launching RQ3 under the Isal arm, pilot one NDC cell: the
+  consensus canonicalises hundreds of candidates per collection and NDC
+  sources are symmetric (R2). (c) Documents to reverse: `START_HERE.md`
+  §0/§0.1/§6.0, `prose.md` §2.1–2.3, `DESIGN.md` G1; the `fact_rank` arm stays
+  registered in code as a baseline, not as ours. (d) Order of work: RQ1 first,
+  the primary representation chosen from its table, then the encoder swap
+  for RQ2–RQ7.
+
+  **Addendum 2026-09-06 (author) — nauty inside the Isal methodology is
+  accepted, and framed.** The author's ruling: *"We can integrate nauty inside
+  the Isal methodology without a problem … when comparing to the nauty
+  certificate, we are comparing something like 'nauty+Isal' vs 'nauty', which
+  is really defensible and perfectly scoped, but always under the knowledge
+  databases preface and measuring things that have an impact."* Consequences: (i) the PI's supersession of D-TA2 is required only if
+  the canonical *value* changes (`lem:pruning` of the completeness proof:
+  invariant tie refinement is complete but yields a different string;
+  stabiliser-orbit pruning is value-preserving); (ii) nauty's role must be
+  stated in one sentence in the paper, whichever variant wins. An agent is
+  spawned to design and measure the variants; its binding brief is
+  [`../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md`](../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md)
+  (reading list, fixed facts, theory constraints, the A–D design space with
+  hypotheses, code map, pitfalls, deliverables).
+
+- **D-ART5** — **[RECORDED 2026-09-09 under D-TA2 and D-ART4 — not a new
+  ruling; one item flagged for the author's objection]** The knowledge-base
+  article's canonical program is the family's frozen `w*_c`, **computed by the
+  stabiliser-orbit-pruned C++ engine**. Published budget: **60 s**. The
+  ordered walk `w°` is the order-only cell of the RQ1 ablation and the
+  deterministic cost floor of RQ7; the rank-keyed walk `w*_ρ` is the "both"
+  cell of RQ1 only.
+
+  *Why this is a record and not a decision.* Three questions were put to the
+  author as open. On review of the record all three were already answered, and
+  putting them up as open was an error of the orchestrator's, corrected here.
+
+  1. **The representation is D-TA2 executed as written.** D-TA2 froze the
+     *unpruned* tie-complete lex-min and named exactly one sanctioned
+     optimisation: "the only sanctioned future speedup is **stabiliser-orbit
+     pruning** (value-preserving by Proposition 6.0), never `ρ`-refinement".
+     The D-ART4 addendum (author, 2026-09-06) closes it: "the PI's supersession
+     of D-TA2 is **required only if the canonical *value* changes** …
+     stabiliser-orbit pruning is value-preserving". Design §8(1)/A3 says the
+     same. The value is unchanged, measured rather than assumed: identical
+     words on **7,013/7,013** members, identical single-edit distances on
+     **130,788/130,788** M1 units, identical ladder distances on **5,174/5,174**
+     M2 pairs with ρ equal to four decimals. So §8(1) is **not triggered**;
+     adopting the orbit engine *confirms* D-TA2. What *would* be PI-level is a
+     departure from it — `w*_ρ` is a different canonical value (65 % word
+     agreement) with no theorem in the proof file, and `w°` is a second
+     canonical form; neither is adopted. The pre-registration's naming of `w°`
+     as "the representation candidate" was an orchestrator decision (recorded
+     as such in the wave summary, "Design decisions taken by the orchestrator
+     (not the user)"), so departing from it is a §9 deviation, already
+     recorded, not a supersession.
+  2. **The budget is the pre-registration.** `pointer_budget_s: 60.0` in all
+     three RQ1 configs; design §3 defines `wstar_600` as "the same on the 60 s
+     -censored tail at 600 s" — a re-run *of the censored tail*, i.e.
+     characterisation by definition, never a row. Merging it would choose a
+     budget after seeing the numbers, force M1–M4 to be recomputed for every
+     arm, and make a published row a property of a budget rather than of the
+     representation. Nothing on record points the other way. The 600 s re-run
+     of the 77 orbit-censored members folds into the RQ7 envelope sweep.
+  3. **The fact arms were already conceded, in the main text.** D-ART4 (1)
+     retires the fact word *as a representation* — "the rows simply do not
+     appear in the article" — and in the same breath instructs the prose to own
+     the consequence: "*Consequence to own in the prose:* against that
+     comparator the Isal string is less local and slower." `prose.md` §2.3,
+     written after that ruling, already says "Where the certificate's or the
+     fact list's locality is better, the article does not claim otherwise."
+     The apparent tension between "leaves the paper" and "remains evidence" is
+     only apparent: the word is not ours, its rows are not in our tables, and
+     naming it as the comparator that beats us on two axes is what the author's
+     standing rule requires ("report failures with the same directness as
+     successes"). **The one item for objection:** the sentence now carries
+     numbers — the fact list is within two instructions on 57 % of interior
+     insertions against the Isal word's 8 %, and `fact_local_key` is more
+     monotone on all three series. The author may strike the quantification and
+     keep the qualitative concession.
+
+  *What the pre-registered rule decided.* Applied to the final data, the §3
+  selection rule (which ranges only over the `ow_*` arms) selects
+  `isal_ow_struct` — pooled within-≤2 of 0.0703 [0.0686, 0.0720], median 8,
+  against 0.0700 (median 9) and 0.0694 (median 9); the three are not
+  distinguishable at Holm-corrected 0.05 and the median breaks the tie. **Its
+  escape clause fired**: no `ow_*` arm beats `nauty_cert_rows` (0.1787), so, in
+  the rule's own words, "the paper argues from the language alone (D-ART4 (1)
+  already anticipates it) and the number is printed."
+
+  *The nauty sentence* (design §8(2), addendum (ii) "one sentence whichever
+  variant wins"): under D-ART5 the **oracle** sentence of design §7 is the
+  methods sentence — nauty supplies the automorphism group of the placed
+  prefix, the family's search explores one branch per orbit, and the string
+  returned is the frozen `w*_c`; the value does not depend on nauty, only the
+  time does. The **order** sentence is used once, in the RQ1 ablation.
+
+  *Restrictions after the decision.* R1 regime-specific and per corpus (see
+  T-KBe); R2 **lifted for symmetry** — orbit pruning takes censoring at
+  |Aut| ≥ 10⁷ from 36 to 0 and on WD50K from 237 to 7 — and **not lifted for
+  arity**, the residual 77 being 69 arity-10 members at |Aut| < 10³, which is
+  the RQ7 envelope's `(m, k)` axis; R3 proved (Prop. C.4); R4 filed (T-KBa);
+  R5 kept; R6 conceded for the search, with `w°` the machine's sub-millisecond
+  member.
+
+---
+
+## D-KBg1 (pending) — `supplementary_data.md`: TWO questions, only one of them a judgement call
+
+**Read this split first.** The supplement is wrong in two *independent* ways and
+they have been weighed as one question. Separating them matters because the half
+with no defensible alternative would otherwise be decided by whichever way the
+other goes. (Separation raised by `[IsalHG-Fable]`.)
+
+### D-KBg1**a** — the counts. *A genuine choice.*
+
+Correct them to the built corpora, **or** keep the document as a deliberate
+pre-freeze record and label it. **The pre-freeze-record argument has real
+force**: a supplement describing what was *planned* is a coherent artefact even
+after the plan moved, and the reconciliation is preserved regardless in
+`census.json`'s `audit.rows` and `freeze_corpora.py`'s `EXPECTED`.
+
+Weighing against it: `prose.md` §7 **cites this document** as the full account
+of the corpora, in a sentence now carrying the corrected 3,162 / 1,381 / 22.2 %
+against the supplement's 3,167 / 1,432 / 21.6 %. A label does not reach a reader
+who follows a citation — they arrive at the content first.
+
+### D-KBg1**b** — the representation framing. *Recommended: correct, either way.*
+
+Line 190 calls the retired fact-addressed word **"the adopted encoding"**; the
+file mentions D-ART4 **zero** times.
+
+**This half does not turn on the answer to (a).** A data supplement preserved as
+a pre-freeze record is a record *of corpora* — asserting which representation the
+article adopts was never its role, and D-ART4 settled that question two days
+after this file was written. **There is no version of "keep it as a pre-freeze
+record" in which that clause is worth preserving**, because the clause is not a
+record of a corpus decision at all. It is also the half that creates the direct
+contradiction with §2.3.
+
+*Recommendation: correct (b) regardless of how (a) is ruled.* Stated as a
+recommendation and not an action — it is the author's, it changes a published
+artefact, and rule 10 found no prior ruling.
+
+---
+
+### The original framing, kept for the record
+
+## D-KBg1 (pending) — does `supplementary_data.md` get corrected to the built corpora?
+
+**Raised:** 2026-09-11 04:43 CEST, by `[IsalHG-Fable]` via the corpus figure screen.
+**Rule 10 check:** grepped `DECISIONS.md` for `supplement` — **no existing
+ruling**, so it survives and is put to the author rather than settled in the
+ledger.
+
+**The situation.** `supplementary_data.md` §S1–S4 publishes the corpus census
+as it stood **before** the freeze. The built corpora differ on 16 audited
+quantities, the largest being `ndc_substances` **2,222 → 1,745** and
+`ndc_classes` **1,432 → 1,381**. `prose.md` §7 references the supplement as
+documenting the corpora in full, and now says 1,381 and 3,162 itself — so as
+things stand **the paper would ship a supplement contradicting its own data
+section**.
+
+**One premise, checked and false.** The concern was raised that correcting the
+supplement would make the freeze audit vacuous — `expected` becoming
+`obtained`, every row matching, the record of what changed lost.
+**It would not.** `scripts/tkde/freeze_corpora.py` holds `EXPECTED` as a
+**hardcoded literal dict** ("the census of supplementary_data.md S1–S4, as
+published"); it does not read the document at runtime. The reconciliation is
+also pinned in every `census.json`'s `audit.rows`. So the audit record survives
+correction in **two** independent places, and there is no trade-off between
+fixing the supplement and keeping the history.
+
+**What is actually being decided**, therefore, is narrower and is editorial:
+
+1. **Correct the supplement** to the built corpora, keeping the reconciliation
+   in `freeze_corpora.py` + `census.json` (and optionally a short "what changed
+   at freeze" note in the supplement itself). The paper then describes what was
+   run, everywhere.
+2. **Leave it**, and add a sentence to the supplement and to `prose.md` §7
+   saying it documents the *pre-freeze* corpora and naming where the built
+   census lives.
+
+**Recommendation: (1).** The supplement's job is to document the corpora the
+experiments ran on; it currently documents corpora nothing ran on. Option 2
+preserves an inconsistency the reader has to be warned about, in the document
+whose purpose is to remove the need for warnings.
+
+**Why it needs the author rather than the ledger:** it changes a published
+artefact of the paper, and option 2 changes what `prose.md` §7 claims about it.
+
+**Second finding, 2026-09-11 — it is not only the numbers, it is the framing.**
+`supplementary_data.md` line 190 calls the fact-addressed word **"the adopted
+encoding"**. That is pre-**D-ART4** language: the fact word left the article with
+that ruling, and the paper's representation is the Isal instruction string. The
+file mentions **D-ART4 zero times**.
+
+So the decision is slightly larger than "correct the census or label it": under
+option 1 the framing is corrected with the counts; under option 2 the label has
+to cover **both** — that the supplement describes the pre-freeze corpora *and*
+names a representation the article no longer adopts. A reader who takes
+"the adopted encoding" at face value from a published supplement reaches the
+opposite conclusion from §2.3.
+
+**Third finding — the paper CITES it, which is what decides between the two
+options.** `prose.md` §7 opens: *"Unchanged from the ratified plan and
+**documented in full in `supplementary_data.md`**"* — and then states **3,162**
+n-ary members, **1,381** NDC-classes members, **22.2 %** one-edit variants, all
+corrected tonight. **The supplement it cites in that sentence still carries
+3,167 / 1,432 / 21.6 %.**
+
+So this is not a stale document sitting beside the paper. It is the account the
+paper **sends the reader to**, and the sentence doing the sending now contradicts
+it on three figures and on the representation.
+
+That is asymmetric between the options, and it is the asymmetry the author needs:
+
+- **Option 1 (correct it)** costs nothing that has not been checked: the
+  reconciliation survives in `census.json`'s `audit.rows` and in
+  `freeze_corpora.py`'s hardcoded `EXPECTED`, both verified to be independent of
+  the document.
+- **Option 2 (label it)** means publishing, under the paper's own citation, a
+  document whose counts and whose framing contradict the citing section — with a
+  note explaining that what the paper directs you to is wrong in two ways. **A
+  label does not reach a reader who follows a citation**, because they arrive at
+  the content first. (Raised by `[IsalHG-Fable]`.)
+
+**One claim in §7 checked and NOT a defect.** "Unchanged from the ratified plan"
+was flagged as pre-ruling framing on the grounds that D-ART4 amended the plan.
+D-ART4 changed the **representation**, not the corpus selection, and that clause
+is about which collections are used — which is unchanged. The figures in the
+sentence moved at the **freeze**, not at the ruling, and they are corrected. The
+clause stands.
+
+*Not edited here, deliberately: this file's disposition is the decision, so
+changing it would pre-empt the ruling. Recorded instead.* (The sweep that found
+it was proposed by `[IsalHG-Fable]` on the basis that the test is not whether a
+number is stale but whether the sentence assumes the fact word is the paper's
+answer — the same sweep found `START_HERE.md`'s §0 and cleared `DESIGN.md` L47,
+which correctly *defines* the `fact_rank` arm rather than adopting it.)
+
+**Until it is ruled**, the screen excludes `supplementary_data.md` by default
+(`--exclude`), so the gate is not held by a file whose staleness may be
+deliberate — and that exclusion is **named in the output on every run** rather
+than silent, so it cannot outlive the decision unnoticed.
+
+## D-ART6 (author-directed 2026-09-13; PI ratification pending) — the ordered walk `w°` is the paper's headline program
+
+**Raised:** 2026-09-13 by `[IsalHG-Fable-Review]`, on the first author's
+instruction after the readiness assessment (`../D_ART3/SESSION_LOG.md` §6.5).
+**Supersedes** D-ART5's choice of the orbit-pruned `w*_c` as the program that
+carries §§3–7; **does not supersede** D-TA2 (`w*_c` stays the family's frozen
+search form) or Theorem A (the family's foundation).
+
+**Ruling.** Every main-text table runs on `w°` (`isal_ow_struct`, Theorem C).
+`w*_c` appears in RQ1's four-cell nauty ablation (the no-search and oracle
+cells) and nowhere else in the main text. The comparison the paper makes is
+"nauty inside an Isal encoder" (a language) against "nauty's canonical form
+written out" (a certificate), on every table.
+
+**Why.** The paper's third prerequisite — polynomial per-pair cost *after one
+canonicalisation* — is void for the 77 real members `w*_c` never canonicalises
+at 60 s, and the tail-600 study showed that tail is the search itself (rank
+walk 50.9 % vs orbit 24.7 %, Fisher p = 0.0028). `w°` censors 0 of 7,776 sweep
+instances and 0 of 8,951 real members, and builds the 3,988 × 3,988 matrix in
+1.39 s against 28.9 min. `w*_c` is more local on every RQ1 cell (e.g. 0.223 vs
+0.096 within two on insert-with-new-constant), but both programs beat the
+certificate on every pendant cell, so the locality argument survives the
+switch. RQ6 already ran on `w°`; RQ7 already headlines it.
+
+**Consequences.** (1) RQ2 census and RQ5 re-run on `w°` (T-KBab). (2) RQ3 is
+redesigned as RQ3 v2 on `w°` (T-KBz) and RQ8 (valid completion) is added
+(T-KBaa); the pre-registered design is
+`../D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md`. (3) The headline
+exhibits are RQ6, RQ3 v2, RQ8 and the measured capability table
+(`../D_ART3/tables/tab_kb_representation_properties.tex`); RQ1 is supporting
+(the ablation + the two locality columns); RQ4 and RQ5 go to the supplement.
+(4) `prose.md` §2.2–§2.3, §3 and §4 are re-folded under T-KBg once the runs
+land. (5) The natural NDC series stays a supplement exhibit as measured.
+
+**Put to the PI.** The switch changes which canonical form the paper names as
+its own; the author directed it and the PI's word is requested with the
+arm-against-arm table of `SESSION_LOG.md` §6.5.

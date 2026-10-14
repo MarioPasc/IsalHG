@@ -1,0 +1,97 @@
+# RQ8 --- valid completion of a record.
+#
+# Pre-registered in docs/article/D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md
+# sections 0, 2 and 4. Nothing here may be tuned on evaluation units; the local
+# gate G8.1 runs on pilot seeds that are NOT in this schedule (see rq8_pilot.yaml).
+#
+# Ours is `ow_ngram`: the RQ6 n-gram (order 3, interpolated Kneser-Ney) over the
+# ordered-walk words of the TRAINING split only. `fact_ngram` is the retired
+# fact-rank word of D-ART4 (1), scored here as the generative comparator it was
+# in RQ6 and never as "ours".
+#
+# Strata come from gate G0 (measured 2026-09-13, local, both corpora):
+#   ndc_classes  1,381 members,    42 stars (3.04 %) -- at m >= 4: 521 non-star, 1 star
+#   wd50k66      3,988 members, 2,128 stars (53.36 %) -- at m >= 4: 1,641 non-star,
+#                                                        1,134 star
+# NDC's star stratum is a single member, so it is not a reportable stratum and is
+# not enumerated; `min_pool` refuses it defensively if it ever is.
+
+rq: RQ8
+experiment: completion
+seed_count: 27
+
+collections: [ndc_classes, wd50k66]
+
+# WD50K supplies both strata; its star stratum is the printed control (H8.2).
+strata:
+  ndc_classes: [non_star]
+  wd50k66: [non_star, star]
+
+# Substrate: members with at least this many facts, so K- still carries >= 3.
+m_min: 4
+# A stratum smaller than this is not reportable and its unit is skipped.
+min_pool: 20
+
+# 80/20 by member, stratified by class label, re-drawn per seed. Models are
+# fitted on the training split only -- never on a member any evaluation unit is
+# drawn from.
+train_frac: 0.8
+units_per_member: 2
+max_eval_units: 200
+
+# k = 10 distinct completions per unit, deduplicated by the Theorem C
+# certificate; R = 20 resamples per slot; a proposal must add at least one fact.
+k_proposals: 10
+resamples: 20
+
+# The n-gram. `ngram_order` is RQ6's order 3; `ngram_order_ho` belongs to the
+# secondary arm `ow_ngram_ho`, which is enabled ONLY under the spec's rule
+# (G8.1 shows `ow_ngram` interior hit@10 below 0.5 x `pattern_cooc`). It
+# replaces the design's `ow_gru`: torch is absent from the campaign environment
+# and adding a dependency is out of scope, so the orchestrator substituted a
+# higher-order n-gram of the same model class and smoothing (2026-09-13, wave
+# 2026-09-13-headline-w0). Declared here so it is never read as post hoc.
+ngram_order: 3
+ngram_order_ho: 6
+
+# `max_len` caps a whole word; a record whose word is already longer would
+# otherwise yield no completion at all, so the runner always allows
+# `max_new_tokens` beyond the prefix.
+max_len: 200
+max_new_tokens: 60
+
+# `ow_ngram_1f` / `ow_ngram_ho_1f` are the fact-count-matched twins of
+# Amendment A1 (pre-registered 2026-09-13, RQ8_PILOT.md §3b). Same model, same
+# seed, same draws, same R = 20 per slot; acceptance restricted to proposals
+# adding EXACTLY one fact, which is what a counting arm adds by construction.
+# Without them, ten slots of a generative arm are compared against ten of which
+# only ~32 % can be a hit, and an extra-fact miss is scored as an attachment
+# miss. The free-running arms stay: "what the model writes" and "what it writes
+# when asked for one fact" are different questions and both are reported.
+#
+# `ow_ngram_ho` and its twin are present because the pre-registered secondary
+# rule fired at G8.1 (interior hit@10 below 0.5 x pattern_cooc on ndc_classes).
+arms:
+  - ow_ngram
+  - ow_ngram_1f
+  - ow_ngram_ho
+  - ow_ngram_ho_1f
+  - fact_ngram
+  - incidence_ngram
+  - pattern_freq
+  - pattern_cooc
+  - random_pattern
+
+# 27 seeds x (1 ndc stratum + 2 wd50k strata) = 81 units, one shard each.
+n_shards: 81
+
+smoke:
+  seed_count: 2
+  collections: [ndc_classes]
+  strata:
+    ndc_classes: [non_star]
+  max_eval_units: 4
+  units_per_member: 1
+  k_proposals: 3
+  resamples: 4
+  n_shards: 1

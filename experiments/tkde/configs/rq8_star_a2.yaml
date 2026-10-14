@@ -1,0 +1,74 @@
+# RQ8, Amendment A2 — the star stratum only, with the baseline repaired.
+#
+# Pre-registered in docs/article/D_ART3/experiments/RQ8_PILOT.md §3a-bis and
+# T-KBaa (D-KBaa8), BEFORE this run. Identical to rq8.yaml in every parameter
+# except two: only `wd50k66/star` is enumerated, and `attach_fresh_fallback` is
+# on.
+#
+# Why the baseline needed repairing. At 27 seeds `pattern_cooc` scored EXACTLY
+# 0.0000 on the star stratum. A star's facts frequently share a pattern; the
+# deterministic attachment resolves that pattern to the hub plus the
+# highest-degree matching constant, which is a fact the record already carries,
+# so it is refused, and the three-deep rank retry cannot rescue it because a
+# star has few distinct constants of the required type. The baseline could not
+# express "another instance of a repeated pattern" — precisely what a star
+# completion is. With `attach_fresh_fallback`, a pattern whose every ranked
+# attachment duplicates is instead instantiated over fresh constants, pendant to
+# the hub. Strictly in the baseline's favour; nothing is taken from ours.
+#
+# Why only the star units. The fallback fires only where the old path emitted
+# nothing, and on the non-star stratum that is nearly never: at 27 seeds the
+# counting arms already filled 9.9–10.0 of 10 slots there. A2 can therefore move
+# the non-star numbers by ≈1 % at most, and they stand as measured under tag
+# c5380cde. Adding `attach_fresh_fallback` changes the run tag, so these star
+# rows land beside the campaign's rather than over them, and the analyzer merges
+# the two by stratum under a duplicate-key guard.
+#
+# NDC is absent: its star stratum is a single member at m >= 4 and was never
+# reportable (gate G0).
+
+rq: RQ8
+experiment: completion
+seed_count: 27
+seed_offset: 0
+
+collections: [wd50k66]
+strata:
+  wd50k66: [star]
+
+attach_fresh_fallback: true
+
+m_min: 4
+min_pool: 20
+train_frac: 0.8
+units_per_member: 2
+max_eval_units: 200
+
+k_proposals: 10
+resamples: 20
+ngram_order: 3
+ngram_order_ho: 6
+max_len: 200
+max_new_tokens: 60
+
+arms:
+  - ow_ngram
+  - ow_ngram_1f
+  - ow_ngram_ho
+  - ow_ngram_ho_1f
+  - fact_ngram
+  - incidence_ngram
+  - pattern_freq
+  - pattern_cooc
+  - random_pattern
+
+# 27 seeds x 1 stratum = 27 units.
+n_shards: 27
+
+smoke:
+  seed_count: 2
+  max_eval_units: 4
+  units_per_member: 1
+  k_proposals: 3
+  resamples: 4
+  n_shards: 1

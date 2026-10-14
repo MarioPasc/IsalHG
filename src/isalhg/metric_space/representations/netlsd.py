@@ -111,6 +111,14 @@ class NetLSDDistance(HypergraphDistance):
         When ``netlsd`` or ``numpy``/``scipy`` is not installed.
     """
 
+    # Label-blind, and not fixably so: the heat trace is a function of the
+    # Laplacian spectrum of the *uncoloured* Levi graph, and NetLSD defines no
+    # coloured variant. ``_levi_to_scipy_adj`` therefore keeps ``levi.edges``
+    # and drops ``levi.colors``. Two knowledge bases differing only in their
+    # types or predicates receive distance 0 here; the competitor tables state
+    # this rather than simulating a label term the method does not have.
+    labels_used = frozenset()
+
     def __init__(self, *, timescales: Any | None = None) -> None:
         self._timescales = timescales
 
@@ -225,3 +233,4 @@ class NetLSDDistance(HypergraphDistance):
 
 
 register_distance("netlsd_l2", NetLSDDistance)
+register_distance("netlsd", NetLSDDistance)

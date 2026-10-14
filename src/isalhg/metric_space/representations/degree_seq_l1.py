@@ -105,6 +105,12 @@ class DegreeSequenceL1Distance(HypergraphDistance):
     contract in ``docs/article/COMPETITORS.md`` §4.
     """
 
+    # Label-blind by definition: the fingerprint is a multiset of integers read
+    # off the incidence structure. There is no place in a degree sequence to
+    # put a type or a predicate, which is the point -- this row is the floor
+    # every labelled representation must clear.
+    labels_used = frozenset()
+
     @property
     def name(self) -> DistanceName:
         return "degree_seq_l1"

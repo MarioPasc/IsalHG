@@ -66,6 +66,7 @@ the transition visible in history. Ids containing `'` are filed with `prime`
 | [`T-TB`](T-TB/) | Theorem B — the HGED-relation record | 1 (+1 blocked) | 6 |
 | [`T-DQ`](T-DQ/) | Data questions gating corpus scale | 0 | 1 |
 | [`T-OPT`](T-OPT/) | C++ engine revision for the metric-space workload | 1 | 2 |
+| [`T-KB`](T-KB/) | The Isal instruction word for knowledge bases (D-ART4): ordered walk, orbit-pruned `w*_c`, rank-keyed walk, C++ ports, harness arms, RQ re-runs — handoff `../D_ART3/experiments/HANDOFF_2026-09-07_isal.md` | 22 (+7 in progress) | 2 |
 
 ## Where HGED is (and is not) needed — the v3 scope decision (D-ART2, 2026-07-18)
 
@@ -239,6 +240,35 @@ on 320/320 (pooled median 1.441, p = 1.6e-54); E1' ρ = 0.622. **T-M8f
 
 **Runnable now:** S7 (article-gating). S6 remains optional stretch (T-M4a ∥
 T-TBe, then T-M6; explicit human opt-in; after S7 if both are wanted).
+
+**D-ART4 (2026-09-06, PI-ruled).** The paper's representation is the **Isal
+instruction string**; the fact-rank word of the TKDE campaign leaves the paper
+(rows kept as the record). nauty may be used *inside* the Isal canonical form;
+the comparison is "nauty+Isal" (a language) vs "nauty" (a certificate) on
+knowledge-base tasks. Restrictions R1–R6, the design space, and the re-aimed
+RQs are in `DECISIONS.md` D-ART4; the refinement agent's brief is
+`../D_ART3/experiments/ISAL_REFINEMENT_BRIEF.md`; the campaign audit is
+`../D_ART3/experiments/RESULTS_AUDIT_2026-09-06.md`.
+
+**NEWPOS (2026-10-13) — new comparative experiment for the TKDE draft: C8,
+near-neighbour retrieval of structural near-duplicates.** This answers the PI's
+request for comparative experiments that favour the method.
+- **Task.** Under each representation's distance, is a record's nearest
+  neighbour truly one (or two) single-fact edits away?
+- **Ground truth.** Exact: enumerated down-edits keyed by the nauty certificate.
+- **Result.** When the edit is pendant (56–90 % of the one-edit pairs), `w°`
+  leads all ten competitors on all four collections, at radius 1 and radius 2:
+  MRR 0.45–0.78 vs at most 0.53, Holm p < 1e-32.
+- **Scope.** `w°` loses the interior stratum to 4–8 of the 10 competitors. The
+  pre-registered pooled criterion failed on NDC-substances AP.
+- **Where to read.**
+  - The result: `../D_ART3/experiments/NEWPOS_2026-10-13/C8_NEAR_DUPLICATE_RETRIEVAL.md`.
+  - Every experiment of the session, negatives included: `…/HANDOFF_2026-10-13.md`.
+  - The append-only record: `…/LOG.md`.
+- **Draft.** Integrated as Option B on the unpushed Overleaf branch `newpos-c8`
+  (`e9feddb`).
+- **Code branch.** `integration/2026-10-13-newpos-w1`, not merged.
+- **Remaining work.** [`T-KBae`](T-KB/IN-PROGRESS/T-KBae.md).
 
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"

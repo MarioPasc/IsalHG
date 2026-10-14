@@ -1,0 +1,98 @@
+# RQ3 --- the representative record (DESIGN.md section 4).
+#
+# Corpus A: constant-preserving variant collections over real members.
+#   24 cells = 2 collections x N in {5, 9} x t in {1, 2} x kind in {ins, del, mix};
+#   27 seeds per cell x 8 sources = 216 collections per cell, 5,184 in total.
+# Corpus B: the natural NDC series; one unit per maximal run of >= 4 consecutive
+#   encodable quarters (collection = quarters 1..T-1, truth = quarter T).
+#
+# The RQ2 certificate-validity rows (DESIGN.md section 3, procedure step 4) are
+# produced from Corpus A's matrices and written to
+# RQ2_wellposedness/certificate_validity/.
+
+rq: RQ3
+seed_count: 27
+
+# The medoid screen (D-KBf1). The same 60 s per member as RQ1 and as
+# matrices.yaml: a different value would make this census incomparable with
+# the one the reader met in RQ1. An arm that misses any member of a
+# collection reports no medoid for it.
+fingerprint_budget_s: 60.0
+
+medoid_arms:
+  - fact_rank
+  - wstar_orbit
+  - nauty_cert
+  - nauty_cert_rows
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_path
+  - bipartite_ged_assign
+  - size_l1
+  - degree_seq_l1
+
+corpus_a:
+  collections: [ndc_classes, wd50k66]
+  n_values: [5, 9]
+  t_values: [1, 2]
+  kinds: [ins, del, mix]
+  sources_per_cell: 8
+  # DESIGN.md section 4, Corpus A: real members with 4 <= n <= 12, 4 <= m <= 12,
+  # max arity <= 6.
+  #
+  # Deletion-only cells tighten this to m >= N + 1 (orchestrator amendment,
+  # 2026-09-05). A source with m facts has exactly m single-fact deletions and
+  # fewer up to isomorphism, so a del cell asking for N pairwise non-isomorphic
+  # members is structurally impossible below m = N; the measured consequence of
+  # the untightened window was that ndc_classes and wd50k66 N9_t1_del dropped
+  # 8 of 8 collections per seed. The per-cell pool size and its status
+  # (ok / pool_limited / infeasible) are recorded in config.json and
+  # summary.json. Insertion and mixed cells keep the frozen window.
+  source_window:
+    n_min: 4
+    n_max: 12
+    m_min: 4
+    m_max: 12
+    max_arity: 6
+  # Radius unknown to the method; r = t is the known-budget variant.
+  radius_default: 2
+  # Frozen candidate family (the language layer's ruling, 2026-09-05): a
+  # candidate within r of two members forces those members within 2r, so the
+  # triangle family is complete for the objective. "per_side" and "sum" are
+  # recorded variants only and are never run here.
+  alignment_budget: triangle
+  # Corpus A collections are N <= 9 over m <= 12 and the consensus was measured
+  # at ~1.6 s, which is why this ran unguarded: `secs` was then the method's own
+  # time. It cannot stay unguarded. The objective's tie break is now the Isal
+  # fingerprint, so the consensus reaches the C++ canonicalizer, and an in-parent
+  # canonicalization leaves every later forked child deadlocking on it --
+  # including the guarded `wstar_orbit` medoid builds, which would be recorded
+  # censored without having run (measured 2026-09-10). The consensus therefore
+  # runs in a child, at Corpus B's budget; the fork costs milliseconds against a
+  # ~1.6 s method.
+  consensus_budget_s: 1800
+
+corpus_b:
+  collection: ndc_classes
+  min_run_length: 4
+  radius: 2
+  alignment_budget: triangle
+  # Natural runs reach T - 1 = 40 members over m <= 110, far outside the regime
+  # in which the consensus was timed. The call is guarded at the process level
+  # and a blown budget is recorded as censored, never as a missing row.
+  consensus_budget_s: 1800
+
+smoke:
+  seed_count: 1
+  fingerprint_budget_s: 5.0
+  corpus_a:
+    collections: [ndc_classes]
+    n_values: [5]
+    t_values: [1]
+    # Both kinds, so the smoke exercises the tightened deletion pool as well as
+    # the untouched insertion window.
+    kinds: [ins, del]
+    sources_per_cell: 2
+  corpus_b:
+    min_run_length: 12

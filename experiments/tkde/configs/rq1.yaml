@@ -1,0 +1,111 @@
+# RQ1 -- representation design (addressing). DESIGN.md section 2.
+#
+# Block counts are sized from a measured pointer-arm profile (40 random members
+# per collection, 60 s budget, this repository, 2026-09-05):
+#
+#   collection      median   p90     mean    censored
+#   synthetic_rq1   0.002 s  0.004 s 0.003 s 0/40
+#   ndc_classes     0.001 s  1.13 s  5.99 s  3/33
+#   wd50k66         0.001 s  0.349 s 2.34 s  1/40
+#
+# The median is milliseconds; the *mean* is set by a censored tail of about 7 %
+# of members that exhaust the whole 60 s budget, and it is the mean that sizes a
+# unit. One unit is about one core-hour and one shard (two units) clears SCBI's
+# two-hour floor. Total pointer cost ~140 core-hours, in line with the design's
+# 125-core-hour estimate. Every other arm is microseconds and rides along.
+
+rq: 1
+rq_folder: RQ1_addressing
+experiment: addressing
+
+collections:
+  - synthetic_rq1
+  - ndc_classes
+  - wd50k66
+
+# The four-cell nauty ablation of the Isal word (D-ART4), plus the fact arms
+# kept on the table as the record, plus the two certificate tokenizations:
+#   no nauty     isalhg_levenshtein  w*_c, C++ engine        (budgeted)
+#   oracle only  wstar_orbit         w*_c, orbit-pruned      (budgeted)
+#   order only   isal_ow_*           the ordered walk        (unbudgeted)
+#   both         wstar_rank          rank as the tie key     (unbudgeted)
+arms:
+  - isalhg_levenshtein     # arm A, pointer w*_c; budgeted
+  - wstar_orbit            # w*_c via the automorphism oracle; budgeted
+  # - wstar_rank           # defective engine; re-run after the C++ port
+  - isal_ow_struct         # the ordered walk, default policy
+  - isal_ow_rank           # the ordered walk, rank before predicate
+  - isal_ow_rank0          # the ordered walk, rank-0 root
+  - fact_rank              # arm B, the record (D-ART4 (1))
+  - fact_local_colour      # arm C
+  - fact_local_key         # arm D
+  - fact_degree_key        # arm D1
+  - nauty_cert             # the certificate member, for M4's rho
+  - nauty_cert_rows        # the certificate at instruction granularity
+
+pointer_budget_s: 60.0
+
+# M3 (+ the M0 per-member ingredients): two budgeted canonicalizations per
+# member and arm (the member and a random relabelling of it).
+m3_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 5
+  wd50k66: 6
+
+# M1: 5 edit kinds x 4 edits per base member, identical instances for all arms.
+m1_edits_per_kind: 4
+m1_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 55
+  wd50k66: 62
+
+# M2: (a) the natural NDC consecutive pairs, (b) constant-preserving ladders.
+m2_natural: [ndc_classes]
+m2_ladders: [wd50k66]
+m2_ladders_count: 1000
+m2_ladder_t_max: 5
+m2_blocks:
+  ndc_classes: 2
+  wd50k66: 4
+
+# M4: the random-pair half; the M1 half is read off rows_m1, which already
+# carries nauty_cert on exactly those pairs.
+m4_random_pairs: 1000
+m4_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 4
+  wd50k66: 2
+
+# One shard per unit (143 of them); the launcher bundles three shards into one
+# array task, which is what clears the two-hour floor.
+n_shards: 143
+
+smoke:
+  collections: [synthetic_rq1, ndc_classes]
+  member_limit: 5
+  pointer_budget_s: 5.0
+  arms:
+    [
+      isalhg_levenshtein,
+      wstar_orbit,
+      # wstar_rank,         # defective engine; re-run after the C++ port
+      isal_ow_struct,
+      isal_ow_rank,
+      isal_ow_rank0,
+      fact_rank,
+      fact_local_key,
+      fact_degree_key,
+      nauty_cert,
+      nauty_cert_rows,
+    ]
+  m3_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_edits_per_kind: 2
+  m2_natural: [ndc_classes]
+  m2_ladders: [synthetic_rq1]
+  m2_ladders_count: 3
+  m2_natural_limit: 4
+  m2_blocks: {ndc_classes: 1, synthetic_rq1: 1}
+  m4_random_pairs: 5
+  m4_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  n_shards: 1

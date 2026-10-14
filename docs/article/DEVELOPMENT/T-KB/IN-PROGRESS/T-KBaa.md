@@ -1,0 +1,293 @@
+# T-KBaa — RQ8: valid completion of a record
+
+**Status:** IN-PROGRESS (2026-09-13 13:23 CEST) · declared 2026-09-13 by D-ART6,
+wave `2026-09-13-headline-w0`, agent `rq8`. Pre-registration:
+`../../../D_ART3/experiments/HEADLINE_DESIGN_2026-09-13.md` §0, §2, §4.
+Sibling: T-KBz (RQ3 v2). Companion: T-KBab (the `w°` swap).
+
+## What
+
+A record is probably missing a fact. Propose completions guaranteed to be
+records, and score whether the true completion is among them.
+
+The property used is the **prefix property** of the ordered walk: `w°(K⁻)` is a
+program of the machine, so any continuation decodes to a connected knowledge
+base containing `K⁻` (Proposition C.8, stated and proved in
+`../../../D_ART3/experiments/RQ8_PILOT.md` §1). A sequence model over `w°` words
+conditioned on that prefix therefore proposes only valid, connected extensions.
+No certificate and no vector fingerprint admits a completion operation, so the
+non-generative rows carry "no completion definable".
+
+Ours is **`ow_ngram`** — the RQ6 order-3 Kneser–Ney n-gram over the `w°` words of
+the training split. It is **not** `fact_ngram`: that is the retired fact-rank
+word of D-ART4 (1), scored here as the generative comparator it was in RQ6. The
+RQ6 analyzer's `MODEL_OURS = "fact_ngram"` mislabel (tracked in T-KBf) is not
+inherited; `rq8.ARM_OURS` is `"ow_ngram"` and a smoke test asserts it.
+
+## Decisions taken in this task
+
+- **D-KBaa1 — the secondary arm is `ow_ngram_ho`, not `ow_gru`.** The design's
+  rule ("enable the secondary arm only if G8.1 shows the n-gram's interior
+  hit@10 below 0.5 × `pattern_cooc`") FIRED: 0.1067 < 0.5 × 0.3033 on
+  `ndc_classes`. torch is not installed in the campaign environment and adding a
+  dependency was out of scope, so the orchestrator replaced the one-layer GRU
+  with a higher-order n-gram — order 6, same interpolated Kneser–Ney smoothing,
+  same training words. Declared in `configs/rq8.yaml` and in the pilot doc
+  *before* the second pilot pass, so it is not post hoc.
+- **D-KBaa2 — H8.1 fails; the pre-registered fallback applies.** `pattern_cooc`
+  beats `ow_ngram` 0.3033 to 0.1067 on `ndc_classes` interior units; on
+  `wd50k66` ours leads 0.0150 to 0.0133, which is noise. **RQ8 is a supporting
+  exhibit, not a headline.** Orchestrator ruling, 2026-09-13, before submission.
+  The full 27-seed run exists to put CIs on H8.3 and on the measured gap, not to
+  reverse the pilot.
+- **D-KBaa3 — the §0 attachment mechanism is CONTRADICTED by measurement.**
+  §0 states that on non-stars the completion must choose attachments, "which the
+  generator learns and counting cannot". Measured directly: among units where
+  the pattern was right, the fraction where the attachment was still wrong is
+  **0.716 for `ow_ngram` against 0.660 for `pattern_cooc`** on `ndc_classes` —
+  the recommender attaches *better*. The NDC gap is a pattern-prediction gap
+  (pattern@10 0.375 vs 0.892), not an attachment gap. One qualification:
+  `ow_ngram_ho` reaches 0.632, below `pattern_cooc`, so the mechanism is right
+  about direction and wrong about magnitude and about which arm wins.
+  **The orchestrator folds this correction into the design doc at merge.**
+- **D-KBaa4 — H8.3's third clause is inapplicable, and the number was NOT
+  moved.** `incidence_ngram` validity is 0.1695 / 0.1427 against a
+  pre-registered ceiling of 0.05. The ceiling was ported from RQ6, where
+  sampling is *unconditional*; under conditional completion the prefix is a
+  well-formed serialization and a truncated continuation decodes far more often.
+  The clause is reported **failed with that reason** (L12), and the paper's
+  sentence is the measured 0.17 / 0.14 against 1.000 by theorem.
+- **D-KBaa5 — the pilot runs off-schedule seeds.** `seed_offset: 900` puts G8.1
+  on seeds 80900–80902, outside the campaign's `seeds(8, 27) = 80000…80026`, so
+  no unit the 27-seed run scores was ever seen by the gate. The offset enters
+  the run tag, so a pilot row can never be served to the campaign.
+- **D-KBaa7 — Amendment A1: the fact-count-matched arms (pre-registered
+  2026-09-13, orchestrator-directed, written here before re-measurement).** An
+  independent read-only review of `rq8.attach` found no leakage and no spec
+  violation, but one real asymmetry: a counting arm adds exactly one fact by
+  construction, while only **607 of 1,923 (31.6 %)** accepted `ow_ngram`
+  proposals do (median 2, max 35; 40 `ndc_classes` non-star units, seed 80900).
+  Ours therefore spends most of its ten slots on proposals that cannot be a hit,
+  and the attach-miss statistic counts extra-fact misses as attachment misses.
+  On the review's matched counterfactual `hit@10` moves 0.075 → 0.100 and
+  attach-miss 0.750 → 0.556, **below `pattern_cooc`'s 0.660 — the sign of
+  D-KBaa3's attachment sentence reverses**. The headline ordering is unchanged
+  and **H8.1 still fails**. The amendment, fixed before any new number:
+  (a) record `Δfacts` per proposal; (b) add `ow_ngram_1f` and `ow_ngram_ho_1f`
+  — same model, same seed, same draws, acceptance restricted to `Δfacts = 1`,
+  first ten distinct, **`R = 20` per slot unchanged**, unfilled slots reported
+  rather than compensated; (c) the free-running arms stay as they are, since
+  "what the model writes" and "what it writes when asked for one fact" are
+  different questions; (d) compute attach-miss only over `Δfacts = 1` proposals
+  for every arm and rename the column to name that denominator; (e) withdraw the
+  "the recommender attaches better" sentence from D-KBaa3 and the pilot doc.
+  Also corrected: the attachment retry goes **three** positions down, not one,
+  and the counting arms rank **3·k = 30** patterns (measured inert —
+  `pattern_cooc` consumed 9.60 patterns per unit).
+- **D-KBaa3 is superseded in its attachment clause only, and the correction
+  reverses it.** Re-measured on the matched denominator (same three seeds, run
+  tag `42875bca`): every ordered-walk arm attaches **better** than either
+  recommender on `ndc_classes` — **0.303–0.393 against `pattern_cooc`'s 0.660
+  and `pattern_freq`'s 0.576** — and ours is ahead on `wd50k66` too
+  (0.871/0.874 against 0.981/0.986). **§0's attachment mechanism is therefore
+  supported, not contradicted.** What survives from D-KBaa3 unchanged: the
+  `ndc_classes` loss is a pattern-prediction loss, and it is *larger* than it
+  looked (matched `pattern@10` 0.288 against 0.892, because a free-running
+  proposal's extra facts were incidentally covering the hidden pattern).
+  Matching also moves `hit@10` 0.1067 → 0.1750 on `ndc_classes` and
+  0.0150 → 0.0383 on `wd50k66`, where the matched arm **leads every baseline**
+  including `pattern_cooc` (0.0133). **H8.1 still fails**, now as a scoped
+  failure: satisfied on `wd50k66`, not on `ndc_classes`. RQ8 remains a
+  supporting exhibit; 27 seeds decide whether the `wd50k66` lead survives Holm.
+  Full table: `RQ8_PILOT.md` §3c.
+- **D-KBaa8 — Amendment A2: the star control was a hole in the baseline
+  (pre-registered 2026-09-14, orchestrator-directed, written before
+  re-measurement).** At 27 seeds `pattern_cooc` scored **exactly 0.0000** on
+  `wd50k66/star` against ours at 0.1156. A recommender that never once proposes
+  the right completion across 27 seeds is not losing a contest, it is unable to
+  enter one. Mechanism: a star's facts frequently share a pattern, the
+  deterministic attachment resolves that pattern to the hub plus the
+  highest-degree matching constant — a fact the record already carries — and the
+  attachment is refused; the three-deep rank retry cannot rescue it because a
+  star has few distinct constants of the required type. **The baseline cannot
+  express "another instance of a repeated pattern", which is exactly what a star
+  completion is.** Amendment: when the attachment and its retries would
+  reproduce an existing fact, instantiate the pattern with **fresh constants**
+  (hub takes one slot, the rest newly created of the required type) — a fact
+  over fresh constants cannot duplicate. Strictly in the baseline's favour.
+  **Only the star units are re-run**, same 27 seeds, own run tag, merged by
+  stratum: the fallback fires only where the old path emitted nothing, and on
+  non-star units the counting arms already filled 9.9–10.0 of 10 slots, bounding
+  A2's effect there at ≈ 1 %. Both outcomes are declared in advance — if ours
+  still leads, the star stratum stops being a control and becomes a result; if
+  the recommender leads, it is the design's expected control and is reported so.
+- **D-KBaa9 — Amendment A3: the counting baseline must learn attachment from
+  data (pre-registered 2026-09-14, orchestrator-directed, written before
+  re-measurement).** A2's decomposition had `pattern_cooc` getting the pattern
+  right 62.4 % of the time and the attachment wrong 93.5 % on the **star**
+  stratum, where the correct attachment is *always* fresh constants pendant to
+  the hub. That is not evidence that counting cannot attach; it is a crippled
+  baseline, and it is the first thing a reviewer will say. The defect: the
+  heuristic tries **existing constants of matching type first** and only falls
+  back to fresh on an exact duplicate, so on a star with repeated operand types
+  it attaches in the one place a star completion never goes — a **fixed rule**
+  against our arm, which learns attachment from the training words. Amendment:
+  for the pattern baselines, estimate on the **training split only**, per
+  pattern, the pendant-versus-interior split of its instances (pendant = every
+  non-hub operand occurs in no other fact); propose the **majority form**, ties
+  to pendant; the interior form keeps the highest-degree matching-type rule with
+  the three-position retry; A2's fresh fallback stays underneath. **Nothing
+  changes for our arms** and the before/after control is repeated — if an
+  ordered-walk arm moves, the amendment leaked and the run is void.
+  **Both strata are re-run**, not just the star: a data-driven rule can move the
+  non-star numbers too, and asserting otherwise without measuring would repeat
+  the very mistake A3 corrects. Both outcomes declared in advance — if the star
+  lead is cut or reversed the star row becomes the control §0 predicted and
+  RQ8's claim rests on the relational stratum only (the stronger paper, since
+  the star loss then explains where the win is); if the lead survives a
+  data-driven attacher it is a result a fixed-rule baseline could not have
+  established.
+- **D-KBaa6 — two prefix constructions that would otherwise have measured the
+  harness.** The incidence prefix drops its `("END",)` terminator (with it,
+  validity reads 1.0000 instead of 0.1718 and the H8.3 contrast inverts); every
+  completion may run `max_new_tokens` past the prefix (without it a long word is
+  capped to zero continuation). Both are pinned by regression tests shown
+  failing against the pre-fix behaviour.
+
+## Files
+
+| path | what |
+|---|---|
+| `experiments/tkde/rq8.py` | the runner: G0, the unit generator, six arms, scoring |
+| `experiments/tkde/analyze_rq8.py` | H8.1–H8.3, the tables, the blank rows |
+| `experiments/tkde/configs/rq8.yaml` | the campaign, 27 seeds, 81 units |
+| `experiments/tkde/configs/rq8_pilot.yaml` | gate G8.1, off-schedule seeds |
+| `experiments/tkde/configs/rq8_star_a2.yaml` | Amendment A2, star units only |
+| `experiments/tkde/configs/rq8_a3.yaml` | Amendment A3, all 81 units, data-driven attacher |
+| `tests/experiments_tkde/test_rq8_units.py` | unit generator, census, baselines, A2/A3 attachment (68) |
+| `tests/experiments_tkde/test_rq8_prefix_property.py` | Proposition C.8 (13) |
+| `tests/experiments_tkde/test_rq8_smoke.py` | end-to-end + the stale-row guard (29) |
+| `slurm/tkde/rq8_{launcher,worker}.sh` | one task, `--constraint=sd`, node staging |
+| `slurm/tkde/rq8_sync.sh` | the private deployment wrapper |
+| `docs/article/D_ART3/experiments/RQ8_PILOT.md` | Prop. C.8, G0, G8.1 |
+| `docs/article/D_ART3/foundation/rq8_facts.md` | run root, job ids, campaign tables |
+
+## Acceptance check
+
+```
+$P -m pytest tests/experiments_tkde/test_rq8_units.py \
+             tests/experiments_tkde/test_rq8_prefix_property.py \
+             tests/experiments_tkde/test_rq8_smoke.py \
+             tests/experiments_tkde/test_rq8_ow_worker_paths.py -q
+118 passed
+```
+
+The nine Amendment-A3 tests (`TestDataDrivenAttachment`) were run against the
+pre-A3 runner first: **8 of 9 fail** there (`prefers_pendant` absent;
+`propose_patterns` has no `pendant_oracle`). The ninth,
+`test_without_the_oracle_a_star_pattern_lands_on_an_existing_constant`, passes
+on both sides by design — it pins the pre-A3 placement that A3 must leave
+reachable whenever the training split says a pattern is interior.
+
+`ruff check src/ tests/ experiments/` stays at the 38-error baseline;
+`mypy src/isalhg/` stays at 20. The pre-existing 6 failures in
+`test_rq36_smoke.py` and `test_rq45_smoke.py` are at BASE_SHA and untouched
+(see the work log).
+
+## Closing evidence (2026-09-14, campaigns harvested and analysed)
+
+Both campaigns COMPLETED and are on the drive: **2308339** free-running (tag
+`b327d7c5`) and **2308489** Amendment A1 (tag `c5380cde`), 81 units each, 27
+seeds, counts verified against `configs/rq8.yaml`. Full numbers with provenance:
+`../../../D_ART3/foundation/rq8_facts.md`.
+
+- **H8.1 as pre-registered (`ow_ngram`): NOT SUPPORTED** on either corpus. The
+  fallback applies; RQ8 is a supporting exhibit. Confirms the pilot at power.
+- **The matched arms win `wd50k66`, Holm-clean.** `ow_ngram_1f` 0.0463 and
+  `ow_ngram_ho_1f` 0.0481 beat **all five** baselines including `pattern_cooc`
+  (0.0185) — every `p_Holm` ≈ 1.3e-05, rank-biserial +0.989 / +1.000 over 27
+  paired seeds. On `ndc_classes` they beat `fact_ngram`, tie `pattern_freq`
+  (0.1922 vs 0.1806, p_H = 0.248) and lose to `pattern_cooc` (0.3185).
+- **D-KBaa3's withdrawal is confirmed at power: §0's attachment mechanism is
+  SUPPORTED.** attach-miss over one-fact proposals, every ordered-walk arm below
+  every recommender — `ndc_classes` 0.256–0.373 against 0.643 / 0.586;
+  `wd50k66` 0.845 / 0.854 against 0.974 / 0.979, denominators 1,453–4,812. The
+  `ndc_classes` deficit is purely pattern prediction (matched `pattern@10`
+  0.269–0.280 against 0.891).
+- **H8.3:** ours valid **1.0000** and connected **1.0000** [1.0000, 1.0000],
+  n = 81, by theorem; `fact_ngram` connectivity 0.6918 [0.6617, 0.7227].
+  **Clause 3 fails as written** — `incidence_ngram` validity 0.1906
+  [0.1811, 0.2009], not below the RQ6-ported 0.05 ceiling. Reported failed with
+  its reason; the number was not moved (D-KBaa4).
+- **H8.2, after Amendment A2 repaired the baseline: ours still leads, so it is a
+  RESULT.** The first measurement had `pattern_cooc` at exactly 0.0000 — a
+  recommender unable to propose, not one losing. With the fresh-constant
+  fallback it reaches **0.0404**; ours is **0.1156** free-running and **0.1846**
+  matched, p = 5.5e-06, rank-biserial +1.000, 27 seeds. Run tag `7f25205b`,
+  merged with `c5380cde` under the duplicate-key guard (243 star rows
+  superseded = 27 × 9, exactly the cell). **The amendment is its own control:
+  every ours-arm is byte-identical before and after**, so the fallback touched
+  only the arms it was meant to.
+  Decomposition, and it is §0's mechanism at its cleanest: the recommender gets
+  the **pattern** right 2.3× as often (0.6243 against 0.2719) and still loses
+  2.9×, because its **attach-miss is 0.935** while **ours is exactly 0.000** on
+  624–997 one-fact opportunities per arm. A pendant completion emitted by the
+  ordered walk chains its new constant onto the placed frontier by construction,
+  so the attachment cannot be wrong; `ow_ngram_1f`'s pattern@10 and hit@10 are
+  identical (0.1846) for that reason. **Design §0 expected counting to tie or
+  win on stars; measured, it does not.**
+
+- **H8.2 under Amendment A3, which supersedes the two readings above: the
+  control HOLDS and the star stratum is not ours.** A2 left the recommender
+  getting the pattern right 62.4 % of the time and placing it wrongly 93.5 % on
+  a stratum whose correct attachment is fixed by definition — a fixed rule
+  scored against an arm that learns attachment, not a baseline. With the shape
+  estimated per pattern on the training split (majority form, ties to pendant;
+  interior keeps the highest-degree matching-type rule and its three-position
+  retry), `pattern_cooc` goes **0.0404 → 0.6243** and `pattern_freq`
+  **0.0261 → 0.3785**, both with **attach-miss 0.000**, against our unchanged
+  0.1156 / 0.1846. H8.2 reads **as expected**: Δ = −0.5087, p = 5.5e-06,
+  rank-biserial **−1.000**, 27 of 27 seeds. Every arm of both families now
+  attaches perfectly on pendant targets, so the star row is a **pure
+  pattern-prediction contest** and we lose it 0.185 to 0.624. Run tag
+  `52c4f4f9`, all 81 units re-run locally at the same 27 seeds, merged with
+  `--supersede` (972 unit rows = 108 × 9, exactly the earlier coverage).
+  **The control passed exactly**: 0 of 63,260 ordered-walk rows and 0 of 31,630
+  other generative rows changed; 7,803 of 47,445 counting rows changed, all in
+  the baseline's favour.
+- **A3 also costs the recommender on the interior stratum, and the stronger
+  baseline there is the A2 one.** The majority form is pendant for most
+  patterns, while the hidden fact on `non_star` is interior by construction:
+  `wd50k66` `pattern_cooc` 0.0185 → 0.0131, `pattern_freq` 0.0126 → 0.0111,
+  attach-miss 0.974 → 0.985 and 0.979 → 0.985. **The citable sentence keeps
+  `0.0185`** — ours must lead the better of the two attachers, and it does
+  (0.0463 / 0.0481, 2.5–2.6×; 3.5–3.7× against the A3 construction, all four
+  contrasts rejected at `p_H` = 1.33e-05, rank-biserial +1.000). `ndc_classes`
+  is unchanged in substance (`pattern_cooc` 0.3185 → 0.3146, still leading).
+- **What A3 changes is the scope of the attachment claim, not a verdict.** H8.1
+  not supported, H8.2 reported as scope, H8.3 not supported — the same three.
+  But the mechanism is now a claim about **interior** facts only: on pendant
+  targets both families attach with miss 0.000, so there is nothing to separate.
+
+Two analyzer corrections were needed to read the campaigns honestly, both in
+`analyze_rq8.py`:
+
+1. **`--run-tag`.** Both campaigns share one directory and `load_table`
+   concatenates every tagged file, so reading them together silently pooled two
+   measurements of overlapping arms. The analyzer now refuses when more than one
+   tag is present and writes each run's artefacts to its own `_tag_*` folder.
+2. **The Holm family is ours against the BASELINES.** It was including
+   `ow_ngram_1f` / `ow_ngram_ho*` as competitors, inflating the correction and
+   scoring our own arms against each other. Each ours-arm is now tested against
+   the same baseline family in its own right; only `ARM_OURS` sets the verdict.
+
+A pre-Amendment-A1 table carries none of the one-fact columns; the mechanism
+table is emitted without the matched statistic and says so, rather than the
+analyzer refusing to read the older campaign or inventing a denominator.
+
+## Open, for the orchestrator
+
+- The prose fold (T-KBg) has to carry D-KBaa2/3/4 verbatim; RQ8 is a supporting
+  exhibit and the §0 mechanism correction is the sentence the design doc needs.
+- The capability table's "completion definable" column is now measured and can
+  leave `\todo`.

@@ -71,9 +71,18 @@ Adaptations made (exhaustive list)
 8. Upstream function signatures have NO type annotations; none are added here
    (adding annotations would be a non-trivial adaptation and is covered by
    point 2 — ``# mypy: ignore-errors`` means this file is not type-checked).
-9. No other changes: function bodies, docstrings, logic, and variable names
-   are byte-for-byte identical to the upstream source (modulo whitespace
-   normalised by the project formatter on items 6-7 above).
+9. Upstream defect fixed in ``hyperedge_portrait``: the ``k``-axis of ``B``
+   was allocated with extent ``N`` (the hyperedge count), which is one short
+   whenever ``N == 1``. The lone hyperedge is at distance 0 from itself, so
+   it writes ``k = 1 = N`` and upstream raises ``IndexError``. The extent is
+   now ``max(N, 2)``, the tight bound derived in the inline comment there.
+   For every ``N >= 2`` this is upstream's ``N`` exactly, so all previously
+   computable portraits are unchanged element-for-element; only the formerly
+   crashing single-hyperedge case now returns a portrait.
+10. No other changes: function bodies, docstrings, logic, and variable names
+    are byte-for-byte identical to the upstream source (modulo whitespace
+    normalised by the project formatter on items 6-7 above, and the defect
+    fix in item 9).
 """
 
 from __future__ import annotations
@@ -164,7 +173,14 @@ def hyperedge_portrait(H):
             lengths |= set(dist_dict[i].values())
 
     dia = max(lengths)
-    B = np.zeros((s_max - 1, s_max - 1, dia + 1, N), dtype=int)
+    # Upstream allocates the k-axis with extent N, which assumes k <= N - 1 --
+    # true only while some hyperedge is excluded from every (size, distance)
+    # bin. At distance l = 0 the bin holds i alone (k <= 1); at l >= 1 it
+    # excludes i (k <= N - 1). The attainable maximum is therefore
+    # max(1, N - 1), so the extent must be max(1, N - 1) + 1 = max(N, 2).
+    # That equals upstream's N for every N >= 2 and is one wider at N = 1,
+    # where the lone hyperedge counts itself and writes k = 1 = N.
+    B = np.zeros((s_max - 1, s_max - 1, dia + 1, max(N, 2)), dtype=int)
 
     for Gc in CC:
         for i in Gc.nodes:

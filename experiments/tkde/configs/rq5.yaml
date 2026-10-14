@@ -1,0 +1,68 @@
+# RQ5 -- description patterns (DESIGN.md §6).
+#
+# Reads submatrices of the cached full-collection matrices; computes nothing
+# distance-shaped itself. Run `experiments.tkde.matrices` first.
+#
+# Class thresholds are MEASURED from the frozen census, not written here:
+# `min_class_size: 20` yields 14 classes on wd50k66 (3,492 of 3,988 members,
+# 87.6 %) exactly as DESIGN.md §G4 states. On wd50k100 the same threshold
+# yields **7** classes (925/572/52/34/29/26/22), not the 8 that §G4 records;
+# the measured value is used and the discrepancy is reported by analyze_rq5.
+#
+# `full` is the imbalanced exhibit (per-class recall; member-level bootstrap CI
+# of ARI; PAM chosen among 27 initializations by lowest PAM cost, never by ARI).
+# `balanced` is the primary statistical comparison: one score per seed, so the
+# 27 seeds are the paired sample the Wilcoxon family runs on.
+
+experiments:
+  - name: wd50k66_full
+    collection: wd50k66
+    design: full
+    min_class_size: 20
+    per_class: 20
+    n_seeds: 27 # = the number of PAM initializations on this design
+    arms:
+      - fact_rank
+      - wstar_orbit
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: wd50k66_balanced
+    collection: wd50k66
+    design: balanced
+    min_class_size: 20
+    per_class: 20 # 14 classes x 20 = 280 members per seed
+    n_seeds: 27
+    arms:
+      - fact_rank
+      - wstar_orbit
+      - nauty_cert
+      - nauty_cert_rows
+      - wl_l1
+      - netlsd
+      - hpd_jsd
+      - bipartite_ged_path
+      - bipartite_ged_assign
+      - size_l1
+      - degree_seq_l1
+
+  - name: wd50k100_balanced # purity control, supplement (DESIGN.md §G4)
+    collection: wd50k100
+    design: balanced
+    min_class_size: 20
+    per_class: 20
+    n_seeds: 27
+    arms:
+      - fact_rank
+      - wstar_orbit
+      - nauty_cert
+      - wl_l1
+      - size_l1
+      - degree_seq_l1

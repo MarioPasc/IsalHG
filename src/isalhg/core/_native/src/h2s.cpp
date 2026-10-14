@@ -175,7 +175,9 @@ struct VCandidate {
     const std::vector<std::int32_t>* key_eta = nullptr;     // points into SHG cache
 };
 
-[[nodiscard]] int compare_v_keys(const VCandidate& a, const VCandidate& b) noexcept {
+// The iso-invariant part of the cascade key: (i, j, edge_label,
+// sorted_new_labels, eta). Everything except the residual tie-break.
+[[nodiscard]] int compare_v_key_prefix(const VCandidate& a, const VCandidate& b) noexcept {
     if (a.i_val != b.i_val) return a.i_val < b.i_val ? -1 : 1;
     if (a.j_val != b.j_val) return a.j_val < b.j_val ? -1 : 1;
     if (a.edge_label != b.edge_label) return a.edge_label < b.edge_label ? -1 : 1;
@@ -203,6 +205,68 @@ struct VCandidate {
         }
         if (ea.size() != eb.size()) return ea.size() < eb.size() ? -1 : 1;
     }
+    return 0;
+}
+
+// Residual V tie-break from canonical ranks: lex comparison of
+// (sorted ranks of the unplaced members, sorted ranks of the pointed members).
+// Mirrors Python ``_rank_tiebreak``. Only reached when the key-prefixes are
+// equal, so ``i_val`` and ``j_val`` already agree and the two candidates read
+// the same ``pointed`` prefix of ``tentative_inputs``; the second component is
+// therefore constant across a tie set and never decides. It is compared anyway
+// so the C++ key is the Python key term for term rather than an argued subset.
+[[nodiscard]] int compare_rank_residual(const VCandidate& a, const VCandidate& b,
+                                        const std::vector<std::int32_t>& ranks,
+                                        const std::array<NodeId, K_MAX>& tentative_inputs) {
+    const auto lex = [](const std::int32_t* x, int nx, const std::int32_t* y, int ny) {
+        const int common = nx < ny ? nx : ny;
+        for (int i = 0; i < common; ++i) {
+            if (x[i] != y[i]) return x[i] < y[i] ? -1 : 1;
+        }
+        if (nx != ny) return nx < ny ? -1 : 1;
+        return 0;
+    };
+
+    std::array<std::int32_t, MAX_NEW> new_a{};
+    std::array<std::int32_t, MAX_NEW> new_b{};
+    const int na = a.n_new_inputs;
+    const int nb = b.n_new_inputs;
+    for (int i = 0; i < na; ++i) {
+        new_a[static_cast<std::size_t>(i)] =
+            ranks[static_cast<std::size_t>(a.new_inputs[static_cast<std::size_t>(i)])];
+    }
+    for (int i = 0; i < nb; ++i) {
+        new_b[static_cast<std::size_t>(i)] =
+            ranks[static_cast<std::size_t>(b.new_inputs[static_cast<std::size_t>(i)])];
+    }
+    std::sort(new_a.begin(), new_a.begin() + na);
+    std::sort(new_b.begin(), new_b.begin() + nb);
+    const int c = lex(new_a.data(), na, new_b.data(), nb);
+    if (c != 0) return c;
+
+    std::array<std::int32_t, K_MAX> ptd_a{};
+    std::array<std::int32_t, K_MAX> ptd_b{};
+    for (int i = 0; i < a.i_val; ++i) {
+        ptd_a[static_cast<std::size_t>(i)] =
+            ranks[static_cast<std::size_t>(tentative_inputs[static_cast<std::size_t>(i)])];
+    }
+    for (int i = 0; i < b.i_val; ++i) {
+        ptd_b[static_cast<std::size_t>(i)] =
+            ranks[static_cast<std::size_t>(tentative_inputs[static_cast<std::size_t>(i)])];
+    }
+    std::sort(ptd_a.begin(), ptd_a.begin() + a.i_val);
+    std::sort(ptd_b.begin(), ptd_b.begin() + b.i_val);
+    return lex(ptd_a.data(), a.i_val, ptd_b.data(), b.i_val);
+}
+
+// Full cascade key comparison. ``ranks == nullptr`` is the historical
+// min-edge-id residual; otherwise the rank residual replaces it.
+[[nodiscard]] int compare_v_keys(const VCandidate& a, const VCandidate& b,
+                                 const std::vector<std::int32_t>* ranks,
+                                 const std::array<NodeId, K_MAX>& tentative_inputs) {
+    const int c = compare_v_key_prefix(a, b);
+    if (c != 0) return c;
+    if (ranks != nullptr) return compare_rank_residual(a, b, *ranks, tentative_inputs);
     if (a.edge_id != b.edge_id) return a.edge_id < b.edge_id ? -1 : 1;
     return 0;
 }
@@ -317,12 +381,13 @@ void for_each_v_candidate(const SHG& H, const EncoderState& state, int k,
 
 [[nodiscard]] bool best_v_for_displacement(const SHG& H, const EncoderState& state, int k,
                                            const std::array<NodeId, K_MAX>& tentative_inputs,
-                                           int tentative_count, VCandidate& out) {
+                                           int tentative_count, VCandidate& out,
+                                           const std::vector<std::int32_t>* ranks) {
     bool have = false;
     VCandidate best{};
     for_each_v_candidate(H, state, k, tentative_inputs, tentative_count,
                          [&](const VCandidate& cand) {
-                             if (!have || compare_v_keys(cand, best) < 0) {
+                             if (!have || compare_v_keys(cand, best, ranks, tentative_inputs) < 0) {
                                  best = cand;  // trivial copy, no heap
                                  have = true;
                              }
@@ -553,6 +618,15 @@ struct WorkArena {
     // call, matching the Python ``_counter[0] += 1`` in ``_encode_from``.
     int expansion_count = 0;
     int max_expansions = 0;
+    // Borrowed per-vertex canonical ranks, or null for the historical
+    // edge-id residual. Constant for the whole walk, so it rides in the arena
+    // rather than widening the recursive signature.
+    const std::vector<std::int32_t>* ranks = nullptr;
+    // Borrowed stabiliser-orbit oracle, or null for the unpruned tie-complete
+    // search. Same reasoning as ``ranks``: constant for the walk.
+    OrbitOracleIface* orbit_oracle = nullptr;
+    // Borrowed diagnostic counters, or null. Observational only.
+    SearchCounters* counters = nullptr;
 };
 
 [[nodiscard]] bool encode_from(const SHG& H, int k, EncoderState& state,
@@ -678,6 +752,9 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
                                WorkArena& arena, bool tie_branch)
 {
     out_completion.clear();
+    if (arena.counters != nullptr) {
+        arena.counters->frames.fetch_add(1, std::memory_order_relaxed);
+    }
     const std::int32_t mapped = state.i2o_count();
     const std::int32_t consumed = state.consumed_count();
     if (mapped == H.n_nodes && consumed == H.n_edges) {
@@ -739,7 +816,7 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
         // Try V candidate.
         VCandidate v_cand{};
         const bool has_v = best_v_for_displacement(H, state, k, tentative_inputs, tentative_count,
-                                                   v_cand);
+                                                   v_cand, arena.ranks);
         if (has_v) {
             Token main_tok = Token::make_v(v_cand.edge_label, v_cand.i_val, v_cand.j_val,
                                            v_cand.sorted_new_labels.data(),
@@ -864,13 +941,17 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
     }
 
     // V branch: enumerate the tied candidate edges (tie_branch mode only;
-    // otherwise the single min-edge-id winner) and, per candidate, the
-    // label-respecting permutations of its new inputs; take the lex-min
-    // sub_completion. ``best_prefix`` is identical across every branch --
-    // the emitted V[le; i; j; labels] token is a function of the shared
-    // key-prefix -- so comparing bare sub_completion vectors is sound.
-    // The permutation enumerator is callback-driven so no intermediate
-    // ``vector<vector<NodeId>>`` perm list is materialised.
+    // otherwise the single winner) and, per candidate, the label-respecting
+    // permutations of its new inputs; take the lex-min sub_completion.
+    // ``best_prefix`` is identical across every branch -- the emitted
+    // V[le; i; j; labels] token is a function of the shared key-prefix -- so
+    // comparing bare sub_completion vectors is sound. The permutation
+    // enumerator is callback-driven so no intermediate perm list is
+    // materialised -- except on the orbit path below, where the oracle needs
+    // the list. Under ``ranks`` both sets are singletons: the rank residual
+    // separates the tie set and the (label, rank) order replaces the
+    // permutations, so no branching happens at all and the whole walk is one
+    // path.
     std::vector<VCandidate> tied;
     if (tie_branch) {
         std::array<NodeId, K_MAX> tent{};
@@ -883,15 +964,54 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
         tied.push_back(best_v_cand);
     }
 
+    // ``dom mu``: the input node ids already mapped, in creation (output-id)
+    // order. Constant across this frame -- ``run_branch`` restores
+    // ``next_output_id`` and the o2i entries it added -- so it is built once
+    // and reused by every oracle call the frame makes. Mirrors Python
+    // ``_State.placed_inputs()``.
+    const bool prune = tie_branch && arena.orbit_oracle != nullptr;
+    std::vector<NodeId> placed;
+    if (prune) {
+        placed.reserve(static_cast<std::size_t>(state.next_output_id));
+        for (NodeId out_v = 0; out_v < state.next_output_id; ++out_v) {
+            placed.push_back(state.o2i[static_cast<std::size_t>(out_v)]);
+        }
+    }
+
+    if (prune && tied.size() > 1) {
+        std::vector<EdgeId> tied_ids;
+        tied_ids.reserve(tied.size());
+        for (const VCandidate& tv : tied) tied_ids.push_back(tv.edge_id);
+        const std::vector<EdgeId> reps = arena.orbit_oracle->edge_representatives(
+            placed.data(), static_cast<int>(placed.size()), tied_ids);
+        if (arena.counters != nullptr) {
+            arena.counters->oracle_calls.fetch_add(1, std::memory_order_relaxed);
+        }
+        // Keep the tie set's own order and drop what the oracle did not
+        // return, exactly as the Python reference does (``keep = set(reps)``).
+        std::vector<VCandidate> kept;
+        kept.reserve(reps.size());
+        for (const VCandidate& tv : tied) {
+            if (std::find(reps.begin(), reps.end(), tv.edge_id) != reps.end()) {
+                kept.push_back(tv);
+            }
+        }
+        tied.swap(kept);
+    }
+
     bool have_completion = false;
     std::vector<Token> best_sub_completion;
     std::vector<Token> sub_completion;
 
-    for (const VCandidate& tv : tied) {
-        const EdgeId branch_edge_id = tv.edge_id;
-        enumerate_label_perms_cb(
-            tv.new_inputs.data(), tv.n_new_inputs, H,
+    // One V branch: place ``perm`` (an ordering of the candidate's new inputs)
+    // after p_1, consume the edge, recurse, undo, and keep the lex-min
+    // completion. Shared by the permutation enumerator and the rank path.
+    EdgeId branch_edge_id = -1;
+    const auto run_branch =
             [&](const NodeId* perm, int new_count) {
+                if (arena.counters != nullptr) {
+                    arena.counters->v_branches.fetch_add(1, std::memory_order_relaxed);
+                }
                 // Budget check before any state mutation: throw is safe here.
                 if (arena.max_expansions > 0) {
                     ++arena.expansion_count;
@@ -950,7 +1070,61 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
                     best_sub_completion.swap(sub_completion);
                     have_completion = true;
                 }
-            });
+            };
+
+    for (const VCandidate& tv : tied) {
+        branch_edge_id = tv.edge_id;
+        if (arena.ranks != nullptr) {
+            // Ranks are a total order on the vertices, so the label-respecting
+            // orderings collapse to the single ascending (label, rank) one.
+            // Mirrors Python ``sorted(inputs, key=(vertex_label, rank))``.
+            const std::vector<std::int32_t>& rk = *arena.ranks;
+            const int n_new = tv.n_new_inputs;
+            std::array<NodeId, MAX_NEW> ordered{};
+            for (int idx = 0; idx < n_new; ++idx) {
+                ordered[static_cast<std::size_t>(idx)] =
+                    tv.new_inputs[static_cast<std::size_t>(idx)];
+            }
+            std::sort(ordered.begin(), ordered.begin() + n_new,
+                      [&](NodeId x, NodeId y) {
+                          const std::int32_t lx = H.vertex_labels[static_cast<std::size_t>(x)];
+                          const std::int32_t ly = H.vertex_labels[static_cast<std::size_t>(y)];
+                          if (lx != ly) return lx < ly;
+                          return rk[static_cast<std::size_t>(x)] < rk[static_cast<std::size_t>(y)];
+                      });
+            run_branch(ordered.data(), n_new);
+        } else if (prune) {
+            // The oracle needs the ordering list, so materialise what the
+            // callback enumerator would otherwise stream. Mirrors the Python
+            // reference, which builds the same list in
+            // ``_label_respecting_perms`` and only then consults the oracle
+            // (and skips it when the list is a singleton).
+            const int n_new = tv.n_new_inputs;
+            std::vector<NodeId> perms;
+            int n_perms = 0;
+            enumerate_label_perms_cb(tv.new_inputs.data(), n_new, H,
+                                     [&](const NodeId* p, int cnt) {
+                                         perms.insert(perms.end(), p, p + cnt);
+                                         ++n_perms;
+                                     });
+            if (n_perms > 1) {
+                std::vector<NodeId> reps = arena.orbit_oracle->ordering_representatives(
+                    placed.data(), static_cast<int>(placed.size()), tv.edge_id, perms.data(),
+                    n_perms, n_new);
+                if (arena.counters != nullptr) {
+                    arena.counters->oracle_calls.fetch_add(1, std::memory_order_relaxed);
+                }
+                perms.swap(reps);
+                n_perms = n_new > 0 ? static_cast<int>(perms.size() / static_cast<std::size_t>(n_new))
+                                    : 0;
+            }
+            for (int r = 0; r < n_perms; ++r) {
+                run_branch(perms.data() + static_cast<std::size_t>(r) * static_cast<std::size_t>(n_new),
+                           n_new);
+            }
+        } else {
+            enumerate_label_perms_cb(tv.new_inputs.data(), tv.n_new_inputs, H, run_branch);
+        }
     }
 
     if (!have_completion) return false;
@@ -968,8 +1142,34 @@ void emit_inverted_candidates(const SHG& H, const EncoderState& state, int k, in
 // ---------------------------------------------------------------------------
 
 std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
-                                     bool tie_branch, int max_expansions)
+                                     bool tie_branch, int max_expansions,
+                                     const std::vector<std::int32_t>* ranks,
+                                     OrbitOracleIface* orbit_oracle,
+                                     SearchCounters* counters)
 {
+    if (orbit_oracle != nullptr) {
+        if (!tie_branch) {
+            throw IsalHGError(
+                "orbit_oracle requires tie_branch: the other variants commit to a single "
+                "candidate, so there is no branch set to reduce");
+        }
+        if (ranks != nullptr) {
+            throw IsalHGError(
+                "ranks and orbit_oracle are mutually exclusive: ranks are a different "
+                "canonical program, not a pruning of w*_c");
+        }
+    }
+    if (ranks != nullptr) {
+        if (tie_branch) {
+            throw IsalHGError(
+                "ranks and tie_branch are mutually exclusive: ranks collapse the tie set to a "
+                "singleton, which is a different canonical program from w*_c");
+        }
+        if (static_cast<std::int32_t>(ranks->size()) != H.n_nodes) {
+            throw IsalHGError("ranks has length " + std::to_string(ranks->size())
+                              + ", expected " + std::to_string(H.n_nodes));
+        }
+    }
     if (H.n_nodes == 0) return {};
     if (seed_node < 0 || seed_node >= H.n_nodes) {
         throw IsalHGError("seed_node out of range");
@@ -1000,6 +1200,9 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
     WorkArena arena;
     arena.cost_class.reserve(64);
     arena.max_expansions = max_expansions;  // 0 = unlimited
+    arena.ranks = ranks;                    // null = historical edge-id residual
+    arena.orbit_oracle = orbit_oracle;      // null = unpruned tie-complete search
+    arena.counters = counters;              // null = no diagnostics
     const bool ok = encode_from(H, k, state, out, arena, tie_branch);
     if (!ok) {
         throw H2SStuckError("H2S stuck from seed");
@@ -1008,9 +1211,13 @@ std::vector<Token> greedy_h2s_tokens(const SHG& H, NodeId seed_node, int k,
 }
 
 std::string greedy_h2s_str(const SHG& H, NodeId seed_node, int k,
-                           bool tie_branch, int max_expansions)
+                           bool tie_branch, int max_expansions,
+                           const std::vector<std::int32_t>* ranks,
+                           OrbitOracleIface* orbit_oracle,
+                           SearchCounters* counters)
 {
-    return serialize(greedy_h2s_tokens(H, seed_node, k, tie_branch, max_expansions));
+    return serialize(greedy_h2s_tokens(H, seed_node, k, tie_branch, max_expansions, ranks,
+                                       orbit_oracle, counters));
 }
 
 }  // namespace isalhg

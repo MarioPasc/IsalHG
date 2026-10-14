@@ -1,0 +1,74 @@
+# RQ1 -- the `wstar_rank` arm re-run as its own experiment (2026-09-07).
+#
+# The campaign array of 2026-09-07 (job 2247394) ran configs/rq1.yaml without
+# `wstar_rank`: its Python engine applied the rank key at depth 0 only (fixed
+# at 3ec5c16) and was infeasible above arity 4. The C++ port (wave
+# 2026-09-07-isal-kb-w3, AlgorithmVariant::GreedyMinRank) makes the arm
+# runnable on every member at ~0.5 ms. This experiment reproduces exactly the
+# units, members and seeded edits of rq1.yaml (same blocks, same seed index)
+# for the three arms below, so its rows join the campaign table on
+# (collection, base_id, edit_kind, edit_idx). The two certificate arms ride
+# along because M4's rho is read off rows_m1 within one run.
+#
+# Launch: RQ1_CONFIG=$REPO_DIR/experiments/tkde/configs/rq1_rank.yaml \
+#         bash slurm/tkde/rq1_launcher.sh
+rq: 1
+rq_folder: RQ1_addressing
+experiment: addressing_rank
+
+collections:
+  - synthetic_rq1
+  - ndc_classes
+  - wd50k66
+
+arms:
+  - wstar_rank             # both: the greedy walk keyed by nauty's rank (C++)
+  - nauty_cert             # the certificate member, for M4's rho
+  - nauty_cert_rows        # the certificate at instruction granularity
+
+pointer_budget_s: 60.0
+
+m3_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 5
+  wd50k66: 6
+
+m1_edits_per_kind: 4
+m1_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 55
+  wd50k66: 62
+
+m2_natural: [ndc_classes]
+m2_ladders: [wd50k66]
+m2_ladders_count: 1000
+m2_ladder_t_max: 5
+m2_blocks:
+  ndc_classes: 2
+  wd50k66: 4
+
+m4_random_pairs: 1000
+m4_blocks:
+  synthetic_rq1: 1
+  ndc_classes: 4
+  wd50k66: 2
+
+# Every arm here is milliseconds, so the 143 units bundle into few shards.
+n_shards: 24
+
+smoke:
+  collections: [synthetic_rq1, ndc_classes]
+  member_limit: 5
+  pointer_budget_s: 5.0
+  arms: [wstar_rank, nauty_cert, nauty_cert_rows]
+  m3_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  m1_edits_per_kind: 2
+  m2_natural: [ndc_classes]
+  m2_ladders: [synthetic_rq1]
+  m2_ladders_count: 3
+  m2_natural_limit: 4
+  m2_blocks: {ndc_classes: 1, synthetic_rq1: 1}
+  m4_random_pairs: 5
+  m4_blocks: {synthetic_rq1: 1, ndc_classes: 1}
+  n_shards: 1

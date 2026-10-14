@@ -73,6 +73,15 @@ class HyperCOTDistance(SubprocessRepresentation):
         message contains the setup hint shown in the module docstring.
     """
 
+    # Label-blind. The subprocess payload carries ``vertex_labels`` but the
+    # worker never reads them: it builds ``hnx.Hypergraph({edge_int: members})``
+    # and hands HyperCOT the incidence structure with uniform vertex and
+    # hyperedge measures. Co-optimal transport is defined on those measures and
+    # the incidence matrix; the method has no label term, so the payload field
+    # is vestigial and no wiring change would make this arm see types or
+    # predicates.
+    labels_used = frozenset()
+
     PINNED_ENV = "isalhg-hypercot"
     WORKER_SCRIPT = str(_WORKER)
 

@@ -138,14 +138,15 @@ without a special-case branch. Stochastic datasets that synthesise
 labels do so deterministically under the bound seed before fitting the
 vocabulary.
 
-*Implementation status (2026-06-13).* The `LabelVocabulary` dataclass +
+*Implementation status.* The `LabelVocabulary` dataclass +
 `trivial()` classmethod + `DatasetMetadata.label_vocabulary` slot
-landed at Phase 3 close. The production `fit(items)` method raises
-`NotImplementedError("deferred to Phase 6 labelled-loader milestone")`;
-it is exercised first by the labelled HIC-atlas loader (Tier 5,
-Phase 6). Phase 3/4 datasets all use `LabelVocabulary.trivial()` and
-the canonical algorithm exercises the trivial-vocabulary code path
-exclusively.
+landed at Phase 3 close (2026-06-13). `fit(items)` is implemented
+(lexicographic sort → contiguous ids, trivial fallback) and unit-tested in
+`tests/unit/datasets/test_arb_benson.py::TestLabelVocabularyFit`; the
+earlier "deferred to Phase 6" note is obsolete (verified 2026-09-05).
+Synthetic datasets use `LabelVocabulary.trivial()`; the labelled
+knowledge-base collections of the TKDE article (`datasets/kb/`) fit their
+own vocabularies at load time.
 
 ### 2.3 `BenchmarkProtocol` -- `src/isalhg/protocols/base.py`
 

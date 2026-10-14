@@ -35,6 +35,24 @@ which removes edge ids from observable behaviour and makes the per-seed
 output isomorphism-equivariant (Theorem A, metric-space article). The
 ``canonical`` algorithm variant exposes this mode.
 
+Two hooks alter *which* branches the tie-complete search explores without
+altering what it returns or how it decides:
+
+- ``orbit_oracle`` prunes the branch set to one representative per
+  stabiliser orbit. Automorphic branches provably return equal completions,
+  so the shortlex minimum is unchanged: the emitted tokens are the unpruned
+  ones bit for bit. Only honoured together with ``tie_branch=True``.
+- ``ranks`` replaces the residual edge-id tie-break by a canonical rank key
+  and the label-respecting orderings by the single ``(label, rank)`` order,
+  at *every* frame of the walk. Both branch sets collapse to a singleton, so
+  the walk is one deterministic path and its output is a function of the
+  labelled hypergraph rather than of the edge insertion order. That is a
+  *different* canonical program (``canonical_rank``), not a pruning of this
+  one; it is mutually exclusive with ``tie_branch=True``.
+
+Neither hook exists on the C++ path; requesting one there raises rather than
+silently running the unhooked search.
+
 Disconnected hypergraphs are rejected by :func:`isalhg.core.canonical.canonical_string`,
 not here.
 """
@@ -42,8 +60,9 @@ not here.
 from __future__ import annotations
 
 from collections import defaultdict
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
+from functools import lru_cache
 from itertools import permutations, product
 from typing import Any
 
@@ -57,6 +76,7 @@ from isalhg.core.instructions import (
     sequence_sort_key,
     serialize,
 )
+from isalhg.core.orbit_oracle import OrbitOracle
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 from isalhg.core.structural_tuples import eta
 from isalhg.errors import CanonicalizationTimeoutError, IsalHGError
@@ -72,14 +92,26 @@ class H2SStuckError(IsalHGError):
 # ---------------------------------------------------------------------------
 
 
-def _enum_displacements(k: int, radius: int) -> list[tuple[int, ...]]:
-    """All ``k``-tuples in ``[-radius, radius]^k`` sorted by ``(sum|d|, |d|, d)``."""
+@lru_cache(maxsize=32)
+def _enum_displacements(k: int, radius: int) -> tuple[tuple[int, ...], ...]:
+    """All ``k``-tuples in ``[-radius, radius]^k`` sorted by ``(sum|d|, |d|, d)``.
+
+    A pure function of ``(k, radius)`` that the encoder calls once per search
+    frame, so it is memoised. The result is shared across callers and must be
+    treated as read-only; it is only ever iterated. Returning a tuple rather
+    than a list makes that immutability structural.
+
+    ``radius`` only ever ranges over ``0..n``, so a cache of 32 covers a whole
+    encoding of any hypergraph these corpora contain without thrashing, and
+    bounds what is retained to roughly twice the largest table -- the table the
+    uncached code would have rebuilt at every frame anyway.
+    """
     if radius <= 0:
-        return [(0,) * k]
+        return ((0,) * k,)
     rng = range(-radius, radius + 1)
     tuples = list(product(*([rng] * k)))
     tuples.sort(key=lambda t: (sum(abs(d) for d in t), tuple(abs(d) for d in t), t))
-    return tuples
+    return tuple(tuples)
 
 
 def _movement_tokens(displacement: tuple[int, ...]) -> list[Token]:
@@ -139,6 +171,15 @@ class _State:
     def set_ptrs(self, new_slots: tuple[int, ...]) -> None:
         self.pointers[:] = list(new_slots)
 
+    def placed_inputs(self) -> tuple[NodeId, ...]:
+        """Return ``dom mu``: placed input ids in creation (output-id) order.
+
+        Output ids are handed out contiguously from ``0`` (the seed), so
+        enumerating ``range(next_output_id)`` walks the placement order both
+        under clone-on-branch and under the in-place undo log.
+        """
+        return tuple(self.o2i[o] for o in range(self.next_output_id))
+
 
 # ---------------------------------------------------------------------------
 # Candidate finders
@@ -197,17 +238,37 @@ def _iter_v_candidates(
             )
 
 
+def _rank_tiebreak(
+    new_inputs: frozenset[NodeId],
+    pointed: tuple[NodeId, ...],
+    ranks: Sequence[int],
+) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Residual V tie-break key from canonical ranks.
+
+    ``(sorted ranks of the unplaced members, sorted ranks of the placed
+    members)``. Ranks are a permutation of the vertices, and at a fixed
+    displacement two tied candidates share their placed prefix, so distinct
+    edges receive distinct keys: the tie set collapses to a singleton.
+    """
+    return (
+        tuple(sorted(ranks[v] for v in new_inputs)),
+        tuple(sorted(ranks[v] for v in pointed)),
+    )
+
+
 def _best_v_for_displacement(
     H: SparseHypergraph,
     k: int,
     tentative_inputs: list[NodeId],
     state: _State,
+    ranks: Sequence[int] | None = None,
 ) -> tuple[tuple[Any, ...], EdgeId, int, int, int, tuple[int, ...], frozenset[NodeId]] | None:
     """Return the lex-min V candidate at this displacement, or None.
 
     Returns ``(cascade_key, edge_id, i, j, edge_label, new_labels, new_inputs_set)``
-    where ``cascade_key = key_prefix + (edge_id,)`` -- the raw edge id is the
-    residual tie-break (NOT iso-invariant; see the module docstring).
+    where ``cascade_key = key_prefix + (residual,)``. The residual is the raw
+    edge id (NOT iso-invariant; see the module docstring) unless ``ranks`` is
+    supplied, in which case it is :func:`_rank_tiebreak`.
     The new-input ordering is left to the caller (branching point).
     """
     best: (
@@ -216,7 +277,10 @@ def _best_v_for_displacement(
     for key_prefix, edge_id, i_val, j_val, edge_label, new_labels, new_inputs in _iter_v_candidates(
         H, k, tentative_inputs, state
     ):
-        key = key_prefix + (edge_id,)
+        residual: Any = edge_id
+        if ranks is not None:
+            residual = _rank_tiebreak(new_inputs, tuple(tentative_inputs[:i_val]), ranks)
+        key = key_prefix + (residual,)
         if best is None or key < best[0]:
             best = (key, edge_id, i_val, j_val, edge_label, new_labels, new_inputs)
     return best
@@ -303,6 +367,9 @@ def _encode_from(
     *,
     inplace: bool = False,
     tie_branch: bool = False,
+    orbit_oracle: OrbitOracle | None = None,
+    ranks: Sequence[int] | None = None,
+    stats: dict[str, int] | None = None,
     _counter: list[int] | None = None,
     _max_expansions: int | None = None,
 ) -> TokenSequence | None:
@@ -321,7 +388,24 @@ def _encode_from(
         min-edge-id one, and keep the lex-min completion. Removes the
         edge-insertion-order dependence of the output (module docstring).
         Default ``False`` (single-branch greedy, historical behaviour).
+    orbit_oracle : OrbitOracle or None, optional
+        When given (and ``tie_branch=True``), reduce the residual tie set to
+        one edge per stabiliser orbit and, per tied edge, the label-respecting
+        orderings to one per orbit of the stabiliser that also fixes the edge.
+        Value-preserving: the completion returned is unchanged.
+    ranks : Sequence[int] or None, optional
+        Per-vertex canonical ranks. When given, the residual V tie-break is
+        :func:`_rank_tiebreak` instead of the raw edge id, and the new-vertex
+        ordering is ``(label, rank)`` instead of every label-respecting
+        permutation. Both branch sets become singletons.
+    stats : dict[str, int] or None, optional
+        Mutable counter sink. Keys ``"frames"`` (calls to this function),
+        ``"v_branches"`` (V-branch expansions actually explored) and
+        ``"oracle_calls"`` (oracle invocations made by the encoder) are
+        incremented in place.
     """
+    if stats is not None:
+        stats["frames"] = stats.get("frames", 0) + 1
     if len(state.i2o) == H.n_nodes and len(state.consumed_edges) == H.n_edges:
         return ()
 
@@ -347,7 +431,7 @@ def _encode_from(
         move_block = _movement_tokens(displacement)
         move_keys = tuple(t.sort_key() for t in move_block)
 
-        v_cand = _best_v_for_displacement(H, k, tentative_inputs, state)
+        v_cand = _best_v_for_displacement(H, k, tentative_inputs, state, ranks)
         if v_cand is not None:
             (v_key, edge_id, i_v, j_v, le, new_labels, new_inputs_set) = v_cand
             main_tok: Token = TokenV(edge_label=le, i=i_v, j=j_v, new_node_labels=new_labels)
@@ -402,6 +486,9 @@ def _encode_from(
                 state,
                 inplace=True,
                 tie_branch=tie_branch,
+                orbit_oracle=orbit_oracle,
+                ranks=ranks,
+                stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
             )
@@ -419,6 +506,9 @@ def _encode_from(
             sub_state,
             inplace=False,
             tie_branch=tie_branch,
+            orbit_oracle=orbit_oracle,
+            ranks=ranks,
+            stats=stats,
             _counter=_counter,
             _max_expansions=_max_expansions,
         )
@@ -432,20 +522,43 @@ def _encode_from(
     assert best_v_info is not None
     edge_id_v, _, _, _, _, new_inputs_set, v_key_prefix = best_v_info
 
+    prune = tie_branch and orbit_oracle is not None
+    placed: tuple[NodeId, ...] = state.placed_inputs() if prune else ()
+
     if tie_branch:
         tentative_best = [state.o2i[state.cdll.get_value(s)] for s in best_new_slots]
         tied = _tied_v_candidates(H, k, tentative_best, state, v_key_prefix)
+        if prune and len(tied) > 1:
+            assert orbit_oracle is not None
+            reps = orbit_oracle.edge_representatives(H, placed, [e for e, _ in tied])
+            if stats is not None:
+                stats["oracle_calls"] = stats.get("oracle_calls", 0) + 1
+            keep = set(reps)
+            tied = [(e, inputs) for e, inputs in tied if e in keep]
     else:
         tied = [(edge_id_v, new_inputs_set)]
 
+    branches: list[tuple[EdgeId, tuple[NodeId, ...]]] = []
+    for edge_id_b, inputs_b in tied:
+        if ranks is not None:
+            rk: Sequence[int] = ranks
+            branches.append(
+                (edge_id_b, tuple(sorted(inputs_b, key=lambda v: (H.vertex_label(v), rk[v]))))
+            )
+            continue
+        perms = _label_respecting_perms(inputs_b, H)
+        if prune and len(perms) > 1:
+            assert orbit_oracle is not None
+            perms = orbit_oracle.ordering_representatives(H, placed, edge_id_b, perms)
+            if stats is not None:
+                stats["oracle_calls"] = stats.get("oracle_calls", 0) + 1
+        branches.extend((edge_id_b, seq_b) for seq_b in perms)
+
     best_completion: TokenSequence | None = None
     best_completion_key: tuple[Any, ...] | None = None
-    branches = (
-        (edge_id_b, seq_b)
-        for edge_id_b, inputs_b in tied
-        for seq_b in _label_respecting_perms(inputs_b, H)
-    )
     for edge_id_v, new_input_seq in branches:
+        if stats is not None:
+            stats["v_branches"] = stats.get("v_branches", 0) + 1
         if _counter is not None:
             if _counter[0] >= _max_expansions:  # type: ignore[operator]
                 raise CanonicalizationTimeoutError(
@@ -477,6 +590,9 @@ def _encode_from(
                 state,
                 inplace=True,
                 tie_branch=tie_branch,
+                orbit_oracle=orbit_oracle,
+                ranks=ranks,
+                stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
             )
@@ -507,6 +623,9 @@ def _encode_from(
                 sub_state,
                 inplace=False,
                 tie_branch=tie_branch,
+                orbit_oracle=orbit_oracle,
+                ranks=ranks,
+                stats=stats,
                 _counter=_counter,
                 _max_expansions=_max_expansions,
             )
@@ -533,6 +652,9 @@ def _python_greedy_h2s(
     inplace: bool = False,
     tie_branch: bool = False,
     max_expansions: int | None = None,
+    orbit_oracle: OrbitOracle | None = None,
+    ranks: Sequence[int] | None = None,
+    stats: dict[str, int] | None = None,
 ) -> TokenSequence:
     """Pure-Python reference implementation (kept for differential tests).
 
@@ -549,6 +671,18 @@ def _python_greedy_h2s(
         :class:`isalhg.errors.CanonicalizationTimeoutError` is raised.
         Only meaningful when ``tie_branch=True``; single-branch greedy never
         branches so the counter stays at 0.
+    orbit_oracle : OrbitOracle or None, optional
+        Stabiliser-orbit pruning of the tie-complete branch set. Honoured
+        only when ``tie_branch=True``; value-preserving, so the returned
+        token sequence is unchanged.
+    ranks : Sequence[int] or None, optional
+        Per-vertex canonical ranks. When given, the residual V tie and the
+        new-vertex ordering are resolved by rank instead of by raw id, which
+        collapses both branch sets to a singleton. Mutually exclusive with
+        ``tie_branch=True``; it selects a *different* canonical program
+        (``canonical_rank``), not ``w*_c``.
+    stats : dict[str, int] or None, optional
+        Mutable counter sink; see :func:`_encode_from`.
     """
     n = H.n_nodes
     if n == 0:
@@ -575,6 +709,9 @@ def _python_greedy_h2s(
         state,
         inplace=inplace,
         tie_branch=tie_branch,
+        orbit_oracle=orbit_oracle,
+        ranks=ranks,
+        stats=stats,
         _counter=_counter,
         _max_expansions=max_expansions,
     )
@@ -592,7 +729,7 @@ def _python_greedy_h2s(
 # ---------------------------------------------------------------------------
 
 from isalhg.core._core import greedy_h2s as _core_greedy_h2s  # noqa: E402
-from isalhg.core.backends import Backend, resolve  # noqa: E402
+from isalhg.core.backends import DEFAULT_BACKEND, Backend, resolve  # noqa: E402
 from isalhg.core.instructions import parse as _parse_tokens  # noqa: E402
 
 
@@ -628,6 +765,8 @@ def greedy_h2s(
     inplace: bool = False,
     tie_branch: bool = False,
     backend: Backend | None = None,
+    orbit_oracle: OrbitOracle | None = None,
+    ranks: Sequence[int] | None = None,
 ) -> TokenSequence:
     """Greedy single-seed H2S encoder.
 
@@ -651,6 +790,14 @@ def greedy_h2s(
     backend : {"cpp", "python"}, optional
         Implementation to use. Defaults to ``"cpp"`` (see
         :data:`isalhg.core.backends.DEFAULT_BACKEND`).
+    orbit_oracle : OrbitOracle or None, optional
+        Stabiliser-orbit pruning of the tie-complete branch set. Python path
+        with ``tie_branch=True`` only. Value-preserving: the emitted tokens
+        are the unpruned ones, bit for bit.
+    ranks : Sequence[int] or None, optional
+        Per-vertex canonical ranks selecting the ``canonical_rank`` program
+        (rank tie-break + ``(label, rank)`` ordering). Python path only, and
+        mutually exclusive with ``tie_branch=True``.
 
     Returns
     -------
@@ -662,7 +809,10 @@ def greedy_h2s(
     H2SStuckError
         If the encoder cannot make progress from a non-terminal state.
     ValueError
-        If ``seed_node`` is out of range, ``k < 1``, or ``backend`` is unknown.
+        If ``seed_node`` is out of range, ``k < 1``, ``backend`` is unknown,
+        or ``orbit_oracle`` / ``ranks`` is combined with a backend or a
+        ``tie_branch`` setting that cannot honour it. The oracle and the
+        ranks never fall back silently: an unhonourable request is an error.
     """
     n = H.n_nodes
     if n == 0:
@@ -671,13 +821,36 @@ def greedy_h2s(
         raise ValueError(f"seed_node {seed_node} out of [0, {n})")
     if k < 1:
         raise ValueError(f"k must be >= 1, got {k}")
+    chosen: str = DEFAULT_BACKEND if backend is None else backend
+    if orbit_oracle is not None:
+        if chosen != "python":
+            raise ValueError(
+                f"orbit_oracle requires backend='python'; the {chosen!r} backend has no "
+                "oracle hook and would silently run the unpruned search"
+            )
+        if not tie_branch:
+            raise ValueError("orbit_oracle requires tie_branch=True (it prunes the tie set)")
+    if ranks is not None:
+        if chosen != "python":
+            raise ValueError(f"ranks requires backend='python'; got {chosen!r}")
+        if tie_branch:
+            raise ValueError(
+                "ranks and tie_branch=True are mutually exclusive: ranks collapse the tie "
+                "set to a singleton, which is a different canonical program from w*_c"
+            )
     impl = resolve(backend, _GREEDY_H2S_BACKENDS)
+    extra: dict[str, Any] = {}
+    if orbit_oracle is not None:
+        extra["orbit_oracle"] = orbit_oracle
+    if ranks is not None:
+        extra["ranks"] = ranks
     return impl(
         H,
         seed_node=seed_node,
         k=k,
         inplace=inplace,
         tie_branch=tie_branch,
+        **extra,
     )
 
 

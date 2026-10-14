@@ -1,0 +1,77 @@
+# RQ7 -- the operating envelope. DESIGN.md section 8.
+#
+# One unit per feasible grid cell (27 seeded instances), one per collection
+# block for the yield pass, and one per (arm, N) for the N-scaling pass. A
+# sweep cell costs at most 27 x 60 s = 27 min for the pointer arm and
+# milliseconds for the other two, so a shard of five cells clears the two-hour
+# floor without any single unit approaching the wall.
+
+rq: 7
+rq_folder: RQ7_envelope
+experiment: envelope
+
+pointer_budget_s: 60.0
+sweep_seeds: 27
+include_extension: true
+sweep_arms:
+  [isalhg_levenshtein, wstar_orbit, isal_ow_struct, fact_rank, nauty_cert]
+
+# Yield: real collections placed by their measured canonicalization time.
+# wd50k66_full is deliberately outside the envelope, so only the fact alphabet
+# is asked to encode it (DESIGN.md section 8: "the fact alphabet only").
+yield_collections:
+  - wd50k66
+  - wd50k66_full
+  - wd50k100
+  - ndc_classes
+  - ndc_substances
+yield_arms: [isalhg_levenshtein, isal_ow_struct, fact_rank]
+yield_fact_alphabet_only: [wd50k66_full]
+yield_blocks:
+  wd50k66: 6
+  wd50k66_full: 1
+  wd50k100: 2
+  ndc_classes: 5
+  ndc_substances: 6
+
+# N-scaling: the full N x N matrix on wd50k66, cache disabled, one core.
+# exact_ged and hypercot are absent by gate (NP-hard / O(n^3) per pair, DESIGN
+# G3); an arm that blows the one-hour budget at some N is recorded censored and
+# its remaining repetitions are recorded skipped.
+nscaling_collection: wd50k66
+nscaling_arms:
+  - fact_rank
+  - wstar_orbit
+  - isal_ow_struct
+  - nauty_cert
+  - nauty_cert_rows
+  - wl_l1
+  - netlsd
+  - hpd_jsd
+  - bipartite_ged_path
+  - bipartite_ged_assign
+  - size_l1
+  - degree_seq_l1
+nscaling_N: [250, 500, 1000, 2000, 3988]
+nscaling_reps: 3
+nscaling_budget_s: 3600.0
+
+# 294 sweep cells + 20 yield blocks + 55 N-scaling units = 369. One shard per
+# unit; the launcher bundles five shards into one array task.
+n_shards: 369
+
+smoke:
+  cell_limit: 3
+  include_extension: false
+  sweep_seeds: 2
+  pointer_budget_s: 5.0
+  member_limit: 25
+  yield_collections: [ndc_classes]
+  yield_blocks: {ndc_classes: 1}
+  sweep_arms: [isalhg_levenshtein, wstar_orbit, isal_ow_struct, fact_rank, nauty_cert]
+  yield_arms: [isalhg_levenshtein, isal_ow_struct, fact_rank]
+  nscaling_arms: [fact_rank, isal_ow_struct, nauty_cert, size_l1]
+  nscaling_N: [25]
+  nscaling_reps: 2
+  nscaling_budget_s: 120.0
+  n_shards: 1

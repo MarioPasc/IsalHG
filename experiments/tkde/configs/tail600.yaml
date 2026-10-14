@@ -1,0 +1,37 @@
+# The 600 s re-run of the 60 s censored tail (T-KBp).
+#
+# Characterisation, never a published row: D-ART5 decision 2 keeps the published
+# budget at 60 s and defines this pass as "a re-run *of the censored tail*".
+# Rows land under TAIL600_characterisation/, outside every RQ tree, and carry
+# kind="tail_characterisation".
+#
+# Source: the RQ1 M3 census (RQ1_*/addressing/rows_m3__*.csv), which is where T-KBe's
+# 77 orbit-censored and 53 rank-censored members were counted and the only source
+# carrying wstar_rank. The experiment folder is `addressing`, not `merged`: the
+# per-arm merge is the RESULTS ROOT (IEEETKDE_isal_merged), not a subfolder, and
+# the census must be read with ISALHG_RESULTS_ROOT pointing at it. Verified
+# 2026-09-10: that root reproduces wstar_orbit 77 / wstar_rank 53 exactly.
+# The matrix-build sidecars are a different population --
+# set `source: sidecar` to measure those instead.
+#
+# Cost: 77 + 53 = 130 (member, arm) calls, worst case 600 s each, so the whole
+# measurement is at most ~22 h of budget. n_shards: 16 puts at most 9 calls in a
+# shard (~1.6 h worst case) -- see slurm/tkde/tail600_launcher.sh for the full
+# arithmetic.
+
+experiment: tail_600s
+source: m3
+census_experiment: addressing
+arms:
+  - wstar_orbit
+  - wstar_rank
+budget_s: 600.0
+n_shards: 16
+
+# The smoke exercises the whole path -- census read, corpus load, forked child,
+# row write -- in under a minute. It must NOT use the real budget: a censored
+# member costs exactly the budget, so five members at 600 s is 50 minutes.
+smoke:
+  budget_s: 5.0
+  max_items: 4
+  n_shards: 1

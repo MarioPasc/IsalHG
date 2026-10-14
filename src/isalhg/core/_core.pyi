@@ -9,6 +9,10 @@ Python shims that consume it.
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+from typing import Any
+
+from isalhg.core.orbit_oracle import OrbitOracle
 from isalhg.core.sparse_hypergraph import SparseHypergraph
 
 def ping() -> str: ...
@@ -33,7 +37,24 @@ def canonical_string(
     structural_depth: int,
     algorithm_id: int,
     max_expansions: int = 0,
+    ranks: Sequence[int] | None = None,
+    orbit_oracle: OrbitOracle | None = None,
 ) -> str: ...
+def canonical_string_stats(
+    H: SparseHypergraph,
+    k: int,
+    structural_depth: int,
+    algorithm_id: int,
+    max_expansions: int = 0,
+    ranks: Sequence[int] | None = None,
+    orbit_oracle: OrbitOracle | None = None,
+) -> tuple[str, dict[str, int]]: ...
+def ordered_walk(
+    H: SparseHypergraph,
+    ranks: Sequence[int],
+    root_rule: int = 0,
+    rank_first: bool = False,
+) -> tuple[int, int, list[tuple[Any, ...]], list[int]]: ...
 def string_to_hypergraph_raw(
     s: str,
     k: int,

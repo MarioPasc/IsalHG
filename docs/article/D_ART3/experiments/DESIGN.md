@@ -51,11 +51,22 @@ RQ1, adopted). Word of a knowledge base `K` with `n` constants and `m` facts:
 T[τ(π⁻¹(0))] … T[τ(π⁻¹(n−1))]   F[ℓ₁; r₁ < … < r_a] … (m fact tokens, sorted by (ℓ, rank tuple))
 ```
 
-`π` is the isomorphism-invariant total order on constants induced by the
-canonical labelling of the coloured Levi graph (`pynauty.canon_label`,
-vertex colour = type, edge-node colour = `|Σ_V| + predicate`); `rank[v]` is the
-position of `v` in that order restricted to constant nodes. One token is one
-atomic symbol; two tokens are equal iff their whole tuple is equal. `|w| = n + m`.
+`π` is the total order on constants induced by a canonical labelling of the
+coloured Levi graph (`pynauty.canon_label`, vertex colour = type, edge-node
+colour = `|Σ_V| + predicate`); `rank[v]` is the position of `v` in that order
+restricted to constant nodes. One token is one atomic symbol; two tokens are
+equal iff their whole tuple is equal. `|w| = n + m`.
+
+**What is invariant is the word, not the rank vector.** A canonical labelling
+is canonical only up to an automorphism of the canonical form, so the rank
+vectors of `K` and of a relabelled copy need not correspond under the
+isomorphism (measured 2026-09-05: 557 of 2,000 random labelled knowledge bases;
+0 changed words). The word is invariant regardless, because such an
+automorphism fixes the type prefix and the fact multiset. Consequence for every
+algorithm in this design: never transport a rank vector between two knowledge
+bases; compare words, and obtain alignments only from canonical labellings of
+*isomorphic* objects (e.g. the isomorphic remainders of §RQ3's delete-and-match),
+where rank equality is a genuine isomorphism.
 
 **Roles.** A fact whose predicate has named argument positions carries
 `(role, rank)` pairs instead of bare ranks (`F[ℓ; (ρ₁, r₁) …]`, sorted by rank).
@@ -119,11 +130,16 @@ reproduces its census numbers as an acceptance test.
 
 | collection | members | labels on constants | labels on facts | ground truth carried | used by |
 |---|---|---|---|---|---|
-| `wd50k66` | WD50K(66) entity knowledge bases inside the envelope (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): ≈ 3,994 | none (single type) | main relation; roles S/O/Q in a side field | Wikidata P31 class of the subject (14 classes with ≥ 20 members; imbalance stated) | RQ1, RQ2, RQ4, RQ5, RQ6, RQ7 |
-| `wd50k66_full` | the same without the envelope filter (≈ 4,554) | | | | RQ7 yield row (fact alphabet only) |
-| `wd50k100` | purity control (≈ 1,847) | | | 8 usable classes | RQ5 supplement |
-| `ndc_classes` | NDC-classes quarterly co-formulation knowledge bases, encodable (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): 1,432; 555 consecutive pairs with exact `Δ` and regime flag; runs per class | FDA class type: `[epc]`, `[moa]`, `[pe]`, untyped | one predicate | NDC node identities (evaluation only); `Δ` of consecutive quarters | RQ1, RQ2, RQ3, RQ4, RQ7 |
-| `ndc_substances` | control (2,222) | none | one predicate | identities | RQ2 census, RQ7 yield (supplement) |
+| `wd50k66` | WD50K(66) entity knowledge bases inside the envelope (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`): 3,988 (3,994 without the `m ≥ 3` floor) | none (single type) | main relation; roles S/O/Q in a side field | Wikidata P31 class of the subject (14 classes with ≥ 20 members covering 87.6 %; imbalance stated) | RQ1, RQ2, RQ4, RQ5, RQ6, RQ7 |
+| `wd50k66_full` | the same without the envelope filter (4,554) | | | | RQ7 yield row (fact alphabet only) |
+| `wd50k100` | purity control (1,837) | | | 7 classes with ≥ 20 members (frozen census; the 8th has 19) | RQ5 supplement |
+| `ndc_classes` | NDC-classes quarterly co-formulation knowledge bases, encodable (`3 ≤ m ≤ 110`, `n ≤ 24`, arity `≤ 10`, **facts of arity ≥ 2 only**): 1,381 members and 528 consecutive pairs with exact `Δ` and regime flag (1,432 / 555 when singleton products are counted as facts — the supplement's figure, reproduced to the unit); runs per class | FDA class type: `[epc]`, `[moa]`, `[pe]`, untyped | one predicate | NDC node identities (evaluation only); `Δ` of consecutive quarters | RQ1, RQ2, RQ3, RQ4, RQ7 |
+| `ndc_substances` | control (1,745; 2,222 counting singletons) | none | one predicate | identities | RQ2 census, RQ7 yield (supplement) |
+
+A singleton product (one class) is a unary statement, carries no relational
+structure and is encodable by neither alphabet; the collections therefore keep
+facts of arity ≥ 2 only, and `census.json` in each frozen collection is the
+authoritative count (expected vs obtained, both conventions recorded).
 | `synthetic_rq1` | 2,000 random connected labelled knowledge bases, `n ∈ [6,16]`, `m ∈ [6,20]`, arity 2–4, 3 types, 3 predicates (the probe's corpus) | 3 types | 3 predicates | — | RQ1 |
 | `envelope_sweep` | random connected labelled knowledge bases on the RQ7 grid | grid | grid | — | RQ7 |
 
@@ -169,8 +185,8 @@ Every run writes, under `<RESULTS_ROOT>/<RQ>/<experiment>/`:
 | `tables.md` | the human-readable tables (inputs for the article's figure/table designer, not the article itself) |
 
 `RESULTS_ROOT` is `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE`
-locally and `~/fscratch/results/IEEETKDE` on Picasso; the harvest script mirrors
-the second into the first. Cached `N × N` distance matrices live under
+locally and `$HOME/results/IEEETKDE` on Picasso (the permanent filesystem, not
+the purged FSCRATCH); the harvest script mirrors the second into the first. Cached `N × N` distance matrices live under
 `<RESULTS_ROOT>/matrices/<collection>/<arm>.npy` with a sidecar manifest (member
 order, arm parameters, wall-clock); every runner reads the cache before
 computing.
@@ -211,8 +227,8 @@ land within two tokens of a one-edit neighbour more often than `fact_rank`
 (the frontier proposition's measured basis). H1d: the roles field costs
 `fact_rank` at most +0.02 in normalized median response on WD50K.
 
-**Corpora.** `synthetic_rq1` (2,000), `ndc_classes` (1,432), `wd50k66`
-(3,994) — all members.
+**Corpora.** `synthetic_rq1` (2,000), `ndc_classes` (**1,381**), `wd50k66`
+(**3,988**) — all members.
 
 **Arms.** `pointer` (A; C++ `w*_c`, per-instance budget 60 s, `k` = pair
 maximum), `fact_rank` (B), `fact_rank_roles` (B′, WD50K only), `local_colour`
@@ -226,11 +242,17 @@ maximum), `fact_rank` (B), `fact_rank_roles` (B′, WD50K only), `local_colour`
    `{insert_fact, delete_fact, add_constant, remove_constant,
    insert_fact_new_constant}`, 4 distinct edits (rejection: result connected,
    inside the envelope, not isomorphic to the base; identical instances for all
-   arms). Record `d(base, edited)` per arm, `|w(base)|`, `|w(edited)|`, the
+   arms). Edit-kind semantics (the probe's, ported verbatim): `insert_fact` /
+   `delete_fact` add or remove one fact over existing constants;
+   `add_constant` / `remove_constant` add an existing constant to one fact or
+   remove one from it (an arity change — the constant set is preserved unless
+   the removal strands a constant, which is then compacted away);
+   `insert_fact_new_constant` is the only kind that grows the constant set.
+   The regime flag is stamped from the constant identities, not from the kind. Record `d(base, edited)` per arm, `|w(base)|`, `|w(edited)|`, the
    regime (`constant_set_preserved ∈ {0,1}`), and the *zero-shift* flag for
    `fact_rank` (canonical order of the surviving constants unchanged).
-3. *M2 — correlation with the known fact-level difference.* (a) the 555 NDC
-   natural consecutive pairs, `Δ = |F_t △ F_{t+1}|` from identities, regime
+3. *M2 — correlation with the known fact-level difference.* (a) the **528** NDC
+   natural consecutive pairs (555 pre-freeze; the built corpus has 528), `Δ = |F_t △ F_{t+1}|` from identities, regime
    flag; (b) 1,000 constant-preserving fact-edit ladders on `wd50k66` members,
    `t = 1..5`. Per arm: `d` per pair.
 4. *M3 — compactness and cost.* Tokens per member and canonicalization
@@ -257,8 +279,30 @@ distances for the two arms compared.
 
 **Gate and fallback.** The pipeline must reproduce the probe within tolerance
 (pooled normalized median of `fact_rank` within ±0.05 of 0.188 / 0.211 / 0.300;
-`pointer` within ±0.05 of 0.500). A discrepancy is a bug until explained. No
-scientific fallback: the selection is closed.
+`pointer` within ±0.05 of **0.57 / 0.56 / 0.60**). A discrepancy is a bug until
+explained. No scientific fallback: the selection is closed.
+
+*Amendment (2026-09-06, after the first campaign rows).* The probe's pointer
+value of 0.500 (`../foundation/probes_2026-09.md` §9) is superseded. The probe
+scored the pointer arm with `rapidfuzz.distance.Levenshtein.distance` applied
+directly to tuples of `Σ_HG` tokens, and rapidfuzz compares generic sequence
+elements by hash; `TokenP(i)` and `TokenN(i)` are hash-equal frozen dataclasses,
+so pointer advances and retreats were matched against each other and the
+response was under-reported on 67.3 % of pairs. Re-scoring the probe's own
+corpus and edits with an equality-keyed alphabet
+(`experiments/tkde/budget.py::symbol_distance`, regression-pinned) gives
+0.569 / 0.556 / 0.600 on `synthetic_rq1` / `ndc_classes` / `wd50k66` (the
+targets above, rounded); the pipeline measures 0.588 / 0.556 / 0.583. The
+`fact_rank` targets are unaffected (0 of 2,400 probe pairs under-reported on
+fact words) and stand. The selection conclusion — `fact_rank` responds to a
+single edit at a third of the pointer alphabet's response — is unchanged and
+strengthened. Normalization of the single-edit response: the distance is
+divided by the length of the sequence it was measured over — the bare word for
+every fact arm, and the seed-prefixed word (`|w| + 1`, the fingerprint
+`F = (seed label, w*)`) for the pointer arm on collections with more than one
+vertex label (`synthetic_rq1`, `ndc_classes`; `wd50k66` has one label and no
+seed symbol). The rows persist `d_abs` and `len_base = |w|` unchanged.
+Investigation record: `.claude/notes/2026-09-05-tkde-w3/rq1-gate.md`.
 
 **Compute.** ≈ 150 k edited instances; arms B–D1 ≈ 50 µs each; arm A ≈ 125
 core-hours at the 60 s budget → one array on `sd`, tasks bundled to ≥ 2 h.
@@ -285,10 +329,24 @@ variant collections (certificate validity); real pairs stratified by `n` for
 the oracle.
 
 **Procedure.**
+0. *Exactness at zero, both directions.* For each collection and each
+   representation: on 100 isomorphic pairs (random relabellings, `permute`),
+   the fraction at distance 0 (`< 10⁻⁹` for real-valued arms) — a complete
+   invariant scores 1.000; the audit of 2026-09-05
+   (`COMPETITOR_AUDIT.md`) found the bipartite **edit-path** reading at
+   0.08–0.19, i.e. it *separates* isomorphic knowledge bases, so it does not
+   respect isomorphism classes and cannot carry a medoid certificate; HyperCOT
+   returned 3.46 on an isomorphic pair (convergence failure) — negatives are
+   clamped to 0 and the tolerance is stated.
 1. *False-merge census.* For each collection and each representation: number
-   of unordered pairs at distance 0 (or `< 10⁻⁹` for real-valued embeddings)
-   whose members are non-isomorphic by the nauty fingerprint; number of classes
-   induced by the representation vs true classes.
+   of unordered pairs at distance 0 (or `< 10⁻⁹` for real-valued embeddings —
+   NetLSD has 9 exact zeros but 186 below tolerance on 200 members, so the
+   tolerance is not optional) whose members are non-isomorphic by the nauty
+   fingerprint; number of classes induced by the representation vs true
+   classes. Every per-pair computation is bounded at the **process level**
+   (a forked child killed at the budget): the pointer alphabet's C++ call and
+   the oracles do not return to the interpreter on time-out, so `SIGALRM` and
+   the oracles' own `timeout` argument do not bound them (measured).
 2. *Bipartite metricity on real members.* 2,000 random ordered pairs per
    collection: asymmetry rate of the edit-path reading; 5,000 random triples:
    triangle-violation rate; false-zero rate of the raw assignment reading on
@@ -324,28 +382,44 @@ real collections are near-unique under labels; the census says so).
 reference, and with what guarantee?
 
 **Definitions (frozen).**
-- *Reach.* `reach_F(K → K′) = min{ |A| + |B| : A ⊆ F(K), B ⊆ F(K′), (K − A) ≅ (K′ − B) }`,
-  the fewest fact-token indels from `w(K)` to a word decoding to `K′`
-  (constants fixed; substitution excluded — the **indel** ball of Prop 5,
-  because a substitution would collapse the `2t` gap between siblings).
+- *Reach.* `reach′_F(K → K′) = min{ |A| + |B| : A ⊆ F(K), B ⊆ F(K′),
+  compact(K − A) ≅ compact(K′ − B) }`, the fewest fact-token indels from `w(K)`
+  to a word decoding to `K′` (substitution excluded — the **indel** ball of
+  Prop 5, because a substitution would collapse the `2t` gap between siblings).
   Computed exactly for `r ≤ 2` by delete-and-match: enumerate `A`, `B` with
-  `|A| + |B| ≤ r` and compare canonical keys of the remainders.
+  `|A| + |B| ≤ r` and compare canonical keys of the *compacted* remainders.
+  **Amended 2026-09-09 (D-KBf5):** the remainders are compacted because a
+  knowledge base is its set of facts (§2.1), so a deletion that takes the last
+  fact naming a constant takes the constant with it; the earlier reading pinned
+  the constant set and therefore returned ∞ on every deletion variant and on
+  1,146 of the 1,400 natural Corpus B member pairs.
 - *Coverage consensus.* Over candidates `C`, return
-  `argmax_{c ∈ C} ( cov_r(c), −Σ_i min(reach_F(c → K_i), r+1), lexicographic word )`
-  with `cov_r(c) = #{ i : reach_F(c → K_i) ≤ r }`. Candidates: the members, and
-  every knowledge base obtained from a member `K_i` by deleting `≤ r` of its
-  facts and inserting `≤ r` facts transferred from other members through the
-  alignments found by delete-and-match (alignment-transfer generation), with
-  decoded classes deduplicated by canonical key. Default radius `r = 2`
-  (budget unknown to the method); `r = t` reported as the known-budget variant.
+  `argmax_{c ∈ C} ( cov_r(c), −Σ_i min(reach′_F(c → K_i), r+1), lexicographic word )`
+  with `cov_r(c) = #{ i : reach′_F(c → K_i) ≤ r }`. Candidates: the members, and
+  every knowledge base `K_i − A′ + π(B′)` obtained from an alignment `(A, B, π)`
+  of two members `K_i`, `K_j` with `|A| + |B| ≤ 2r` — the *triangle-complete*
+  set, since a candidate within `r` of both members forces
+  `reach′_F(K_i, K_j) ≤ 2r` — taking `A′ ⊆ A`, `B′ ⊆ B` with `|A′| + |B′| ≤ r`
+  (alignment-transfer generation), with decoded classes deduplicated by
+  canonical key. `π` comes from the canonical labellings of the two isomorphic
+  compacted remainders, never from the ranks of `K_i` and `K_j` themselves (G1);
+  it is therefore *partial*, and a transferred fact naming a constant `B`
+  stranded creates that constant with the donor's type and identity — the
+  `insert_fact_new_constant` edit (D-KBf5, 2026-09-09). The
+  narrower budgets "per side" (`|A|, |B| ≤ r`) and "sum" (`|A| + |B| ≤ r`) are
+  implemented as recorded variants only; under "sum" the source is provably
+  outside the candidate set for `t = r`, which is how the ambiguity was found
+  (2026-09-05). Default radius `r = 2` (budget unknown to the method); `r = t`
+  reported as the known-budget variant.
 - *Certified medoid.* `M = argmin_i Σ_j d(K_i, K_j)`; `LB = Σ_{i<j} d(K_i,K_j)/(N−1)`;
   `ratio = cost(M)/LB` (`≤ 2 − 2/N` by Prop 3 in any metric).
 - *Truth and the axis.* Exact fact-level distance `|F(out) △ F(truth)|`
   computed with constant identities carried through the pipeline for
   evaluation only: a member keeps its identities; a candidate inherits the
-  identities of the member it was derived from; transferred facts are
-  expressed in that member's constant space. The methods never read
-  identities.
+  identities of the member it was derived from; a transferred fact is expressed
+  in that member's constant space where it can be, and where it names a
+  constant that member does not have, the constant is created and keeps the
+  *donor's* identity. The methods never read identities.
 
 **Hypotheses.** H3a (directional): the coverage consensus returns the source
 exactly (distance 0) in ≥ 95 % of insertion-only and deletion-only variant
@@ -357,21 +431,34 @@ the coverage consensus matches `majority_merge` (which uses identities) on
 recovery rate within 5 points. H3d: every medoid ratio under `fact_rank` is
 ≤ `2 − 2/N`, and the measured ratios are ≤ 1.7.
 
-**Corpus A — constant-preserving variant collections over real members
-(primary).** Sources: real members of `ndc_classes` and `wd50k66` with
+**Corpus A — fact-edit variant collections over real members (primary).**
+Sources: real members of `ndc_classes` and `wd50k66` with
 `4 ≤ n ≤ 12`, `4 ≤ m ≤ 12`, max arity `≤ 6`; per cell `(collection, N ∈ {5, 9},
 t ∈ {1, 2}, kind ∈ {ins, del, mix})`, 27 seeds × 8 sources = 216 variant
-collections; members are `t` independent constant-preserving fact edits of the
-source (mix: each edit insert or delete with probability ½), pairwise
-non-isomorphic and non-isomorphic to the source (50 resampling attempts, else
-the collection is dropped and counted). Isolated constants are legal.
+collections; members are `t` independent fact edits of the source (mix: each
+edit insert or delete with probability ½), pairwise non-isomorphic and
+non-isomorphic to the source (50 resampling attempts, else the collection is
+dropped and counted). Every member is connected, and a deletion that takes the
+last fact naming a constant takes the constant with it, so members of one
+collection may differ from the source and from each other in constant count
+(renamed off "constant-preserving" at D-KBf5, 2026-09-09;
+`meta["constant_set_preserved"]` records which members kept the source's set).
+**Deletion-only eligibility (amended 2026-09-05):** a source with `m` facts has
+at most `m` single-fact deletions, fewer up to isomorphism, so `N` pairwise
+non-isomorphic deletion variants need `m ≥ N + 1`; the deletion cells sample
+their sources from that sub-pool (the first runner found the `N = 9, t = 1`
+deletion cells 100 % dropped otherwise). Pool sizes are recorded per cell; a
+cell with fewer than 8 eligible sources runs with what exists and is marked
+`pool_limited`, an empty pool is marked `infeasible`.
 
 **Corpus B — the natural NDC series (the harder case, reported beside A).**
-Every drug class with a run of `T ≥ 4` consecutive encodable quarters (45 with
-≥ 3, 20 with ≥ 5): collection = quarters `1..T−1`, truth = quarter `T`;
-reported for all runs and for the 15 constant-preserving runs separately.
-Constants change in 75 % of natural consecutive pairs, so this is the regime
-in which the adopted encoding is at its weakest, and the paper says so.
+Every drug class with a run of `T ≥ 4` consecutive encodable quarters (frozen
+census: 42 classes with runs ≥ 3, 19 with ≥ 5): collection = quarters
+`1..T−1`, truth = quarter `T`; reported for all runs and for the
+constant-preserving runs separately. Constants change in 400 of the 528
+natural consecutive pairs (76 %), so this is the regime in which the adopted
+encoding is at its weakest, and the paper says so. Sizes come from
+`corpora/ndc_classes/census.json` (`series` block), not from this text.
 
 **Methods.** `medoid[d]` for `d ∈ {fact_rank, nauty_cert, wl_l1, netlsd,
 hpd_jsd, bipartite_ged, degree_seq_l1, size_l1}` with certified ratio where `d`
@@ -399,6 +486,11 @@ collections, that is a bug (the source is provably in it). If Corpus B shows
 the consensus no better than the medoid, Corpus B goes to the supplement as the
 characterized weak regime and the main text carries Corpus A with the regime
 boundary stated (this is the plan of record in `../START_HERE.md` §6.0).
+**This gate fired on a crippled measurement and its verdict is void (D-KBf5,
+2026-09-09):** under the frozen `reach`, 81.9 % of Corpus B's member pairs sit
+at infinite reach because `compatible()` requires equal constant counts, so the
+consensus was never given a candidate set to work with. The gate is re-run under
+`reach′`; until then Corpus B's placement is undecided, not "supplement".
 
 **Compute.** 2 collections × 12 cells × 216 = 5,184 variant collections;
 per collection `N²` alignments × ≈ 200 canonicalizations at 50 µs ≈ 1–5 s →
@@ -419,7 +511,7 @@ twin is indistinguishable from the original for them), while `fact_rank` and
 corruptions, `fact_rank`'s AUC is within the 95 % CI of the best competitor's
 on each collection — competitiveness, not superiority, is claimed.
 
-**Corpora.** (a) `ndc_classes`, all 1,432 members (structural repetition:
+**Corpora.** (a) `ndc_classes`, all **1,381** members (structural repetition:
 ≈ 7 members per unlabelled class); (b) `wd50k66` per-type sub-collections for
 the six types with ≥ 47 members (human, film, big city, television series,
 animated film, sovereign state) — anomalies must be judged against their own
@@ -601,8 +693,11 @@ for bipartite GED.
 
 **Sweep.** Random connected labelled knowledge bases on the grid
 `m ∈ {10, 20, 40, 80, 120, 160}` × `k ∈ {2, 3, 4, 5}` × `|Σ_E| ∈ {1, 3, 10}` ×
-`|Σ_V| ∈ {1, 4}` × density `n ∈ {⌈1.5 m⌉ (sparse), ⌈0.5 m⌉ + k (dense)}`,
-27 seeds per cell (7,776 instances). Arms: `pointer` (C++, budget 60 s),
+`|Σ_V| ∈ {1, 4}` × density `n ∈ {min(⌈1.5 m⌉, m(k−1)+1) (sparse), ⌈0.5 m⌉ + k
+(dense)}`, 27 seeds per cell (7,776 instances). The sparse cap is the largest
+connected constant count for `m` facts of arity `≤ k`; it binds only at `k = 2`,
+where the sparse cells are trees (`n = m + 1`) — without it those 36 cells are
+structurally impossible (found by the corpus generator, 2026-09-05). Arms: `pointer` (C++, budget 60 s),
 `fact_rank`, `nauty_cert`. Extension for the fact alphabet only:
 `m ∈ {320, 640, 1280}` at `k = 3`, `|Σ_E| = 3`, `|Σ_V| = 1`, both densities.
 Real collections placed by their per-member `(m, k, |Σ|)` and measured
@@ -610,7 +705,8 @@ canonicalization time (from the corpus pass); yield per collection and size
 bucket, including `wd50k66_full` under the fact alphabet.
 
 **`N`-scaling.** Wall-clock of the full `N × N` matrix on `wd50k66` for
-`N ∈ {250, 500, 1,000, 2,000, 3,994}` for every representation of G3 that runs
+`N ∈ {250, 500, 1,000, 2,000, **3,988**}` (the full `wd50k66`; 3,994 is the
+pre-floor count) for every representation of G3 that runs
 on it (3 repetitions).
 
 **Evaluation.** Median and p90 wall-clock, time-out fraction, tokens (bytes

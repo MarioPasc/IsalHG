@@ -8,6 +8,38 @@ goes to the PI), then [`supplementary_data.md`](supplementary_data.md) and the
 Last updated 2026-09-04, after the PI ratified the scope (§6.0) and the
 addressing question was measured and closed (§0, RQ1).*
 
+> ## ⚠ This file predates D-ART4. Read this before §0.
+>
+> It is dated **2026-09-04**. **D-ART4 was ruled 2026-09-06** and changed what
+> the paper's representation *is*. Everything below written before that date —
+> §0's state of play, §6.0's ratification, the timeline's 2026-09-04 row —
+> describes the **pre-ruling** paper and is correct **as history**, not as the
+> current answer.
+>
+> **What changed.** Those sections say the adopted encoding is a *fact token
+> addressed by global canonical rank*. **It is not.** D-ART4 (1) makes the
+> paper's representation the **Isal instruction string**; the fact-addressed
+> word *left the article* with that ruling ("the rows simply do not appear"),
+> surviving only as a comparator named in prose and tabled in the supplement.
+> The alphabet `Σ_HG` did **not** change — what the campaign varied is the
+> **canonical program**, and **D-ART5** records which program carries §§3–7.
+>
+> **Where the current answer is:** `prose.md` §2.3 (the decision and the
+> four-cell ablation), `DECISIONS.md` D-ART4 and D-ART5, and the per-RQ fact
+> bases in `foundation/rq*_facts.md`.
+>
+> This banner exists rather than a rewrite because the dated sections are the
+> record of what was believed when, and that record is load-bearing —
+> §3 corrects *other* files in this folder and never corrected this one.
+> (Raised by `[IsalHG-Fable]` from the same defect in `prose.md`'s header.)
+
+> **2026-09-13 — D-ART6 and the headline campaign.** The headline program is
+> now the ordered walk `w°` (D-ART6, `../DEVELOPMENT/DECISIONS.md`). The
+> readiness assessment is `SESSION_LOG.md`; the pre-registered design of the
+> three headline exhibits (RQ6, RQ3 v2, RQ8) and the capability table is
+> `experiments/HEADLINE_DESIGN_2026-09-13.md`. Read those two before anything
+> dated earlier in this file.
+
 **Standing instruction (author).** Prior results are *guidance*, not assets:
 every experiment may start from zero, designed for its own question, on its own
 corpora. What carries over is the experience (`foundation/lessons.md`), the
@@ -42,6 +74,30 @@ quarters), which is why RQ3 runs on constant-preserving ladders over real
 members with the natural series reported beside them. The knowledge-base
 framing and the canonical-word metric are verified novel
 (`foundation/literature_verified.md`).
+
+> **Superseded in part, 2026-09-06 (D-ART4, `../DEVELOPMENT/DECISIONS.md`).**
+> The PI ruled that the paper's representation is the **Isal instruction
+> string**, not the fact-rank word adopted below; the fact-rank word and its
+> addressing arms leave the paper (they stay on disk as the record). The
+> measured restrictions of the Isal string on knowledge bases (locality;
+> symmetric-input cost; connected-only domain; roles), the design options for
+> a canonical string other than the lex-min over walks, and the re-aimed RQ
+> set are recorded there. Read `experiments/PI_QA_2026-09-06_isal_string.md`,
+> `experiments/ENCODINGS_WORKED_EXAMPLE.md` and
+> `experiments/RESULTS_AUDIT_2026-09-06.md` before §0–§8 below, which describe
+> the superseded encoding decision and the campaign run under it.
+> An agent is being spawned to design the nauty-assisted Isal variants; its
+> brief is `experiments/ISAL_REFINEMENT_BRIEF.md` (read it first if that is
+> your task).
+>
+> **Done 2026-09-06/07 — read `experiments/HANDOFF_2026-09-07_isal.md`
+> first.** The design is pre-registered in
+> `experiments/ISAL_VARIANT_DESIGN.md` (with its measured deviations in §9),
+> the theory is `theorem_c_ordered_walk.tex` on the drive, three canonical
+> programs run on the C++ engine, and the RQ1 campaign of the four-cell
+> nauty ablation is on Picasso. `prose.md` §2–§4, §6 and §11 are rewritten
+> for the Isal word; §0–§8 below and §6.0 describe the superseded fact-rank
+> decision.
 
 ## 0.1 What a takeover agent should do next
 
@@ -253,9 +309,9 @@ is adopted because it maximizes the fraction of edits that cost nothing.
 
 **Data** (`prose.md` §7; `supplementary_data.md`). Two real collections, one
 question each, each with a control in the supplement: entity knowledge bases
-of **WD50K(66)** (3,167 n-ary members; Wikidata types as class labels;
+of **WD50K(66)** (**3,162** n-ary members; Wikidata types as class labels;
 WD50K(100) as purity control) and the quarterly co-formulation knowledge
-bases of pharmacologic classes in **NDC-classes** (1,432 members, 21.6 % of
+bases of pharmacologic classes in **NDC-classes** (**1,381** members, **22.2 %** of
 consecutive quarters one-edit variants with exact fact-level truth;
 NDC-substances as control); controlled corruptions of real members for RQ4;
 a synthetic envelope sweep for RQ7 only. Retired after probing: planted
@@ -349,8 +405,8 @@ findings came with it that the article now owns:
   survives 68–85 % of edits. The generalizable lesson, now a paper
   observation: **address symbols must be positional, not content-hashed.**
 - **The boundary is the constant set, and it is an inversion rather than a
-  caveat.** Split by regime on the real NDC series (140 constant-preserving
-  pairs, 415 changing): where constants are preserved the rank encoding gives
+  caveat.** Split by regime on the real NDC series (**128** constant-preserving
+  pairs, **400** changing): where constants are preserved the rank encoding gives
   **1 token** at Δ = 1 against the pointer alphabet's 5, and 77 % of pairs
   within two tokens against 17 %; where constants change it is **worse than
   the pointer alphabet** — 7 tokens against 4, 0 % within two tokens against

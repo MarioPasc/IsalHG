@@ -19,14 +19,28 @@ the only metric reported for it. (iii) The logical machinery stays out of
 this manuscript — knowledge bases are treated as data, not as models of
 sentences; the logic program is the follow-up paper (§10).
 
+> **D-ART6 (2026-09-13, author-directed; PI ratification pending).** The
+> paper's headline program is the **ordered walk `w°`**, not the orbit-pruned
+> `w*_c` that D-ART5 named. Every sentence below that says `w*_c` "carries
+> §§3–7" is superseded; `w*_c` stays the family's search form and appears in
+> RQ1's ablation only. Three headline exhibits: RQ6 (generation), RQ3 v2 (the
+> golden record, redesigned), RQ8 (valid completion, new), plus the measured
+> capability table. Design and pre-registration:
+> `experiments/HEADLINE_DESIGN_2026-09-13.md`; reasoning: `SESSION_LOG.md` §6.
+> This file is re-folded under T-KBg once those runs land.
+
 **The alphabet gate, and its answer.** The PI ratified changing the
 instruction alphabet and set the criterion: *similar knowledge bases must
-encode to strings at small Levenshtein distance*. It has been measured
-(§2.3, RQ1, `foundation/probes_2026-09.md` §9): fact tokens addressed by
-**global canonical rank** meet it — one token per fact insertion against half
-the word under the inherited pointer alphabet — local colour-based addressing
-is refuted, and the residual boundary is a change of the constant set. The
-adopted encoding carries §§3–7.
+encode to strings at small Levenshtein distance*. **The answer was not an
+alphabet change.** D-ART4 (2026-09-06) ruled that the paper's representation is
+the instruction string of the Isal machine; the fact-addressed word that had
+been measured against the criterion left the paper with that ruling and stays
+in the record as a comparator. What the campaign varied instead was the
+*canonical program* — the rule that picks one program per isomorphism class —
+with `Σ_HG` unchanged. **D-ART5 records the outcome**: the family's own `w*_c`,
+computed by the stabiliser-orbit-pruned engine, carries §§3–7. The criterion is
+met **conditionally**, and §2.3 states the condition rather than claiming it
+away.
 
 ---
 
@@ -46,11 +60,15 @@ distance. We write each knowledge base as a word over an instruction alphabet
 and give the first four by construction: exact identity, a metric with
 computable optimality certificates, polynomial pairwise cost after one
 canonicalization, and a language whose every prefix, edit and sample decodes
-to a knowledge base. The fifth is a design problem in the alphabet itself, and
-this paper's second contribution is to solve it: we show that the pointer-
-addressed alphabet of our earlier work is locally unstable — one fact rewrites
-half the word — and we design and measure fact-addressed alternatives against
-that criterion. On the resulting representation we build the operations a
+to a knowledge base. The fifth is a design problem, and this paper's second
+contribution is to locate it rather than to claim it solved: the instability of
+our earlier work belongs to the *search* that selects the canonical program and
+not to the alphabet — one fact rewrites half the word — and it is conditional on
+where the edit falls. An edit that changes the constant inventory costs our
+representation a constant number of instructions, where a canonical adjacency
+certificate rewrites every row after the change; an edit interior to the
+existing constants costs us more than it costs the certificate. We measure both
+and claim only the first. On that representation we build the operations a
 knowledge engineer actually performs on a collection — a representative
 record, a data-quality screen, a description-pattern hierarchy, a map, and a
 generator — each with the guarantee it needs, on two real collections:
@@ -122,17 +140,14 @@ hyperedge over its constants labelled by predicate, `k` is the maximum arity.
 Encoding E1⊤ adds an anchor constant joined to every constant, which makes
 constant insertion a fact and every knowledge base connected.
 
-**Argument roles ride inside the fact token** (author decision, 2026-09-04).
-A relation with named argument positions — a statement's subject, object and
-qualifier values — is encoded as the labelled set of `(role, constant)` pairs,
-so nothing is abstracted away and arity stays native. Under a fact-addressed
-alphabet the role is one extra field per operand and costs nothing
-structural; under the pointer alphabet, whose tokens have no role field, the
-fallback is encoding E2 (an arity-2 incidence hypergraph with
-position-labelled incidences), fully general but inflating the constant count
-to `1 + |constants| + |facts|` and pushing members out of the feasibility
-envelope. This is one more reason the alphabet decision of §2.3 matters. Under
-each, `K ≅ K' ⇔ E(K) ≅ E(K')`, so every statement about hypergraphs below is
+**Argument roles** (subject, object, qualifier) are not carried in this
+paper: facts are sets, as in every representation compared. The lift that
+keeps the alphabet — a per-slot role pattern folded into the fact label, with
+the roles in the incidence graph's colouring so the canonical labelling
+respects them — is specified and filed (ledger T-KBa) and is future work;
+the fact-rank variant that carried roles without the colouring failed
+invariance and is the cautionary measurement. Under E1,
+`K ≅ K' ⇔ E(K) ≅ E(K')`, so every statement about hypergraphs below is
 a statement about knowledge bases. *The paper does not develop the model
 theory of this correspondence* (rule iii): it states the encoding, notes that
 isomorphic knowledge bases are indistinguishable by any property that does not
@@ -140,124 +155,255 @@ name a constant, and moves on.
 
 ### 2.2 The word, and what is proved of it
 
-An instruction alphabet is executed by a small machine that builds a
-knowledge base; the encoder writes a knowledge base as a word, the interpreter
-reads a word back. For the pointer alphabet `Σ_HG` inherited from our earlier
-work, the tie-complete canonical word `w*_c(K)` and the augmented fingerprint
-`F_c(K) = (seed type, w*_c(K))` give:
+The instruction alphabet `Σ_HG = {V, C, P, N, W}` is executed by a small
+machine — a circular list of constants and `k` pointers — that builds a
+knowledge base; an encoder writes a knowledge base as a program, the
+interpreter `S2H` runs a program back into one. **The paper's representation
+is that program** (D-ART4, 2026-09-06). The machine admits more than one
+*canonical* program, and the paper uses that:
 
-1. *Exactness.* `F_c(K) = F_c(K') ⇔ K ≅ K'` (Theorem A, proved, labelled case
-   included).
-2. *Metric.* `d_I(K,K') = d_Lev(F_c(K), F_c(K'))` over the token sequence is a
-   metric on isomorphism classes (Corollary A, proved). Raw token
-   Levenshtein; never the length-normalized variant, which is not a metric.
-3. *Polynomial pairwise cost.* One canonicalization per knowledge base, then
-   `O(L²)` per pair in tokens; measured in milliseconds on labelled real
-   knowledge bases, with the frontier at the fact count, not the constant
-   count.
-4. *A closed language.* Every word decodes to a knowledge base: every prefix,
-   every single-token edit (24,000/24,000 measured), every interior word of an
-   alignment between two canonical words (62/62), every sample of any
-   distribution over words.
+1. `w*_c(K)`, the tie-complete shortlex minimum over all programs from an
+   isomorphism-invariant seed set — the family's search-based form. With the
+   augmented fingerprint `F_c(K) = (seed type, w*_c(K))`: *exactness*
+   `F_c(K) = F_c(K') ⇔ K ≅ K'` (Theorem A, proved, labelled case included)
+   and the *metric* `d_I = d_Lev` on the token sequences (Corollary A). Its
+   search is made polynomial on symmetric inputs by stabiliser-orbit pruning
+   without changing its value (Prop. C.7, proved; implemented in the C++
+   engine, bit-identical on 1,300 differentials).
+2. `w°(K)`, the *ordered walk*: a deterministic program emitted along a
+   canonical labelling of the constants (individualisation–refinement on the
+   coloured incidence graph, computed by nauty), and `w*_ρ(K)`, the family's
+   own greedy walk with that labelling as its residual tie key. **Theorem C**
+   (proved): every deterministic emitter along a canonical labelling that
+   round-trips is a complete isomorphism invariant; Corollary C: its
+   Levenshtein distance is a metric on isomorphism classes. No search, no
+   exponential case: one canonical-labelling call and a linear emission.
 
-**Compactness** rides along: the word is shorter than the incidence list under
-a fixed-width code.
+Common to every canonical program: *polynomial pairwise cost* — one
+canonicalisation per knowledge base, then `O(L²)` per pair in tokens, raw
+Levenshtein and never the length-normalised variant, which is not a metric;
+and *a closed language* — every word decodes to a knowledge base. Prop. C.4
+now proves what was only measured: every word of `Σ_HG` decodes to a
+**connected** knowledge base with no isolated constant, so every prefix,
+every edit, every alignment interior and every generated sample is one.
+Measured again in RQ6, at campaign scale (27 seeds x 10,000 samples per
+collection): every sample of the Isal generator is valid **and** connected —
+270,000/270,000 on NDC and 270,000/270,000 on WD50K, validity 1.0000 and
+connectivity 1.0000 on both. The fact-list generator's samples are all valid
+but connected only 41.6 % of the time on NDC and 12.6 % on WD50K; no single
+ratio describes both collections. The sharper contrast is the third generator:
+an incidence-list serialisation with a strict decoder must **reject 98.10 %
+(NDC) and 98.98 % (WD50K) of its own output**, against validity 1 by theorem.
+Put on a single denominator — the fraction of *drawn* samples that are valid
+**and** connected, which is what a user of a generator actually gets — the Isal
+generator returns a usable knowledge base **every time**, the fact list **one
+time in two** (NDC) and **one in eight** (WD50K), and the incidence list **one
+in 578** and **one in 11,739**.
 
-### 2.3 The fifth prerequisite, and the alphabet decision (RQ1)
+**Novelty is where the fact list wins, and the win is real**: 0.9883 (NDC) and
+0.9425 (WD50K) of its samples are non-isomorphic to every member, against 0.9172
+and 0.9138 for the Isal generator. What that figure conceals is the price. Of the
+fact list's genuinely new samples, **7.3 % are connected** (WD50K); of ours,
+**100 %**, by Proposition C.4 and not by measurement. Connectivity is the bar
+rather than a nicety because it is this representation's domain condition (R3):
+a disconnected sample cannot be encoded, so it cannot be canonicalised, compared,
+or added to the collection at all. The fact list produces something connected,
+which is then usually a near-copy of a member, or something novel, which is then
+usually not encodable — rarely both. Its novelty is bought by leaving the domain,
+and a closed language has nothing to buy it with, because there is nowhere
+outside the domain to go. The dependence is a
+WD50K phenomenon and is stated as one: on NDC the two are nearly independent
+(joint 0.4040 against 0.4109 if they were).
 
-`Σ_HG` addresses the constants of a fact *relatively*, by where a set of
-pointers happens to stand after every earlier instruction. The canonical word
-is therefore a layout as much as a content, and a single new fact perturbs the
-layout: measured, one structural edit rewrites **0.51–0.54 of the word** on
-random substrates. Similar knowledge bases are not close. That is a defect of
-the alphabet, not of the idea — and the PI's ratified criterion is exactly
-this property, so the paper's second contribution is to fix it.
+One asymmetry a reader will notice, stated because the answer is evidence of
+care rather than a concession: on the roles-carrying corpus the models are fitted
+on role-aware words and every evaluation column is role-free, so a sample
+reproducing a member up to argument roles counts as a **reproduction**. That
+makes novelty harder to earn, not easier — and hardest for the comparator, whose
+novelty figure is the one that beats ours.
 
-**The design space** is how a fact names its constants:
+**Compactness** rides along: `|w| ≤ m(1+kn)` (proved); measured medians of 6
+(WD50K) and 8 (NDC) instructions per member against 12 rows of the canonical
+adjacency certificate.
 
-| | Addressing | One new fact costs | Risk |
-|---|---|---|---|
-| **A — pointer (inherited)** | relative to a moving pointer state | a token plus every downstream layout shift | measured: half the word |
-| **B — global canonical rank** | the constant's position in an isomorphism-invariant total order | one token *if* the order is unchanged | a new fact can permute the order, rewriting every token that mentions a re-ranked constant |
-| **C — local address** | `(structural colour, index within colour)`, the colour from a bounded-depth refinement | one token *if* the colours are unchanged | refinement is local, so damage should be bounded — untested |
+### 2.3 The fifth prerequisite: locality, and the canonical-program decision (RQ1)
 
-All three are complete invariants under an isomorphism-invariant ordering, so
-exactness and the metric survive any choice; what differs is the topology. The
-selection rule was **pre-registered before the measurement**: adopt the scheme
-with the best measured local stability, whichever it is, keep the others with
-their numbers in the supplement, and explain why the winner wins.
+The PI's criterion is that similar knowledge bases sit at small Levenshtein
+distance. The family's canonical string `w*_c` fails it on the real corpora
+(one edit rewrites 0.49–0.79 of the word, normalised; campaign of
+2026-09-05) and is censored on 41–100 % of members whose incidence graph has
+`|Aut| ≥ 10³`. Both limits have one root: **`w*_c` is the minimum of a
+presentation-dependent search.** The minimum is discontinuous under edits,
+and the search must try every ordering of automorphic constants because it
+cannot tell they are automorphic. Neither is a defect of the alphabet, and
+neither needs a new canonical form. The paper keeps the machine, the alphabet,
+the decoder **and the canonical string**, and treats the two limits separately:
+one by a value-preserving change to how `w*_c` is *computed*, the other by
+measuring where the string is and is not local.
 
-**Measured (`foundation/probes_2026-09.md` §9; 31,279 single-edit pairs over
-synthetic, NDC and WD50K members). C is falsified outright; B is adopted for
-the regime it wins, which is not every regime — see the trade-off below.**
+**The decision, stated before the evidence for it.** The paper's canonical
+program is the family's own `w*_c`, computed by the stabiliser-orbit-pruned
+engine (D-ART5). Orbit pruning returns `w*_c` bit for bit (Prop. C.7), so this
+is the string D-TA2 froze rather than a second canonical form; what changes is
+what it costs to obtain on symmetric inputs. The ablation below is therefore
+evidence *for* that choice, not a search for a replacement: it measures what a
+canonical-labelling engine contributes in each of its two roles, and what the
+alternatives cost on the axes the paper claims.
 
-| | A pointer | **B global rank** | C local colour |
-|---|---|---|---|
-| single-edit response, normalized median (synth / NDC / WD50K) | 0.500 / 0.500 / 0.500 | **0.188 / 0.211 / 0.300** | 1.000 / 1.000 / 1.000 |
-| one fact inserted over existing constants | 15 / 7 / 5 tokens | **1 / 1 / 1 token** | 25 / 14 / 14 tokens |
-| canonicalization | 1.1–1.7 ms median, p90 2.2–8.3 s, 6 % censored | **20–60 µs, none censored** | 20–60 µs |
-| completeness and iso-invariance (3,000 instances) | 0 violations | 0 violations | 0 violations |
+**The design space** is four canonical programs of one machine, arranged by
+what a canonical-labelling engine (nauty) contributes — the ablation the
+author asked for:
 
-The result that generalizes beyond this paper is *why* C fails. A refinement
-colour is a hash of the whole refinement history, so one fact edit moves
-92–98 % of the colours — no edit among 5,724 left the colour multiset intact,
-and even depth 1 moves 36–52 % — whereas the canonical rank order is untouched
-by 68–85 % of edits. Putting a colour *identity* inside an address makes every
-symbol change at once. **Address symbols must be positional, not
-content-hashed**, and that is a statement about canonical forms in general,
-not about our alphabet.
+| cell | canonical program | nauty's job | exact by | cost per member (see note) | locality |
+|---|---|---|---|---|---|
+| no nauty | `w*_c`: tie-complete shortlex minimum over walks | none | Theorem A | exponential on symmetric inputs | the search's |
+| oracle only | the same `w*_c`, one branch per stabiliser orbit | **`autgrp` only** — an automorphism-group oracle at ties and seeds, never a labelling | Theorem A, value preserved (Prop. C.7) | **median 0.36 ms, mean 436 ms** — a 790× divergence; the mean is the tail | the search's |
+| order only | `w°`, the ordered walk: a deterministic emission along the canonical labelling | supplies the order | Theorem C | **0.098 ms** = one 0.040 ms labelling call **+ 0.058 ms emission** | the emission's |
+| both | `w*_ρ`, the family's greedy walk with the labelling as its residual tie key | the order, used inside the search as the tie key | Theorem C | one greedy run (0.5 ms/member, C++) | the greedy walk's |
 
-**The boundary is a trade-off, not a caveat, and it is the more interesting
-result.** B's locality holds for edits that leave the constant set alone and
-**inverts** when an edit adds or strands a constant, because any
-isomorphism-invariant total order renumbers when the set it orders changes.
-Measured on the real NDC series, split by regime (140 constant-preserving
-pairs, 415 changing):
+**Only the oracle-only and order-only costs come from the same measurement** —
+cluster medians over 200 `wd50k66` members in one run
+(`foundation/rq7_envelope_facts.md` §9). The other two rows do not: the
+no-nauty cell states a complexity rather than a per-member time, and the
+tie-key cell's figure predates the campaign. The column is therefore read row
+by row and is not a ranking; the two comparable cells are marked in bold.
+**The oracle-only cell is deliberately
+not decomposed**: it takes `autgrp` of the prefix-individualised Levi graph at
+every residual tie and **never a canonical labelling**, so subtracting the
+labelling call that the other cells share would subtract work it does not do.
+That is also why Prop. C.7 can license orbit pruning as value-preserving while a
+rank-refined tie set is forbidden — **the pruned search never consults an
+order.**
 
-| | pointer (A) | rank (B) |
-|---|---|---|
-| preserving: median distance at Δ = 1 | 5 tokens | **1 token** |
-| preserving: pairs within 2 tokens | 0.167 | **0.771** |
-| changing: median distance at Δ = 1 | **4 tokens** | 7 tokens |
-| changing: pairs within 2 tokens | **0.400** | 0.000 |
-| changing: ρ(constants moved, distance) | 0.430 | 0.503 |
+**The mean/median split in the oracle-only row is the finding, not an artefact.**
+Reporting that cell as a mean — which a total-over-N naturally produces — gives
+436 ms and describes a corpus; the median gives 0.36 ms and describes a member.
+The paper quotes the median for per-member cost and the mean only where an
+`N`-member corpus is what is being priced.
 
-So the pooled figures above are an average over a mix that is 1:3 against B on
-this corpus, and the honest statement is a **trade-off with a mechanism**: a
-content-addressed encoding pays for every *fact* edit, a position-addressed one
-pays for every *constant* edit.
+**What is proved** (`theorem_c_ordered_walk.tex`). Theorem C and Corollary
+C (above). Prop. C.4: closed *and connected* language. Prop. C.5 (star
+locality): on a knowledge base whose facts all contain the entity, inserting
+a new argument costs the ordered walk exactly one `V` instruction and at
+most one unit of one pointer run; a new fact over an existing argument at
+most three instructions. Prop. C.6 (name-freedom): the word never names a
+constant, so a change of the canonical order inside a class of equivalent
+constants leaves it unchanged, whereas every rank-addressed serialisation
+rewrites every row that names a re-ranked constant. Prop. C.7: orbit pruning
+returns `w*_c` bit for bit.
 
-**The trade-off is an obstruction, not an unexplored gap.** The missing third
-point — positional addressing *within* a locally determined class, which
-should have inherited the virtues of both — was built and measured, in a fine
-and a coarse variant. It is worse than either: it **never** lands within two
-tokens of a one-edit neighbour (0 of 31,279 pairs), where B is within *one*
-token on 38–52 % of constant-preserving pairs. The reason is the sentence the
-paper should keep: in every constant-preserving row the fraction of edits that
-leave the address map entirely intact is **0.000** — no edit among 21,528 —
-because a fact insertion *is* a change to the incidence data such a key reads,
-whereas B's profile is bimodal and nothing moves at all on 57 / 43 / 22 % of
-those edits. **Locality is won by the mass of zero-cost edits, not by a low
-average damage.**
+**What is measured so far** (a local preview, 60 members per corpus, one
+replication, instruction granularity). **The campaign has since run** — RQ1's
+deliverable is frozen at `results/IEEETKDE/RQ1_isal/merged/` and RQ7 completed
+2026-09-11 — so the locality table below is the preview and is **superseded on
+cost by §2.3's measured row and by the sweep result that follows it**. It is
+retained until the 27-seed locality figures are folded, and is marked as the
+preview wherever it is cited.
 
-**Frontier (Prop 13).** For an isomorphism-invariant address map `A` on
-constants: if `A` is content-determined, every fact edit changes it at the
-edit site, so its cost is never zero; if `A` is position-determined, it is
-untouched with probability `p` under fact edits (measured 0.22–0.57) but
-renumbers `Θ(|w|)` whenever the constant set changes; a hybrid inherits both
-costs. An addressing that is `O(1)`-local under both would require an
-identifier that is not a function of the isomorphism class — extrinsic naming,
-which invariance forbids. B is adopted because it maximizes the zero-cost
-fraction, and the article reports the frontier as a result.
+| edit (real corpora) | `w*_c` | ordered walk | certificate rows | fact list (record) |
+|---|---|---|---|---|
+| delete a fact — median instructions (≤ 2 fraction) | **1–3** (0.47–0.77) | **1–3** (0.43–0.61) | 12–15.5 (0.00) | 5–6 (0.12–0.20) |
+| remove an argument | **2** (0.58–0.66) | **2** (0.51) | 10–14.5 (0.07–0.13) | 3–6.5 (0.12–0.39) |
+| add a fact with a new constant | **4–7** (0.04–0.31) | 13–14.5 (0.02–0.09) | 13–17 (0.00) | 4–7 (0.08–0.18) |
+| add an argument to a fact | 4 (0.14–0.16) | 6–7 (0.05–0.08) | 4.5–11 (0.18–0.32) | **2–5** (0.32–0.66) |
+| add a fact over existing constants | 6–8 (0.03–0.07) | 14–17 (0.00–0.02) | 8–10 (0.00) | **2–3** (0.49–0.52) |
 
-**The consequence the paper states itself, rather than leaving to a
-reviewer.** B is, in substance, a canonical labelling serialized to a sorted
-fact list, and its distance correlates with the canonical-labelling
-certificate distance at ρ = 0.62–0.96. The article's distinctiveness therefore
-rests on what a certificate does not have — the closed language, total
-decoding, the certified ball-coverage representative, and generation with
-validity 1 — and that argument is made explicitly in §6 and tested in RQ3 and
-RQ6, not implied by a claim of novelty in the addressing.
+Three readings, **as the preview stated them, each carrying the campaign's
+correction so the two are not met seventy lines apart**. (1) The Isal walks
+looked like the most local representation under deletions: removing a fact or
+an argument removes instructions and renumbers nothing, while a rank-addressed
+serialisation renumbers everything after the gap. **Corrected below** — the
+axis is pendant versus interior, and on *interior* deletions the retired fact
+list beats us. (2) **Under insertions the family's greedy walk is 2–3× more
+local than the ordered walk**: the greedy walk creates a constant's facts
+while that constant is still one pointer step away, and the ordered walk's
+breadth-first order defers them until the constant has been pushed away and
+then pays the excursion twice — a property of the ordering, not of the
+machine. The preview read that as making the "both" cell the representation
+candidate; **D-ART5 did not follow it**, because the tie key yields a
+*different* canonical value — one Theorem C's statement does not cover, and one
+whose adoption would supersede D-TA2 — and the campaign did not measure it
+above `w*_c` on the locality axis. (3) Under insertions over existing constants the fact list keeps
+the edge it was retired for: naming a constant by rank costs one token where
+moving a pointer to it costs a run. That edge and its price (renumbering on
+constant edits) are in the record, not in the paper's tables.
+
+**The symmetric-input cost is lifted without changing the definition.** On
+the 100 highest-symmetry WD50K members the unpruned C++ engine censors at
+60 s, the orbit-pruned C++ engine completes 98 — all 37 with `|Aut| ≥ 10⁷` in
+a median of 3 ms — and both Steiner triple systems of order 13, which the
+unpruned search never finished, in 50 s and 7 s. On NDC it completes 48 of
+100, because that corpus's censored tail is not symmetric: it is arity-10
+members whose cost is the displacement search, which pruning cannot touch.
+Both numbers go in the paper.
+
+> **QUALIFIED by the 600 s characterisation (job 2279006, T-KBf).** "Pruning
+> cannot touch it" stands — the orbit engine recovers only 24.7 % of that tail
+> even at a tenfold budget. What does **not** stand is reading the tail as
+> intractable *in itself*: the deterministic rank walk clears **50.9 %** of it at
+> 600 s, significantly more than orbit (−26.3 %, 95 % CI [−41.6 %, −9.4 %],
+> Fisher p = 0.00279; stratified sign test over shards p = 0.0386). So the cost is
+> **the tie-complete search on that tail**, not a property of arity-10 members
+> that no method can address. The census (69 of 77 at arity 10, |Aut| < 10³) is
+> unchanged; only the explanation is. Rewrite at the fold.
+
+**And the ordered walk has no symmetry frontier at all** — the campaign result
+that supersedes the 100-member preview above. On the RQ7 envelope sweep
+(7,776 instances per arm, 60 s budget; `foundation/rq7_envelope_facts.md` §1):
+
+| `\|Aut\|` | n | pointer alphabet | orbit-pruned `w*_c` | **ordered walk `w°`** |
+|---|---|---|---|---|
+| `< 10³` | 6,734 | 31.1 % censored | 29.0 % | **0** |
+| `10³–10⁶` | 615 | 89.1 % | 65.0 % | **0** |
+| `≥ 10⁷` | 427 | **100 %** | 91.8 % | **0** |
+
+**Zero of 7,776**, including all 427 instances at `|Aut| ≥ 10⁷` where the pointer
+alphabet fails every single one. This is a census, not an estimate, so it needs
+no interval.
+
+**What the frontier actually is, once symmetry is held fixed.** Joined against
+size — because every `≥ 10⁷` instance in the sweep also has `m ≥ 80`, so the
+marginal confounds the two — **arity gates and symmetry modulates inside the
+gate**: `k = 2` censors 0.000 at every `m` and every symmetry level, including
+0 of 22 at `m = 160` with `|Aut| ≥ 10⁷`, while at fixed `(m, k)` censoring rises
+across symmetry buckets in 9 of 15 usable cells and falls in none.
+
+**On the real collections the walk canonicalises everything**: 1381/1381,
+1745/1745, 1837/1837 and 3988/3988 — **8,951 of 8,951** members of the four
+gated collections, at 0.60–0.70 ms median.
+
+**At corpus scale the separation is three orders of magnitude, and it is the
+one comparison with nothing to confound it.** The full 3,988 × 3,988 matrix on
+`wd50k66` takes **1.39 s** for the ordered walk against **28.9 min** for the
+tie-complete search — **1,252×**, on one alphabet, one tokenisation, one code
+path and one corpus, so neither side's cost depends on how it was serialised.
+Every cross-representation timing in this paper carries that caveat and this
+one does not. It is also the cost axis of the ablation stated at the scale the
+applications actually run at: the same language, the same machine and the same
+decoder, with and without the search, is interactive against overnight.
+
+**The selection rule was pre-registered** (design record §3): among the
+exact, uncensored arms, the one with the highest fraction of
+constant-preserving edits within two instructions, ties by median; the
+losers stay in the same table. The decision is taken on the campaign table.
+
+**The consequence the paper states itself.** Where the certificate's or the
+fact list's locality is better, the article does not claim otherwise; its
+distinctiveness rests on what a certificate does not have — a language that
+is closed *and connected*, total decoding, the certified representative, and
+generation with validity 1 — plus the locality the Isal walk owns outright.
+
+**That last clause previously read "deletions", and the measurement does not
+support it.** Against the *certificate* we own three **pendant** edit kinds (it
+scores 0.000 on all of them); against the *fact list* we do **not** own
+deletions — on interior deletions it is 57.8 % against our 13.9 %. **The axis is
+pendant versus interior, not deletion versus insertion.** A pendant edit touches
+the frontier of the walk and costs a constant; an interior one displaces
+everything the walk has already emitted, and a rank-addressed serialisation pays
+nothing for it because it never emitted an order in the first place. The claim
+is restated on that axis and the fact list keeps interior deletions.
+
+That argument is made in §6 and tested in RQ3 and RQ6.
 
 ## 3. Research questions
 
@@ -265,34 +411,43 @@ Each question names the knowledge-base problem it answers, the hypothesis, the
 evidence, and the single evaluation it receives. They are the paper's
 sections, in order.
 
-### RQ1 — Representation design. *Which addressing scheme makes similar knowledge bases close, and at what cost in exactness, compactness and time?*
+### RQ1 — Canonical-program design within the Isal language. *Which canonical program of the machine makes similar knowledge bases close, and what does a canonical-labelling engine contribute — as an order, as an oracle, or both?*
 
-- **Hypothesis (falsified twice, and the paper says so).** Pointer addressing
-  is locally unstable — confirmed, one fact ≈ half the word on every corpus.
-  Local `(colour, index)` addressing was predicted to be the stable one —
-  **refuted**: it is the worst, because a refinement colour is a global hash
-  (one edit moves 92–98 % of colours). Its repair, positional addressing
-  within a *locally determined* class, was then built and is **also
-  refuted** — 0 of 31,279 pairs within two tokens. Global canonical ranks,
-  predicted to sit in between, are the best, at one token per fact insertion,
-  with a characterized inversion when the constant set changes. The three
-  failures together give the frontier proposition (Prop 13), which is a
-  stronger result than any single encoding would have been.
-- **Evidence.** The three encodings on the same instances: single-edit
-  response per edit kind on synthetic and on both real collections; the
-  correlation with the *known* fact-level difference on the real variant
-  series; a locality measurement of the refinement colouring that explains the
-  refutation; empirical completeness and iso-invariance; token counts;
-  wall-clock.
-- **Evaluation.** Median and interquartile single-edit response, absolute and
-  as a fraction of the word, and Spearman correlation with the true fact-level
-  difference — the PI's criterion, stated as a number.
-- **Reading (contract, pre-registered and honoured).** The encoding with the
-  best measured local stability carries the rest of the paper, whatever its
-  relation to the certificate baseline; the others are reported in the
-  supplement with their numbers. The selection was made on the measurement
-  (`foundation/probes_2026-09.md` §9) and the losing arms are documented, not
-  discarded.
+- **Hypothesis (pre-registered 2026-09-06; the preview already corrects
+  it).** The search was named as the root of both limits — confirmed: the
+  orbit oracle removes the symmetric-input cost without changing `w*_c`, and
+  the deterministic programs have no exponential case. The ordered walk was
+  predicted to be the most local Isal program (H-M1a) — **falsified on
+  insertions**: its breadth-first order defers a constant's facts and pays
+  pointer excursions, so the family's own greedy walk is 2–3× more local
+  there; the relative-addressing advantage (H-M1b) holds for growth around
+  the entity (median 1 instruction against 12 certificate rows) and not for
+  insertions elsewhere. Unpredicted and robust across both real corpora:
+  **the Isal walks are the most local representation on *pendant* edits — those
+  that change the constant inventory — where the certificate scores zero. The
+  axis is pendant versus interior, not deletion versus insertion** (§2.3): on
+  interior edits the certificate and the retired fact list are more local.
+- **Evidence.** The four cells of the nauty ablation and the two certificate
+  tokenisations on identical seeded edits: exactness and relabelling
+  invariance (M0); single-edit response per edit kind and regime in absolute
+  instructions, the within-two fraction and the zero-shift flag (M1);
+  correlation with the known fact-level difference on the real series (M2);
+  cost and censoring per symmetry bucket (M3); correlation with the
+  certificate (M4). Every Isal arm on the C++ engine.
+- **Evaluation.** Median single-edit response in instructions with a cluster
+  bootstrap over members, the within-two fraction with a Wilson interval,
+  Holm-corrected paired Wilcoxon against the certificate rows, Spearman ρ on
+  the ladders — the PI's criterion, stated as a number per edit kind.
+- **Reading (contract, discharged).** The contract was that the exact,
+  uncensored Isal program with the best constant-preserving locality carries
+  RQ2–RQ7, with the other cells kept in the same table with their numbers and
+  their mechanism, and the retired fact list kept in the record as the
+  comparator it was. The campaign ran and **D-ART5 records the outcome**:
+  `w*_c` on the orbit-pruned engine carries RQ2–RQ7, the ordered walk appears
+  as the order-only cell here and as the cost floor in RQ7, and the tie-keyed
+  walk appears here only. The pre-registered selection rule was applied among
+  the `ow_*` arms and its escape clause fired, which is printed rather than
+  argued around.
 
 ### RQ2 — Well-posedness. *Which distances on isomorphism classes satisfy the prerequisites the five operations need, and what does each missing one do to a real collection?*
 
@@ -323,6 +478,18 @@ sections, in order.
   representative to the held-out next quarter, against the certified medoid
   and against the identity-using majority merge (which uses information our
   methods do not have).
+- **Status — RQ3's numbers are provisional and nothing here may be folded as
+  settled.** The consensus objective was corrected after the first run: its
+  tie-break ran on the retired representation, and candidates outside the
+  representation's domain were admitted to the search. Both are fixed and the
+  re-run is not optional; T-KBf records how many collections move. Two
+  consequences. Any RQ3 figure quoted before that lands is superseded by
+  construction. And the placement of the natural NDC series — main text or
+  supplement — rests on a pre-registered gate that was applied to the
+  *pre-correction* rows, on the corpus more exposed to the correction of the
+  two, so **the rule is re-applied to the new numbers rather than the standing
+  verdict confirmed**. A rule re-applied can return a different answer; a rule
+  remembered cannot.
 
 ### RQ4 — The data-quality screen. *Which descriptions are structurally anomalous, and does exactness change the answer?*
 
@@ -367,35 +534,62 @@ sections, in order.
 ### RQ7 — Operating envelope. *For which knowledge-base sizes, arities and vocabularies does this run, and how does cost scale with `N`?*
 
 - **Hypothesis.** Cost is `N` canonicalizations plus `N²` string comparisons;
-  the canonicalization frontier is the fact count, not the constant count
-  (measured: `m ≤ 111` in ~0.03 s, `m ≥ 253` never); labels are the
-  tie-breaker (labelled milliseconds where the unlabelled form fails at
-  thirteen constants). Fact-addressed encodings should be dominated by the
-  canonical-ordering call and be markedly cheaper.
+  the canonicalization frontier is the fact count, not the constant count;
+  labels are the tie-breaker (labelled milliseconds where the unlabelled form
+  fails at thirteen constants). Fact-addressed encodings should be dominated by
+  the canonical-ordering call and be markedly cheaper.
+  *The hypothesis was formed on a **probe**, not the campaign:
+  `foundation/probes_2026-09.md` §4–§5, on the **pointer alphabet**, gave
+  20/21 complete at `m ≤ 111` (median 0.03 s) and 0 of 6 and 0 of 9 at
+  `m ≥ 253`. Those are the figures that motivated it — 21 and 15 instances, one
+  arm — and the Measured block below is what tests it. They are cited as the
+  hypothesis's origin and are not the paper's evidence for the frontier.*
 - **Evaluation.** One envelope figure over `(m, k, |Σ|)` on random knowledge
   bases — the single place synthetic data is indispensable, since real
   collections do not span sizes — with the real collections placed on it, and
   the yield table per collection.
+- **Measured** (2026-09-11; 7,776 instances per arm;
+  `foundation/rq7_envelope_facts.md`). The frontier hypothesis **holds, and only
+  the join shows it**: censoring is monotone in `m` in both density series while
+  the pure-`n` effect is non-monotone and **changes sign at `m ≈ 100`**, so `m`
+  is the frontier and `n` is not. Marginally the two looked comparable — every
+  dense cell sits in the lowest symmetry bucket, so the apparent `n` effect was
+  partly symmetry.
+  **The `N`-scaling hypothesis holds in its ordering and fails in two
+  magnitudes**, both in the competitors' favour: the full 3,988 × 3,988 matrix on
+  `wd50k66` is **1.39 s** for the ordered walk against 24.19 s for the
+  byte-serialised certificate, 40.6 s for NetLSD (predicted *minutes*), 10.6 min
+  for bipartite GED (predicted *hours*), and **28.9 min for the tie-complete
+  search** — the walk-against-search ratio being **1,252×**, on one alphabet, one
+  tokenisation and one code path.
+  **No speed claim against the certificate survives.** Its cost is whatever its
+  serialisation says: three tokenisations of the *same* canonical form span
+  **19.2×**, and at the row tokenisation the two are at **parity**. L17's
+  concession stands and the paper makes no canonicalisation-speed claim.
 
 ## 4. Theory delivered
 
 | # | Statement | Status | Serves |
 |---|---|---|---|
-| Thm 1 | Exactness: the canonical word is a complete isomorphism invariant of labelled knowledge bases, for any isomorphism-invariant addressing (pointer, global rank, local address) | proved for `Σ_HG` (Theorem A); the fact-addressed case is a short argument via invariance of the address map — to be written with RQ1's choice | RQ1, RQ2, RQ4 |
-| Thm 2 | Metric: `d(K,K') = d_Lev` on the canonical token sequences is a metric on isomorphism classes, one `(alphabet, depth, vocabulary)` per comparison | proved (Corollary A); ports verbatim | all |
-| Prop 1 | Length and key size: `\|w\| ≤ m(1+kn)` for the pointer alphabet, `\|w\| = n + m` for the fact alphabets; fixed-width bits against the incidence list | proved / immediate | RQ1, RQ7 |
-| Prop 2 | Closure: the interpreter is total, so every word — prefix, edit, alignment interior, generated sample — decodes to a knowledge base (and, for `Σ_HG`, a connected one) | closure proved; connectivity written here | RQ3, RQ6 |
+| Thm 1 | Exactness of the search-based canonical program: `F_c(K) = F_c(K') ⇔ K ≅ K'` for labelled knowledge bases | proved (Theorem A, tie-complete `w*_c`) | RQ1, RQ2, RQ4 |
+| Thm 2 | Metric: `d(K,K') = d_Lev` on the canonical token sequences is a metric on isomorphism classes, one `(k, vocabulary)` per comparison | proved (Corollary A; Corollary C for the deterministic programs) | all |
+| **Thm 3** | **Exactness of every deterministic canonical program**: an emitter along a canonical labelling that round-trips through `S2H` is a complete isomorphism invariant — the ordered walk `w°` and the rank-keyed greedy walk `w*_ρ` in particular | proved (Theorem C, `theorem_c_ordered_walk.tex`) | RQ1, RQ2 |
+| Prop 1 | Length and key size: `\|w\| ≤ m(1+kn)` for every Isal program; measured medians 6 / 8 instructions (WD50K / NDC) against 12 certificate rows; fixed-width bits against the incidence list | proved / measured | RQ1, RQ7 |
+| Prop 2 | Closure **and connectivity**: the interpreter is total, and every word of `Σ_HG` decodes to a *connected* knowledge base with no isolated constant — hence every prefix, edit, alignment interior and generated sample | proved (Prop. C.4); measured validity 1.0000 **and** connectivity 1.0000 on 270,000 samples per collection (`ow_ngram`, 27 seeds x 10,000, both NDC and WD50K), against fact-list connectivity 0.4157 (NDC) / 0.1260 (WD50K) and an incidence-list generator rejecting 98.10 % / 98.98 % of its own samples | RQ3, RQ6 |
 | Prop 3 | Certificates: medoid `≤ (2 − 2/N)·OPT`; `LB ≤ OPT`; hence `LB ≤ OPT ≤ Σ_i d(M, K_i)` certifies any candidate | proved (Jiang–Münger–Bunke 2001 for the medoid) | RQ3 |
-| Prop 4 | Fact-level simulation: under a fact-addressed alphabet a fact insertion is exactly one token, so the ball of radius `r` contains every knowledge base within `r` fact insertions; under the pointer alphabet the same holds only through non-canonical words, with the pointer displacement as an additive cost | measured for the pointer case (1,200/1,200 insertion witnesses, 717/717 deletions); immediate for the fact case | RQ1, RQ3 |
+| Prop 4 | Fact-level simulation: a fact insertion is reachable through a non-canonical word with the pointer displacement as an additive cost, so the ball of radius `r` contains every knowledge base within `r` fact insertions up to that cost | measured (1,200/1,200 insertion witnesses, 717/717 deletions) | RQ1, RQ3 |
 | Prop 5 | Source identifiability on the indel ball: if the members are `t` fact insertions from a common source, the source covers all `N` at radius `t` while no member reaches another in fewer than `2t` | measured (source unique maximiser 12/12 at both noise levels; member-to-member reach 0.00–0.02) | RQ3 |
 | Prop 6 | Generative closure: any distribution over words pushes forward to a distribution over knowledge bases; autoregressive generation is valid at every prefix | immediate from Prop 2 | RQ6 |
 | Prop 7 | Certificate sets are not languages: not closed under any edit, no total decoder, no prefix property; hence no ball, path or generative model exists on them | to be written (short) | RQ2, RQ6 |
 | Prop 8 | The bipartite edit-path cost is not a metric (counterexample `d(A,B)=2, d(B,C)=4, d(A,C)=7` on 3+3+4 vertices); its raw assignment value is a pseudometric with false zeros | proved by counterexample; rates measured | RQ2 |
 | Prop 9 | Incompleteness of refinement-based keys on hypergraphs | cited + measured merges | RQ2, RQ4 |
-| Obs 10 | Instability of pointer addressing: one fact edit moves the canonical word by a constant fraction (measured 0.500 normalized median on all three corpora), with the two mechanisms named | measured; the lower-bound construction is time-boxed with a pre-agreed fallback to the measurement | RQ1 |
-| Obs 11 | Address symbols must be positional, not content-hashed: a refinement colour is a global function of the knowledge base (one fact edit moves 92–98 % of depth-3 colours; 36–52 % at depth 1), so a colour-identity address rewrites the whole word, while a canonical rank order survives 68–85 % of edits | measured (5,724 edits) | RQ1 |
-| Obs 12 | **The addressing trade-off.** Any isomorphism-invariant total order renumbers when the constant set changes, so a position-addressed encoding is one-token-local under fact edits and pays globally under constant edits, while a content-addressed one pays under fact edits: measured inversion on the real series (rank encoding 1 token vs 5 at Δ=1 when constants are preserved; 7 vs 4 when they are not, its distance tracking constants moved at ρ = 0.503) | measured on both regimes, four encodings | RQ1, RQ3 |
-| **Prop 13** | **Addressing frontier.** For an isomorphism-invariant address map: content-determined addresses change at the edit site of every fact edit (measured: 0 of 21,528 edits left such a map intact); position-determined addresses are untouched with probability 0.22–0.57 under fact edits but renumber `Θ(\|w\|)` when the constant set changes; hybrids inherit both. `O(1)`-locality under both edit kinds requires an extrinsic identifier, which invariance forbids. Corollary of practice: locality is won by the mass of zero-cost edits, not by low average damage | measured over four encodings and 31,279 pairs; the proposition is to be written from it | RQ1 |
+| Prop 10 | Star locality of the ordered walk: on a knowledge base whose facts all contain the entity, a new argument costs one `V` and at most one unit of one pointer run; a new fact over an existing argument at most three instructions | proved (Prop. C.5) under the no-crossing move rule; measured exact on 400 random stars | RQ1 |
+| Prop 11 | Name-freedom: the Isal word never names a constant, so a change of the canonical order inside a class of equivalent constants leaves it unchanged, while every rank-addressed serialisation rewrites every row naming a re-ranked constant | proved (Prop. C.6) | RQ1 |
+| Prop 12 | Orbit pruning is value-preserving: branching over one representative per orbit of the stabiliser of the placed prefix, recomputed at every tie, returns `w*_c` | proved (Prop. C.7, from Prop. 6.1 of the completeness proof); implemented in C++, bit-identical on 1,300 differentials; both STS(13) in 50 s / 7 s | RQ1, RQ7 |
+| Obs 10 | Instability of the search-based program under insertions: the minimum of the tie-complete search moves under a single edit (normalised response 0.49–0.79, campaign 2026-09-05), with the two mechanisms named (seed and tie flips; pointer drift) | measured | RQ1 |
+| Obs 13 | **The ordered walk's deferral.** A breadth-first emission by anchor defers a constant's own facts until the constant has been pushed away from the root, so insertions elsewhere than the entity cost pointer excursions (median 13–17 instructions) where the family's greedy walk creates them one step away (4–8) | preview figures; the mechanism is what the campaign confirms — the search is more local than the ordered walk on every insertion kind on all three corpora (§2.3) | RQ1 |
+| Obs 14 | **Pendant locality of the Isal walks.** An edit that changes the constant inventory — removing a pendant fact, narrowing a fact to a constant's last occurrence, inserting a fact that brings its own constant — adds or removes instructions and renumbers nothing, where the canonical adjacency certificate stays within two rows on none of them. **On *interior* edits the certificate and the retired fact list are more local**; the axis is pendant versus interior, not deletion versus insertion (§2.3) | measured on both real corpora; the preview's figures are superseded by the campaign's per-corpus table and quoted only there | RQ1, RQ3 |
+| Record | The fact-rank word's results — its one-token insertion locality, the refutation of content-hashed addresses (Obs 11), the renumbering trade-off (Obs 12) and the addressing frontier (Prop 13) — stay in the ledger and the supplement as the comparator's record; they are not the paper's representation (D-ART4 (1)) | measured 2026-09-04, retired 2026-09-06 | supplement |
 
 Not claimed: a faster isomorphism test; an edit-distance proxy; scaling to
 large knowledge bases.
@@ -427,18 +621,77 @@ generative model definable*. The **locally stable** column is new and is what
 RQ1 fills; the last three are where the certificate member differs from us,
 and RQ3 and RQ6 are the experiments that make the difference visible.
 
+**That column must be two columns — *pendant* and *interior* — and not because
+our entry is awkward.** On the rows the main text carries, neither is uniform and
+the two conditionals point in **opposite directions**:
+
+| main-text row | strongest | weakest |
+|---|---|---|
+| ordered walk | the **pendant** kinds — delete a fact (0.43–0.61), remove an argument (0.51) | interior insertion (0.00–0.02) |
+| certificate rows | its only non-zero cells are **interior** widening (0.18–0.32) | 0.000 on three kinds outright |
+
+So a single *locally stable* column does not exist for **either** of them, and
+ours is not the exception — it is the row where the absence happened to be
+noticed. The two are **complementary, not ordered**: each owns an axis the other
+loses, which is what the campaign measured and what no binary column can say.
+The retired fact word makes the same point more sharply — it is the mirror image
+of ours, strongest on interior and weakest on deletion — and that is **a sentence
+here and a table in the supplement**, per D-ART4 (1): its rows do not appear in
+our tables, and naming it as the comparator that beats us on interior is the
+consequence the ruling instructs the prose to own.
+
+**The two columns are filled where RQ1 measured and blank-with-a-reason
+elsewhere.** RQ1's arms were the Isal cells, the two certificate tokenisations
+and the fact arms — **not** WL, NetLSD, hyperedge portrait divergence, HyperCOT,
+the bipartite pipeline or the naive floors, which make up most of the rows above.
+Filling those cells would mean importing the sibling article's sensitivity
+profiles, measured on a different corpus with a different representation for a
+different paper. The reason is stated once, under the table: *locality on these
+axes was measured for the canonical-word family on this campaign's corpora; no
+equivalent measurement exists for the embedding competitors.* **A blank with a
+stated reason is information; a cell filled from another paper's corpus is the
+defect** — and it is the one `foundation/measured_facts.md` now carries a header
+against.
+
+**Two columns state the concession structurally instead of in a sentence.**
+§2.3 already concedes in prose that where the certificate's or the fact list's
+locality is better the article does not claim otherwise. A reviewer who meets
+that in the *table* — a column the paper does not win, scored and printed — reads
+the rest differently from one who meets a qualified tick, which is the version
+that looks like it is protecting something. It also gives RQ1 a clean job:
+the matrix poses the question per axis and RQ1 answers it per axis, rather than
+filling a cell whose definition it has to renegotiate. (Raised by
+`[IsalHG-Fable]`, and narrowed by it from "every row" to the rows RQ1 measured.
+The profiles above are the §2.3 **preview**, 60 members per corpus; the campaign
+figures are frozen and per corpus in `IEEETKDE/RQ1_isal/merged/` — `regime` **is**
+the pendant/interior axis there — so this is a transcription, and it is owed
+before the matrix is read as the paper's summary of itself.)
+
+**Nauty's role, stated once.** The canonical order of the constants is
+computed by nauty's individualisation–refinement on the coloured incidence
+graph; the Isal encoder then emits, along that order, a program for the Isal
+machine — nauty decides *which* constant comes first, the language decides
+*what* is written, and every string of that language decodes to a knowledge
+base. For the family's own search-based form, nauty supplies the automorphism
+group of the placed prefix, and the search explores one branch per orbit; the
+string returned is the frozen `w*_c`. The comparison in every table is
+therefore *a language* (nauty inside an Isal encoder) against *a certificate*
+(nauty's canonical form written out).
+
 **Conceded once, in the introduction.** For deciding isomorphism and
 deduplicating a collection, the certificate engines are faster and equally
-exact; we do not compete there and we report the timing.
+exact; we do not compete there and we report the timing. For the
+deterministic Isal programs the gap is one linear emission on top of the
+same nauty call.
 
 ## 7. Data
 
 Unchanged from the ratified plan and documented in full in
 [`supplementary_data.md`](supplementary_data.md): **WD50K(66)** entity
-knowledge bases (3,167 genuinely n-ary members in the envelope; Wikidata types
+knowledge bases (**3,162** genuinely n-ary members in the envelope; Wikidata types
 as class labels, imbalance stated; WD50K(100) as purity control) and
-**NDC-classes** quarterly co-formulation knowledge bases (1,432 members, 21.6 %
-of consecutive quarters one-edit variants with exact fact-level truth;
+**NDC-classes** quarterly co-formulation knowledge bases (**1,381** members,
+**22.2 %** of consecutive quarters one-edit variants with exact fact-level truth;
 NDC-substances as control); controlled corruptions of real members for RQ4;
 one synthetic envelope sweep for RQ7. Retired after probing: the planted
 families and size-controlled strata of the previous iteration, the contact
@@ -459,10 +712,10 @@ identity speed.
 | Risk | Fallback |
 |---|---|
 | ~~No fact-addressed encoding is locally stable~~ | **resolved**: global-rank addressing gives one token per fact insertion (`foundation/probes_2026-09.md` §9) |
-| **Global-rank addressing won its regime and correlates with the certificate distance at ρ = 0.62–0.96** (materialized) | adopted for that regime under the pre-registered rule, and **said in the paper**: the distinctiveness is the closed language — total decoding, the ball-coverage representative, generation with validity 1 — carried by RQ3, RQ6 and the decodability figure; the certificate engine becomes a family member we cite rather than a competitor we beat. Losing encodings and their numbers are in the supplement |
-| **The consensus substrate sits in the weak regime** (materialized and quantified): 74.8 % of natural NDC consecutive pairs change the constant set, and restricting to the preserving regime leaves **15 drug classes with a run of ≥ 3 quarters and 2 with ≥ 5** — too small to carry RQ3 alone | RQ3 runs on constant-preserving ladders over *real* members (injected fact edits on real knowledge bases, constant set held) with the natural series reported beside them as the harder case; the alternative — moving the substrate — is an open scoping decision recorded in `foundation/probes_2026-09.md` §9 |
-| Roles cost stability under the adopted encoding (unmeasured — the roles arm was run only on the falsified encoding) | measure before the experiments; the fallback is to carry roles as an edge-label refinement instead of a token field |
-| A new alphabet costs more engineering than the schedule holds | the pointer alphabet remains available for every experiment except RQ1, whose comparison is the contribution either way |
+| **Global-rank addressing won its regime and correlates with the certificate distance at ρ = 0.62–0.96** (materialized) | **superseded by D-ART4**: it was adopted for that regime under the pre-registered rule and then retired, because it has no machine — the Isal instruction string carries the paper and the fact word stays in the record as a comparator. What survives unchanged is the consequence, **said in the paper**: the distinctiveness is the closed language — total decoding, the ball-coverage representative, generation with validity 1 — carried by RQ3, RQ6 and the decodability figure; the certificate engine becomes a family member we cite rather than a competitor we beat. Losing encodings and their numbers are in the supplement |
+| **The consensus substrate sits in the weak regime** (materialized and quantified): **75.8 %** of natural NDC consecutive pairs change the constant set (400 of 528), and restricting to the preserving regime leaves **15 drug classes with a run of ≥ 3 quarters and 2 with ≥ 5** — too small to carry RQ3 alone | RQ3 runs on constant-preserving ladders over *real* members (injected fact edits on real knowledge bases, constant set held) with the natural series reported beside them as the harder case; the alternative — moving the substrate — is an open scoping decision recorded in `foundation/probes_2026-09.md` §9 |
+| Roles cost stability under the adopted encoding — **the Isal string** — and remain unmeasured there: the roles arm was run only on the retired fact word, where it failed relabelling invariance | measure before the experiments; the fallback is to carry roles as an edge-label refinement instead of a token field. Filed as T-KBa |
+| ~~A new alphabet costs more engineering than the schedule holds~~ | **moot**: `Σ_HG` is unchanged under D-ART4, so no alphabet was built; what varied was the canonical program, and RQ1's comparison is the contribution either way |
 | Entity types too imbalanced for RQ5 | per-class support with macro-averaging, or a super-class coarsening; the hierarchy remains an unsupervised exhibit |
 | Generation fidelity poor | validity 1 and the certificate impossibility still hold; the exhibit stays short |
 
@@ -482,46 +735,46 @@ ordered and repeated arguments natively rather than through E2.
 The word means two things in this project. §11.1 is the instruction alphabet —
 the PI's D3′ decision. §11.2 is the paper's glossary.
 
-### 11.1 The alphabet: from a pointer language to a fact language
+### 11.1 The alphabet stays; the canonical program is what changed (D-ART4)
 
-**Why this is on the table.** The preprint fixed the pointer alphabet, and the
-metric-space work inherited it. The PI's ruling is that we are not bound by
-it, that a change increases the distance from the preprint (which the venue
-values), and that the criterion is topological: *KBs parecidas deben
-codificarse en cadenas cuyas distancias de Levenshtein sean pequeñas*.
+**The ruling.** On 2026-09-04 the PI allowed the alphabet to change and the
+criterion was set: *KBs parecidas deben codificarse en cadenas cuyas
+distancias de Levenshtein sean pequeñas*. A fact-list alphabet addressed by
+canonical rank was adopted and measured (§2.3's record). On 2026-09-06 the
+PI ruled that the paper's representation is the instruction string of the
+Isal family: a word for the machine with its circular list, its pointers and
+`Σ_HG`. The fact list has no machine; it leaves the paper and stays in the
+record as a comparator.
 
-**What is inherited and what changes.** The machine, the closed alphabet, the
-total decoder, the completeness argument and the metric corollary are
-alphabet-parametric: they depend on the address map being isomorphism-
-invariant and on every construction token attaching to something already
-present, not on *how* a token names its operands. What changes is the
-addressing, and with it the topology. Concretely, a fact-addressed word is a
-type prefix plus one token per fact, sorted — length exactly `n + m` against
-the pointer alphabet's `m(1+kn)` bound — with the constants addressed as in
-§2.3 B or C.
+**What changes under the ruling.** Not the alphabet, not the decoder, not
+the completeness argument: the *canonical program*. `w*_c` is the minimum
+of a search, and the search is what made similar knowledge bases far apart
+and symmetric ones expensive. The machine admits canonical programs that do
+not search — a deterministic emission along a canonical labelling of the
+constants (the ordered walk), or the family's greedy walk with that
+labelling as its residual tie key — and these are complete by Theorem C.
+The search itself is kept, as the family's own form `w*_c`, and made
+polynomial on symmetric inputs by orbit pruning without changing its value.
+A canonical-labelling engine enters as a subroutine of an Isal encoder, in
+two roles the paper measures separately (§2.3's ablation).
 
-**An earlier, weaker proposal, and why it is not enough.** A previous draft
-proposed adding fact tokens to the *decoder* only, leaving the canonical
-encoder untouched: this makes a one-fact variant *reachable* in one token edit
-through a non-canonical word (measured: insertion witnesses 1,200/1,200,
-deletion witnesses 717/717, source identification 12/12) while leaving the
-distance between canonical words at half the string. That satisfies the
-neighbourhood queries but **not** the PI's criterion, which is about the
-distance itself. The decoder-side tokens remain useful — they are what makes
-Props 4–5 constructive — but the encoder must change too, and RQ1 decides how.
+**What the fact-list detour bought and what it cost.** Its measurements are
+the comparator the paper argues against and they are kept: one-token
+insertion locality where the constant set is preserved, the refutation of
+content-hashed addresses, the renumbering trade-off. Its price was the
+machine, and with it the two properties the paper claims and the fact list
+cannot: a language closed under every edit whose words are all *connected*
+knowledge bases (its samples are disconnected 58 % of the time on NDC and
+87 % on WD50K), and a
+deletion locality no rank-addressed serialisation has.
 
-**The honest price, now paid.** A new canonical encoder means re-proving
-completeness for it (short, since the address map carries it — and measured
-clean over 3,000 instances), re-implementing the encoder, and re-scoping every
-frozen `Σ_HG` measurement as a statement about the pointer alphabet: nothing
-is invalidated, things are labelled. The gains, measured rather than hoped:
-one token per fact insertion instead of half the word; canonicalization from
-milliseconds-to-seconds with a 6 % censor rate down to tens of microseconds
-with none; word length `n + m`; and the connectedness restriction lifted,
-since a fact language can express a disconnected knowledge base and the
-pointer language cannot. The cost is compactness on sparse knowledge bases
-(one type token per constant, where the pointer encoding amortizes constants
-into the tokens that create them) and the renumbering boundary of §2.3.
+**The honest price, now paid.** Three canonical programs were implemented
+in the C++ engine, each bit-identical to its Python reference on every
+differential (the ordered walk on all 5,369 members of both corpora); a
+theorem file was written; and every frozen `Σ_HG` measurement is re-labelled
+as a statement about the search-based program: nothing is invalidated. The
+restriction R4 (roles) is filed; R3 (connected domain) is now a proved
+property rather than a restriction.
 
 ### 11.2 Glossary (additions to `logic_models/vocabulary.md`)
 
@@ -533,8 +786,18 @@ Each term earns its place by a claim that needs it.
   and place the competitor inside it.
 - **Language.** A set of words closed under the alphabet with a total decoder
   into objects. Needed for RQ6 and Prop 7.
-- **Addressing.** How a fact token names its constants: pointer, global rank,
-  or local `(colour, index)`. Needed to state RQ1.
+- **Canonical program.** The rule that picks one program of the Isal machine
+  per isomorphism class: the tie-complete search minimum `w*_c` (Theorem A),
+  the ordered walk `w°` along a canonical labelling, or the greedy walk
+  `w*_ρ` with that labelling as its tie key (both Theorem C). Needed to state
+  RQ1 and the nauty ablation.
+- **Ordered walk.** The deterministic emission: root by degree and type,
+  facts by anchor, predicate and local signature with the canonical rank as
+  the last key, closing facts swept by position, moves that never cross the
+  root. Needed for Props. C.5–C.6.
+- **Orbit pruning.** Branching over one representative per orbit of the
+  automorphism group fixing the placed prefix, recomputed at every tie;
+  returns `w*_c` unchanged. Needed for the symmetric-input result.
 - **Local stability.** The distribution of `d(K, K ⊕ f)` over single fact
   edits. Needed because "similar KBs are close" must be a measured quantity,
   not an impression.
@@ -558,9 +821,10 @@ Each term earns its place by a claim that needs it.
    and strings; canonical forms in mining; metric-space analytics; closed
    string languages as precedent.
 3. Knowledge bases as hypergraphs; the machine and the alphabet; the
-   addressing design space.
-4. The metric space — Thm 1, Thm 2, Props 1, 3, 8, 9.
-5. The language and its topology — Props 2, 4–7; RQ1's measurement.
+   canonical programs and what a canonical-labelling engine contributes.
+4. The metric space — Thms 1–3, Props 1, 3, 8, 9, 12.
+5. The language and its topology — Props 2, 4–7, 10–11; RQ1's measurement
+   with the four-cell ablation.
 6. The toolkit — algorithms and guarantees.
 7. Experiments — RQ1–RQ7, one evaluation each, on the collections of §7; the
    decodability figure in RQ6.

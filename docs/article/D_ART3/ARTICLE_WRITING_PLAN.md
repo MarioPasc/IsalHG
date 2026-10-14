@@ -534,6 +534,25 @@ although it is provably incomplete; exactness is a property of the family.
 Tab. III (capability table) is introduced here. Src `rq2_wellposedness_facts.md`
 §1, `rq2_ow_facts.md` §4.
 
+> **2026-10-13 — superseded on the draft branch `newpos-c8` (`e9feddb`, not pushed).**
+> H2 is now the task-level comparison C8, "Records One Pendant Edit Apart Are
+> Nearest Neighbours", with Fig. 3 `fig_neardup_retrieval.pdf`.
+>
+> - **What it shows.** On pendant one-edit pairs, `w°` has MRR 0.449 / 0.726 /
+>   0.552 / 0.691 (NDC-cl / NDC-sub / WD66 / WD100). The best of ten competitors
+>   reaches 0.263 / 0.349 / 0.065 / 0.175, with Holm p < 1e-32. At radius 2, `w°`
+>   is first on all four collections.
+> - **Mandatory scope clause.** Interior pairs are lost to 4–8 of the 10
+>   competitors. Pooled over all edits, the bipartite edit path ties `w°` on both
+>   NDC series. The pre-registered pooled AP criterion failed on NDC-substances.
+> - **Where the old material goes.** Tab. IV (`tab_locality`, below) moves to S3,
+>   and its numbers stay in one sentence.
+> - **Source of every number.** `experiments/NEWPOS_2026-10-13/C8_NEAR_DUPLICATE_RETRIEVAL.md`
+>   §4, and the JSONs and `tab_neardup.tex` in
+>   `D/results/NEWPOS_2026-10-13/neardup/`.
+>
+> The text below records the 2026-10-04 plan.
+
 **8.2 H2 — Pendant edits are absorbed locally.** *Proposition 4 implies an
 edit that changes the constant inventory leaves the rest of the word in place,
 whereas a rank-addressed certificate rewrites every row after the change.*
@@ -701,6 +720,28 @@ clustering vs entity types (negative, all representations); S8 natural NDC
 series (RQ3 v1, underpowered tie); S9 tail characterisation of `w*_c`; S10 the
 data-quality screen (not completed: state so, no table).
 
+**Added 2026-10-13 (NEWPOS session; the draft branch `newpos-c8` already cites
+these sections).** All paths below are under `experiments/NEWPOS_2026-10-13/`.
+
+- **S3** also carries the full C8 table, `tab_neardup.tex`. It gives P / I / 2
+  columns per collection, for all ten competitors and `w°`. It also carries the
+  pooled radius-1 table and the `w*_c` ablation (`C8_…md` §4.3, §5).
+- **S11** is the GRU language model. It is trained identically on `w°`, the fact
+  list and the certificate rows, over 27 seeds. It covers validity, yield and
+  VUN, and the out-of-domain rate of the baselines. It also covers the LCC
+  repair and the uncapped sensitivity run (`HANDOFF_2026-10-13.md` §2, GRU row).
+- **S12** is compactness under learned and generic coders. It covers the
+  3-of-4 result against the fact list and the version deltas
+  (`HANDOFF_…` §2, rows C5, C5-len and C5-delta).
+- **Unassigned so far**, but they must appear (they are negative or mixed):
+  - C2: metric search;
+  - C3/C3b: version linkage;
+  - C7: change tracking;
+  - C4/HA1–HA2: rejection bias;
+  - C4-post: the size window.
+
+  Their tables and verdicts are in `HANDOFF_…` §2 and `LOG.md`.
+
 ---
 
 ## 10. Bibliography
@@ -831,7 +872,11 @@ article repo.
 3. **Funding acknowledgment text.**
 4. **Compactness numbers are unreconciled** (6/8 instruction medians vs a
    T-KBx mean of 13.8 walk tokens against 40 certificate integers): the paper
-   states the proved bound only, until reconciled.
+   states the proved bound only, until reconciled. **Resolved 2026-10-13.**
+   Both statements were right: the median `w°` is 6 instructions (WD) or 9
+   (NDC, including the root type) against 12 rows, and the mean is 13.5 against
+   40.0 four-byte words. Source: `experiments/NEWPOS_2026-10-13/HANDOFF_2026-10-13.md`
+   §2, row C5-len.
 5. **T-KBy** (row-certificate timing through a Python loop) is unfixed: no
    certificate-row timing appears in the main text.
 6. **RQ3 v2 is partial** (heavy N = 15 cells timed out): §8.5 is written in
@@ -843,6 +888,13 @@ article repo.
 10. The integration branch `integration/2026-09-13-headline-w0` is not merged
     into `feature/isal-kb-word`; the paper's sources cite files that exist only
     there.
+11. **NEWPOS (2026-10-13).** Two branches await the author:
+    - the Overleaf branch `newpos-c8` (`e9feddb`), which holds C8 as H2, the GRU
+      sentence and the compactness sentence, and is not pushed;
+    - the code branch `integration/2026-10-13-newpos-w1`, which holds scripts,
+      tests and docs only (`src/` is untouched) and is not merged.
+
+    Remaining ledger work is T-KBae: mirror five locally built matrices.
 
 ---
 
@@ -895,3 +947,36 @@ article repo.
   *conjecture*; the paper no longer cites it as proved. The completion table
   shows the claimed stratum and the attachment mechanism; NDC hit@10 and stars
   stay in the text's scope clause and go to S5.
+- 2026-10-13 — **NEWPOS session: C8 replaces H2's evidence (draft branch
+  `newpos-c8`, `e9feddb`, not pushed).** This answers the PI's 2026-10-05
+  request for comparative experiments that favour the method. The session is
+  recorded in `experiments/NEWPOS_2026-10-13/{C8_NEAR_DUPLICATE_RETRIEVAL,HANDOFF_2026-10-13,LOG}.md`.
+
+  **What the draft gains.**
+  - C8, near-neighbour retrieval of structural near-duplicates, against all ten
+    competitors on all four collections. It is placed under Option B: Fig. 3
+    replaces `tab_locality`, and `tab_locality` moves to S3.
+  - The capability table's locality column now gives pendant MRR for every
+    representation.
+  - One GRU sentence in H4 (S11) and one compactness sentence in the discussion
+    (S12).
+  - `wd50k100` and `ndc_substances` are promoted to evaluation collections.
+
+  **Framing constraints the writer must keep.**
+  - The pre-registered hypothesis was *pooled* (highest MRR and AP on every
+    collection). It failed on NDC-substances AP. The stratified headline was
+    adopted after that failure, at Fable's instruction. Pendant/interior
+    stratification had been pre-registered as a reporting dimension, not as the
+    test.
+  - The radius-2 stratum was run on Fable's prediction, without a kill
+    criterion written in advance (`LOG.md` records the omission).
+  - This keeps H2 an observation, per the 2026-10-04 rule. C8 is the
+    observation's out-of-sample task test: the edits are naturally occurring
+    pairs in the collections, not edits applied by us. The scope clause
+    (interior lost to 4–8 of 10; pooled tie with the edit path on NDC) is
+    mandatory.
+
+  **Checks.** The writing orchestrator re-checked every C8 number against the
+  JSONs and corrected two overstatements in the hand-off. Fable reviewed the
+  design and the pooled results, but not the final stratified and radius-2
+  numbers.

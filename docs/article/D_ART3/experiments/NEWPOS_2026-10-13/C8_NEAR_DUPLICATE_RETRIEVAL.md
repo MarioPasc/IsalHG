@@ -1,11 +1,23 @@
 # C8 — Near-neighbour retrieval of structural near-duplicates
 
-**Status:** POSITIVE, candidate for the main text of the TKDE article.
-**Date:** 2026-10-13. **Author:** `[IsalHG-Article-Iterator]`, reviewed twice by
-`[IsalHG-Fable-Review]` (design, then attack). **Branch:**
-`feature/newpos-experiments`. **Record of how it was found:** `LOG.md` in this
-directory, §P-C8 onwards. Nothing here supersedes a frozen result; it is new
-evidence.
+**Status:** POSITIVE. In the draft as the new H2, on an unpushed branch.
+**Date:** 2026-10-13. **Author:** `[IsalHG-Article-Iterator]`.
+
+**Branches.**
+- Code and docs: `feature/newpos-experiments` (commit `9d5db6e`), merged into
+  `integration/2026-10-13-newpos-w1`. That branch is not merged further.
+- Draft: Overleaf clone branch `newpos-c8`, commit `e9feddb`, not pushed.
+
+**Review coverage.**
+- `[IsalHG-Fable-Review]` reviewed the design, then the pooled radius-1
+  results. That second review imposed the stratified headline, the radius-2
+  stratum and the inflation checks.
+- The stratified and radius-2 numbers, and this file, were checked against the
+  JSONs by `[Opus-Article-Orchestrator]` (two overstatements corrected), not by
+  Fable.
+
+**Record of how it was found:** `LOG.md` in this directory, §P-C8 onwards.
+Nothing here supersedes a frozen result; it is new evidence.
 
 ---
 
@@ -272,11 +284,25 @@ Wall-clock on the workstation: radius 1, 6–32 s per collection; radius 2,
 
 ## 9. Open items before it enters the paper
 
-- Mirror the four locally built WD50K(100) matrices and the NDC-substances
-  `w°` matrix into `D/results/IEEETKDE/matrices/` with manifests (they live in
-  the session scratchpad; regenerate with §8 if lost).
-- Unit tests for `neardup.py` (down-neighbour enumeration, AP with ties,
-  expected rank) — the probes are untested scripts.
-- Decide placement (§7) with the writing plan and the PI.
-- Optional: a version-only stratum on NDC (same-class pairs only, 41 % /
-  6 % of positives) as the "versions" exhibit.
+Status as of 2026-10-13 20:21 CEST.
+
+**Done.**
+- **Unit tests.** `tests/newpos/test_neardup.py` has 11 tests: down-neighbour
+  enumeration, AP with ties, expected rank, Holm, rank-biserial. All pass.
+- **Placement.** Option B is written into the draft (branch `newpos-c8`,
+  `e9feddb`), but it is not pushed.
+  - The author decides whether to push it; the PI sees it only once it is on
+    Overleaf.
+  - The draft points to supplement sections S3 (locality tables and the full C8
+    table, i.e. `tab_neardup.tex`), S11 (GRU) and S12 (compactness). Keep those
+    numbers when the supplement is written.
+
+**Still open.**
+- **Mirror the matrices.** Copy the four WD50K(100) matrices built locally and
+  the NDC-substances `w°` matrix into `D/results/IEEETKDE/matrices/` with
+  manifests. They live in the session scratchpad; regenerate them with §8 if
+  lost. Tracked in T-KBae.
+- **Optional: one review by `[IsalHG-Fable-Review]`** of §1, §4 and the draft's
+  H2 subsection, before submission (see the review-coverage note at the top).
+- **Optional: a version-only stratum on NDC.** Restrict to same-class pairs
+  (41 % / 6 % of positives) as the "versions" exhibit.

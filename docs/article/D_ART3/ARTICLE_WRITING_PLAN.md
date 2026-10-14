@@ -998,3 +998,4 @@ article repo.
   - An independent claim check found 14 scope or wording issues and no wrong number; all are fixed.
 
   Record: the Overleaf clone's `.claude/notes/2026-10-14-tkde-polish/summary.md`.
+- 2026-10-14 — **Pushed.** The final writing pass is on Overleaf `main` (`97d1e76`), and the author will read it. The code repository's `main` is on GitHub.

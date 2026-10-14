@@ -26,3 +26,5 @@
 - Close only when (a) the author has pushed or merged `newpos-c8` and (b) the mirror is in place and reproduces the C8 tables bit-for-bit.
 
 **Correction (2026-10-14).** In the Description, "≤ 0.53" should read **≤ 0.54** (the maximum competitor MRR is 0.5311, the fact list on WD50K(66), radius-2 pendant). The full set of rounding corrections is at the end of `NEWPOS_2026-10-13/LOG.md`.
+
+**Progress (2026-10-14).** The draft half is done and pushed. C8 is in the Overleaf `main` (`97d1e76`) as H2: a compact table in the main text, with the full tables and the figure in supplement S2. The mirror half is still open; it is the only remaining acceptance item.

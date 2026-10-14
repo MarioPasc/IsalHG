@@ -177,3 +177,6 @@ from these results, read `docs/article/D_ART3/experiments/NEWPOS_2026-10-13/HAND
 - Branches: retained.
 - Conda env: `isalhg-newpos-gru` (local, torch) — retained; delete with `conda env remove -n isalhg-newpos-gru` when no longer needed.
 - Picasso: not used. Every probe and campaign ran locally in minutes (C8: 6–48 s per collection; GRU: about 63 min of unit time), so no cluster resources were created or deleted.
+
+## Correction (2026-10-14)
+The out-of-domain range quoted above should read 30–91 %, not 30–92 % (0.9145, double-rounded). See the correction entry at the end of `docs/article/D_ART3/experiments/NEWPOS_2026-10-13/LOG.md`.

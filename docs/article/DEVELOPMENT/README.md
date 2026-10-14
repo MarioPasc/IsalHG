@@ -258,7 +258,7 @@ request for comparative experiments that favour the method.
 - **Ground truth.** Exact: enumerated down-edits keyed by the nauty certificate.
 - **Result.** When the edit is pendant (56–90 % of the one-edit pairs), `w°`
   leads all ten competitors on all four collections, at radius 1 and radius 2:
-  MRR 0.45–0.78 vs at most 0.53, Holm p < 1e-32.
+  MRR 0.45–0.78 vs at most 0.54 (max 0.5311), Holm p < 1e-32.
 - **Scope.** `w°` loses the interior stratum to 4–8 of the 10 competitors. The
   pre-registered pooled criterion failed on NDC-substances AP.
 - **Where to read.**

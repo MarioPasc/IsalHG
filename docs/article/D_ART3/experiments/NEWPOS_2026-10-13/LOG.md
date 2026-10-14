@@ -668,3 +668,16 @@ reported next to its structural distortion.
   axis — whether an interior lies *between* its endpoints in fact space — could
   favour the fact list, since a single pointer-token edit can re-attach every
   later fact. Hold until the generation wave reports.
+
+### Correction (2026-10-14, found by the supplement agent of wave `2026-10-14-tkde-polish`, verified)
+
+Two numbers above are wrong and are corrected here rather than rewritten, because this log is append-only.
+- **GRU out-of-domain range.** It is **30–91 %**, not 30–92 %: `neural_gen/stats.json` gives the WD50K(66) fact-list residual out-of-domain rate as 0.9145, and 92 % came from double rounding. The full set of rates is 0.300 / 0.393 (NDC-classes, fact list / incidence) and 0.914 / 0.639 (WD50K(66)).
+- **Best competitor on pooled AP, WD50K(66).** It is the fact list (0.0035), not HPD (0.0026). `C8_NEAR_DUPLICATE_RETRIEVAL.md` §4.3 had it wrong and is corrected; the P-C8 table above was already right.
+- **Rank-biserial floors, pendant stratum (P-C8-strata).** The "min r_rb" column printed +0.47 / +0.77 / +0.97 / +0.93. The exact minima are 0.4659 / 0.7703 / 0.9664 / 0.9276 (NDC-cl / NDC-sub / WD66 / WD100), so the correct floors are **+0.46 / +0.77 / +0.96 / +0.92**. Three of the four had been rounded upward, which is wrong for a lower bound.
+- **Upper bounds on the competitors (Verdict on C8, and C8 §1 and §7).**
+  - "≤ 0.53" MRR should be **≤ 0.54**: the maximum is 0.5311, the fact list on WD50K(66), radius-2 pendant.
+  - "at most 26 %" hit@1 on pendant pairs should be **at most 27 %**: the maximum is 0.2643, the degree-sequence floor on NDC-substances.
+  - Both were rounded down, which is wrong for an upper bound.
+  - The draft (wave `2026-10-14-tkde-polish`) now gives the per-collection values instead of a bound.
+- **Interior locality ("the word within two instructions in at most 0.09 of the edits").** It should read **at most 0.093**: the maximum is 0.0928, NDC-classes interior fact deletion.

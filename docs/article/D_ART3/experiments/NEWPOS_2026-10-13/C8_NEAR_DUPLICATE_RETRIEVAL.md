@@ -31,7 +31,7 @@ records differ by a **pendant** edit — a statement or qualifier added or
 removed together with its value; 56–90 % of the one-edit pairs per collection —
 the ordered-walk word `w°` ranks the true neighbour first far more often than
 every competitor on all four collections, at radius 1 and at radius 2. MRR is
-0.45–0.78 for `w°` against at most 0.53 for the best competitor, with
+0.45–0.78 for `w°` against at most 0.54 for the best competitor (maximum 0.5311, fact list, WD50K(66), radius-2 pendant; corrected 2026-10-14 from 0.53), with
 Holm-corrected p < 1e-32 everywhere. When they differ by an **interior** edit,
 `w°` is beaten by 4–8 of the 10 competitors (6 / 4 / 6 / 8 on WD66 / WD100 /
 NDC-cl / NDC-sub; always by both certificate renderings, the fact list and the
@@ -154,7 +154,7 @@ largest Holm-corrected p of `w°` against any competitor.
 
 Pendant stratum, certificate (bytes / rows): 0.007 / 0.018, 0.017 / 0.062,
 0.005 / 0.008, 0.020 / 0.023. Rank-biserial of `w°` vs every competitor on the
-pendant stratum: ≥ +0.47 (NDC-classes), ≥ +0.77, ≥ +0.97, ≥ +0.93.
+pendant stratum: ≥ +0.46 (NDC-classes), ≥ +0.77, ≥ +0.96, ≥ +0.92 (floors rounded down; exact minima 0.4659, 0.7703, 0.9664, 0.9276; corrected 2026-10-14).
 
 ### 4.2 Radius 2
 
@@ -174,7 +174,7 @@ trivial detector (§6, objection 1).
 |---|---|---|---|---|
 | NDC-classes | **0.416** | bipartite path 0.413 (0.19, tie) | **0.168** | fact list 0.150 |
 | NDC-substances | **0.717** | bipartite path 0.701 (1.0, tie) | 0.430 | **degree-seq 0.459** |
-| WD50K(66) | **0.541** | fact list 0.101 (2e-155) | **0.139** | HPD 0.003 |
+| WD50K(66) | **0.541** | fact list 0.101 (2e-155) | **0.139** | fact list 0.0035 (corrected 2026-10-14; HPD is 0.0026) |
 | WD50K(100) | **0.685** | fact list 0.318 (3e-70) | **0.181** | fact list 0.089 |
 
 The pre-registered pooled hypothesis H-ND (highest MRR **and** AP on every
@@ -247,7 +247,7 @@ censors none (H1/H3).
   collections for this experiment.
 - **Draft sentence (scope in the same sentence, per the framing rules):** "On
   pairs that differ by one pendant edit, the word ranks the true neighbour first
-  in 0.41–0.69 of queries across the four collections, against at most 0.26 for
+  in 0.41–0.69 of queries across the four collections, against at most 0.27 (maximum 0.2643; corrected 2026-10-14 from 0.26) for
   any other representation (Holm-corrected p < 10⁻³²); on interior edits the
   certificate, the fact list and the bipartite edit path rank better, and
   pooled over all edits the bipartite edit path ties the word on both NDC

@@ -980,3 +980,21 @@ article repo.
   JSONs and corrected two overstatements in the hand-off. Fable reviewed the
   design and the pooled results, but not the final stratified and radius-2
   numbers.
+- 2026-10-14 — **Final writing pass (wave `2026-10-14-tkde-polish`; Overleaf clone branch `integration/2026-10-14-tkde-polish`, `97d1e76`, not yet merged or pushed).** The author's instructions change three rules of this plan.
+  - **§4 rule 3 is superseded.** Losses are not given one clause where they occur. Every loss and constraint lives in ONE Limitations subsection of the Conclusions (`sec:limitations`, Section 9.2, about 550 words). A claim's own scope qualifier stays in the claim (rule 2).
+  - **The Discussion section is dissolved**, and the Conclusions gain "Impact and Applications": five uses, each tied to a proved property and to cited work.
+  - **§9 is superseded.** The supplement (`submission/supplementary/supplement.tex`, same IEEEtran template, 12 pages) holds:
+    - S1 Proofs;
+    - S2 Near-duplicate retrieval and locality by edit type;
+    - S3 Generation under a GRU;
+    - S4 Completion strata and amendments.
+
+    Compactness, clustering, the nauty-role cost split, the golden record and the probe-level negatives are deliberately left out.
+
+  Also:
+  - The C8 figure is now a compact table in the main text; the figure moved to S2.
+  - The bibliography has 29 references; the abstract is 245 words.
+  - Bounds are rounded outward: upper bounds up, lower bounds down.
+  - An independent claim check found 14 scope or wording issues and no wrong number; all are fixed.
+
+  Record: the Overleaf clone's `.claude/notes/2026-10-14-tkde-polish/summary.md`.

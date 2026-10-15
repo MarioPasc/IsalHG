@@ -73,6 +73,20 @@ ABLATION = "wstar_orbit"
 WL_H1 = "wl_h1"
 COMPETITORS_C: tuple[str, ...] = (*COMPETITORS, WL_H1)
 ARMS_C: tuple[str, ...] = (OURS, *COMPETITORS_C)
+#: The bipartite edit path as run (``pairwise(H_i, H_j)`` for ``i < j``, mirrored) and its
+#: orientation-free reading ``min(pairwise(H_i, H_j), pairwise(H_j, H_i))`` (LOG.md §7.1).
+PATH_ASRUN = "bipartite_ged_path"
+PATH_SYM = "bipartite_ged_path_sym"
+#: The full run's verdict competitors (LOG.md §8): the eleven of §6 with the symmetric-min edit
+#: path in place of the as-run one. The as-run orientation stays in the run as a reported row.
+COMPETITORS_FULL: tuple[str, ...] = tuple(PATH_SYM if a == PATH_ASRUN else a for a in COMPETITORS_C)
+ARMS_FULL: tuple[str, ...] = (OURS, *COMPETITORS_FULL, PATH_ASRUN)
+#: Named arm sets of the CLIs: the arms computed and the competitors a verdict ranges over.
+ARM_SETS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
+    "probe": (ARMS, COMPETITORS),
+    "c": (ARMS_C, COMPETITORS_C),
+    "full": (ARMS_FULL, COMPETITORS_FULL),
+}
 COLLECTIONS: tuple[str, ...] = ("wd50k66", "wd50k100", "ndc_classes", "ndc_substances")
 LINEAGE_COLLECTIONS: tuple[str, ...] = ("ndc_classes", "ndc_substances")
 
@@ -676,7 +690,13 @@ def build_matrices(
         The evaluated items.
     arms : Sequence[str]
         Registered distance names, plus ``wl_h1`` (:data:`WL_H1`, the
-        one-round WL, built directly because the registry has no round cap).
+        one-round WL, built directly because the registry has no round cap)
+        and ``bipartite_ged_path_sym`` (:data:`PATH_SYM`). When the latter is
+        requested, the edit path is evaluated once per *ordered* pair and both
+        readings come from that matrix ``P``: the symmetric min
+        ``min(P, P.T)`` and, if requested, the as-run matrix (``P[i, j]`` for
+        ``i < j``, mirrored, which is what the registry's ``build_matrix``
+        computes); both then report the ordered matrix's wall-clock.
         ``wstar_orbit`` is refused here: its C++ engine poisons forked children
         and needs a per-member budget, so it is built by
         :func:`build_ablation_matrix` in a separate process.
@@ -705,7 +725,17 @@ def build_matrices(
     secs: dict[str, float] = {}
     # The forking pairwise arms run first: nothing before them touches a C++ engine.
     ordered = sorted(arms, key=lambda a: (not a.startswith("bipartite"), arms.index(a)))
+    if PATH_SYM in arms:
+        t0 = time.perf_counter()
+        P = ordered_pairwise_matrix(hs, PATH_ASRUN, n_jobs)
+        dt = time.perf_counter() - t0
+        mats[PATH_SYM], secs[PATH_SYM] = np.minimum(P, P.T), dt
+        if PATH_ASRUN in arms:
+            upper = np.triu(P, 1)
+            mats[PATH_ASRUN], secs[PATH_ASRUN] = upper + upper.T, dt
     for arm in ordered:
+        if arm in mats:
+            continue
         t0 = time.perf_counter()
         if arm == WL_H1:
             from isalhg.metric_space.representations.wl import HypergraphWLDistance
@@ -716,6 +746,63 @@ def build_matrices(
         secs[arm] = time.perf_counter() - t0
         mats[arm] = np.asarray(M, dtype=np.float64)
     return {a: mats[a] for a in arms}, {a: secs[a] for a in arms}
+
+
+_ORDERED_STATE: dict[str, Any] = {}
+
+
+def _ordered_rows(lo: int, hi: int) -> FloatMatrix:
+    d, hs = _ORDERED_STATE["full"]
+    out = np.zeros((hi - lo, len(hs)))
+    for i in range(lo, hi):
+        for j in range(len(hs)):
+            if j != i:
+                out[i - lo, j] = float(d.pairwise(hs[i], hs[j]))
+    return out
+
+
+def ordered_pairwise_matrix(hs: Sequence[Any], arm: str, n_jobs: int = 1) -> FloatMatrix:
+    """``P[i, j] = pairwise(H_i, H_j)`` of a registered distance for every ordered pair.
+
+    Row blocks run on fork-based joblib workers (the inputs are inherited, not
+    pickled), as in the C8 orientation audit; the diagonal is 0.
+
+    Parameters
+    ----------
+    hs : Sequence
+        The hypergraphs.
+    arm : str
+        A registered distance name (here the bipartite edit path).
+    n_jobs : int, optional
+        Worker processes.
+
+    Returns
+    -------
+    ndarray
+        The ``(N, N)`` ordered matrix.
+    """
+    from isalhg.metric_space.registry import get_distance
+
+    n = len(hs)
+    if n == 0:
+        return np.zeros((0, 0))
+    _ORDERED_STATE["full"] = (get_distance(arm), list(hs))
+    try:
+        if n_jobs <= 1:
+            blocks = [_ordered_rows(0, n)]
+        else:
+            from joblib import Parallel, delayed
+
+            step = max(1, math.ceil(n / (n_jobs * 4)))
+            bounds = [(lo, min(n, lo + step)) for lo in range(0, n, step)]
+            blocks = list(
+                Parallel(n_jobs=n_jobs, backend="multiprocessing")(
+                    delayed(_ordered_rows)(a, b) for a, b in bounds
+                )
+            )
+    finally:
+        _ORDERED_STATE.pop("full", None)
+    return np.vstack(blocks)
 
 
 def _ablation_child(
@@ -902,6 +989,40 @@ def loo_knn_probs(
         ok[q] = False
         out[q] = knn_label_probs(D[q, ok], codes[ok], k, L)
     return out
+
+
+def nearest_same_other(
+    D: FloatMatrix,
+    codes: NDArray[np.int64],
+    candidate_mask: NDArray[np.bool_] | None = None,
+) -> tuple[FloatMatrix, FloatMatrix]:
+    """Per query, the distance to its nearest same-class and nearest other-class candidate.
+
+    The mechanism diagnostic: a query's 1-NN is correct with certainty iff the
+    first is strictly smaller. ``inf`` when a query has no candidate of that kind.
+
+    Parameters
+    ----------
+    D : ndarray
+        ``(N, N)`` distances.
+    codes : ndarray of int
+        Class code per item.
+    candidate_mask : ndarray of bool or None, optional
+        As in :func:`loo_knn_probs`; the diagonal is always excluded.
+
+    Returns
+    -------
+    tuple[ndarray, ndarray]
+        ``(nearest same-class distance, nearest other-class distance)``.
+    """
+    N = D.shape[0]
+    ok = np.ones((N, N), dtype=bool) if candidate_mask is None else candidate_mask.copy()
+    np.fill_diagonal(ok, False)
+    same = codes[:, None] == codes[None, :]
+    Dn = np.where(np.isnan(D), np.inf, D)
+    near_same = np.where(ok & same, Dn, np.inf).min(axis=1) if N else np.zeros(0)
+    near_other = np.where(ok & ~same, Dn, np.inf).min(axis=1) if N else np.zeros(0)
+    return near_same, near_other
 
 
 def expected_accuracy(P: FloatMatrix, codes: NDArray[np.int64]) -> float:
@@ -1114,7 +1235,8 @@ def evaluate_arm(
     dict
         ``acc1``, ``acc5``, ``f1_1``, ``f1_5``, ``ari``, ``nmi``, PAM details
         (with the number of distinct classes among the medoids), the zero
-        census, ``n_nonfinite`` and ``secs_eval``; ``_p_correct1`` /
+        census, ``n_nonfinite``, ``secs_eval``, the per-query ``nn_same`` /
+        ``nn_other`` (:func:`nearest_same_other`); ``_p_correct1`` /
         ``_p_correct5`` hold the per-query probability of a correct
         prediction (for :func:`ceiling_census`; not meant for the JSON).
     """
@@ -1129,6 +1251,11 @@ def evaluate_arm(
         res[f"_p_correct{k}"] = P[np.arange(len(codes)), codes]
         if k == 1 and class_groups is not None:
             res.update(error_split(P, codes, class_groups))
+    near_same, near_other = nearest_same_other(D, codes, candidate_mask)
+    # Kept per query for the mechanism figure (distance to the nearest sibling vs the nearest
+    # non-sibling); ``None`` stands for ``inf`` in the JSON.
+    res["nn_same"] = [round(float(x), 4) if np.isfinite(x) else None for x in near_same]
+    res["nn_other"] = [round(float(x), 4) if np.isfinite(x) else None for x in near_other]
     if cluster:
         cl = pam(D, k_clusters, pam_seed)
         res["ari"] = float(adjusted_rand_score(codes, cl["labels"]))
@@ -1176,13 +1303,18 @@ def error_split(
     }
 
 
-def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
-    """How easy a cell is for the main arms (the word and the ten competitors).
+def ceiling_census(
+    p_correct: dict[str, NDArray[np.float64]], arms_order: Sequence[str] = ARMS_C
+) -> dict[str, Any]:
+    """How easy a cell is for the main arms (the word and its verdict competitors).
 
     Parameters
     ----------
     p_correct : dict[str, ndarray]
         Per arm, the per-query probability that the 1-NN prediction is correct.
+    arms_order : Sequence[str], optional
+        The main arms (word first); arms outside it, e.g. the as-run edit path
+        in the full run, are ignored.
 
     Returns
     -------
@@ -1198,7 +1330,7 @@ def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
         expected shares of queries one gets right and the other wrong, under
         independent tie draws), and ``n_arms_acc1_ge_0.9``.
     """
-    arms = [a for a in ARMS_C if a in p_correct]
+    arms = [a for a in arms_order if a in p_correct]
     if not arms:
         return {}
     M = np.vstack([p_correct[a] for a in arms])

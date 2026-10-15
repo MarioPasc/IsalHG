@@ -337,8 +337,10 @@ def evaluate_pool(
     seed: int,
     stratum: str,
     n_jobs: int,
+    arm_set: str = "c",
 ) -> dict[str, Any]:
-    """Every arm's scores on the copies of the pool at ``r``."""
+    """Every arm's scores on the copies of the pool at ``r`` (arms of ``knn_lib.ARM_SETS``)."""
+    arms, competitors = K.ARM_SETS[arm_set]
     t0 = time.perf_counter()
     members = [cls for block in pool.blocks for cls in block]
     block_of = np.array([b for b, block in enumerate(pool.blocks) for _ in block])
@@ -358,7 +360,7 @@ def evaluate_pool(
         "arms": {},
     }
     mats, secs = K.build_matrices(
-        items, K.ARMS_C, n_types=col.n_types, n_preds=col.n_preds, n_jobs=n_jobs
+        items, arms, n_types=col.n_types, n_preds=col.n_preds, n_jobs=n_jobs
     )
     pam_seed = K.cell_seed(seed, "C-pam", col.name, stratum, r)
     p_correct: dict[str, np.ndarray] = {}
@@ -377,7 +379,7 @@ def evaluate_pool(
         res.pop("_p_correct5")
         res["p_correct1"] = [round(float(x), 6) for x in p_correct[arm]]
         out["arms"][arm] = res
-    out["ceiling"] = K.ceiling_census(p_correct)
+    out["ceiling"] = K.ceiling_census(p_correct, (K.OURS, *competitors))
     out["pam_seed"] = pam_seed
     out["secs"] = time.perf_counter() - t0
     return out
@@ -404,6 +406,7 @@ def run_seed(
     keys: K.IsoKeys,
     n_jobs: int,
     c: int = C_COPIES,
+    arm_set: str = "c",
 ) -> dict[str, Any]:
     """Counting draw, pool draw, and the three ``r`` cells of one seed."""
     t0 = time.perf_counter()
@@ -426,7 +429,7 @@ def run_seed(
     if len(pool.blocks) >= 2:
         for r in RS:
             payload["cells"][str(r)] = evaluate_pool(
-                col, graph, pool, r, keys, seed, stratum, n_jobs
+                col, graph, pool, r, keys, seed, stratum, n_jobs, arm_set
             )
     payload["secs_seed"] = time.perf_counter() - t0
     return payload
@@ -442,16 +445,21 @@ def run_job(
     out: Path,
     n_jobs: int,
     c: int = C_COPIES,
+    arm_set: str = "c",
 ) -> Path:
     """Run every requested seed of one ``(collection, stratum, c)`` job; resume from disk."""
     import json
 
     if stratum not in STRATA:
         raise DesignCError(f"unknown stratum {stratum!r}; expected one of {sorted(STRATA)}")
+    arms, competitors = K.ARM_SETS[arm_set]
     path = out / f"C_{collection}_{stratum}_c{c}.json"
     payload: dict[str, Any]
     if path.exists():
         payload = json.loads(path.read_text())
+        stored = payload.get("config", {}).get("arms")
+        if stored is not None and stored != list(arms):
+            raise DesignCError(f"{path} was run with arms {stored}, asked for {list(arms)}")
     else:
         payload = {"collection": collection, "stratum": stratum, "c": c, "seeds": {}}
     t0 = time.perf_counter()
@@ -474,8 +482,9 @@ def run_job(
                 "min_feasible_blocks": MIN_FEASIBLE_BLOCKS,
                 "eligibility_seed": ELIGIBILITY_SEED,
                 "kinds": list(kinds),
-                "arms": list(K.ARMS_C),
-                "competitors": list(K.COMPETITORS_C),
+                "arm_set": arm_set,
+                "arms": list(arms),
+                "competitors": list(competitors),
                 "n_jobs": n_jobs,
             },
             "graph": {
@@ -493,20 +502,22 @@ def run_job(
         if str(seed) in payload["seeds"]:
             logger.info("%s %s seed %d on disk, skipped", collection, stratum, seed)
             continue
-        res = run_seed(col, graph, eligible, stratum, seed, keys, n_jobs, c)
+        res = run_seed(col, graph, eligible, stratum, seed, keys, n_jobs, c, arm_set)
         payload["seeds"][str(seed)] = res
         K.write_json(path, payload)
-        _log_seed(collection, stratum, res)
+        _log_seed(collection, stratum, res, competitors)
     K.write_json(path, payload)
     return path
 
 
-def _log_seed(collection: str, stratum: str, res: dict[str, Any]) -> None:
+def _log_seed(
+    collection: str, stratum: str, res: dict[str, Any], competitors: Sequence[str]
+) -> None:
     parts = []
     for r, cell in res["cells"].items():
         w = cell["arms"][K.OURS]
-        b_acc = K.best_competitor(cell["arms"], "acc1", K.COMPETITORS_C)
-        b_ari = K.best_competitor(cell["arms"], "ari", K.COMPETITORS_C)
+        b_acc = K.best_competitor(cell["arms"], "acc1", competitors)
+        b_ari = K.best_competitor(cell["arms"], "ari", competitors)
         parts.append(
             f"r{r}: w° {w['acc1']:.3f}/{w['ari']:.3f} vs {b_acc[0]} {b_acc[1]:.3f} / "
             f"{b_ari[0]} {b_ari[1]:.3f}"
@@ -544,6 +555,13 @@ def main() -> None:
         choices=[C_COPIES, C_SECONDARY],
         help="copies per member: 3 (primary, LOG.md §6.1) or 6 (the registered secondary)",
     )
+    ap.add_argument(
+        "--arm-set",
+        choices=["c", "full"],
+        default="c",
+        help="c: the §6 arms (probe); full: LOG.md §8 (symmetric-min edit path as the verdict "
+        "arm, the as-run path as a reported row)",
+    )
     args = ap.parse_args()
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s %(name)s %(message)s", datefmt="%H:%M:%S"
@@ -551,7 +569,9 @@ def main() -> None:
     for noisy in ("isalhg", "experiments"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
     args.out.mkdir(parents=True, exist_ok=True)
-    path = run_job(args.collection, args.stratum, args.seeds, args.out, args.n_jobs, args.copies)
+    path = run_job(
+        args.collection, args.stratum, args.seeds, args.out, args.n_jobs, args.copies, args.arm_set
+    )
     print(f"wrote {path}")
 
 

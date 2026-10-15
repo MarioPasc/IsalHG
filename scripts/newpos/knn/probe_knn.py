@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import logging
+import os
 import sys
 import time
 from collections import defaultdict
@@ -73,6 +74,8 @@ def _evaluate_items(
             "exact_arm_acc1_ceiling": K.exact_arm_ceiling(iso_class, codes, candidate_mask),
         },
         "pam_seed": pam_seed,
+        "arm_set": args.arm_set,
+        "competitors": list(args.competitors),
         "arms": {},
     }
     mats, secs = K.build_matrices(
@@ -107,7 +110,7 @@ def _evaluate_items(
             dest = args.out / "matrices" / args.current_cell
             dest.mkdir(parents=True, exist_ok=True)
             np.save(dest / f"{arm}.npy", M.astype(np.float32))
-    out["ceiling"] = K.ceiling_census(p_correct)
+    out["ceiling"] = K.ceiling_census(p_correct, (K.OURS, *args.competitors))
     return out
 
 
@@ -289,8 +292,9 @@ def run_lineages(collection: str, seed: int | None, args: argparse.Namespace) ->
 def _log_cell(name: str, payload: dict[str, Any]) -> None:
     arms = payload["arms"]
     w = arms.get(K.OURS, {})
-    b_acc = K.best_competitor(arms, "acc1")
-    b_ari = K.best_competitor(arms, "ari")
+    comps = payload.get("competitors", K.COMPETITORS)
+    b_acc = K.best_competitor(arms, "acc1", comps)
+    b_ari = K.best_competitor(arms, "ari", comps)
     logger.info(
         "%s: N=%d  w° acc1 %.3f ari %.3f | best acc1 %s %.3f | best ari %s %.3f | %.1f s",
         name,
@@ -347,7 +351,8 @@ def summarize(out: Path) -> dict[str, Any]:
                     "n_singletons": sum(x["n_singletons"] for x in certs),
                 }
         means = {a: {m: v[m]["mean"] for m in METRICS if m in v} for a, v in per_arm.items()}
-        best = {m: K.best_competitor(means, m) for m in ("acc1", "ari", "acc5", "nmi")}
+        comps = cells[0].get("competitors", K.COMPETITORS)
+        best = {m: K.best_competitor(means, m, comps) for m in ("acc1", "ari", "acc5", "nmi")}
         word = means.get(K.OURS, {})
         rows.append(
             {
@@ -590,7 +595,15 @@ def main() -> None:
     ap.add_argument("--c", type=int, default=6)
     ap.add_argument("--r", nargs="+", type=int, default=[1, 2, 3])
     ap.add_argument("--lineages", type=int, default=30)
-    ap.add_argument("--arms", nargs="+", default=list(K.ARMS))
+    ap.add_argument(
+        "--arm-set",
+        choices=sorted(K.ARM_SETS),
+        default="probe",
+        help="probe: the word + the ten §2 competitors; full: LOG.md §8 (one-round WL, the "
+        "symmetric-min edit path as the verdict arm, the as-run path as a reported row)",
+    )
+    ap.add_argument("--arms", nargs="+", default=None, help="override the arm set's arms")
+    ap.add_argument("--no-summary", action="store_true", help="skip SUMMARY.md (array tasks)")
     ap.add_argument("--ablation", action="store_true", help="also build wstar_orbit (slow)")
     ap.add_argument("--ablation-budget", type=float, default=60.0)
     ap.add_argument("--n-jobs", type=int, default=16)
@@ -606,9 +619,11 @@ def main() -> None:
         logging.getLogger(noisy).setLevel(logging.WARNING)
     args.out.mkdir(parents=True, exist_ok=True)
     args.current_cell = ""
+    set_arms, args.competitors = K.ARM_SETS[args.arm_set]
+    args.arms = list(args.arms) if args.arms is not None else list(set_arms)
     if not args.summary_only:
         K.write_json(
-            args.out / "runs" / f"run_{time.strftime('%Y%m%dT%H%M%S')}.json",
+            args.out / "runs" / f"run_{time.strftime('%Y%m%dT%H%M%S')}_{os.getpid()}.json",
             {"argv": sys.argv, **{k: str(v) for k, v in vars(args).items()}},
         )
         for seed in args.seeds:
@@ -626,6 +641,8 @@ def main() -> None:
             for collection in K.LINEAGE_COLLECTIONS:
                 if collection in args.collections:
                     run_lineages(collection, None, args)
+    if args.no_summary:
+        return
     summarize(args.out)
     print((args.out / "SUMMARY.md").read_text())
 

@@ -80,6 +80,7 @@ PENDANT_SHARE: dict[str, float] = {
 
 M_MIN = 3
 KNN_KS: tuple[int, ...] = (1, 5)
+FLOORS: tuple[str, ...] = ("degree_seq_l1", "size_l1")
 
 FloatMatrix: TypeAlias = NDArray[np.float64]
 
@@ -965,6 +966,80 @@ def pam(D: FloatMatrix, k: int, seed: int, *, max_iter: int = 1000) -> dict[str,
     }
 
 
+def medoid_certificates(
+    D: FloatMatrix, labels: NDArray[np.int64], medoids: NDArray[np.int64]
+) -> dict[str, Any]:
+    """Certified ratio ``cost(M) / LB`` of every PAM cluster's medoid (Prop. 6.1).
+
+    For a cluster ``K_1..K_N`` (``N >= 2``) with medoid ``M``:
+    ``cost(M) = sum_i d(M, K_i)`` and ``LB = sum_{i<j} d(K_i, K_j) / (N - 1)``;
+    for a metric ``LB <= OPT`` and the cluster's own 1-medoid satisfies
+    ``cost <= (2 - 2/N) LB``. The PAM medoid need not be its cluster's
+    1-medoid, so both are recorded, and a ratio above ``2 - 2/N`` (possible
+    for a non-metric, or for a PAM medoid that is not the 1-medoid) is counted.
+
+    Parameters
+    ----------
+    D : ndarray
+        ``(N, N)`` distances (non-finite entries pushed far, as for PAM).
+    labels : ndarray of int
+        PAM cluster index per item, aligned with ``medoids``.
+    medoids : ndarray of int
+        Item index of each cluster's medoid.
+
+    Returns
+    -------
+    dict
+        ``clusters`` (per cluster: size, cost, lb, ratio, bound, the
+        1-medoid's ratio, ``pam_medoid_is_1medoid``), ``ratio_median``,
+        ``ratio_max``, ``ratio_1medoid_max``, ``n_singletons``, ``n_lb_zero``,
+        ``n_over_bound`` (PAM medoid) and ``n_1medoid_over_bound``.
+    """
+    Df = finite_for_clustering(D)
+    rows: list[dict[str, Any]] = []
+    n_single = n_zero = 0
+    for c, m in enumerate(medoids.tolist()):
+        members = np.flatnonzero(labels == c)
+        N = len(members)
+        if N < 2:
+            n_single += 1
+            continue
+        sub = Df[np.ix_(members, members)]
+        lb = float(sub[np.triu_indices(N, 1)].sum() / (N - 1))
+        costs = sub.sum(axis=1)
+        cost = float(Df[m, members].sum())
+        if lb <= 0.0:
+            n_zero += 1
+            continue
+        bound = 2.0 - 2.0 / N
+        rows.append(
+            {
+                "size": int(N),
+                "cost": cost,
+                "lb": lb,
+                "ratio": cost / lb,
+                "bound": bound,
+                "ratio_1medoid": float(costs.min()) / lb,
+                "pam_medoid_is_1medoid": bool(cost <= float(costs.min()) + 1e-9),
+            }
+        )
+    ratios = np.array([r["ratio"] for r in rows])
+    r1 = np.array([r["ratio_1medoid"] for r in rows])
+    eps = 1e-9
+    return {
+        "clusters": rows,
+        "ratio_median": float(np.median(ratios)) if len(rows) else None,
+        "ratio_max": float(ratios.max()) if len(rows) else None,
+        "ratio_1medoid_max": float(r1.max()) if len(rows) else None,
+        "n_certified": len(rows),
+        "n_singletons": n_single,
+        "n_lb_zero": n_zero,
+        "n_over_bound": int(sum(r["ratio"] > r["bound"] + eps for r in rows)),
+        "n_1medoid_over_bound": int(sum(r["ratio_1medoid"] > r["bound"] + eps for r in rows)),
+        "n_pam_medoid_not_1medoid": int(sum(not r["pam_medoid_is_1medoid"] for r in rows)),
+    }
+
+
 def brute_force_kmedoids(D: FloatMatrix, k: int) -> float:
     """Exact k-medoids loss by enumeration (tiny inputs only)."""
     from itertools import combinations
@@ -1042,6 +1117,7 @@ def evaluate_arm(
         res["pam"] = {k: v for k, v in cl.items() if k not in ("labels", "medoids")}
         res["medoid_ids_idx"] = [int(x) for x in cl["medoids"]]
         res["medoid_classes_distinct"] = int(len(set(codes[cl["medoids"]].tolist())))
+        res["certified"] = medoid_certificates(D, cl["labels"], cl["medoids"])
     res.update(zero_pair_census(D, iso_class))
     res["secs_eval"] = time.perf_counter() - t0
     return res
@@ -1059,20 +1135,26 @@ def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
     -------
     dict
         ``all_arms_correct`` (share of queries every arm gets right with
-        certainty), ``min_arm_p_correct_mean`` (mean over queries of the
-        smallest per-arm probability), ``word_right_some_competitor_wrong`` and
-        ``word_wrong_some_competitor_right`` (shares of queries, certainty in
-        both directions read as ``p == 1`` / ``p < 1``), and
-        ``n_arms_acc1_ge_0.9``.
+        certainty) and ``all_nonfloor_correct`` (the same without the two
+        floors, whose ties make certainty rare), ``min_arm_p_correct_mean``
+        (mean over queries of the smallest per-arm probability),
+        ``word_right_some_competitor_wrong`` and
+        ``word_wrong_some_competitor_right`` (certainty read as ``p == 1``),
+        the paired split against the best competitor by 1-NN accuracy
+        (``best_competitor``, ``word_only_vs_best``, ``best_only_vs_best``:
+        expected shares of queries one gets right and the other wrong, under
+        independent tie draws), and ``n_arms_acc1_ge_0.9``.
     """
     arms = [a for a in ARMS if a in p_correct]
     if not arms:
         return {}
     M = np.vstack([p_correct[a] for a in arms])
     comp = [i for i, a in enumerate(arms) if a != OURS]
+    nonfloor = [i for i, a in enumerate(arms) if a not in FLOORS]
     out: dict[str, Any] = {
         "arms": arms,
         "all_arms_correct": float((M == 1.0).all(axis=0).mean()),
+        "all_nonfloor_correct": float((M[nonfloor] == 1.0).all(axis=0).mean()),
         "min_arm_p_correct_mean": float(M.min(axis=0).mean()),
         "n_arms_acc1_ge_0.9": int((M.mean(axis=1) >= 0.9).sum()),
     }
@@ -1084,7 +1166,47 @@ def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
         out["word_wrong_some_competitor_right"] = float(
             ((w < 1.0) & (M[comp] == 1.0).any(axis=0)).mean()
         )
+        b = max(comp, key=lambda i: M[i].mean())
+        out["best_competitor"] = arms[b]
+        out["word_only_vs_best"] = float((w * (1.0 - M[b])).mean())
+        out["best_only_vs_best"] = float(((1.0 - w) * M[b]).mean())
     return out
+
+
+def exact_arm_ceiling(
+    iso_class: NDArray[np.int64],
+    codes: NDArray[np.int64],
+    candidate_mask: NDArray[np.bool_] | None = None,
+) -> float:
+    """Highest 1-NN accuracy any complete invariant can reach on these items.
+
+    A complete invariant puts a query at distance 0 from exactly its
+    isomorphic candidates. When a query has such candidates, its 1-NN is drawn
+    from them, so its expected accuracy is at most the share of them in its
+    own class; otherwise it is at most 1. The mean over queries bounds the
+    1-NN accuracy of every exact arm from above.
+
+    Parameters
+    ----------
+    iso_class, codes : ndarray of int
+        Isomorphism class and class label per item.
+    candidate_mask : ndarray of bool or None, optional
+        kNN candidate restriction, as in :func:`loo_knn_probs`.
+
+    Returns
+    -------
+    float
+        The ceiling.
+    """
+    N = len(codes)
+    vals = np.ones(N)
+    for q in range(N):
+        ok = np.ones(N, dtype=bool) if candidate_mask is None else candidate_mask[q].copy()
+        ok[q] = False
+        iso = ok & (iso_class == iso_class[q])
+        if iso.any():
+            vals[q] = float((codes[iso] == codes[q]).mean())
+    return float(vals.mean()) if N else float("nan")
 
 
 def iso_classes(records: Sequence[KBRecord], keys: IsoKeys) -> tuple[NDArray[np.int64], int]:

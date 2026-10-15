@@ -276,6 +276,39 @@ def test_ceiling_census() -> None:
     assert ce["n_arms_acc1_ge_0.9"] == 0
 
 
+def test_exact_arm_ceiling() -> None:
+    from knn_lib import exact_arm_ceiling
+
+    iso = np.array([0, 0, 1, 1, 2])
+    codes = np.array([0, 1, 0, 0, 1])
+    assert exact_arm_ceiling(iso, codes) == pytest.approx((0 + 0 + 1 + 1 + 1) / 5)
+    # an exact arm reaches the ceiling: zero distance exactly within isomorphism classes
+    D = (iso[:, None] != iso[None, :]).astype(float)
+    acc = expected_accuracy(loo_knn_probs(D, codes, 1), codes)
+    assert acc <= exact_arm_ceiling(iso, codes) + 1e-12
+
+
+def test_medoid_certificates_on_a_metric() -> None:
+    from knn_lib import medoid_certificates
+
+    rng = np.random.default_rng(5)
+    X = rng.normal(size=(12, 2))
+    D = np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(-1))
+    res = pam(D, 3, 0)
+    cert = medoid_certificates(D, res["labels"], res["medoids"])
+    assert cert["n_1medoid_over_bound"] == 0
+    for row in cert["clusters"]:
+        members = np.flatnonzero(res["labels"] == res["labels"][0])
+        assert row["ratio_1medoid"] <= row["bound"] + 1e-12
+        assert row["ratio"] >= row["ratio_1medoid"] - 1e-12
+        assert row["lb"] > 0 and len(members) >= 1
+    # hand case: three points on a line at 0, 1, 2 -> LB = (1 + 2 + 1) / 2 = 2, medoid cost 2
+    line = np.array([[0, 1, 2], [1, 0, 1], [2, 1, 0]], dtype=float)
+    one = medoid_certificates(line, np.zeros(3, dtype=np.int64), np.array([1]))
+    assert one["clusters"][0]["ratio"] == pytest.approx(1.0)
+    assert one["clusters"][0]["bound"] == pytest.approx(4 / 3)
+
+
 # --------------------------------------------------------------------------- PAM
 
 

@@ -449,3 +449,20 @@ does not claim a kNN positive.
   - **D:** S = 200, c = 3, both the pendant condition and the C8 edit mix.
 - **Fixed.** Every hypothesis, kill criterion and metric is exactly as registered in §§3, 6, 6.1, 7
   and 7.1. The verdicts are reported as they come, whatever they are. Execution is on Picasso.
+
+### 8.1 Correction (independent claim check, 2026-10-15)
+
+§7.1 says the symmetric minimum is "never worse for the competitor than either orientation". That is
+false for ranking metrics. The minimum lowers the distances to the distractors as well as to the
+target.
+
+Measured on C8, the symmetric minimum *lowers* the edit path's interior MRR on WD50K(66)
+(0.1855 → 0.1773) and on NDC-classes (0.5929 → 0.5920), and its AP on WD50K(100) (0.0477 → 0.0473).
+It raises the pendant and pooled values.
+
+**Justification for the choice.** The symmetric minimum is the orientation-free definition. It does
+not rest on any claim that it favours the competitor. The article now says only that the raw cost is
+asymmetric and that we symmetrize it by the minimum.
+
+**Effect on the Design-D verdict.** None. On Design D, both the flipped orientation and the minimum
+favoured the competitor in every probe cell, so the kill stands.

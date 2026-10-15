@@ -576,3 +576,27 @@ all four collections (full ordered matrices), so only the path is replaced.
   sym-min path the Holm-corrected pendant claim (word first on all 4 collections, r = 1 and 2)
   **holds**; largest pendant p rises to 5.7e-31 (NDC-classes r1) — "p < 1e-32" must become
   "p < 1e-30"; pooled r1 NDC-classes: sym-min path 0.421 vs word 0.416 (was a tie at 0.413).
+
+## 17. Sym-min regeneration of every article number using the edit path
+
+Brief (`main`, verbatim core): "the article will define the edit-path competitor as the symmetric
+minimum everywhere [...] Enumerate every number in the article that uses bipartite_ged_path [...]
+Recompute each with the sym-min path through the original code paths, changing only the matrix.
+Write everything to D/results/KNN_2026-10-15/symmin_regen/ [...] REGEN.md with one row per article
+claim: file:line, old value, new value, whether the sentence changes. Preserve the bound rule [...]
+Report the new merge and split counts per collection. Do not edit the article."
+
+- Script `scripts/newpos/knn/symmin_regen.py` (reuses the audit's matrix roots). Validations all
+  passed: as-run reruns reproduce every published C8 JSON (incl. the two wstar-restricted runs);
+  `tab_neardup.py` on the published JSONs is byte-identical to the published table; RQ2 stored pair
+  and triple values match the ordered matrices (0 mismatches); the exact0 relabelling stream replays
+  (0 mismatches); the three RQ2 sections recomputed from the original rows equal the frozen summary.
+- H1: merges 0 / 0 / 0, classes 574 / 1,290 / 3,839 — **unchanged** (no split pair is zero in
+  either orientation); exact at zero 37 / 37 / 10 unchanged. Triangle violations 8 / 12 / 4 of
+  5,000 (was 8 / 26 / 7); asymmetry 0 by construction (was 44–58 %).
+- 32 rows in `symmin_regen/REGEN.md`; sentences that change: results.tex (non-metric sentence,
+  pendant range 0.071–0.349, p < 1e-30, rank-biserial ≥ 0.44, r2 p ≤ 6.6e-7), capability table
+  near-dup 0.071 / 0.277, main and S2 near-dup tables (edit-path row), conclusion and S2 pooled
+  sentences (NDC-classes: edit path 0.421 > word 0.416; the registered pooled criterion now fails on
+  NDC-classes too; NDC-substances best AP is now the edit path 0.465), S2 radius-2 numbers, the
+  1.6–7.8 ratio range, the wstar-ablation edit-path value 0.420, and the S2 figure.

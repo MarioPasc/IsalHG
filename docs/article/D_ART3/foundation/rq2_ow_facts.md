@@ -168,6 +168,7 @@ the three numbers in that row. On `wd50k66` (3,988 members) the same arm splits
 |---|---|---|---|
 | bipartite path asymmetry (pairs) | `ndc_classes` 882/2,000 = 0.441; `ndc_substances` 1,156/2,000 = 0.578; `wd50k66` 981/2,000 = 0.4905 | 1,764/4,000; 2,312/4,000; 1,962/4,000 — same rates | the campaign pools two tags of the same 2,000 pairs |
 | bipartite path triangle violations | 8/5,000; 26/5,000; 7/5,000 | 16/10,000; 52/10,000; 14/10,000 | same rates; smallest violating triple identical (`ndc_substances`, 3 + 3 < 8, excess 2) |
+| bipartite path, **symmetric minimum** min(d(a,b), d(b,a)) — the article's definition since 2026-10-15 (`KNN_2026-10-15/LOG.md` §7.2) | asymmetry 0 / 0 / 0; triangle violations 8 / 12 / 4 of 5,000 (`ndc_classes` / `ndc_substances` / `wd50k66`) | — | source: `D/results/KNN_2026-10-15/symmin_regen/` (REGEN.md row 32); the raw rows above are the orientation-dependent cost |
 | bipartite assign false zeros | 0/1,992; 2/1,996; 36/2,000 | 0/3,984; 4/3,992; 72/4,000 | same rates |
 | exact oracle ceiling | 30/30 completed in every `n` stratum of both collections; median 0.35–0.78 s, p90 up to 10.6 s (`ndc_classes` 9–10) | 60/60; median 0.44–0.91 s | complete in both |
 

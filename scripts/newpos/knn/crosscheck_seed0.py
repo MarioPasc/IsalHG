@@ -16,7 +16,9 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import time
+from collections import Counter
 from pathlib import Path
 from typing import Any
 
@@ -73,14 +75,69 @@ def pairs(picasso: Path, local: Path) -> list[tuple[str, Any, Any]]:
     return out
 
 
+class ArmTally(CR.Tally):
+    """:class:`compare_runs.Tally` that also counts differences per arm."""
+
+    def __init__(self, rtol: float) -> None:
+        super().__init__(rtol=rtol)
+        self.diff_by_arm: Counter[str] = Counter()
+        self.values_by_arm: Counter[str] = Counter()
+
+    @staticmethod
+    def _arm(where: str) -> str:
+        m = re.search(r"arms\.([a-z0-9_]+)", where)
+        return m.group(1) if m else "(cell level)"
+
+    def number(self, a: float, b: float, where: str) -> None:
+        before = self.n_diff
+        super().number(a, b, where)
+        self.values_by_arm[self._arm(where)] += 1
+        self.diff_by_arm[self._arm(where)] += self.n_diff - before
+
+    def other(self, equal: bool, where: str, a: Any, b: Any) -> None:  # noqa: ANN401
+        before = self.n_diff
+        super().other(equal, where, a, b)
+        self.values_by_arm[self._arm(where)] += 1
+        self.diff_by_arm[self._arm(where)] += self.n_diff - before
+
+
+def _metric_gaps(a: Any, b: Any, label: str) -> list[dict[str, Any]]:  # noqa: ANN401
+    """Per arm and hypothesis metric, the Picasso and local values where they differ."""
+    out = []
+    cells = a["cells"].items() if "cells" in a else [("", a)]
+    for r, ca in cells:
+        cb = b["cells"][r] if r else b
+        for arm, va in ca.get("arms", {}).items():
+            for m in ("acc1", "ari", "rr"):
+                x, y = va.get(m), cb["arms"].get(arm, {}).get(m)
+                if x is not None and y is not None and x != y:
+                    out.append(
+                        {
+                            "cell": f"{label}{'#r' + r if r else ''}",
+                            "arm": arm,
+                            "metric": m,
+                            "picasso": x,
+                            "local": y,
+                            "abs_diff": abs(x - y),
+                        }
+                    )
+    return out
+
+
 def run(picasso: Path, locals_: list[Path], rtol: float, ignore: set[str]) -> dict[str, Any]:
-    t = CR.Tally(rtol=rtol)
+    t = ArmTally(rtol=rtol)
     checked: list[str] = []
+    gaps: list[dict[str, Any]] = []
     for local in locals_:
         for label, a, b in pairs(picasso, local):
             CR.compare(_align(a, b, ignore), b, label, t)
             checked.append(f"{label} <- {local}")
+            gaps += _metric_gaps(a, b, label)
     return {
+        "diff_by_arm": dict(t.diff_by_arm),
+        "values_by_arm": dict(t.values_by_arm),
+        "metric_gaps": gaps,
+        "max_metric_gap": max(gaps, key=lambda g: g["abs_diff"]) if gaps else None,
         "generated": time.strftime("%Y-%m-%d %H:%M %Z"),
         "picasso": str(picasso),
         "local": [str(p) for p in locals_],

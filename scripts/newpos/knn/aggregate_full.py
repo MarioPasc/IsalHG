@@ -755,7 +755,7 @@ def render(summary: dict[str, Any]) -> str:
     out += ["## Diagnostics (means over seeds)", "", *_diag_table(list(cells.values())), ""]
     out += _mechanism_section(list(cells.values()))
     out += _repro_section(summary.get("reproducibility"))
-    out += _crosscheck_section(summary.get("crosscheck_seed0"))
+    out += _crosscheck_section(summary.get("crosscheck_seed0"), cells)
     if summary.get("sacct"):
         out += [
             "## Cost on Picasso (`sacct`, every step; MaxRSS of the batch step)",
@@ -842,10 +842,36 @@ def _mechanism_section(cells: list[dict[str, Any]]) -> list[str]:
     return lines + [""]
 
 
-def _crosscheck_section(cc: dict[str, Any] | None) -> list[str]:
+def platform_sensitive_cells(cells: dict[str, Any], gap: float, arms: set[str]) -> list[dict]:
+    """Cells whose registered verdict an arm's cross-machine 1-NN gap could reach.
+
+    An arm whose seed-0 1-NN accuracy differed between Picasso and the
+    workstation by up to ``gap`` could change a verdict only where its mean
+    lies within ``gap`` of the word's and it decides the verdict alone: in a
+    surviving cell, by crossing the word; in a killed cell, by being the only
+    competitor at or above the word on 1-NN while nothing kills on another
+    metric. ``gap`` is a seed-level difference, used as a heuristic bound.
+    """
+    out = []
+    for c in cells.values():
+        if not c["claim"] or c["verdict"] not in ("word ahead", "kill"):
+            continue
+        w = c["per_arm"].get(K.OURS, {}).get("acc1")
+        for arm in arms & set(c["competitors"]):
+            st = c["per_arm"].get(arm, {}).get("acc1")
+            if not st or not w or abs(st["mean"] - w["mean"]) > gap:
+                continue
+            others = [k for m, ks in c["killers"].items() for k in ks if (m, k) != ("acc1", arm)]
+            if c["verdict"] == "word ahead" or not others:
+                out.append({"cell": c["id"], "arm": arm, "arm_mean": st["mean"], "word": w["mean"]})
+    return out
+
+
+def _crosscheck_section(cc: dict[str, Any] | None, cells: dict[str, Any]) -> list[str]:
     """Seed-0 cells computed on the workstation against the Picasso cells."""
     if not cc:
         return []
+    differing = {a: n for a, n in cc.get("diff_by_arm", {}).items() if n}
     lines = [
         "## Cross-check: Picasso cells against the same cells computed locally (seed 0)",
         "",
@@ -853,13 +879,37 @@ def _crosscheck_section(cc: dict[str, Any] | None) -> list[str]:
         f"{cc['n_values']:,} values compared (wall-clock, throughput and worker-count keys "
         f"skipped). Exactly equal: {cc['n_exact']:,}; within rtol {cc['rtol']:g}: "
         f"{cc['n_close']:,}; different: {cc['n_diff']:,}. Keys dropped where the local cell "
-        f"predates them: {', '.join(cc['ignored_keys']) or 'none'}.",
-        "",
-        *[f"- `{c}`" for c in cc["cells"]],
+        f"predates them: {', '.join(cc['ignored_keys']) or 'none'}. Differing values by arm: "
+        + (", ".join(f"{a} {n}" for a, n in sorted(differing.items())) or "none")
+        + ".",
         "",
     ]
-    if cc.get("examples"):
-        lines += ["First differences:", "", *[f"- `{e}`" for e in cc["examples"][:20]], ""]
+    gap = cc.get("max_metric_gap")
+    if gap:
+        arms = {g["arm"] for g in cc["metric_gaps"]}
+        lines.append(
+            f"Hypothesis metrics that differ: {len(cc['metric_gaps'])} (arm, cell, metric) "
+            f"values, all in {', '.join(sorted(arms))}; the largest is {gap['arm']} "
+            f"{gap['metric']} on `{gap['cell']}`: {gap['picasso']:.4f} on Picasso against "
+            f"{gap['local']:.4f} locally (|Δ| = {gap['abs_diff']:.4f}). Every other arm is "
+            "bitwise identical across the two machines."
+        )
+        sens = platform_sensitive_cells(cells, gap["abs_diff"], arms)
+        lines.append(
+            "Claim cells where such an arm's mean 1-NN lies within that gap of the word's (so "
+            "the platform could decide the verdict): "
+            + (
+                "; ".join(
+                    f"`{s['cell']}` ({s['arm']} {s['arm_mean']:.3f} vs word {s['word']:.3f})"
+                    for s in sens
+                )
+                if sens
+                else "none"
+            )
+            + "."
+        )
+        lines.append("")
+    lines += [*[f"- `{c}`" for c in cc["cells"]], ""]
     return lines
 
 

@@ -405,3 +405,47 @@ Recomputing the other orientation, for description only, favours the competitor 
 **Consequence for C8 (main-text H2).** The same orientation question applies to C8's edit-path
 competitor. An audit with the symmetric minimum is running (`D/results/KNN_2026-10-15/c8_orientation_audit/`).
 Its outcome is appended here, whatever it is.
+
+### 7.2 Results of the C8 orientation audit and the symmetric-min regeneration
+
+Sources: `c8_orientation_audit/AUDIT.md` and `symmin_regen/REGEN.md`, which lists 32 article claims,
+each with its old and new value.
+
+- **How the matrices were built.** Every bipartite matrix holds pairwise(H_i, H_j) for i < j,
+  mirrored, so the orientation of a pair depends on the order of the members. Rerunning in the
+  original orientation reproduces every published number exactly.
+- **Asymmetry.** The edit path is asymmetric on 45–62 % of pairs. The assignment value is exactly
+  symmetric.
+- **What survives.** With the symmetric-min edit path, the C8 pendant claim still holds: the word is
+  first on all 4 collections at radius 1 and 2.
+- **What changes:**
+  - the Holm bound becomes p < 10⁻³⁰ (largest p 5.7e-31) and the rank-biserial floor 0.44;
+  - the radius-2 Holm bound becomes p ≤ 6.6e-7;
+  - the best-competitor pendant range becomes 0.071–0.349.
+- **Pooled reversal.** Pooled over both edit kinds, the edit path now has the higher MRR on
+  NDC-classes (0.421 vs 0.416, p = 0.24). The registered pooled criterion therefore fails on
+  NDC-classes too.
+- **H1 is unchanged.** Merges stay 0, and splits stay 574 / 1,290 / 3,839. The only change is
+  triangle violations, now 8 / 12 / 4 of 5,000.
+
+**Decision.** The article defines the edit-path competitor as the symmetric minimum everywhere. The
+writing pass integrates REGEN.md.
+
+## 8. Author's decision and the full run (2026-10-15)
+
+**The author's ruling** on the four killed designs: write a self-contained supplementary-style section
+reporting the kNN / k-medoids experiment in detail, with visual and scientific figures. The main text
+does not claim a kNN positive.
+
+**The full run is for the record, not for selection.**
+- **Seeds.** All four designs are run at 27 seeds.
+- **Edit path.** The symmetric-min edit path is the primary competitor; the as-run orientation is
+  kept as a row.
+- **Competitors.** One-round WL is included.
+- **Designs:**
+  - **A:** L = 30.
+  - **B:** S = 200, c = 6, plus the C8 edit mix on WD50K.
+  - **C:** c = 3, all three strata; c = 6 on its feasible cells.
+  - **D:** S = 200, c = 3, both the pendant condition and the C8 edit mix.
+- **Fixed.** Every hypothesis, kill criterion and metric is exactly as registered in §§3, 6, 6.1, 7
+  and 7.1. The verdicts are reported as they come, whatever they are. Execution is on Picasso.

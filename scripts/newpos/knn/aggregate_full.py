@@ -755,6 +755,7 @@ def render(summary: dict[str, Any]) -> str:
     out += ["## Diagnostics (means over seeds)", "", *_diag_table(list(cells.values())), ""]
     out += _mechanism_section(list(cells.values()))
     out += _repro_section(summary.get("reproducibility"))
+    out += _crosscheck_section(summary.get("crosscheck_seed0"))
     if summary.get("sacct"):
         out += [
             "## Cost on Picasso (`sacct`, every step; MaxRSS of the batch step)",
@@ -841,6 +842,27 @@ def _mechanism_section(cells: list[dict[str, Any]]) -> list[str]:
     return lines + [""]
 
 
+def _crosscheck_section(cc: dict[str, Any] | None) -> list[str]:
+    """Seed-0 cells recomputed on the workstation against the Picasso cells (``crosscheck_seed0.py``)."""
+    if not cc:
+        return []
+    lines = [
+        "## Cross-check: Picasso cells against the same cells computed locally (seed 0)",
+        "",
+        f"`crosscheck_seed0.py` on {cc['generated']}: {len(cc['cells'])} cells, "
+        f"{cc['n_values']:,} values compared (wall-clock, throughput and worker-count keys "
+        f"skipped). Exactly equal: {cc['n_exact']:,}; within rtol {cc['rtol']:g}: "
+        f"{cc['n_close']:,}; different: {cc['n_diff']:,}. Keys dropped where the local cell "
+        f"predates them: {', '.join(cc['ignored_keys']) or 'none'}.",
+        "",
+        *[f"- `{c}`" for c in cc["cells"]],
+        "",
+    ]
+    if cc.get("examples"):
+        lines += ["First differences:", "", *[f"- `{e}`" for e in cc["examples"][:20]], ""]
+    return lines
+
+
 def _repro_section(repro: dict[str, Any] | None) -> list[str]:
     """The cross-machine check (Picasso vs the local replica), when ``compare_runs.py`` ran."""
     if not repro:
@@ -901,7 +923,9 @@ def aggregate(root: Path) -> dict[str, Any]:
     }
     repro_path = root / "REPRO_CHECK.json"
     sacct_path = root / "sacct.txt"
+    cc_path = root / "CROSSCHECK_SEED0.json"
     return {
+        "crosscheck_seed0": json.loads(cc_path.read_text()) if cc_path.exists() else None,
         "sacct": sacct_path.read_text() if sacct_path.exists() else None,
         "root": str(root),
         "generated": time.strftime("%Y-%m-%d %H:%M %Z"),

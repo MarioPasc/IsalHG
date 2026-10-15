@@ -243,3 +243,36 @@ Pre-registered 2026-10-15, before any Design-C code runs. Rationale:
 **Figure.** As in §4, with panel (a) drawn *inside one block* (copies of 3–5 look-alike records,
 coloured by member). The edit-path panel is always one of the four, because it is the strongest
 competitor.
+
+### 6.1 Amendment before any Design-C result (2026-10-15)
+
+**Feasibility finding.** The engineer counted blocks before computing any distance. With c = 6, the
+stratum C-int is infeasible on every collection, because the one-edit graph lives on small records:
+- the median record has 3–5 facts, and 21–52 % of the isomorphism classes have m = 3;
+- many of these records cannot yield 6 pairwise non-isomorphic pendant copies.
+
+The binding constraint is c, not r.
+
+| | WD50K(66) | WD50K(100) | NDC-classes | NDC-substances |
+|---|---|---|---|---|
+| Eligible classes, c = 6 | 82 / 957 | 208 / 624 | 153 / 374 | 51 / 513 |
+| Disjoint blocks, c = 6 (all / int / pend) | 3 / 0 / 3 | 21 / 2 / 21 | 17 / 2 / 11 | 2 / 0 / 1 |
+| Disjoint blocks, c = 3 (all / int / pend) | 27 / 3 / 25 | 50 / 15 / 47 | 38 / 4 / 29 | 22 / 14 / 19 |
+
+Block counts are for seed 0, drawn to exhaustion. Eligible classes are given out of all classes in the
+one-edit graph.
+
+**Amendment.**
+- **Copies.** Design C uses **c = 3** copies per member, with r ∈ {1, 2, 3} unchanged. Every query then
+  has 2 siblings, and a cell holds about 180 items.
+- **Feasibility.** The rule is unchanged: at least 10 blocks, taken as the minimum over seeds.
+- **Kill criteria.** The kill criteria of §6 apply unchanged to the c = 3 cells. These cells are the
+  primary result.
+- **The registered c = 6 run.** It still runs on its feasible cells and is reported with its own
+  verdicts, so the amendment cannot hide a c = 6 failure.
+- **Variable c.** Rejected, because unequal class sizes bias both 1-NN accuracy and ARI.
+
+**Consequence, stated now.** H-KNN-C-int is testable only on WD50K(100) and NDC-substances. Its claim
+is restricted to the feasible cells, and the infeasible cells are reported as infeasible.
+
+No Design-C distance, accuracy or ARI had been computed when this amendment was written.

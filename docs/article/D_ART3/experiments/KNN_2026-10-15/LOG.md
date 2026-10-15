@@ -127,3 +127,119 @@ the certified-representative operation (Prop. 6.1) that the paper so far has not
 ## 5. Probes and results
 
 (appended below as they run)
+
+### 5.1 Probe of Designs A and B (2026-10-15; S = 60, c = 6, 3 seeds, all cells, 399 s)
+
+Code: `scripts/newpos/knn/{knn_lib,probe_knn,fig_knn_probe}.py`, tests `tests/newpos/test_knn.py` (78 pass
+with `test_neardup.py`), merged into `main` at `bd52419`. Outputs and the generated tables:
+`D/results/KNN_2026-10-15/probe/{SUMMARY.md,summary.json}`. Engineer's log:
+`.claude/notes/2026-10-15-knn/probe-engineer.md`. The leader re-ran the tests and checked the numbers
+below against `SUMMARY.md`. Point values are seed means, with [min, max] over the 3 seeds.
+
+**Verdicts. All three kill criteria fired.**
+
+- **H-KNN-B (pendant partial copies): killed in 12 of 12 cells.**
+  - The bipartite edit path, or the assignment value, has the highest 1-NN accuracy in every cell
+    except WD50K(66) at r = 2 and r = 3. In those two the word leads 1-NN (0.944 vs 0.886; 0.880 vs
+    0.834) but loses ARI (0.452 vs 0.486; 0.323 vs 0.405).
+  - The gap is widest on NDC-substances: word ARI 0.323 / 0.264 / 0.234 vs 0.614 / 0.508 / 0.432.
+- **H-KNN-A (real NDC lineages): killed.**
+  - NDC-classes: the word leads both metrics, 1-NN 0.748 vs 0.700 (edit path) and ARI 0.273 vs 0.256
+    (fact list), but the seed ranges overlap.
+  - NDC-substances: the word loses, 1-NN 0.430 vs 0.452 and ARI 0.142 vs HPD's 0.208.
+- **H-KNN-mix: killed in all 6 WD50K cells,** by the edit path (e.g. WD50K(100) at r = 1: 0.648 vs
+  0.864). The realized pendant share was 0.81–0.86 against the 0.90 target, and 0.68–0.73 against the
+  0.75 target.
+
+**Diagnostics.**
+
+- **No ceiling effect.** At most 2 arms reach 1-NN ≥ 0.9 in any cell. The ceiling for exact arms is
+  0.93–1.00 on every Design-B cell.
+- **Isomorphism shared across lineages (Design A):** 0.25 / 0.29 of items, with exact-arm ceilings of
+  0.92 / 0.79. The ceiling, not the shared fraction, is what bounds accuracy.
+- **Prop. 6.1 holds in every arm.** For the word, cost(M)/LB has a median of 1.22–1.34 and a maximum of
+  1.75. 0 of 2,785 clusters exceed the 2 − 2/N bound, so the bound does not separate the arms.
+- **Ablation: the word beats `w*_c` on 1-NN in 6 of 6 cells** (seed 0, WD50K(66) and NDC-classes).
+  `w*_c` costs 41–549 s per cell.
+- **The pre-registered WL arm is degenerate on this task.** Run to a stable partition, every pair's
+  distance is n_i + n_j, so 1-NN ≈ 0.014. A fixed one-round WL reaches 0.989 / 0.964 / 0.928 on
+  WD50K(66), above the word. This is recorded here and is not hidden: §6 adds it as a competitor.
+
+**Mechanism (seed-0 diagnostics).**
+
+- One token of the word carries a whole fact, so on small records copies of *unrelated* sources sit
+  only a few tokens apart. On NDC-classes the nearest copy of another source is 2 tokens away and the
+  nearest sibling 1 token away; the word also has avalanche tails of up to 60 tokens per removal.
+- The bipartite edit cost of a removal grows with the size of the removed fact. Unrelated sources drawn
+  at random therefore stay far apart under it.
+- **Lesson.** When the sources are drawn uniformly from a few thousand records, the pool is sparse. It
+  then lacks exactly the look-alike records that made C8's distractors hard, and in that regime an
+  edit-cost distance is the right tool.
+- **The word still beats every certificate and fact-list arm in every Design-B cell.**
+
+**Decision (leader).**
+
+- The kills are accepted.
+- Designs A and B do not go to the main text and are not run at full scale. They are kept for the
+  supplement, as the honest "random records" condition.
+- The draft figure (`probe/fig_knn_probe_r2_s0*.png`) shows that the visual format works.
+
+## 6. Design C — linkage among look-alike records (C8 reformulated as kNN / k-medoids)
+
+Pre-registered 2026-10-15, before any Design-C code runs. Rationale:
+- C8 showed the word's advantage on real near-duplicate neighbourhoods, where the distractors are the
+  record's look-alikes.
+- Record linkage in practice runs *after blocking*: the linker is handed candidates that already look
+  alike (Christen, *Data Matching*, Springer 2012, ch. 4).
+- Design C keeps Design B's noise model (partial exports, pendant removals) but draws the sources the
+  way a blocking step presents them: as groups of look-alike records.
+
+**Blocks.**
+- Take the C8 one-edit relation among the real records of the collection: single-fact edits,
+  enumerated, keyed by the nauty certificate, with records deduplicated to isomorphism classes.
+- A block is a seed record plus a uniform subsample of at most 4 of its one-edit neighbours. A block
+  has at least 3 members.
+- Blocks drawn in one seed are disjoint. Draw blocks uniformly at random until the pool holds ≥ 60
+  sources or the candidates run out, and report the realised S.
+- **Strata, fixed now:**
+  - **C-all:** the neighbours may be of either edit kind, in the collection's natural proportion.
+  - **C-int:** only neighbours one *interior* edit from the seed.
+  - **C-pend:** only *pendant* neighbours. Reported, with no claim.
+- A stratum with fewer than 10 available blocks on a collection is reported as infeasible there. An
+  infeasible cell is not a pass.
+
+**Copies, competitors and statistics.**
+- Copies are as in Design B: c = 6 per member, r ∈ {1, 2, 3} pendant removals, at least 3 facts kept,
+  connected.
+- Competitors are those of §2 plus the **one-round WL** (fixed h = 1, L1 on the colour histogram).
+- 27 seeds, BCa intervals, one-sided Wilcoxon with Holm correction and rank-biserial effect sizes.
+
+**Metrics (primary, no others promoted later).**
+- 1-NN accuracy over the whole pool (ties at expected accuracy).
+- k-medoids ARI against the source, with k = S.
+- Each cell reports the exact-arm ceiling and the fraction of items whose isomorphism class is shared
+  across sources.
+
+**Hypotheses and kills.**
+- **H-KNN-C (natural blocks, C-all).** The word has the highest 1-NN accuracy and the highest ARI on
+  all four collections at every r. **Kill:** any competitor ≥ the word on either metric in any feasible
+  cell.
+- **H-KNN-C-int (mechanism).** The same claim and kill, on C-int.
+- **Prediction, written down so it can be wrong.** C-int favours the word: a pendant removal moves few
+  tokens of the word, and an interior edit moves many, whereas an edit cost prices both by fact size.
+  C-pend is expected to favour no one, because the copies of a record and of its pendant extension
+  collide.
+
+**Main-text admission (fixed now).**
+- If H-KNN-C survives, it is the headline.
+- If only H-KNN-C-int survives, it may enter the main text only if:
+  - the same sentence carries the scope "look-alike records that differ in how their facts are
+    linked";
+  - the main text points to the Design-B negative (random records: the bipartite edit path wins) and
+    to the C-all result.
+- If neither survives, there is no kNN positive. The leader reports this to the author, and the
+  experiment goes to the supplement whole.
+
+**Figure.** As in §4, with panel (a) drawn *inside one block* (copies of 3–5 look-alike records,
+coloured by member). The edit-path panel is always one of the four, because it is the strongest
+competitor.

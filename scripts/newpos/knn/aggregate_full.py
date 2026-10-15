@@ -843,7 +843,7 @@ def _mechanism_section(cells: list[dict[str, Any]]) -> list[str]:
 
 
 def _crosscheck_section(cc: dict[str, Any] | None) -> list[str]:
-    """Seed-0 cells recomputed on the workstation against the Picasso cells (``crosscheck_seed0.py``)."""
+    """Seed-0 cells computed on the workstation against the Picasso cells."""
     if not cc:
         return []
     lines = [

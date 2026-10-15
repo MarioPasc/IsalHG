@@ -30,8 +30,12 @@ what the environment *is* and how it was verified.
 local convention; the remote one differs and `common.sh` encodes the remote one.
 
 **`~/fscratch` is a symlink.** It resolves to
-`/mnt2/fscratch/users/tic_163_uma/mpascual`, so `isalhg.__file__` reports
-`/mnt2/fscratch/users/tic_163_uma/mpascual/repos/IsalHG-tkde/src/isalhg/__init__.py`.
+`/mnt/fscratch/users/tic_163_uma/mpascual` since the 2026-10-08 storage migration
+(before it, `/mnt2/fscratch/...`, now root-only). An editable install made before the
+migration still maps `isalhg` to `/mnt2` and fails to import; re-run the sync script's
+documented reinstall (`rm -rf build; pip install -e . --no-deps`) in `IsalHG-tkde`
+(done 2026-10-15, KNN full run). `isalhg.__file__` then reports
+`/mnt/fscratch/users/tic_163_uma/mpascual/repos/IsalHG-tkde/src/isalhg/__init__.py`.
 Verification asserts the substring `IsalHG-tkde`, never equality against the
 `/mnt/home/...` spelling — an equality check would fail on a correct install.
 

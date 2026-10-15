@@ -276,3 +276,103 @@ one-edit graph.
 is restricted to the feasible cells, and the infeasible cells are reported as infeasible.
 
 No Design-C distance, accuracy or ARI had been computed when this amendment was written.
+
+### 6.2 Probe of Design C (2026-10-15; c = 3 primary, c = 6 secondary, 3 seeds)
+
+Code: `scripts/newpos/knn/{design_c,aggregate_c}.py` and the figure script, merged into `main` at
+`46d5a7b` (229 tests pass in `tests/newpos`). Outputs: `D/results/KNN_2026-10-15/probe_c/`, with the
+summary in `SUMMARY_C.md`. The c = 3 run was computed first; no c = 6 accuracy or ARI existed before
+§6.1 was written.
+
+**Verdicts. Both claims were killed in every feasible cell.**
+
+- **H-KNN-C (C-all), c = 3: killed on all four collections at every r.**
+  - The bipartite edit path, or the assignment value, leads 1-NN everywhere. For r = 1 / 2 / 3, the
+    word against the best competitor:
+    - WD50K(66): 0.22 / 0.23 / 0.15 vs 0.43 / 0.28 / 0.20;
+    - WD50K(100): 0.23 / 0.20 / 0.21 vs 0.61 / 0.39 / 0.31;
+    - NDC-classes: 0.40 / 0.34 / 0.30 vs 0.72 / 0.55 / 0.48;
+    - NDC-substances: 0.16 / 0.12 / 0.08 vs 0.58 / 0.44 / 0.33.
+  - ARI is also led by a competitor in every cell: the edit path, the degree floor or one-round WL.
+- **H-KNN-C-int, c = 3.**
+  - It is feasible only on WD50K(100) and NDC-substances; it is infeasible on the other two, which
+    have 3 and 4 blocks.
+  - Killed on both feasible collections at every r: WD50K(100) 0.25 / 0.18 / 0.19 vs
+    0.51 / 0.31 / 0.28; NDC-substances 0.19 / 0.15 / 0.13 vs 0.43 / 0.33 / 0.24.
+- **C-pend (no claim):** a bipartite edit arm leads every cell.
+- **c = 6 secondary:** H-KNN-C is killed in all 6 feasible cells, e.g. WD50K(100) 0.26 / 0.27 / 0.25 vs
+  0.76 / 0.62 / 0.42. H-KNN-C-int is untestable at c = 6.
+
+**Why the C-int prediction failed.**
+- The one-edit graph lives on small records (median m = 4–5). On them, word distances are tiny and
+  quantised. At seed 0 and r = 1, a copy is 2–3 tokens from its siblings and 2–3 tokens from copies in
+  other blocks.
+- A sibling is strictly closer than every copy in another block for only 0.22–0.47 of queries; the
+  edit path manages 0.35–0.63.
+- Most of the word's errors land in *other* blocks: only 0.20–0.39 of its errors fall inside the
+  query's own block on C-int.
+- The separation that was predicted for interior look-alikes does exist inside a block (WD50K(100):
+  sibling 3 tokens vs block-mate 4). The trouble is that unrelated small records sit closer still.
+- In the drafted figure's single block the word leads, 0.49 vs 0.33, but that block is not
+  representative of its cell (0.19 vs 0.43). It must never be shown as a win.
+
+**Lesson across A, B and C.** When the classes must be inferred from *siblings* (copies of a record
+that is absent from the pool), the word's quantised small-record geometry loses to an edit cost priced
+by fact size, whether the sources are random or look-alikes. The word's measured strength, from C8, is
+a different task: finding the record itself, i.e. exactness at zero plus pendant locality toward a
+reference that is present.
+
+**Decision (leader).** Design C is killed and goes to the supplement record with A and B.
+
+## 7. Design D — linkage against a reference catalogue (C8 as a 1-NN classifier)
+
+Pre-registered 2026-10-15, before any Design-D code runs. This is the fourth design.
+- **Why it is pre-registered after three kills.** Its hypothesis is not a new claim: it is C8's
+  measured pendant locality rewritten as a 1-NN classifier. What it adds is a task reading the PI asked
+  for, and figures.
+- **Disclosure.** The history of A, B and C must be disclosed wherever D is reported. The supplement
+  carries A, B and C in full, and the main text points to them.
+
+**Task.** Records arrive as *partial exports* of entities held in a master catalogue, and each must
+be assigned to its catalogue record: reference-based record linkage without identifiers. The 1-NN
+classifier's training set is the catalogue, i.e. every record of the collection within the C8
+envelope, deduplicated to isomorphism classes, one class per record. A query is a partial copy, and
+its label is its source.
+
+**Queries.**
+- The sources are drawn uniformly from the eligible records, those yielding 3 pairwise non-isomorphic
+  pendant copies at every r ≤ 3 (the same rule as §6.1).
+- Each source gets c = 3 copies made by r pendant removals, with r ∈ {1, 2, 3}.
+- S = 60 in the probe and S = 200 in the full run.
+- Nothing is removed from the catalogue. When a copy is isomorphic to another catalogue record, every
+  exact arm is drawn to that record. This is real ambiguity, so the exact-arm ceiling is reported per
+  cell.
+
+**Metrics.**
+- **Primary:** 1-NN accuracy against the catalogue, with ties at expected accuracy.
+- **Secondary, descriptive:** the reciprocal rank of the source. **No clustering metric**, because the
+  catalogue has one record per class.
+
+**Competitors.** The same eleven as in §6: the ten of §2 plus one-round WL.
+
+**Hypotheses and kills.**
+- **H-KNN-D (claim).** The word has the highest 1-NN accuracy on all four collections at r = 1 and
+  r = 2. **Kill:** any competitor ≥ the word in any of these 8 cells.
+  - The claim is limited to r ≤ 2 because C8 measured the word's lead up to radius 2 only.
+  - **r = 3 is reported with its own verdict, without a claim.** It is an extrapolation; Design B
+    showed the word degrades with r.
+- **H-KNN-D-mix (claim, WD50K only, as H-KNN-mix).** Under C8's empirical edit mix, the word has the
+  highest 1-NN accuracy on both WD50K collections at r = 1 and r = 2. **Kill:** as above.
+
+**Statistics.** As in §2: 27 seeds in the full run, BCa intervals, one-sided Wilcoxon with Holm
+correction, rank-biserial effect sizes.
+
+**Admission rule.**
+- **If H-KNN-D survives:**
+  - It enters the main text as the kNN experiment.
+  - The main text must say, in the same paragraph, that it is the classification form of C8.
+  - It must say that when classes must be inferred from siblings, i.e. copies without the reference
+    (Designs B and C), the bipartite edit path wins; the supplement holds those designs.
+  - If H-KNN-D-mix is killed, that is stated in the same paragraph.
+- **If H-KNN-D is killed,** there is no kNN positive. The leader stops designing and reports to the
+  author.

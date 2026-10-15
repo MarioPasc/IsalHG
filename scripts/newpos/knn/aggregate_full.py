@@ -147,6 +147,8 @@ class Series:
     #: Per arm: per-seed share of queries whose own class is strictly nearer / tied, and the
     #: pooled nearest same-class and other-class distances (memory only; quantiles are kept).
     mech: dict[str, dict[str, list[Any]]] = field(default_factory=dict)
+    #: Per arm: the per-seed Prop. 6.1 certificate census of the PAM clusters.
+    cert: dict[str, list[dict[str, Any]]] = field(default_factory=dict)
 
     def add(self, seed: int, arms: dict[str, dict[str, Any]], metrics: Sequence[str]) -> None:
         """Append one seed's arm values (``None`` where an arm lacks a metric)."""
@@ -159,6 +161,8 @@ class Series:
                 v = res.get(m)
                 col.append(None if v is None else float(v))
             self._add_mech(arm, res)
+            if res.get("certified"):
+                self.cert.setdefault(arm, []).append(res["certified"])
         for slot in self.values.values():
             for col in slot.values():
                 col.extend([None] * (n - len(col)))
@@ -211,9 +215,11 @@ def load_ab(root: Path) -> dict[str, Series]:
             cond, r = "lineage", None
             cid = f"{design}/lineage/{p['collection']}"
             hyp, claim = ("H-KNN-A", True) if design == "A" else ("Afull", False)
-        s = out.get(cid) or Series(
-            cid, design, cond, None, p["collection"], r, hyp, claim, tuple(p["competitors"])
-        )
+        # Designs A and B were registered with ten competitors: one-round WL is an added,
+        # reported row there and stays outside the kill and the Holm family (coordinator
+        # ruling, 2026-10-15); C and D registered it.
+        comps = tuple(a for a in p["competitors"] if a != K.WL_H1)
+        s = out.get(cid) or Series(cid, design, cond, None, p["collection"], r, hyp, claim, comps)
         out[cid] = s
         s.add(int(p["seed"]) if p["seed"] is not None else 0, p["arms"], _cell_metrics(design))
         s.diag["n_items"].append(p["n_items"])
@@ -416,8 +422,12 @@ def aggregate_series(s: Series) -> dict[str, Any]:
     }
     tests: dict[str, Any] = {}
     best: dict[str, Any] = {}
+    best_any: dict[str, Any] = {}
     diffs: dict[str, Any] = {}
-    asrun: dict[str, Any] = {}
+    # Reported rows outside the family and the verdict: the as-run edit path everywhere,
+    # one-round WL in Designs A and B.
+    added = [a for a in (K.PATH_ASRUN, K.WL_H1) if a in s.values and a not in s.competitors]
+    added_rows: dict[str, dict[str, Any]] = {a: {} for a in added}
     word_vals = s.values.get(K.OURS, {})
     for m in metrics:
         comps = {a: s.values[a][m] for a in s.competitors if a in s.values and m in s.values[a]}
@@ -427,13 +437,18 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         means = {a: per_arm[a][m]["mean"] for a in comps if m in per_arm[a]}
         name = max(means, key=lambda a: means[a])
         best[m] = {"arm": name, "mean": means[name]}
+        verdict_arms = {**means, K.OURS: per_arm[K.OURS][m]["mean"]}
+        top = max(verdict_arms, key=lambda a: verdict_arms[a])
+        best_any[m] = {"arm": top, "mean": verdict_arms[top]}
         diffs[m] = _diff(word_vals[m], s.values[name][m])
-        if K.PATH_ASRUN in s.values and m in s.values[K.PATH_ASRUN]:
-            x, y = _paired(word_vals[m], s.values[K.PATH_ASRUN][m])
-            asrun[m] = {
-                "mean": per_arm[K.PATH_ASRUN][m]["mean"],
+        for a in added:
+            if m not in s.values[a] or m not in per_arm[a]:
+                continue
+            x, y = _paired(word_vals[m], s.values[a][m])
+            added_rows[a][m] = {
+                "mean": per_arm[a][m]["mean"],
                 "p_raw_word_greater": _one_sided(x, y),
-                "ge_word": bool(per_arm[K.PATH_ASRUN][m]["mean"] >= per_arm[K.OURS][m]["mean"]),
+                "ge_word": bool(per_arm[a][m]["mean"] >= per_arm[K.OURS][m]["mean"]),
             }
     word_mean = {m: per_arm[K.OURS][m]["mean"] for m in metrics if m in per_arm.get(K.OURS, {})}
     killers = {
@@ -459,6 +474,7 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         verdict = "word ahead (no claim)" if all(ahead.values()) else "competitor ahead (no claim)"
     diag = {k: list(v) for k, v in s.diag.items()}
     mechanism = {arm: _mechanism(slot) for arm, slot in s.mech.items()}
+    certified = {arm: _certified(rows) for arm, rows in s.cert.items()}
     return {
         "id": s.cell_id,
         "design": s.design,
@@ -477,8 +493,10 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         "per_arm": per_arm,
         "tests": tests,
         "best_competitor": best,
+        "best_arm_overall": best_any,
         "diff_word_minus_best": diffs,
-        "as_run_path": asrun,
+        "added_rows": added_rows,
+        "as_run_path": added_rows.get(K.PATH_ASRUN, {}),
         "word": word_mean,
         "killers": killers,
         "word_ahead": ahead,
@@ -486,6 +504,25 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         "verdict": verdict,
         "diag": diag,
         "mechanism": mechanism,
+        "certified": certified,
+    }
+
+
+def _certified(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Prop. 6.1 census over seeds: per-seed median ratios, the largest ratio, the counts."""
+    med = [r["ratio_median"] for r in rows if r.get("ratio_median") is not None]
+    mx = [r["ratio_max"] for r in rows if r.get("ratio_max") is not None]
+    return {
+        "ratio_median_per_seed": med,
+        "ratio_median_mean": float(np.mean(med)) if med else None,
+        "ratio_median_min": float(min(med)) if med else None,
+        "ratio_median_max": float(max(med)) if med else None,
+        "ratio_max": float(max(mx)) if mx else None,
+        "n_over_bound": int(sum(r.get("n_over_bound", 0) for r in rows)),
+        "n_1medoid_over_bound": int(sum(r.get("n_1medoid_over_bound", 0) for r in rows)),
+        "n_certified": int(sum(r.get("n_certified", 0) for r in rows)),
+        "n_lb_zero": int(sum(r.get("n_lb_zero", 0) for r in rows)),
+        "n_singletons": int(sum(r.get("n_singletons", 0) for r in rows)),
     }
 
 
@@ -585,7 +622,7 @@ def _verdict_table(cells: list[dict[str, Any]]) -> list[str]:
     lines = [
         "| collection | r | N items | metric | `w°` mean [BCa] | best competitor mean [BCa] | "
         "Δ `w°` − best [BCa] | p_Holm `w°` > best / best > `w°` | r_rb | max p_Holm over the "
-        "11 | bip. path as run‡ | verdict |",
+        "family | added rows (outside the verdict) | verdict |",
         "|---|---|---|---|---|---|---|---|---|---|---|---|",
     ]
     for c in sorted(cells, key=_order_key):
@@ -600,7 +637,11 @@ def _verdict_table(cells: list[dict[str, Any]]) -> list[str]:
             b = c["best_competitor"][m]["arm"]
             t = c["tests"][m][b]
             d = c["diff_word_minus_best"].get(m)
-            ar = c["as_run_path"].get(m)
+            added = "; ".join(
+                f"{SHORT.get(a, a)} {_f(row[m]['mean'])}{' (≥ w°)' if row[m]['ge_word'] else ''}"
+                for a, row in c["added_rows"].items()
+                if m in row
+            )
             pmax = max(x["p_holm"] for x in c["tests"][m].values())
             verdict = c["verdict"]
             if verdict == "kill":
@@ -611,8 +652,7 @@ def _verdict_table(cells: list[dict[str, Any]]) -> list[str]:
                 f"{m} | {_ci(c['per_arm'][K.OURS].get(m))} | {SHORT.get(b, b)} "
                 f"{_ci(c['per_arm'][b].get(m))} | {_ci(d) if d else '–'} | "
                 f"{_p(t['p_holm'])} / {_p(t['p_holm_rev'])} | {t['rank_biserial']:+.2f} | "
-                f"{_p(pmax)} | {_f(ar['mean']) if ar else '–'}"
-                f"{' (≥ w°)' if ar and ar['ge_word'] else ''} | {verdict} |"
+                f"{_p(pmax)} | {added or '–'} | {verdict} |"
             )
     return lines
 
@@ -669,21 +709,24 @@ def render(summary: dict[str, Any]) -> str:
         "(secondary), S target 60; D S = 200, c = 3.",
         "",
         "**Reading.** Point values are means over seeds with 95 % BCa intervals (9,999 "
-        "resamples). The verdict competitors are the eleven of §6 with the bipartite edit path "
-        "read as the symmetric min min(d(a, b), d(b, a)), the orientation-free symmetrization "
-        "of the raw cost (§7.1, §8). A claim cell is **killed** when any verdict "
-        "competitor's seed mean is ≥ the word's on any of the hypothesis's metrics (the "
-        "registered kill; the tests do not change it). p_Holm: one-sided paired Wilcoxon over "
-        "seeds (zsplit), Holm over the eleven competitors, in each direction; r_rb: rank-biserial "
-        "of `w°` − best. ‡ the as-run edit-path orientation, a reported row outside every family "
-        "and verdict; '(≥ w°)' marks a cell where it alone would also have reached the word. † "
-        "the registry WL refines to the union's stable partition and is degenerate on copy sets "
-        "(LOG.md §5.1).",
+        "resamples). The bipartite edit path is read as the symmetric min min(d(a, b), d(b, a)), "
+        "the orientation-free symmetrization of the raw cost (§7.1, §8). The verdict "
+        "competitors are each design's registered ones: the ten of §2 for Designs A and B (and "
+        "the mix condition), those ten plus one-round WL for Designs C and D (§6, §7). A claim "
+        "cell is **killed** when any verdict competitor's seed mean is ≥ the word's on any of "
+        "the hypothesis's metrics (the registered kill; the tests do not change it). p_Holm: "
+        "one-sided paired Wilcoxon over seeds (zsplit), Holm over the design's verdict "
+        "competitors, in each direction; r_rb: rank-biserial of `w°` − best. Added rows, "
+        "outside every family and verdict: ‡ the as-run edit-path orientation (every design) "
+        "and § one-round WL in Designs A and B; '(≥ w°)' marks a cell where that row alone "
+        "would have reached the word. † the registry WL refines to the union's stable partition "
+        "and is degenerate on copy sets (LOG.md §5.1).",
         "",
         "## Verdicts",
         "",
         *_summary_table(hyps),
         "",
+        *_added_row_flags(cells),
     ]
     for name, h in hyps.items():
         mine = [c for c in cells.values() if c["hypothesis"] == name]
@@ -713,6 +756,45 @@ def render(summary: dict[str, Any]) -> str:
     out += _mechanism_section(list(cells.values()))
     out += _repro_section(summary.get("reproducibility"))
     return "\n".join(out) + "\n"
+
+
+def added_row_flags(cells: dict[str, Any] | list[dict[str, Any]]) -> dict[str, Any]:
+    """Per added row and hypothesis: the claim cells where it reaches the word."""
+    rows = cells.values() if isinstance(cells, dict) else cells
+    out: dict[str, Any] = {}
+    for c in rows:
+        if not c["claim"] or c["verdict"] not in ("word ahead", "kill"):
+            continue
+        for arm, row in c["added_rows"].items():
+            slot = out.setdefault(arm, {}).setdefault(
+                c["hypothesis"], {"cells": 0, "reaches_word": []}
+            )
+            slot["cells"] += 1
+            hit = [m for m in c["metrics"] if m in row and row[m]["ge_word"]]
+            if hit:
+                slot["reaches_word"].append({"cell": c["id"], "metrics": hit})
+    return out
+
+
+def _added_row_flags(cells: dict[str, Any]) -> list[str]:
+    flags = added_row_flags(cells)
+    if not flags:
+        return []
+    lines = [
+        "**Added rows (outside every family and verdict).** Claim cells in which the row's "
+        "seed mean reaches the word's on a hypothesis metric:",
+        "",
+    ]
+    for arm, by_h in flags.items():
+        for h, slot in by_h.items():
+            hits = ", ".join(
+                f"`{x['cell']}` ({'/'.join(x['metrics'])})" for x in slot["reaches_word"]
+            )
+            lines.append(
+                f"- {SHORT.get(arm, arm)}, {h}: {len(slot['reaches_word'])} of {slot['cells']}"
+                + (f" — {hits}" if hits else "")
+            )
+    return [*lines, ""]
 
 
 MECH_ARMS: tuple[str, ...] = (K.OURS, K.PATH_SYM, K.WL_H1)
@@ -816,6 +898,7 @@ def aggregate(root: Path) -> dict[str, Any]:
         "seeds_expected": SEEDS_FULL,
         "cells": cells,
         "hypotheses": hypothesis_verdicts(cells),
+        "added_row_flags": added_row_flags(cells),
         "reproducibility": json.loads(repro_path.read_text()) if repro_path.exists() else None,
     }
 

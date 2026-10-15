@@ -70,6 +70,22 @@ def test_a_competitor_at_or_above_the_word_kills() -> None:
     assert cell["diff_word_minus_best"]["acc1"]["mean"] < 0
 
 
+def test_wl_h1_is_an_added_row_outside_designs_a_and_b() -> None:
+    rng = np.random.default_rng(4)
+    ten = tuple(a for a in K.COMPETITORS_FULL if a != K.WL_H1)
+    others = {a: _flat(27, 0.5, rng) for a in K.COMPETITORS_FULL}
+    others[K.WL_H1] = _flat(27, 0.95, rng)
+    s = _series(_flat(27, 0.8, rng), others)
+    s.competitors = ten
+    cell = AF.aggregate_series(s)
+    assert cell["verdict"] == "word ahead"
+    assert K.WL_H1 not in cell["tests"]["acc1"] and len(cell["tests"]["acc1"]) == 10
+    assert cell["added_rows"][K.WL_H1]["acc1"]["ge_word"] is True
+    flags = AF.added_row_flags({cell["id"]: cell})
+    assert flags[K.WL_H1]["H-KNN-B"]["reaches_word"][0]["cell"] == cell["id"]
+    assert cell["best_arm_overall"]["acc1"]["arm"] == K.OURS
+
+
 def test_infeasible_and_non_claim_cells() -> None:
     rng = np.random.default_rng(2)
     others = {a: _flat(5, 0.5, rng) for a in K.COMPETITORS_FULL}

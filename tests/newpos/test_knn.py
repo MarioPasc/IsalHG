@@ -13,6 +13,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "newpos" / "knn"))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+import design_c as DC  # noqa: E402, N812
 from knn_lib import (  # noqa: E402
     IsoKeys,
     brute_force_kmedoids,
@@ -351,3 +352,113 @@ def test_lineages_need_three_versions() -> None:
     lin = lineages(col)
     assert sorted(lin) == ["1", "3"]
     assert [col.records[i].meta["window"] for i in lin["3"]] == [1, 2, 4, 5]
+
+
+# --------------------------------------------------------------------------- Design C
+
+
+def _toy_graph(seed: int, n: int = 60, p: float = 0.12) -> dict[int, dict[int, str]]:
+    rng = np.random.default_rng(seed)
+    adj: dict[int, dict[int, str]] = {v: {} for v in range(n)}
+    for a in range(n):
+        for b in range(a + 1, n):
+            if rng.random() < p:
+                kind = "pendant" if rng.random() < 0.6 else "interior"
+                adj[a][b] = adj[b][a] = kind
+    return adj
+
+
+@pytest.mark.parametrize("stratum", list(DC.STRATA))
+@pytest.mark.parametrize("seed", range(4))
+@pytest.mark.parametrize("s_target", [None, 20])
+def test_blocks_are_disjoint_and_match_the_stratum(
+    stratum: str, seed: int, s_target: int | None
+) -> None:
+    adj = _toy_graph(seed)
+    eligible = [v for v in adj if v % 7 != 0]
+    kinds = DC.STRATA[stratum]
+    blocks, discarded = DC.draw_blocks(
+        adj, kinds, eligible, np.random.default_rng(seed), s_target=s_target
+    )
+    assert blocks and discarded == 0
+    used = [v for b in blocks for v in b]
+    assert len(used) == len(set(used)), "blocks overlap"
+    assert set(used) <= set(eligible)
+    for block in blocks:
+        assert DC.BLOCK_MIN <= len(block) <= DC.BLOCK_NEIGHBOURS + 1
+        head = block[0]
+        for member in block[1:]:
+            assert adj[head][member] in kinds, "a neighbour's edit kind is outside the stratum"
+    remaining = set(eligible) - set(used)
+    if s_target is None or sum(len(b) for b in blocks) < s_target:
+        assert DC.candidate_seeds(adj, kinds, remaining) == [], "the draw stopped early"
+
+
+def test_block_acceptance_drops_members_and_discards_small_blocks() -> None:
+    adj = _toy_graph(1)
+
+    def drop(block: list[int]) -> list[int]:
+        return block[:3] if len(block) == 5 else block[:2]
+
+    blocks, discarded = DC.draw_blocks(
+        adj, DC.STRATA["C-all"], list(adj), np.random.default_rng(0), s_target=None, accept=drop
+    )
+    assert blocks and all(len(b) == 3 for b in blocks)
+    assert discarded > 0
+
+
+def test_one_edit_graph_dedups_and_labels_kinds() -> None:
+    base = [(0, (0, 1)), (1, (1, 2)), (2, (0, 2)), (3, (2, 3)), (0, (3, 4))]
+    a = _record("A", 5, base)
+    b = _record("B", 4, base[:4])  # minus the leaf statement (0, (3, 4)): pendant
+    d = _record("D", 5, [f for f in base if f != (2, (0, 2))])  # minus a cycle edge: interior
+    # A with constants 0 and 2 swapped (both carry type 0): isomorphic to A
+    perm = {0: 2, 1: 1, 2: 0, 3: 3, 4: 4}
+    a2 = _record("A2", 5, [(p, tuple(sorted(perm[x] for x in args))) for p, args in base])
+    col = KBCollection(
+        "toy_c",
+        (a, b, d, a2),
+        type_names=tuple(f"t{i}" for i in range(N_TYPES)),
+        pred_names=tuple(f"p{i}" for i in range(N_PREDS)),
+    )
+    g = DC.one_edit_graph(col)
+    assert len(g.rep) == 3  # A and A2 collapse to one class, represented by A (index 0)
+    cls = {i: c for c, i in g.rep.items()}
+    assert g.adj[cls[0]] == {cls[1]: "pendant", cls[2]: "interior"}
+    assert g.edge_counts() == {"pendant": 1, "interior": 1}
+
+
+def test_member_copies_are_deterministic(source: KBRecord, keys: IsoKeys) -> None:
+    one = DC.member_copies(source, 7, 0, keys, "toy", 3)
+    two = DC.member_copies(source, 7, 0, keys, "toy", 3)
+    assert one is not None and two is not None
+    assert {r: [c.facts for c in cs] for r, cs in one.items()} == {
+        r: [c.facts for c in cs] for r, cs in two.items()
+    }
+    assert all(len(cs) == 3 for cs in one.values())
+
+
+def test_error_split() -> None:
+    from knn_lib import error_split
+
+    groups = np.array([0, 0, 1])  # classes 0 and 1 share a block; class 2 is alone
+    codes = np.array([0, 2])
+    P = np.array([[0.5, 0.25, 0.25], [0.5, 0.0, 0.5]])
+    out = error_split(P, codes, groups)
+    assert out["err_within_group"] == pytest.approx(0.25 / 2)
+    assert out["err_other_group"] == pytest.approx((0.25 + 0.5) / 2)
+    assert out["err_within_share"] == pytest.approx(0.25)
+
+
+def test_wl_h1_arm(source: KBRecord, keys: IsoKeys) -> None:
+    from knn_lib import WL_H1, build_matrices
+
+    copies, _ = make_copies(source, 1, 3, np.random.default_rng(0), keys)
+    twin = KBRecord(
+        kb_id="twin", n=source.n, types=source.types, facts=source.facts, meta=dict(source.meta)
+    )
+    mats, secs = build_matrices([source, twin, *copies], [WL_H1], n_types=N_TYPES, n_preds=N_PREDS)
+    M = mats[WL_H1]
+    assert M[0, 1] == 0.0
+    assert (M[0, 2:] > 0).all() and np.isfinite(M).all()
+    assert secs[WL_H1] >= 0.0

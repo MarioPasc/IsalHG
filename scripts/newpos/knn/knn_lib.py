@@ -67,6 +67,12 @@ COMPETITORS: tuple[str, ...] = (
 )
 ARMS: tuple[str, ...] = (OURS, *COMPETITORS)
 ABLATION = "wstar_orbit"
+#: One-round hypergraph WL, L1 on the colour histogram (Design C competitor, LOG.md §6). The
+#: registry ``wl_l1`` refines to the stable partition of the item union, which on near-identical
+#: copies separates every item and collapses the distance to ``n_i + n_j``.
+WL_H1 = "wl_h1"
+COMPETITORS_C: tuple[str, ...] = (*COMPETITORS, WL_H1)
+ARMS_C: tuple[str, ...] = (OURS, *COMPETITORS_C)
 COLLECTIONS: tuple[str, ...] = ("wd50k66", "wd50k100", "ndc_classes", "ndc_substances")
 LINEAGE_COLLECTIONS: tuple[str, ...] = ("ndc_classes", "ndc_substances")
 
@@ -669,9 +675,11 @@ def build_matrices(
     records : Sequence[KBRecord]
         The evaluated items.
     arms : Sequence[str]
-        Registered distance names. ``wstar_orbit`` is refused here: its C++
-        engine poisons forked children and needs a per-member budget, so it is
-        built by :func:`build_ablation_matrix` in a separate process.
+        Registered distance names, plus ``wl_h1`` (:data:`WL_H1`, the
+        one-round WL, built directly because the registry has no round cap).
+        ``wstar_orbit`` is refused here: its C++ engine poisons forked children
+        and needs a per-member budget, so it is built by
+        :func:`build_ablation_matrix` in a separate process.
     n_types, n_preds : int
         Collection-scoped vocabulary sizes.
     n_jobs : int, optional
@@ -699,7 +707,12 @@ def build_matrices(
     ordered = sorted(arms, key=lambda a: (not a.startswith("bipartite"), arms.index(a)))
     for arm in ordered:
         t0 = time.perf_counter()
-        M = build_matrix(hs, arm, member_ids=ids, n_jobs=n_jobs)
+        if arm == WL_H1:
+            from isalhg.metric_space.representations.wl import HypergraphWLDistance
+
+            M = HypergraphWLDistance(metric="l1", max_rounds=1).matrix(hs)
+        else:
+            M = build_matrix(hs, arm, member_ids=ids, n_jobs=n_jobs)
         secs[arm] = time.perf_counter() - t0
         mats[arm] = np.asarray(M, dtype=np.float64)
     return {a: mats[a] for a in arms}, {a: secs[a] for a in arms}
@@ -1072,6 +1085,7 @@ def evaluate_arm(
     iso_class: NDArray[np.int64],
     candidate_mask: NDArray[np.bool_] | None = None,
     cluster: bool = True,
+    class_groups: NDArray[np.int64] | None = None,
 ) -> dict[str, Any]:
     """kNN and k-medoids scores of one arm's matrix.
 
@@ -1091,6 +1105,9 @@ def evaluate_arm(
         kNN candidate restriction (Design A: other windows only).
     cluster : bool, optional
         Run PAM (skipped for the deterministic all-lineage kNN reference).
+    class_groups : ndarray of int or None, optional
+        Group (Design C block) of each class code; adds :func:`error_split`
+        of the 1-NN errors.
 
     Returns
     -------
@@ -1110,6 +1127,8 @@ def evaluate_arm(
         res[f"acc{k}"] = expected_accuracy(P, codes)
         res[f"f1_{k}"] = expected_macro_f1(P, codes)
         res[f"_p_correct{k}"] = P[np.arange(len(codes)), codes]
+        if k == 1 and class_groups is not None:
+            res.update(error_split(P, codes, class_groups))
     if cluster:
         cl = pam(D, k_clusters, pam_seed)
         res["ari"] = float(adjusted_rand_score(codes, cl["labels"]))
@@ -1121,6 +1140,40 @@ def evaluate_arm(
     res.update(zero_pair_census(D, iso_class))
     res["secs_eval"] = time.perf_counter() - t0
     return res
+
+
+def error_split(
+    P: FloatMatrix, codes: NDArray[np.int64], class_groups: NDArray[np.int64]
+) -> dict[str, float]:
+    """Where the expected kNN errors land: inside the query's own group or in another.
+
+    Parameters
+    ----------
+    P : ndarray
+        ``(N, n_classes)`` label distribution of every query.
+    codes : ndarray of int
+        True class code per query.
+    class_groups : ndarray of int
+        Group of each class code (indexed by code).
+
+    Returns
+    -------
+    dict
+        ``err_within_group`` and ``err_other_group`` (mean expected error mass
+        per query) and ``err_within_share`` (their ratio to the total error;
+        ``None`` without errors).
+    """
+    same = class_groups[None, :] == class_groups[codes][:, None]
+    wrong = np.ones_like(P, dtype=bool)
+    wrong[np.arange(len(codes)), codes] = False
+    within = float((P * (same & wrong)).sum(axis=1).mean())
+    other = float((P * ~same).sum(axis=1).mean())
+    total = within + other
+    return {
+        "err_within_group": within,
+        "err_other_group": other,
+        "err_within_share": within / total if total > 0 else None,
+    }
 
 
 def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
@@ -1145,7 +1198,7 @@ def ceiling_census(p_correct: dict[str, NDArray[np.float64]]) -> dict[str, Any]:
         expected shares of queries one gets right and the other wrong, under
         independent tie draws), and ``n_arms_acc1_ge_0.9``.
     """
-    arms = [a for a in ARMS if a in p_correct]
+    arms = [a for a in ARMS_C if a in p_correct]
     if not arms:
         return {}
     M = np.vstack([p_correct[a] for a in arms])
@@ -1249,12 +1302,16 @@ def cross_class_iso(iso_class: NDArray[np.int64], codes: NDArray[np.int64]) -> d
 # --------------------------------------------------------------------------- summaries
 
 
-def best_competitor(arms: dict[str, dict[str, Any]], metric: str) -> tuple[str, float]:
+def best_competitor(
+    arms: dict[str, dict[str, Any]],
+    metric: str,
+    competitors: Sequence[str] = COMPETITORS,
+) -> tuple[str, float]:
     """The competitor (not the word, not the ablation) with the highest ``metric``.
 
     Returns ``("-", nan)`` when no competitor reports ``metric``.
     """
-    scored = [(a, float(r[metric])) for a, r in arms.items() if a in COMPETITORS and metric in r]
+    scored = [(a, float(r[metric])) for a, r in arms.items() if a in competitors and metric in r]
     if not scored:
         return "-", float("nan")
     return max(scored, key=lambda kv: kv[1])

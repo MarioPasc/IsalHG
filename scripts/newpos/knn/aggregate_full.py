@@ -144,6 +144,9 @@ class Series:
     values: dict[str, dict[str, list[float | None]]] = field(default_factory=dict)
     diag: dict[str, list[Any]] = field(default_factory=lambda: defaultdict(list))
     feasible: bool | None = None
+    #: Per arm: per-seed share of queries whose own class is strictly nearer / tied, and the
+    #: pooled nearest same-class and other-class distances (memory only; quantiles are kept).
+    mech: dict[str, dict[str, list[Any]]] = field(default_factory=dict)
 
     def add(self, seed: int, arms: dict[str, dict[str, Any]], metrics: Sequence[str]) -> None:
         """Append one seed's arm values (``None`` where an arm lacks a metric)."""
@@ -155,9 +158,23 @@ class Series:
                 col = slot.setdefault(m, [None] * (n - 1))
                 v = res.get(m)
                 col.append(None if v is None else float(v))
+            self._add_mech(arm, res)
         for slot in self.values.values():
             for col in slot.values():
                 col.extend([None] * (n - len(col)))
+
+    def _add_mech(self, arm: str, res: dict[str, Any]) -> None:
+        same = res.get("nn_same", res.get("d_source"))
+        other = res.get("nn_other", res.get("d_other"))
+        if same is None or other is None:
+            return
+        a = np.array([np.inf if x is None else x for x in same], dtype=float)
+        b = np.array([np.inf if x is None else x for x in other], dtype=float)
+        slot = self.mech.setdefault(arm, {"closer": [], "tie": [], "same": [], "other": []})
+        slot["closer"].append(float((a < b).mean()) if len(a) else float("nan"))
+        slot["tie"].append(float((a == b).mean()) if len(a) else float("nan"))
+        slot["same"].append(a[np.isfinite(a)].astype(np.float32))
+        slot["other"].append(b[np.isfinite(b)].astype(np.float32))
 
 
 # --------------------------------------------------------------------------- loading
@@ -441,6 +458,7 @@ def aggregate_series(s: Series) -> dict[str, Any]:
     else:
         verdict = "word ahead (no claim)" if all(ahead.values()) else "competitor ahead (no claim)"
     diag = {k: list(v) for k, v in s.diag.items()}
+    mechanism = {arm: _mechanism(slot) for arm, slot in s.mech.items()}
     return {
         "id": s.cell_id,
         "design": s.design,
@@ -467,6 +485,29 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         "word_significant_vs_all": significant,
         "verdict": verdict,
         "diag": diag,
+        "mechanism": mechanism,
+    }
+
+
+def _mechanism(slot: dict[str, list[Any]]) -> dict[str, Any]:
+    """Own-class-strictly-nearer share over seeds and the pooled distance quantiles.
+
+    For A / B / C the own class is the query's siblings (nearest same-class
+    candidate vs nearest other-class candidate); for D it is the source record
+    (distance to the source vs the nearest other catalogue record).
+    """
+    same = np.concatenate(slot["same"]) if slot["same"] else np.zeros(0)
+    other = np.concatenate(slot["other"]) if slot["other"] else np.zeros(0)
+
+    def q(x: np.ndarray) -> list[float] | None:
+        return [float(v) for v in np.quantile(x, (0.25, 0.5, 0.75))] if len(x) else None
+
+    return {
+        "own_strictly_nearer": _stat(slot["closer"], with_ci=True),
+        "tie": _stat(slot["tie"], with_ci=False),
+        "own_quartiles": q(same),
+        "other_quartiles": q(other),
+        "n_queries": int(len(same)),
     }
 
 
@@ -669,7 +710,66 @@ def render(summary: dict[str, Any]) -> str:
         out += ["## Design A reference — every lineage with >= 3 versions (no clustering)", ""]
         out += _verdict_table(ref) + [""]
     out += ["## Diagnostics (means over seeds)", "", *_diag_table(list(cells.values())), ""]
+    out += _mechanism_section(list(cells.values()))
+    out += _repro_section(summary.get("reproducibility"))
     return "\n".join(out) + "\n"
+
+
+MECH_ARMS: tuple[str, ...] = (K.OURS, K.PATH_SYM, K.WL_H1)
+
+
+def _q(v: list[float] | None, nd: int = 2) -> str:
+    return "–" if not v else f"{v[1]:.{nd}f} ({v[0]:.{nd}f}–{v[2]:.{nd}f})"
+
+
+def _mechanism_section(cells: list[dict[str, Any]]) -> list[str]:
+    """Own class strictly nearer than every other class, per cell (word, edit path, WL h=1)."""
+    lines = [
+        "## Mechanism — is the own class strictly nearer? (pooled over seeds)",
+        "",
+        "A query's 1-NN is right with certainty iff its nearest own-class candidate is strictly "
+        "nearer than its nearest other-class candidate (A / B / C: siblings; D: the source "
+        "record against every other catalogue record). `own nearer` = share of queries where it "
+        "is, mean over seeds [BCa]; `tie` = share where the two distances are equal; distances "
+        "are medians (IQR) over every query of every seed, in the arm's own unit (word: tokens; "
+        "edit path: edit cost).",
+        "",
+        "| cell | arm | own nearer [BCa] | tie | own-class distance | other-class distance |",
+        "|---|---|---|---|---|---|",
+    ]
+    for c in cells:
+        for arm in MECH_ARMS:
+            m = c.get("mechanism", {}).get(arm)
+            if not m or not m["own_strictly_nearer"]:
+                continue
+            lines.append(
+                f"| `{c['id']}` | {SHORT.get(arm, arm)} | {_ci(m['own_strictly_nearer'])} | "
+                f"{_f(m['tie']['mean']) if m['tie'] else '–'} | {_q(m['own_quartiles'])} | "
+                f"{_q(m['other_quartiles'])} |"
+            )
+    return lines + [""]
+
+
+def _repro_section(repro: dict[str, Any] | None) -> list[str]:
+    """The cross-machine check (Picasso vs the local replica), when ``compare_runs.py`` ran."""
+    if not repro:
+        return []
+    lines = [
+        "## Cross-machine reproducibility (Picasso vs the local replica)",
+        "",
+        f"Compared `{repro['a']}` with `{repro['b']}` by `compare_runs.py` on "
+        f"{repro['generated']}: {repro['n_files']} result files, {repro['n_values']:,} numeric "
+        "values (every metric and per-query list; wall-clock, throughput and run logs "
+        f"excluded). Exactly equal: {repro['n_exact']:,}; within rtol {repro['rtol']:g}: "
+        f"{repro['n_close']:,}; different: {repro['n_diff']:,}; files present on one side only: "
+        f"{repro['n_missing']}.",
+        "",
+    ]
+    if repro.get("examples"):
+        lines += ["First differences:", ""]
+        lines += [f"- `{e}`" for e in repro["examples"][:20]]
+        lines.append("")
+    return lines
 
 
 def render_detail(summary: dict[str, Any]) -> str:
@@ -708,6 +808,7 @@ def aggregate(root: Path) -> dict[str, Any]:
             ),
         )
     }
+    repro_path = root / "REPRO_CHECK.json"
     return {
         "root": str(root),
         "generated": time.strftime("%Y-%m-%d %H:%M %Z"),
@@ -715,6 +816,7 @@ def aggregate(root: Path) -> dict[str, Any]:
         "seeds_expected": SEEDS_FULL,
         "cells": cells,
         "hypotheses": hypothesis_verdicts(cells),
+        "reproducibility": json.loads(repro_path.read_text()) if repro_path.exists() else None,
     }
 
 

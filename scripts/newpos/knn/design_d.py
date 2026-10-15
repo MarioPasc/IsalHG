@@ -52,7 +52,14 @@ C_COPIES = 3
 RS: tuple[int, ...] = (1, 2, 3)
 S_PROBE = 60
 MIXES: tuple[str, ...] = ("pendant", "empirical")
-ARMS: tuple[str, ...] = K.ARMS_C
+#: The bipartite arms whose verdict reading is the symmetric min (LOG.md §7.1, adopted after
+#: the probe values were seen; it can only help the competitor). The as-run orientation stays
+#: in the job as a reported row.
+SYM_ARMS: tuple[str, ...] = ("bipartite_ged_path_sym",)
+ARMS: tuple[str, ...] = (*K.ARMS_C, *SYM_ARMS)
+COMPETITORS_D: tuple[str, ...] = tuple(
+    f"{a}_sym" if f"{a}_sym" in SYM_ARMS else a for a in K.COMPETITORS_C
+)
 
 
 class DesignDError(K.KnnExperimentError):
@@ -137,15 +144,25 @@ def run_seed(
     q_interior: float,
     seed: int,
     S: int,
+    existing: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Sources, copies and the three ``r`` cells of one seed."""
+    """Sources, copies and the three ``r`` cells of one seed.
+
+    With ``existing`` (a seed already on disk), the sources and copies are
+    regenerated from the same seed, checked against the stored source ids, and
+    only the arms missing from the stored cells are computed.
+    """
     t0 = time.perf_counter()
     source_seed = K.cell_seed(seed, "D", col.name, mix, "sources")
     draw = K.select_sources(
         cat, S, RS, C_COPIES, np.random.default_rng(source_seed), keys, q_interior=q_interior
     )
     index = cat.index()
-    payload: dict[str, Any] = {
+    if existing is not None and [s.kb_id for s in draw.sources] != existing["source_ids"]:
+        raise DesignDError(
+            f"{col.name} seed {seed}: regenerated sources differ from the stored ones"
+        )
+    payload: dict[str, Any] = existing or {
         "seed": seed,
         "source_seed": source_seed,
         "S": len(draw.sources),
@@ -166,7 +183,7 @@ def run_seed(
         shared = np.array([keys(cp)[0] in cat_certs for cp in items])
         st = draw.stats[r]
         steps = st.steps_pendant + st.steps_interior
-        cell: dict[str, Any] = {
+        cell: dict[str, Any] = payload["cells"].get(str(r)) or {
             "r": r,
             "n_queries": len(items),
             "exact_arm_ceiling": float(1.0 - shared.mean()),
@@ -181,6 +198,8 @@ def run_seed(
             "arms": {},
         }
         for name, arm in arms.items():
+            if name in cell["arms"]:
+                continue
             ta = time.perf_counter()
             D = arm.rect(hs)
             secs = time.perf_counter() - ta
@@ -194,9 +213,13 @@ def run_seed(
                 "p_correct1": [round(float(x), 6) for x in p1],
                 "rr_q": [round(float(x), 6) for x in rr],
             }
-        cell["secs"] = time.perf_counter() - tr
+        if existing is None:
+            cell["secs"] = time.perf_counter() - tr
         payload["cells"][str(r)] = cell
-    payload["secs_seed"] = time.perf_counter() - t0
+    if existing is None:
+        payload["secs_seed"] = time.perf_counter() - t0
+    else:
+        payload.setdefault("secs_augment", []).append(time.perf_counter() - t0)
     return payload
 
 
@@ -238,12 +261,16 @@ def run_job(
                 "c": C_COPIES,
                 "r": list(RS),
                 "arms": list(ARMS),
-                "competitors": list(K.COMPETITORS_C),
+                "competitors": list(COMPETITORS_D),
                 "n_jobs": n_jobs,
                 "q_interior": q,
                 "target_pendant_share": K.PENDANT_SHARE[collection] if mix == "empirical" else 1.0,
                 "availability": calib,
-                "orientation": "pairwise(catalogue_record, query) for the non-symmetric arms",
+                "orientation": (
+                    "bipartite arms: '<arm>' = pairwise(catalogue_record, query) (as run, a "
+                    "reported row); '<arm>_sym' = min of both orientations (the verdict arm, "
+                    "LOG.md 7.1)"
+                ),
             },
             "catalogue": census,
             "secs_fit": {a: arm.secs_fit for a, arm in arms.items()},
@@ -251,8 +278,18 @@ def run_job(
         }
     )
     for seed in seeds:
-        if str(seed) in payload["seeds"]:
-            logger.info("%s %s seed %d on disk, skipped", collection, mix, seed)
+        existing = payload["seeds"].get(str(seed))
+        if existing is not None:
+            missing = {a for a in ARMS for c in existing["cells"].values() if a not in c["arms"]}
+            if not missing:
+                logger.info("%s %s seed %d on disk, skipped", collection, mix, seed)
+                continue
+            logger.info("%s %s seed %d: adding arms %s", collection, mix, seed, sorted(missing))
+            todo = {a: arm for a, arm in arms.items() if a in missing}
+            payload["seeds"][str(seed)] = run_seed(
+                col, cat, cat_certs, todo, keys, mix, q, seed, S, existing
+            )
+            K.write_json(path, payload)
             continue
         res = run_seed(col, cat, cat_certs, arms, keys, mix, q, seed, S)
         payload["seeds"][str(seed)] = res

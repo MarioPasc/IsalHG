@@ -309,6 +309,43 @@ def _pair_rows(lo: int, hi: int) -> FloatMatrix:
     return out
 
 
+class SymMinPairwiseArm(PairwiseArm):
+    """``min(pairwise(c, q), pairwise(q, c))``: the orientation-free reading (LOG.md §7.1).
+
+    Named ``<registry arm>_sym``; never worse for the competitor than either
+    orientation pair by pair.
+    """
+
+    def __init__(self, name: str, n_jobs: int = 1) -> None:
+        ArmRect.__init__(self, name, n_jobs)
+        from isalhg.metric_space.registry import get_distance
+
+        self._d = get_distance(name.removesuffix(SYM_SUFFIX))
+
+    def rect(self, queries: Sequence[SparseHypergraph]) -> FloatMatrix:
+        t0 = time.perf_counter()
+        _STATE["pair"] = (self._d, list(queries), self.catalogue)
+        rows = _parallel_rows(_pair_rows_sym, len(queries), self.n_jobs)
+        _STATE.pop("pair", None)
+        dt = time.perf_counter() - t0
+        n_pairs = 2 * len(queries) * len(self.catalogue)
+        self.last_pairs_per_s = n_pairs / dt if dt > 0 else None
+        return np.vstack(rows) if rows else np.zeros((0, len(self.catalogue)))
+
+
+def _pair_rows_sym(lo: int, hi: int) -> FloatMatrix:
+    d, queries, catalogue = _STATE["pair"]
+    out = np.empty((hi - lo, len(catalogue)))
+    for i in range(lo, hi):
+        q = queries[i]
+        for j, c in enumerate(catalogue):
+            out[i - lo, j] = min(float(d.pairwise(c, q)), float(d.pairwise(q, c)))
+    return out
+
+
+SYM_SUFFIX = "_sym"
+
+
 # --------------------------------------------------------------------------- parallel helpers
 
 
@@ -371,4 +408,6 @@ def make_arm(name: str, n_jobs: int = 1) -> ArmRect:
         return WLArm(name, n_jobs, max_rounds=None)
     if name in ("bipartite_ged_assign", "bipartite_ged_path"):
         return PairwiseArm(name, n_jobs)
+    if name in ("bipartite_ged_assign_sym", "bipartite_ged_path_sym"):
+        return SymMinPairwiseArm(name, n_jobs)
     raise RectError(f"no rectangle implementation for arm {name!r}")

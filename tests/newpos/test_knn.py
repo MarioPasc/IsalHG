@@ -499,6 +499,24 @@ def test_rect_equals_the_union_matrix_block(source: KBRecord, keys: IsoKeys, arm
     np.testing.assert_allclose(got, want, rtol=1e-6, atol=1e-7)
 
 
+def test_symmetric_min_arm(source: KBRecord, keys: IsoKeys) -> None:
+    from isalhg.metric_space.registry import get_distance
+
+    rng = np.random.default_rng(2)
+    catalogue = [source, *make_copies(source, 2, 3, rng, keys)[0]]
+    queries = make_copies(source, 1, 3, rng, keys)[0]
+    cat_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in catalogue]
+    q_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in queries]
+    got = RECT.make_arm("bipartite_ged_path_sym", n_jobs=2).fit(cat_hs).rect(q_hs)
+    d = get_distance("bipartite_ged_path")
+    want = np.array(
+        [[min(d.pairwise(c, q), d.pairwise(q, c)) for c in cat_hs] for q in q_hs], dtype=float
+    )
+    np.testing.assert_array_equal(got, want)
+    as_run = RECT.make_arm("bipartite_ged_path", n_jobs=1).fit(cat_hs).rect(q_hs)
+    assert (got <= as_run).all()
+
+
 def test_rect_parallel_matches_serial(source: KBRecord, keys: IsoKeys) -> None:
     rng = np.random.default_rng(1)
     catalogue = [source, *make_copies(source, 1, 4, rng, keys)[0]]

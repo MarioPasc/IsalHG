@@ -501,3 +501,78 @@ shaded.
 Per job: setup (graph + cached eligibility) 2–7 s; per seed 1.7–4.9 s at c = 3 (N ≈ 150–185), ~13 s
 at c = 6 (N ≈ 330–370). A full job of 27 seeds: about 2.5 min at c = 3, 6 min at c = 6, on one node
 with 16 cores; 12 jobs per c. Memory is negligible (< 1 GB).
+
+---
+
+# Design D probe (catalogue linkage) — opened 2026-10-15 ~10:00 CEST
+
+## 12. The brief from `main` (verbatim, abridged to the binding items)
+
+```
+Design C is accepted as killed. [...] §7 pre-registers Design D (commit 118f8f0). Fast-forward to main and read §7 in full; it is the spec.
+1) Catalogue linkage. Catalogue = every record of the collection in the C8 envelope, deduplicated to isomorphism classes [...]. Queries = c=3 pendant copies, r∈{1,2,3}, of S sources. S=60 in the probe. Sources are drawn uniformly from the records eligible under the §6.1 rule. 1-NN against the catalogue, with ties at expected accuracy. Secondary: the reciprocal rank of the source. Per cell, report the exact-arm ceiling: the share of queries whose isomorphism class is not shared with another catalogue record.
+2) Mix condition on both WD50K collections. Use the C8 empirical mix, reusing your Design-B mix code.
+3) Arms: the eleven of §6. For the matrix arms, compute query × catalogue rectangles. [...] Make sure the query distances use exactly the same definition and normalisation as the cached ones. Test this: recompute a few cached catalogue × catalogue entries through your rectangle path and assert equality. Bipartite GED is the cost driver. Parallelise it with joblib and report the measured pairs/s.
+4) Verdicts per cell against H-KNN-D (r=1,2 claim; r=3 reported) and H-KNN-D-mix, in a SUMMARY_D.md [...]. Probe: 3 seeds, all cells. Outputs go in D/results/KNN_2026-10-15/probe_d/.
+5) Figure draft [...] four panels are the word, the certificate rows, the bipartite edit path (mandatory) and one-round WL [...] Choose the sources for panel (a) by a fixed rule decided before you look: the first 12 sources of seed 0. No cherry-picking.
+6) Job CLI as for Design C (`--collection --mix {pendant,empirical} --seeds --out`), plus an aggregator. Estimate the full-run cost per job at S=200 and 27 seeds.
+```
+
+## 13. Code
+
+- `rect.py`: query × catalogue rectangles that equal the `[queries, catalogue]` block of each arm's
+  own matrix over `catalogue + queries` (library fingerprints + pair functions; catalogue
+  fingerprints fitted once per job; bipartite arms `pairwise(catalogue, query)` over fork-based
+  joblib row blocks; WL arms from one WL run over the union). `SymMinPairwiseArm`
+  (`bipartite_ged_path_sym`) = `min(d(c,q), d(q,c))`.
+- `design_d.py`: job per `(collection, mix)`, resumable per seed *and per arm* (a missing arm is
+  added to stored seeds after regenerating and checking the sources). `aggregate_d.py`: seed stats,
+  BCa, Wilcoxon + Holm + rank-biserial, verdicts, cost table. `fig_knn_d.py`, `run_probe_d.sh`.
+- Tests: rectangles = union-matrix block for all 12 arms; serial = parallel; sym-min arm =
+  elementwise min of both orientations; **integration test against the cached campaign matrices**
+  (`ndc_classes`, 10 arms: exact for every integer arm, ≤ 3e-8 for NetLSD/HPD = float32 cache).
+
+## 14. The orientation finding and §7.1 (verbatim decision)
+
+The bipartite edit path is asymmetric; my rectangle followed the cache convention (catalogue first).
+The flipped orientation `pairwise(query, catalogue)` is better for the competitor in every cell and
+flips NDC-classes r = 1 (word 0.546 vs path 0.533 as run, 0.635 flipped). Reported to `main`.
+Decision (verbatim): "option (b), using the symmetric min. The edit-path competitor (and
+bipartite_ged_assign, if it is asymmetric too) is scored with d_sym(a,b) = min(d(a,b), d(b,a)). This is
+orientation-free and never worse for the competitor than either orientation. I will log it as LOG
+§7.1, disclosing that it was adopted after the probe values were seen and that it can only hurt the
+word. Under it, H-KNN-D is killed at NDC-classes r=1 (word 0.546 vs about 0.63), so Design D is
+killed at probe scale, like A, B and C. No full run." The assignment value is exactly symmetric on
+all four collections (full ordered matrices), so only the path is replaced.
+
+## 15. Design D results (probe: S = 60, c = 3, 3 seeds; verdict arm = sym-min edit path)
+
+`probe_d/SUMMARY_D.md`. Word vs best competitor, 1-NN (r = 1 / 2 / 3):
+- WD50K(66): 0.689 / 0.392 / 0.191 vs WL h=1 0.665 / 0.349 / 0.160 — word ahead.
+- WD50K(100): 0.629 / 0.363 / 0.236 vs WL h=1 0.626 / 0.266, path 0.121 — word ahead (r = 1 by
+  0.003; WL h=1 has the higher RR 0.718 vs 0.693).
+- NDC-classes: 0.546 / 0.296 / 0.156 vs sym-min path 0.628 / 0.241 / 0.073 — **killed at r = 1**.
+- NDC-substances: 0.521 / 0.287 / 0.159 vs sym-min path 0.488 / 0.209 / 0.101 — word ahead.
+- **H-KNN-D: killed (1 of 8 claim cells). H-KNN-D-mix: killed (3 of 4)** — WD50K(66) r = 1 by WL h=1
+  (0.585 vs 0.602), WD50K(100) r = 1, 2 by the sym-min path (0.475 / 0.253 vs 0.621 / 0.358).
+- As-run orientation (reported row): H-KNN-D would have survived 8/8 — the verdict hinges on §7.1.
+- Exact-arm ceiling 0.74–0.99 (lowest NDC-substances r = 3).
+- Cost: bipartite path 143k–258k pairs/s on 16 workers (sym-min evaluates both orientations);
+  per seed 12–36 s at S = 60; full run (S = 200, 27 seeds) 19–54 min per job, ×2 for the sym-min
+  arm's bipartite share — irrelevant now (no full run).
+- Figure: `probe_d/fig_knn_d_wd50k66_r1_s0.{png,pdf}`; rule fixed before drawing (WD50K(66),
+  pendant, seed 0, r = 1, first 12 sources, ≤ 5 one-edit look-alikes sampled with a fixed seed). On
+  those 36 copies WL h=1 beats the word (0.74 vs 0.65); panel (b) draws the sym-min path. It shows no
+  win the verdict does not support.
+
+## 16. C8 orientation audit (priority task from `main`)
+
+`c8_orientation_audit.py` + `c8_audit_report.py` (commit `b9937ff`); outputs
+`KNN_2026-10-15/c8_orientation_audit/{AUDIT.md,audit.json,build.json,asrun/,symmin/}`.
+- Every C8 bipartite matrix is `pairwise(i, j)` for `i < j`, mirrored (cache reproduced, max diff
+  0); a (query, candidate) score depends on member order. Path asymmetric on 45–62 % of pairs;
+  assignment exactly symmetric.
+- The unchanged `neardup.py` / `neardup_r2.py` rerun reproduces every published number; with the
+  sym-min path the Holm-corrected pendant claim (word first on all 4 collections, r = 1 and 2)
+  **holds**; largest pendant p rises to 5.7e-31 (NDC-classes r1) — "p < 1e-32" must become
+  "p < 1e-30"; pooled r1 NDC-classes: sym-min path 0.421 vs word 0.416 (was a tie at 0.413).

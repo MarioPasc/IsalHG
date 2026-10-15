@@ -32,7 +32,12 @@ CLAIM_RS: tuple[int, ...] = (1, 2)
 METRICS: tuple[str, ...] = ("acc1", "rr")
 HYP = {"pendant": "H-KNN-D", "empirical": "H-KNN-D-mix"}
 MIX_COLLECTIONS = {"empirical": ("wd50k66", "wd50k100")}
-SHORT = AC.SHORT
+SHORT = {
+    **AC.SHORT,
+    "bipartite_ged_path": "bip. path (as run)‡",
+    "bipartite_ged_path_sym": "bip. path (sym-min)",
+    "bipartite_ged_assign_sym": "bip. assign (sym-min)",
+}
 S_FULL = 200
 SEEDS_FULL = 27
 
@@ -47,8 +52,18 @@ def _values(job: dict[str, Any], r: str, arm: str, metric: str) -> list[float]:
 
 
 def aggregate_cell(job: dict[str, Any], r: str) -> dict[str, Any]:
-    """Statistics, tests and the verdict of one ``(job, r)`` cell."""
-    arms = [a for a in K.ARMS_C if _values(job, r, a, "acc1")]
+    """Statistics, tests and the verdict of one ``(job, r)`` cell.
+
+    The verdict competitors are the job's ``config.competitors`` (§7.1: the bipartite
+    edit path read as the symmetric min); every other arm, including the as-run
+    orientation, is a reported row.
+    """
+    competitors = tuple(job["config"].get("competitors", K.COMPETITORS_C))
+    every = (*K.ARMS_C, *(a for a in competitors if a not in K.ARMS_C))
+    arms = [a for a in every if _values(job, r, a, "acc1")]
+    missing = [a for a in competitors if a not in arms]
+    if missing:
+        raise SystemExit(f"{job['collection']} {job['mix']} r={r}: no values for {missing}")
     per_arm: dict[str, dict[str, Any]] = {}
     for arm in arms:
         per_arm[arm] = {}
@@ -76,12 +91,12 @@ def aggregate_cell(job: dict[str, Any], r: str) -> dict[str, Any]:
     tests = {
         m: AC.paired_tests(
             per_arm[K.OURS][m]["values"],
-            {a: per_arm[a][m]["values"] for a in arms if a in K.COMPETITORS_C},
+            {a: per_arm[a][m]["values"] for a in arms if a in competitors},
         )
         for m in METRICS
     }
     means = {a: {m: v[m]["mean"] for m in METRICS} for a, v in per_arm.items()}
-    best = {m: K.best_competitor(means, m, K.COMPETITORS_C) for m in METRICS}
+    best = {m: K.best_competitor(means, m, competitors) for m in METRICS}
     word = means[K.OURS]
     ahead = bool(word["acc1"] > best["acc1"][1])
     claim = int(r) in CLAIM_RS
@@ -250,7 +265,10 @@ def render(summary: dict[str, Any]) -> str:
         "Wilcoxon p-values over seeds are in the detail tables (descriptive at probe scale: with "
         "3 seeds the smallest one-sided p is 0.125). A claim cell (r = 1, 2) is killed when any "
         "competitor's mean 1-NN accuracy is >= the word's; r = 3 carries no claim. Competitors: "
-        "the ten §2 arms plus the one-round WL; † the registry WL refines to the stable "
+        "the ten §2 arms plus the one-round WL, with the bipartite edit path read as the "
+        "symmetric min min(d(a,b), d(b,a)) (LOG.md §7.1, adopted after the probe values were "
+        "seen; it can only help the competitor); ‡ the as-run orientation pairwise(catalogue, "
+        "query) is a reported row outside the verdict; † the registry WL refines to the stable "
         "partition of catalogue + queries and is degenerate. Exact-arm ceiling = share of "
         "queries isomorphic to no catalogue record. RR = reciprocal of the source's expected "
         "rank.",

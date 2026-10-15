@@ -26,9 +26,9 @@ import knn_lib as K  # noqa: E402, N812
 import style as S  # noqa: E402, N812
 
 ROWS: tuple[tuple[str, str], ...] = (
-    ("B/pendant/{col}/r{r}", "B: random sources"),
-    ("C/C-all/c3/{col}/r{r}", "C: look-alike blocks"),
-    ("D/pendant/{col}/r{r}", "D: catalogue linkage"),
+    ("B/pendant/{col}/r{r}", "B"),
+    ("C/C-all/c3/{col}/r{r}", "C (C-all, c = 3)"),
+    ("D/pendant/{col}/r{r}", "D"),
 )
 RS = (1, 2, 3)
 WIDTH_IN, HEIGHT_IN = 7.0, 3.0
@@ -89,7 +89,9 @@ def draw(summary: dict[str, Any]) -> tuple[Any, dict[str, str]]:
             first = cells.get(pattern.format(col=col, r=1))
             ax.grid(True, color=S.GRID, lw=0.4)
             ax.set_xticks(RS)
-            ax.set_ylim(0, 1.02)
+            # Headroom above 1 holds the best competitor's name clear of the lines.
+            ax.set_ylim(-0.02, 1.2)
+            ax.set_yticks((0.0, 0.5, 1.0))
             ax.set_xlim(0.8, 3.2)
             if i == 0:
                 ax.set_title(S.COLLECTION_LABELS[col], pad=2)
@@ -117,10 +119,9 @@ def draw(summary: dict[str, Any]) -> tuple[Any, dict[str, str]]:
                 ax.fill_between(RS, lo, hi, color=colour, alpha=0.2, lw=0, zorder=z - 1)
                 ax.plot(RS, m, color=colour, marker=marker, ms=2.8, lw=lw, zorder=z)
             ax.text(
-                0.97,
-                0.97,
+                3.15,
+                1.18,
                 f"best: {S.LABELS[best]}" if best else "",
-                transform=ax.transAxes,
                 ha="right",
                 va="top",
                 fontsize=5.5,

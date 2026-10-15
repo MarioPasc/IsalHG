@@ -488,7 +488,9 @@ def aggregate_series(s: Series) -> dict[str, Any]:
         "competitors": list(s.competitors),
         "seeds": s.seeds,
         "n_seeds": len(s.seeds),
-        "complete": len(s.seeds) >= SEEDS_FULL or s.design == "Afull",
+        # An infeasible Design-C cell can hold fewer seeds: a seed whose pool held fewer than
+        # two blocks has no cell. It carries no verdict either way.
+        "complete": len(s.seeds) >= SEEDS_FULL or s.design == "Afull" or s.feasible is False,
         "metrics": list(metrics),
         "per_arm": per_arm,
         "tests": tests,

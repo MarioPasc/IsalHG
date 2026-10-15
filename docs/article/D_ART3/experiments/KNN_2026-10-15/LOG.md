@@ -376,3 +376,32 @@ correction, rank-biserial effect sizes.
   - If H-KNN-D-mix is killed, that is stated in the same paragraph.
 - **If H-KNN-D is killed,** there is no kNN positive. The leader stops designing and reports to the
   author.
+
+### 7.1 Probe of Design D and the edit-path orientation (2026-10-15; S = 60, c = 3, 3 seeds)
+
+**The orientation problem.** `bipartite_ged_path` is not symmetric, and §7 did not fix the orientation
+of a query–catalogue pair. The probe evaluated it catalogue-first, to match the cached campaign
+matrices. With that orientation, H-KNN-D survived 8 of its 8 claim cells, and H-KNN-D-mix was killed
+in 3 of 4 cells: WD50K(100) at r = 1 and r = 2, and WD50K(66) at r = 1.
+
+Recomputing the other orientation, for description only, favours the competitor in every cell.
+
+**Amendment.**
+- **What changed.** The bipartite edit arms are scored with the symmetric minimum,
+  min(d(a, b), d(b, a)). It is orientation-free and never worse for the competitor than either
+  orientation. The flipped orientation is within 0.01 of it everywhere.
+- **Disclosure.** This amendment was adopted *after* the probe values were seen. It can only hurt the
+  word.
+
+**Verdict.**
+- **H-KNN-D is killed** at NDC-classes, r = 1: the word scores 0.546 and the symmetric edit path about
+  0.63 (flipped orientation, per seed: 0.594, 0.644, 0.669).
+- **H-KNN-D-mix stays killed.**
+- One-round WL ties the word at WD50K(100), r = 1 (0.626 vs 0.629), and has the higher reciprocal rank
+  there.
+- By §7's admission rule there is no kNN positive. Design D is not run at full scale, and the leader
+  stops designing kNN variants and reports to the author.
+
+**Consequence for C8 (main-text H2).** The same orientation question applies to C8's edit-path
+competitor. An audit with the symmetric minimum is running (`D/results/KNN_2026-10-15/c8_orientation_audit/`).
+Its outcome is appended here, whatever it is.

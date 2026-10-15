@@ -690,3 +690,21 @@ fig_accuracy, fig_gap, fig_mechanism (README widths, Okabe–Ito word/best/other
 section_facts (bound rule; extra facts wlh1-AB-*, ratio-exceed-any-arm), check_facts, make_section;
 tests/newpos/test_knn_figs.py. Mechanism axes follow the s5 caption (x = other source, y =
 sibling; "below the diagonal is correct"); the README says the reverse — flagged to main.
+
+**Coordinator, verbatim core (≈18:15):** "The user has cancelled the local replica (full_local); the
+Picasso array 2921149 is the only full run. [...] do not kill, relaunch or resume any local
+full_run.py. Change of contract: drop the Picasso-vs-local per-JSON comparison from your final report
+and replace it with a cross-check of a few Picasso cells recomputed locally at single-seed scale (at
+most 2 cores, under 10 minutes total), or skip it and say so. Build FULL_SUMMARY.md, knn_facts.tex,
+the four fig_s5_* figures, SECTION_FACTS.md and check_facts.py from the Picasso results only." User,
+mid-turn: "Sorry, they took too long". The main session also stopped my background waiters.
+
+**Cross-check without new compute** (`crosscheck_seed0.py`): the seed-0 cells already computed on
+the workstation with the run's code — the local smoke (D_ndc_classes_pendant, C3_ndc_classes_C-all,
+A_ndc_classes + Afull, B_ndc_classes) and the B timing run (B_wd50k66) — against the Picasso cells
+of the same unit and seed. Partial harvest 18:31: 9 cells, 386,319 values; every arm bitwise
+identical except NetLSD (960 values; 1-NN up to |Δ| = 0.0196 on B_wd50k66 r1 s0, 0.5549 vs
+0.5353; ARI identical to 4 decimals): float near-ties in the heat-trace distance break differently
+across CPUs. The two local smokes agreed exactly with each other (same machine). FULL_SUMMARY flags
+claim cells whose verdict a gap of that size could decide (refined: NetLSD the sole decider);
+partial result: none. full_local/ (partial, cancelled) is not used anywhere.

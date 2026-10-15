@@ -52,9 +52,9 @@ C_COPIES = 3
 RS: tuple[int, ...] = (1, 2, 3)
 S_PROBE = 60
 MIXES: tuple[str, ...] = ("pendant", "empirical")
-#: The bipartite arms whose verdict reading is the symmetric min (LOG.md §7.1, adopted after
-#: the probe values were seen; it can only help the competitor). The as-run orientation stays
-#: in the job as a reported row.
+#: The bipartite arms whose verdict reading is the symmetric min, the orientation-free
+#: symmetrization of the raw cost (LOG.md §7.1, adopted after the probe values were seen). The
+#: as-run orientation stays in the job as a reported row.
 SYM_ARMS: tuple[str, ...] = ("bipartite_ged_path_sym",)
 ARMS: tuple[str, ...] = (*K.ARMS_C, *SYM_ARMS)
 COMPETITORS_D: tuple[str, ...] = tuple(

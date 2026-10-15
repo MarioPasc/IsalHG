@@ -629,7 +629,8 @@ def render(summary: dict[str, Any]) -> str:
         "",
         "**Reading.** Point values are means over seeds with 95 % BCa intervals (9,999 "
         "resamples). The verdict competitors are the eleven of §6 with the bipartite edit path "
-        "read as the symmetric min (§7.1, §8). A claim cell is **killed** when any verdict "
+        "read as the symmetric min min(d(a, b), d(b, a)), the orientation-free symmetrization "
+        "of the raw cost (§7.1, §8). A claim cell is **killed** when any verdict "
         "competitor's seed mean is ≥ the word's on any of the hypothesis's metrics (the "
         "registered kill; the tests do not change it). p_Holm: one-sided paired Wilcoxon over "
         "seeds (zsplit), Holm over the eleven competitors, in each direction; r_rb: rank-biserial "

@@ -310,10 +310,11 @@ def _pair_rows(lo: int, hi: int) -> FloatMatrix:
 
 
 class SymMinPairwiseArm(PairwiseArm):
-    """``min(pairwise(c, q), pairwise(q, c))``: the orientation-free reading (LOG.md §7.1).
+    """``min(pairwise(c, q), pairwise(q, c))``: the orientation-free symmetrization (LOG.md §7.1).
 
-    Named ``<registry arm>_sym``; never worse for the competitor than either
-    orientation pair by pair.
+    Named ``<registry arm>_sym``. Pair by pair it is at most either orientation;
+    that does not order the ranking metrics, because distractors move closer too
+    (LOG.md §8.1).
     """
 
     def __init__(self, name: str, n_jobs: int = 1) -> None:

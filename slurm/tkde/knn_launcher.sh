@@ -6,6 +6,7 @@
 #   bash slurm/tkde/knn_launcher.sh --dry-run
 #   bash slurm/tkde/knn_launcher.sh                # the array (every task)
 #   bash slurm/tkde/knn_launcher.sh --tasks 3,7    # a subset of array indices
+#   bash slurm/tkde/knn_launcher.sh --hours 8      # wall-clock per task (default 12)
 #
 # Private deployment, as rq8_launcher.sh: REPO_DIR defaults to
 # ~/fscratch/repos/IsalHG-knn (scripts/ and experiments/ of this wave, deployed
@@ -32,12 +33,14 @@ source "${REPO_DIR}/slurm/tkde/common.sh"
 MODE="submit"
 SMOKE=0
 TASKS=""
+HOURS=12
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --dry-run) MODE="dry"; shift ;;
         --test-only) MODE="test"; shift ;;
         --smoke) SMOKE=1; shift ;;
         --tasks) TASKS="${2:?--tasks needs a comma-separated list}"; shift 2 ;;
+        --hours) HOURS="${2:?--hours needs an integer}"; shift 2 ;;
         *) echo "ERROR: unknown option $1" >&2; exit 2 ;;
     esac
 done
@@ -72,8 +75,11 @@ N_TASKS=$("${PY}" scripts/newpos/knn/full_run.py --list-tasks | wc -l)
 MAX_CONCURRENT="${N_TASKS}"
 ARRAY="0-$((N_TASKS - 1))%${MAX_CONCURRENT}"
 [[ -n "${TASKS}" ]] && ARRAY="${TASKS}"
-TIME_LIMIT="0-12:00:00"
-WALL_S=43200
+[[ "${HOURS}" =~ ^[0-9]+$ ]] && (( HOURS >= 2 && HOURS <= 72 )) || {
+    echo "FATAL: --hours must be an integer in [2, 72]" >&2; exit 2
+}
+TIME_LIMIT="$(printf '%d-%02d:00:00' $(( HOURS / 24 )) $(( HOURS % 24 )))"
+WALL_S=$(( HOURS * 3600 ))
 EXPORTS="ALL,REPO_DIR=${REPO_DIR},ISALHG_RESULTS_ROOT=${ISALHG_RESULTS_ROOT},KNN_WALL_S=${WALL_S}"
 NAME="tkde-knn"
 if [[ "${SMOKE}" -eq 1 ]]; then

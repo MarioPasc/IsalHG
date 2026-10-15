@@ -755,6 +755,15 @@ def render(summary: dict[str, Any]) -> str:
     out += ["## Diagnostics (means over seeds)", "", *_diag_table(list(cells.values())), ""]
     out += _mechanism_section(list(cells.values()))
     out += _repro_section(summary.get("reproducibility"))
+    if summary.get("sacct"):
+        out += [
+            "## Cost on Picasso (`sacct`, every step; MaxRSS of the batch step)",
+            "",
+            "```",
+            summary["sacct"].rstrip(),
+            "```",
+            "",
+        ]
     return "\n".join(out) + "\n"
 
 
@@ -891,7 +900,9 @@ def aggregate(root: Path) -> dict[str, Any]:
         )
     }
     repro_path = root / "REPRO_CHECK.json"
+    sacct_path = root / "sacct.txt"
     return {
+        "sacct": sacct_path.read_text() if sacct_path.exists() else None,
         "root": str(root),
         "generated": time.strftime("%Y-%m-%d %H:%M %Z"),
         "alpha": ALPHA,

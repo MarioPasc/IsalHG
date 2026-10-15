@@ -320,3 +320,184 @@ array.
    Picasso before any array. The full registered run (27 seeds, S = 200, N = 1,200 per cell) is
    about 540 cells; at N = 1,200 the matrices take ~10 s per arm and PAM a few seconds per arm, so a
    24-core workstation finishes it in about an hour. Picasso is optional for this experiment.
+
+---
+
+# Design C probe (look-alike blocks) — opened 2026-10-15 ~09:40 CEST
+
+## 8. The brief from `main` (verbatim)
+
+```
+Your A/B probe is accepted. Next: build and run the Design C probe, which is pre-registered in LOG.md §6. I merged your branch into main at bd52419. LOG.md §5.1 (verdicts) and §6 (Design C) are at 65ddb4a.
+
+Setup:
+- In your worktree, run `git merge --ff-only main`. Your branch is an ancestor of main, so this is safe and authorised. Then read LOG.md §6 in full; it is the spec. Do not reinterpret it. If something is ambiguous, message main with your proposed reading and continue on that reading.
+
+What to build:
+1) Blocks.
+   - Use the C8 one-edit relation from the existing near-duplicate code (scripts/newpos/neardup.py and its cached outputs in D/results/NEWPOS_2026-10-13/neardup/). Each pair carries its edit kind (pendant or interior).
+   - Records are deduplicated to isomorphism classes.
+   - A block is a seed record plus a uniform subsample of at most 4 one-edit neighbours. A block needs at least 3 members. Blocks are disjoint within a seed.
+   - Draw blocks until S ≥ 60 sources or the candidates run out, and report the realised S.
+   - Build three strata: C-all (neighbours of either kind), C-int (interior-only neighbours) and C-pend (pendant-only neighbours).
+   - Report the number of available blocks per stratum and collection. A stratum with fewer than 10 blocks is reported as infeasible.
+2) Copies are exactly as in Design B: c=6, r∈{1,2,3} pendant removals, at least 3 facts, connected.
+3) Arms are all the §2 competitors plus a new arm `wl_h1`: one-round WL, L1 on the colour histogram. Keep the registry WL arm too, as pre-registered, and footnote it as degenerate.
+4) Metrics:
+   - 1-NN accuracy over the whole pool, with ties at expected accuracy;
+   - PAM ARI with k = S;
+   - per cell: the exact-arm ceiling and the cross-source isomorphism fraction.
+   - Add the share of 1-NN errors that land inside the query's own block versus another block. This is descriptive and explains the mechanism.
+5) Probe size: 3 seeds, all 4 collections × 3 strata × 3 r. Give per-cell verdicts against H-KNN-C and H-KNN-C-int exactly as SUMMARY.md does for A/B. Write the outputs to D/results/KNN_2026-10-15/probe_c/.
+6) Figure: draft the §6 figure. Panel (a) is drawn inside one block (copies of 3–5 look-alike members, coloured by member), on a collection and r where C-int is feasible. Its four panels are the word, the certificate rows, the bipartite edit path (mandatory) and wl_h1. Panel (b) is 1-NN accuracy vs r per stratum.
+7) Write the code so the full run (27 seeds, every cell) can be launched per (collection, stratum) as an independent job. Each job writes one JSON. Provide an aggregator that computes BCa, one-sided Wilcoxon, Holm and rank-biserial. I will submit it to Picasso, so keep the CLI to `--collection --stratum --seeds --out`.
+
+Rules (unchanged):
+- Never change src/.
+- Use ~/.conda/envs/isalhg/bin/python and do not pip install.
+- Tests go in tests/newpos/test_knn.py, including a block-construction test that checks disjointness and that every pair's edit kind matches the stratum.
+- Commit everything and append to your log at .claude/notes/2026-10-15-knn/probe-engineer.md.
+- Do not tune any parameter after seeing results. If a design choice turns out to be unworkable, message main before changing it.
+
+Report back:
+- the verdict table;
+- the block counts per stratum;
+- the within-block error share;
+- the figure paths;
+- the estimated full-run cost per job.
+```
+
+## 9. Ratified readings (verbatim)
+
+My message to `main` (sent before any Design-C code ran), readings 1–8:
+
+```
+1. Relation: I recompute it in-job with neardup.ground_truth(col, "cert"). That takes ≤5 s per collection and matches the cached C8 truth JSONs exactly on all 4 collections. Pendant holds exactly when n differs, on every pair, so each pair has exactly one kind. Isomorphism classes are represented by their lowest member index.
+2. Block = a seed plus up to 4 of its one-edit neighbours. Members are one edit from the seed, not necessarily from each other. A seed is drawn uniformly among the available records that have ≥2 available neighbours of the stratum's kind. The neighbours are a uniform subsample of the available ones, and members leave availability once used.
+3. Eligibility: a block member must be a valid Design-B source, i.e. it yields 6 pairwise non-isomorphic pendant copies at every r in {1,2,3}. This is decided once per collection with a fixed seed, and the one-edit graph is restricted to eligible records before any block is drawn. If a seed's own copy draw later fails (rare), that member is dropped. A block left with fewer than 3 members is discarded and counted.
+4. "Available blocks" = the number of disjoint blocks reached by drawing to exhaustion (no S cap), reported as min and mean over seeds. The cell is infeasible if the min is <10. I also report the number of candidate block seeds.
+5. Copies of a record use an rng keyed by (seed, record), so within a seed a record has the same copies in every stratum.
+6. Within-block error share: from the exact 1-NN label distribution, the expected error mass on labels in the query's own block divided by the total error mass. Pooled over queries per cell.
+7. Kills are evaluated on seed means, as for A/B; a tie counts as a kill. The competitors are §2's ten plus wl_h1. The registry wl_l1 stays among them and carries a footnote. wstar_orbit is not included.
+8. The job CLI is --collection --stratum --seeds --out. It writes one JSON per job. --n-jobs is optional and defaults to SLURM_CPUS_PER_TASK.
+```
+
+`main`'s ratification (verbatim):
+
+```
+Readings 1–8 ratified, with one clarification on 4.
+- Counting available blocks: draw to exhaustion with no cap. That count is the feasibility statistic.
+- Evaluation pool: stop drawing once the pool reaches ≥ 60 sources. If a seed runs out first, use what it has and report the realised S.
+- Keep the two draws separate. Use a separate rng stream for the counting draw so the evaluated pool does not depend on it.
+- Log every ratified reading verbatim in your log. Proceed.
+```
+
+Feasibility blocker I reported (before any Design-C distance was computed): with c = 6 the one-edit
+graph's small records rarely yield 6 non-isomorphic copies; eligible classes 82/957, 208/624,
+153/374, 51/513; C-int had 0–2 blocks on every collection. `main`'s decision (verbatim):
+
+```
+Decision: option (b). The amendment is now LOG.md §6.1, commit b57c9c3 on main. Fast-forward to it.
+- **Primary.** Design C uses c=3 with r∈{1,2,3}. The kill criteria are unchanged, and so is the feasibility rule (min over seeds ≥ 10 blocks).
+- **Secondary.** The registered c=6 also runs on its feasible cells, with its own verdicts. Report both tables, primary first.
+- **Order of runs.** If you have not yet computed any c=6 accuracy or ARI, do the c=3 run first. If you already have, tell me so in the report; that must be on the record.
+- **Eligibility for c=3.** A source needs 3 pairwise non-isomorphic pendant copies at every r≤3. Redo the eligibility and block counts at c=3, and report them per seed as min and mean.
+- **Figure.** Panel (a) uses a C-int block on WD100 or NDC-sub, whichever has the larger block at c=3. Copies are coloured by member.
+Everything else is as ratified. Proceed.
+```
+
+**Order of runs, on the record.** No c = 6 accuracy or ARI had been computed when the amendment
+arrived (only eligibility and block counts). The c = 3 run went first (09:50–09:54 CEST), then the
+c = 6 secondary (09:54–09:58).
+
+## 10. Code (commit `afd58c2` + the figure commit)
+
+- `scripts/newpos/knn/design_c.py` — the job: graph (`one_edit_graph`), eligibility (cached per
+  collection and c under `<out>/eligibility/`), the two draws (`count_blocks` on stream
+  `C-count`, `build_pool` on stream `C-pool`), copies (`member_copies`, stream `(seed, record)`),
+  evaluation (`evaluate_pool`), resumable JSON `C_<collection>_<stratum>_c<c>.json`. CLI
+  `--collection --stratum --seeds --out` (+ optional `--n-jobs`, `--copies 3|6`, default 3).
+- `scripts/newpos/knn/aggregate_c.py` — seed means, [min, max], BCa (scipy, 9,999 resamples),
+  one-sided Wilcoxon (`zsplit`) + Holm over the 11 competitors + rank-biserial, per-cell verdicts,
+  hypothesis verdicts, `SUMMARY_C.md` + `summary_c.json`.
+- `scripts/newpos/knn/run_probe_c.sh <out> <c> <seeds...>` — all 12 jobs locally, then aggregate.
+- `scripts/newpos/knn/fig_knn_c.py` — the draft figure.
+- `knn_lib`: `wl_h1` (`HypergraphWLDistance(metric="l1", max_rounds=1)`, one refinement round,
+  checked on a toy star), `COMPETITORS_C`, `error_split`, `best_competitor(..., competitors)`.
+- Tests: 96 in `test_knn.py` (+ 11 `test_neardup.py` = 107 pass), incl. block disjointness and
+  edit kinds per stratum on random graphs, exhaustive-draw completeness, graph dedup + kinds on a toy
+  collection, copy determinism, the error split, `wl_h1`.
+
+## 11. Design C results (probe: 3 seeds; S ≈ 60; descriptive)
+
+Outputs: `/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/KNN_2026-10-15/probe_c/`
+(`SUMMARY_C.md`, `summary_c.json`, 24 job JSONs, `eligibility/`, `run_c3.log`, `run_c6.log`).
+
+### Feasibility, c = 3 (primary): available blocks min / mean over seeds
+
+| | WD50K(66) | WD50K(100) | NDC-classes | NDC-substances |
+|---|---|---|---|---|
+| eligible classes | 325 / 957 | 394 / 624 | 251 / 374 | 194 / 513 |
+| C-all | 27 / 27.7 | 50 / 51.3 | 35 / 36.0 | 21 / 22.7 |
+| C-int | **3 / 3.0 (infeasible)** | 15 / 15.7 | **4 / 4.0 (infeasible)** | 14 / 14.0 |
+| C-pend | 24 / 24.7 | 44 / 45.3 | 28 / 29.0 | 17 / 18.0 |
+
+Realised S: 60–64 in every C-all / C-pend pool; C-int 48–52 (WD100, NDC-sub; candidates run out).
+No block was discarded and no member dropped.
+
+### Verdicts, c = 3 (primary)
+
+- **H-KNN-C (C-all): KILLED in 12/12 feasible cells.** The bipartite edit path (or assignment)
+  leads 1-NN everywhere; ARI is led by the edit path, the degree floor or WL h=1. Word vs best
+  1-NN: WD66 0.22/0.23/0.15 vs 0.43/0.28/0.20; WD100 0.23/0.20/0.21 vs 0.61/0.39/0.31; NDC-cl
+  0.40/0.34/0.30 vs 0.72/0.55/0.48; NDC-sub 0.16/0.12/0.08 vs 0.58/0.44/0.33 (r = 1/2/3).
+- **H-KNN-C-int: KILLED in 6/6 feasible cells** (WD100: 0.25/0.18/0.19 vs edit path
+  0.51/0.31/0.28; NDC-sub: 0.19/0.15/0.13 vs 0.43/0.33/0.24). WD66 and NDC-cl infeasible (3 and 4
+  blocks); on those infeasible pools the word is close to the best arm (e.g. NDC-cl r = 1: 0.69 vs
+  degree 0.75; ARI 0.59 vs 0.54) — not a pass.
+- C-pend (no claim): the edit path / assignment leads every cell.
+
+### Verdicts, c = 6 (secondary, registered)
+
+Feasible cells only: C-all on WD100 and NDC-classes, C-pend on WD100; C-int nowhere.
+**H-KNN-C killed in 6/6 feasible cells** (WD100 word 0.26/0.27/0.25 vs edit path 0.76/0.62/0.42;
+NDC-cl 0.58/0.49/0.44 vs assignment 0.81/0.74/0.62). H-KNN-C-int untestable at c = 6.
+
+### Within-block error share (c = 3, feasible cells)
+
+Share of the expected 1-NN error mass that lands on another member of the query's own block:
+word 0.33–0.75 (C-all), 0.20–0.39 (C-int), 0.33–0.77 (C-pend); edit path 0.22–0.71 / 0.20–0.33 /
+0.17–0.54; WL h=1 0.31–0.75 / 0.19–0.41 / 0.23–0.76. On C-int most of the word's errors go to
+*other* blocks.
+
+### Mechanism (seed 0, r = 1; median distances)
+
+Under the word, distances in these pools are tiny and quantised: copy to own source 1–3.5 tokens,
+nearest sibling 2–3, nearest other member of the block 1–4, nearest other-block copy 2–3. Sibling
+closer than every other-block copy: 0.22–0.47 of queries (edit path 0.35–0.63). The one-edit graph
+lives on small records (median m 4–5), whose words differ by a handful of tokens whether or not they
+are related; the predicted separation of interior look-alikes does appear inside a block (WD100
+C-int: sibling 3.0 vs in-block 4.0 tokens) but unrelated small records from other blocks sit closer
+still (2.0). The edit path prices facts by size and spreads these records out.
+
+### Diagnostics
+
+Exact-arm ceiling 0.37–0.95 (lowest on NDC-sub, where 26–63 % of the copies share an isomorphism
+class with another source's copy). Arms with 1-NN >= 0.9: none in any cell. Prop. 6.1: word
+medoid ratio median 1.00–1.19, max 1.67, 0 clusters over the bound.
+
+### Figure
+
+`probe_c/fig_knn_c_r1.{png,pdf,json}`. Panel (a): the largest C-int block of seed 0 at c = 3 —
+NDC-substances (5 members; WD100's largest had 4), r = 1, t-SNE perplexity 4, seed 0; within this
+block the word scores 1-NN 0.49 / ARI 0.32 vs edit path 0.33 / 0.14, certificate rows 0.18 / −0.05,
+WL h=1 0.22 / 0.13. **This block is not representative of the cell** (pooled C-int NDC-sub r = 1:
+word 0.19 vs edit path 0.43); the within-block numbers ignore the other-block impostors that cause
+most of the word's errors. Panel (b): 1-NN vs r for 3 strata x 4 collections, infeasible panels
+shaded.
+
+### Cost (workstation, 16 jobs for the pairwise arms)
+
+Per job: setup (graph + cached eligibility) 2–7 s; per seed 1.7–4.9 s at c = 3 (N ≈ 150–185), ~13 s
+at c = 6 (N ≈ 330–370). A full job of 27 seeds: about 2.5 min at c = 3, 6 min at c = 6, on one node
+with 16 cores; 12 jobs per c. Memory is negligible (< 1 GB).

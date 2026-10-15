@@ -14,6 +14,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "scripts" / "newpos
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 import design_c as DC  # noqa: E402, N812
+import design_d as DD  # noqa: E402, N812
+import rect as RECT  # noqa: E402, N812
+from knn_lib import ARMS_C as K_ARMS_C  # noqa: E402
 from knn_lib import (  # noqa: E402
     IsoKeys,
     brute_force_kmedoids,
@@ -462,3 +465,102 @@ def test_wl_h1_arm(source: KBRecord, keys: IsoKeys) -> None:
     assert M[0, 1] == 0.0
     assert (M[0, 2:] > 0).all() and np.isfinite(M).all()
     assert secs[WL_H1] >= 0.0
+
+
+# --------------------------------------------------------------------------- Design D
+
+
+def test_nn_scores_ties_at_expectation() -> None:
+    d = np.array([2.0, 1.0, 1.0, 3.0])
+    p1, rr = DD.nn_scores(d, 1)
+    assert p1 == pytest.approx(0.5)
+    assert rr == pytest.approx(1 / 1.5)
+    p1, rr = DD.nn_scores(d, 3)
+    assert p1 == 0.0
+    assert rr == pytest.approx(0.25)
+    p1, rr = DD.nn_scores(np.array([0.0, 5.0]), 0)
+    assert (p1, rr) == (1.0, 1.0)
+
+
+@pytest.mark.parametrize("arm", list(K_ARMS_C))
+def test_rect_equals_the_union_matrix_block(source: KBRecord, keys: IsoKeys, arm: str) -> None:
+    from knn_lib import build_matrices
+
+    rng = np.random.default_rng(0)
+    other = _record("other", 6, [(0, (0, 1)), (1, (1, 2)), (2, (2, 3)), (3, (3, 4)), (0, (4, 5))])
+    catalogue = [source, other, *make_copies(source, 2, 3, rng, keys)[0]]
+    queries = [*make_copies(source, 1, 3, rng, keys)[0], *make_copies(other, 1, 2, rng, keys)[0]]
+    cat_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in catalogue]
+    q_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in queries]
+    got = RECT.make_arm(arm, n_jobs=1).fit(cat_hs).rect(q_hs)
+    mats, _ = build_matrices([*catalogue, *queries], [arm], n_types=N_TYPES, n_preds=N_PREDS)
+    want = mats[arm][len(catalogue) :, : len(catalogue)]
+    # build_matrix stores float32, the rectangle float64: integer arms agree exactly
+    np.testing.assert_allclose(got, want, rtol=1e-6, atol=1e-7)
+
+
+def test_symmetric_min_arm(source: KBRecord, keys: IsoKeys) -> None:
+    from isalhg.metric_space.registry import get_distance
+
+    rng = np.random.default_rng(2)
+    catalogue = [source, *make_copies(source, 2, 3, rng, keys)[0]]
+    queries = make_copies(source, 1, 3, rng, keys)[0]
+    cat_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in catalogue]
+    q_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in queries]
+    got = RECT.make_arm("bipartite_ged_path_sym", n_jobs=2).fit(cat_hs).rect(q_hs)
+    d = get_distance("bipartite_ged_path")
+    want = np.array(
+        [[min(d.pairwise(c, q), d.pairwise(q, c)) for c in cat_hs] for q in q_hs], dtype=float
+    )
+    np.testing.assert_array_equal(got, want)
+    as_run = RECT.make_arm("bipartite_ged_path", n_jobs=1).fit(cat_hs).rect(q_hs)
+    assert (got <= as_run).all()
+
+
+def test_rect_parallel_matches_serial(source: KBRecord, keys: IsoKeys) -> None:
+    rng = np.random.default_rng(1)
+    catalogue = [source, *make_copies(source, 1, 4, rng, keys)[0]]
+    queries = make_copies(source, 2, 4, rng, keys)[0]
+    cat_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in catalogue]
+    q_hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in queries]
+    for arm in ("bipartite_ged_path", "hpd_jsd"):
+        serial = RECT.make_arm(arm, n_jobs=1).fit(cat_hs).rect(q_hs)
+        parallel = RECT.make_arm(arm, n_jobs=2).fit(cat_hs).rect(q_hs)
+        np.testing.assert_array_equal(serial, parallel)
+
+
+CACHED = Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/IEEETKDE/matrices")
+
+
+@pytest.mark.integration
+@pytest.mark.skipif(not CACHED.is_dir(), reason="cached campaign matrices not mounted")
+@pytest.mark.parametrize(
+    "arm",
+    [
+        "isal_ow_struct",
+        "nauty_cert",
+        "nauty_cert_rows",
+        "fact_rank",
+        "netlsd",
+        "hpd_jsd",
+        "degree_seq_l1",
+        "size_l1",
+        "bipartite_ged_assign",
+        "bipartite_ged_path",
+    ],
+)
+def test_rect_reproduces_cached_catalogue_entries(arm: str) -> None:
+    from experiments.tkde import corpora
+
+    col = corpora.load_collection("ndc_classes")
+    hs = corpora.hypergraphs(col)
+    rng = np.random.default_rng(7)
+    cat_idx = np.sort(rng.choice(len(hs), 40, replace=False))
+    q_idx = np.sort(rng.choice(len(hs), 8, replace=False))
+    got = RECT.make_arm(arm, n_jobs=1).fit([hs[i] for i in cat_idx]).rect([hs[i] for i in q_idx])
+    cached = np.load(CACHED / "ndc_classes" / f"{arm}.npy", mmap_mode="r")
+    want = np.asarray(cached[np.ix_(q_idx, cat_idx)], dtype=np.float64)
+    # cached[i, j] = pairwise(i, j) for i < j; the rectangle is pairwise(catalogue, query)
+    mask = cat_idx[None, :] < q_idx[:, None]
+    assert mask.sum() > 50
+    np.testing.assert_allclose(got[mask], want[mask], rtol=0, atol=1e-6)  # cache is float32

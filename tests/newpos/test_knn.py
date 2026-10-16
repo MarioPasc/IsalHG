@@ -467,6 +467,76 @@ def test_wl_h1_arm(source: KBRecord, keys: IsoKeys) -> None:
     assert secs[WL_H1] >= 0.0
 
 
+# --------------------------------------------------------------------------- full run (LOG.md §8)
+
+
+def test_full_arm_set() -> None:
+    from knn_lib import (
+        ARM_SETS,
+        ARMS_FULL,
+        COMPETITORS_C,
+        COMPETITORS_FULL,
+        OURS,
+        PATH_ASRUN,
+        PATH_SYM,
+        WL_H1,
+    )
+
+    assert len(COMPETITORS_FULL) == len(COMPETITORS_C) == 11
+    assert PATH_SYM in COMPETITORS_FULL and WL_H1 in COMPETITORS_FULL
+    assert PATH_ASRUN not in COMPETITORS_FULL and PATH_ASRUN in ARMS_FULL
+    assert ARMS_FULL[0] == OURS and set(COMPETITORS_FULL) < set(ARMS_FULL)
+    assert ARM_SETS["full"] == (ARMS_FULL, COMPETITORS_FULL)
+    # Design D's verdict set is the same eleven competitors.
+    assert tuple(DD.COMPETITORS_D) == COMPETITORS_FULL
+
+
+def test_build_matrices_reads_the_edit_path_both_ways(source: KBRecord, keys: IsoKeys) -> None:
+    from knn_lib import PATH_ASRUN, PATH_SYM, build_matrices
+
+    from isalhg.metric_space.registry import get_distance
+
+    rng = np.random.default_rng(3)
+    other = _record("other", 6, [(0, (0, 1)), (1, (1, 2)), (2, (2, 3)), (3, (3, 4)), (0, (4, 5))])
+    items = [
+        source,
+        other,
+        *make_copies(source, 1, 3, rng, keys)[0],
+        *make_copies(source, 2, 3, rng, keys)[0],
+        *make_copies(other, 1, 2, rng, keys)[0],
+    ]
+    both, _ = build_matrices(
+        items, [PATH_ASRUN, PATH_SYM], n_types=N_TYPES, n_preds=N_PREDS, n_jobs=2
+    )
+    registry, _ = build_matrices(items, [PATH_ASRUN], n_types=N_TYPES, n_preds=N_PREDS)
+    # The as-run reading derived from the ordered matrix is the registry's build_matrix.
+    np.testing.assert_allclose(both[PATH_ASRUN], registry[PATH_ASRUN], rtol=1e-6, atol=1e-7)
+    hs = [r.to_hypergraph(n_types=N_TYPES, n_preds=N_PREDS) for r in items]
+    d = get_distance(PATH_ASRUN)
+    want = np.array(
+        [
+            [0.0 if i == j else min(d.pairwise(a, b), d.pairwise(b, a)) for j, b in enumerate(hs)]
+            for i, a in enumerate(hs)
+        ]
+    )
+    np.testing.assert_array_equal(both[PATH_SYM], want)
+    assert (both[PATH_SYM] <= both[PATH_ASRUN] + 1e-9).all()
+
+
+def test_ceiling_census_restricted_to_the_verdict_arms() -> None:
+    from knn_lib import OURS, PATH_ASRUN, PATH_SYM, ceiling_census
+
+    p = {
+        OURS: np.array([1.0, 0.0, 1.0]),
+        PATH_SYM: np.array([1.0, 1.0, 0.0]),
+        PATH_ASRUN: np.array([1.0, 1.0, 1.0]),
+    }
+    out = ceiling_census(p, (OURS, PATH_SYM))
+    assert out["arms"] == [OURS, PATH_SYM]
+    assert out["best_competitor"] == PATH_SYM
+    assert out["all_arms_correct"] == pytest.approx(1 / 3)
+
+
 # --------------------------------------------------------------------------- Design D
 
 

@@ -52,9 +52,9 @@ C_COPIES = 3
 RS: tuple[int, ...] = (1, 2, 3)
 S_PROBE = 60
 MIXES: tuple[str, ...] = ("pendant", "empirical")
-#: The bipartite arms whose verdict reading is the symmetric min (LOG.md §7.1, adopted after
-#: the probe values were seen; it can only help the competitor). The as-run orientation stays
-#: in the job as a reported row.
+#: The bipartite arms whose verdict reading is the symmetric min, the orientation-free
+#: symmetrization of the raw cost (LOG.md §7.1, adopted after the probe values were seen). The
+#: as-run orientation stays in the job as a reported row.
 SYM_ARMS: tuple[str, ...] = ("bipartite_ged_path_sym",)
 ARMS: tuple[str, ...] = (*K.ARMS_C, *SYM_ARMS)
 COMPETITORS_D: tuple[str, ...] = tuple(
@@ -119,6 +119,15 @@ def score_rect(D: np.ndarray, sources: np.ndarray) -> tuple[np.ndarray, np.ndarr
     """Per-query 1-NN probability and reciprocal rank for a ``(Q, N)`` rectangle."""
     out = np.array([nn_scores(D[i], int(sources[i])) for i in range(len(sources))])
     return out[:, 0], out[:, 1]
+
+
+def source_and_other(D: np.ndarray, sources: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Per query, the distance to its source and to the nearest other catalogue record."""
+    rows = np.arange(len(sources))
+    d_src = D[rows, sources]
+    masked = np.where(np.isnan(D), np.inf, D).astype(np.float64, copy=True)
+    masked[rows, sources] = np.inf
+    return d_src, masked.min(axis=1)
 
 
 # --------------------------------------------------------------------------- job
@@ -204,6 +213,7 @@ def run_seed(
             D = arm.rect(hs)
             secs = time.perf_counter() - ta
             p1, rr = score_rect(D, sources)
+            d_src, d_other = source_and_other(D, sources)
             cell["arms"][name] = {
                 "acc1": float(p1.mean()),
                 "rr": float(rr.mean()),
@@ -212,6 +222,9 @@ def run_seed(
                 "nn_zero_share": float((D.min(axis=1) == 0).mean()),
                 "p_correct1": [round(float(x), 6) for x in p1],
                 "rr_q": [round(float(x), 6) for x in rr],
+                # Mechanism diagnostic: distance to the source vs to the nearest other record.
+                "d_source": [round(float(x), 4) for x in d_src],
+                "d_other": [round(float(x), 4) for x in d_other],
             }
         if existing is None:
             cell["secs"] = time.perf_counter() - tr

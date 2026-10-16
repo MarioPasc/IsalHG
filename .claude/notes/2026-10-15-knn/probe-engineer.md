@@ -600,3 +600,140 @@ Report the new merge and split counts per collection. Do not edit the article."
   sentences (NDC-classes: edit path 0.421 > word 0.416; the registered pooled criterion now fails on
   NDC-classes too; NDC-substances best AP is now the edit path 0.465), S2 radius-2 numbers, the
   1.6–7.8 ratio range, the wstar-ablation edit-path value 0.420, and the S2 figure.
+
+## 18. Full run (LOG.md §8) — TASK 1
+
+Brief (`main`, verbatim core): "TASK 1: run the full set on Picasso [...] all four designs, 27
+seeds, as in §8 [...] The symmetric-min edit path is primary; the as-run orientation is kept as a
+row. Include one-round WL. Design A: L = 30. Design B: S = 200, c = 6, plus the mix condition on
+WD50K. Design C: c = 3, all strata; also c = 6 on the feasible cells. Design D: S = 200, c = 3,
+pendant and mix conditions. [...] slurm/tkde/knn_{launcher,worker}.sh. Use one array task per
+(design, collection, condition/stratum). CPU only [...] harvest to D/results/KNN_2026-10-15/full/
+[...] FULL_SUMMARY.md with one verdict table per hypothesis." TASK 2 = figures F-a..F-d, TASK 3 =
+SECTION_FACTS.md.
+
+**Code (no parameter of any design changed).**
+- `knn_lib`: `PATH_ASRUN`, `PATH_SYM`, `COMPETITORS_FULL` (the eleven of §6 with the sym-min path in
+  place of the as-run one), `ARMS_FULL` (word + those 11 + the as-run path as a row), `ARM_SETS`
+  (`probe` / `c` / `full`). `build_matrices` computes the edit path once per *ordered* pair when
+  the sym arm is requested and derives both readings (sym = min(P, Pᵀ); as-run = triu(P) mirrored —
+  test asserts it equals the registry `build_matrix`). `ceiling_census(p, arms_order)` so the
+  as-run row stays out of the verdict-arm census.
+- `probe_knn.py` `--arm-set {probe,full}`, `--no-summary`; cells record `arm_set` + `competitors`.
+  `design_c.py` `--arm-set {c,full}` (refuses to resume a job file run with other arms).
+  `design_d.py` unchanged (its ARMS / COMPETITORS_D already equal the full set; test asserts it).
+- `full_run.py`: 38 units (B×4, Bmix×2, D×6, A×2 incl. Afull, C3×12, C6×12) over seeds 0–26, each
+  into `<out>/<unit>/`; 9 tasks.
+- Tests: 124 pass (3 new).
+
+**Deviation from "one array task per unit" (scheduling only).** slurm/tkde/README.md: "No
+submitted task may run under two hours (SCBI, 2026-08-07)". A and C units take 1–6 min each, D
+units 19–54 min. So B / mix units are one task each, the two WD50K(66) D units one task, the other
+four D units one task, and all 26 A/C units one task. No unit's parameters or seeds change.
+
+**Timing (local, 16 jobs).** B wd50k66 seed 0 at S = 200, c = 6, full arms: N = 1,200 per cell,
+112–114 s per cell (matrices ~60 s incl. the ordered edit path 10 s and HPD 28 s; evaluation
+~62 s, mostly PAM k = 200), ~5.8 min per seed → ~2.6 h per B unit.
+
+**Verification of the cluster inputs (2026-10-15).** Corpora md5 identical local vs
+`~/fscratch/datasets/isalhg_tkde/corpora` (12 files). `src/` checksum-identical to the canonical
+`~/fscratch/repos/IsalHG-tkde/src` (rsync -nc: timestamps only). `kmedoids` imports in isalhg-tkde.
+Quotas: home 26.8k/35.0k files, fscratch 178.3k/250k.
+
+**Cluster env broken by the storage migration, repaired (2026-10-15 14:58).** Smoke 2920620 failed
+in 10 s: `PermissionError` reading `/mnt2/fscratch/.../IsalHG-tkde/src/isalhg/__init__.py`. Since
+2026-10-08 `~/fscratch -> /mnt/fscratch/users/...` (new storage); the old `/mnt2/fscratch/users/
+tic_163_uma/mpascual` is `root:root drwx------`. The scikit-build-core editable finder of the
+isalhg-tkde env (`_isalhg_editable.py`) mapped every module and the `.so` to `/mnt2/...`, so
+`import isalhg` failed for every user of that env, on the login node too. Repair = the documented
+reinstall step of `sync_to_picasso.sh`, without its rsync: `cd ~/fscratch/repos/IsalHG-tkde; rm -rf
+build; $PY -m pip install -e ".[dev]" --no-deps --no-build-isolation` (PIP EXIT 0), then the
+script's own check: `isalhg -> /mnt/fscratch/.../IsalHG-tkde/src/isalhg/__init__.py`, extension
+built 14:58:30 (fresh), `canonical_string(fano, cpp) == python` OK, kmedoids imports. The canonical
+tree's sources were not touched (checksum-identical to this branch's `src/`). PICASSO.md §1 still
+describes the `/mnt2` spelling (out of scope; reported).
+
+**Smokes.** Local `full_run.py --smoke` (seed 0 of D_ndc_classes_pendant 35 s, C3_ndc_classes_C-all
+9 s, A_ndc_classes 45 s, B_ndc_classes 255 s): all exit 0. Cluster smoke resubmitted as 2921030.
+**Sym-min wording** (coordinator correction, LOG §8.1): the minimum also brings distractors closer,
+so it does not favour the competitor on ranking metrics; described only as "the orientation-free
+symmetrization of the raw cost" (commit 48a3ab7 fixes rect / design_d / aggregate_d wording).
+
+**Submission.** Array 2921149 (9 tasks, 16 CPU, 32G, sd, 10 h) submitted 15:0x; `--test-only`
+predicted 21:56 but tasks 0–7 started 15:11–15:20. Smoke 2921030 started 15:09. Picasso B cell
+≈ 310 s (local uncontended 112 s) → B unit ≈ 7 h. Reported to main (job ids + ETA).
+
+**Coordinator, verbatim core (local replica):** "Run the identical 38 units locally now as well,
+same seeds and code, with joblib on 16 cores, into D/results/KNN_2026-10-15/full_local/ [...] The
+Picasso run is the canonical execution [...] When it lands, diff Picasso against local per JSON on
+every metric [...] Record the comparison in FULL_SUMMARY.md as a cross-machine reproducibility
+check. If they differ, report it before harvesting anything into full/." → three local streams
+(tasks 0,3,6 / 1,4,8 / 2,5,7; 16 joblib jobs each; 24 hardware threads), code 48a3ab7, started
+15:04. **Run-path files (knn_lib, probe_knn, design_c, design_d, rect, full_run) must not be
+edited until the local run ends: every unit is a fresh subprocess that imports them.**
+
+**Coordinator, verbatim core (contract):** "Deliver into D/results/KNN_2026-10-15/full/section/
+[...] (a) knn_facts.tex: one \knnfact{name}{value} line per \KNNTBD name, plus the 72 verdict cells
+[...] Before each line, put a % src: comment with the JSON path and key. Apply the bound rule. (b)
+The figures, named as the README says: fig_s5_{tsne,accuracy,gap,mechanism}.pdf [...] (c) A check
+script that greps every \KNNTBD and verdict name in s5_knn.tex and asserts that each one is defined
+in knn_facts.tex. Hypothesis evaluation rules: One-round WL is outside the A/B kill criteria (they
+were registered with ten competitors). Report it there as an added row, with a flag saying whether
+it would beat the word in any A/B cell. The as-run edit path is descriptive and outside the Holm
+family. Build all of this from full_local first. Regenerate from full/ after the Picasso
+comparison."
+
+Implemented (commits b4224c7, 28342da): aggregate_full uses each design's registered competitor
+set (A/B/mix: 10 with the sym path; C/D: 11); added rows (as-run path; WL h=1 in A/B) with
+`added_row_flags`; `best_arm_overall`; per-arm Prop. 6.1 census. figs/: style, fig_tsne,
+fig_accuracy, fig_gap, fig_mechanism (README widths, Okabe–Ito word/best/other, serif 7 pt),
+section_facts (bound rule; extra facts wlh1-AB-*, ratio-exceed-any-arm), check_facts, make_section;
+tests/newpos/test_knn_figs.py. Mechanism axes follow the s5 caption (x = other source, y =
+sibling; "below the diagonal is correct"); the README says the reverse — flagged to main.
+
+**Coordinator, verbatim core (≈18:15):** "The user has cancelled the local replica (full_local); the
+Picasso array 2921149 is the only full run. [...] do not kill, relaunch or resume any local
+full_run.py. Change of contract: drop the Picasso-vs-local per-JSON comparison from your final report
+and replace it with a cross-check of a few Picasso cells recomputed locally at single-seed scale (at
+most 2 cores, under 10 minutes total), or skip it and say so. Build FULL_SUMMARY.md, knn_facts.tex,
+the four fig_s5_* figures, SECTION_FACTS.md and check_facts.py from the Picasso results only." User,
+mid-turn: "Sorry, they took too long". The main session also stopped my background waiters.
+
+**Cross-check without new compute** (`crosscheck_seed0.py`): the seed-0 cells already computed on
+the workstation with the run's code — the local smoke (D_ndc_classes_pendant, C3_ndc_classes_C-all,
+A_ndc_classes + Afull, B_ndc_classes) and the B timing run (B_wd50k66) — against the Picasso cells
+of the same unit and seed. Partial harvest 18:31: 9 cells, 386,319 values; every arm bitwise
+identical except NetLSD (960 values; 1-NN up to |Δ| = 0.0196 on B_wd50k66 r1 s0, 0.5549 vs
+0.5353; ARI identical to 4 decimals): float near-ties in the heat-trace distance break differently
+across CPUs. The two local smokes agreed exactly with each other (same machine). FULL_SUMMARY flags
+claim cells whose verdict a gap of that size could decide (refined: NetLSD the sole decider);
+partial result: none. full_local/ (partial, cancelled) is not used anywhere.
+
+## 19. Completion (2026-10-16)
+
+**Coordinator, verbatim core (10:05):** "Picasso array 2921149 is finished (sacct: 9/9 COMPLETED),
+but full/ and FULL_SUMMARY.md (generated 18:34 yesterday) are partial, and the partial summary
+contains a verdict defect. [...] 1. Harvest [...] --checksum [...] verify each of the 38 units [...]
+2. Fix the completeness defect [...] 'H-KNN-D … 6 cells, 4 claim cells, 0 kills, survives, complete
+yes', but §7 registers H-KNN-D on all FOUR collections at r = 1 and r = 2 [...] Any hypothesis
+missing a registered cell must read 'incomplete' [...] regression test [...] 3. Regenerate from the
+complete full/ [...] If H-KNN-D at full scale differs from the probe verdict (killed at NDC-classes
+r = 1), report both values side by side. [...] 4. Run the tests [...] Do not push."
+
+- **Defect owned.** The 18:34 build ran on a partial harvest with `--allow-missing`; the
+  aggregator's hypothesis table counted only the cells present, so H-KNN-D read "survives" from the
+  WD50K cells alone. Fixed in 446cab6: `REGISTERED` builds each hypothesis's cell set from the
+  registration; absent or short cells → "incomplete"; C infeasibility from the job's own rule.
+- sacct: 9/9 COMPLETED, 2 h 35 m – 9 h 10 m (B_ndc_substances), MaxRSS 8.2–12.5 GB of 32 G.
+- Harvest: `rsync -a --checksum`, no delete; a second checksum dry run lists 0 files to transfer.
+  `verify_units.py`: 38 units, 27 seeds each (A also Afull); D_ndc_classes_pendant and
+  D_ndc_substances_pendant present.
+- The session scratchpad (smoke / timing seed-0 outputs) was wiped overnight; the seed-0
+  cross-check was recomputed on 2 cores in ≈ 3 min into KNN_2026-10-15/crosscheck_local/ (C3
+  ndc_classes C-all, C3 ndc_substances C-int, D ndc_classes pendant, A ndc_classes): 172,413 values,
+  only NetLSD differs (306 values; largest 1-NN gap 0.0098), the earlier 0.0196 kept as `prior`;
+  no claim cell's verdict within reach of that gap.
+- Verdicts at full scale: A killed (1 of 2), B 12/12, mix 6/6, C 12/12, C-int 6/6 feasible, C@c6
+  6/6 feasible, C-int@c6 untestable (infeasible everywhere), D killed in 1 of 8
+  (D/pendant/ndc_classes/r1: word 0.575 vs sym-min path 0.638 — the probe's cell), D-mix 3 of 4.
+- check_facts: 66 + 72 names, OK. Tests: test_knn 124, test_knn_figs 10, test_knn_full 10.

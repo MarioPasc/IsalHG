@@ -62,6 +62,67 @@ def test_every_figure_was_built() -> None:
         assert (ROOT / "section" / f"fig_s5_{stem}.pdf").stat().st_size > 0
 
 
+def _facts() -> dict[str, str]:
+    return CF.defined_facts((ROOT / "section" / "knn_facts.tex").read_text())[0]
+
+
+@needs_root
+def test_mechanism_second_row_follows_its_rule() -> None:
+    import fig_mechanism as FM  # noqa: N812
+
+    summary = json.loads((ROOT / "full_summary.json").read_text())
+    meta = json.loads((ROOT / "section" / "fig_s5_mechanism.numbers.json").read_text())
+    assert meta["rule2"] == FM.ROW2_RULE
+    b = [
+        c
+        for c in summary["cells"].values()
+        if c["design"] == "B" and c["condition"] == "pendant" and c["claim"]
+    ]
+    assert len(b) == 12
+    leads = {
+        c["id"]: c["per_arm"][K.PATH_SYM]["acc1"]["mean"] - c["per_arm"][K.OURS]["acc1"]["mean"]
+        for c in b
+    }
+    assert meta["cell2"] == max(leads, key=leads.get)
+    assert meta["rule2_lead_acc1"] == pytest.approx(leads[meta["cell2"]])
+    # Every panel prints its own-nearer and tie shares: two arms x two rows x two shares.
+    assert len(meta["printed"]) == 8
+    assert {e["path"][-2] for e in meta["printed"]} == {"own_strictly_nearer", "tie"}
+
+
+@needs_root
+def test_mechanism_facts_match_the_summary() -> None:
+    summary = json.loads((ROOT / "full_summary.json").read_text())
+    facts = _facts()
+    b = [
+        c
+        for c in summary["cells"].values()
+        if c["design"] == "B" and c["condition"] == "pendant" and c["claim"]
+    ]
+    word = [c["mechanism"][K.OURS]["own_strictly_nearer"]["mean"] for c in b]
+    edit = [c["mechanism"][K.PATH_SYM]["own_strictly_nearer"]["mean"] for c in b]
+    higher = sum(e > w for w, e in zip(word, edit, strict=True))
+    assert facts["mechB-edit-higher-cells"] == f"${higher}$"
+    assert facts["mechB-own-word-range"] == (
+        rf"${SF.down(100 * min(word), 0)}$ to ${SF.up(100 * max(word), 0)}$\,\%"
+    )
+    assert facts["mechB-own-edit-range"] == (
+        rf"${SF.down(100 * min(edit), 0)}$ to ${SF.up(100 * max(edit), 0)}$\,\%"
+    )
+    for name in (
+        "mech2-cell",
+        "mech2-sibling-closer-word",
+        "mech2-sibling-closer-edit",
+        "mech-tie-word",
+        "mech-tie-edit",
+        "mech2-tie-word",
+        "mech2-tie-edit",
+        "mechB-tie-word-range",
+        "mechB-tie-edit-range",
+    ):
+        assert name in facts, name
+
+
 @needs_root
 @pytest.mark.skipif(not CF.DEFAULT_TEX.exists(), reason="section source not mounted")
 def test_facts_cover_the_section() -> None:

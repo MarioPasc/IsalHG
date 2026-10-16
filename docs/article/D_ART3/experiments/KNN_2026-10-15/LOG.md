@@ -526,3 +526,21 @@ NetLSD is bitwise identical.
 - NetLSD differs in 306 values, through float near-ties in its distance; the largest 1-NN gap is 0.0098.
 - An earlier partial check measured 0.0196, on B WD50K(66) r = 1. No claim-cell verdict lies within
   that gap.
+
+### 9.1 Corrections (independent S5 claim check, 2026-10-16)
+
+- **p-value bound.** §9 says that in the other 7 D claim cells the word leads with "Holm p ≤ 1.1e-5". The
+  largest of those p-values is 1.104e-5, so under the bound rule the statement is **p ≤ 1.2e-5**.
+  `FULL_SUMMARY.md` prints the value rounded, as 1.1e-05.
+- **Orientation.**
+  - Under the cached, catalogue-first orientation, the as-run edit path reaches the word in **0 of the 8**
+    H-KNN-D claim cells (`FULL_SUMMARY.md`, added rows). H-KNN-D would therefore survive under that
+    orientation at full scale, as it did in the probe.
+  - It is killed under the symmetric minimum. That definition is used throughout the article and was
+    adopted after the probe values were seen (§7.1). S5 states this.
+- **The mechanism figure's cells.**
+  - Row 1 (B, WD50K(66), r = 2) was fixed in the S5 specification before the full-run values were read.
+    It was never pre-registered in this log.
+  - The rule for row 2 (the B pendant claim cell with the largest symmetric-edit-path lead on 1-NN) was set
+    by the leader *after* reading the full-run values, so that the figure also shows a cell where the word
+    loses. S5 discloses both.

@@ -1,15 +1,15 @@
 """Cross-check single Picasso cells against the same cells computed locally (seed 0).
 
-The local cells come from the full-run smoke (``full_run.py --smoke``: seed 0 of
-D_ndc_classes_pendant, C3_ndc_classes_C-all, A_ndc_classes with Afull, and
-B_ndc_classes) and from the Design-B timing run (seed 0 of B_wd50k66), both
-computed on the workstation with the code the cluster ran. Each local cell is
-compared value by value with the Picasso cell of the same unit and seed
-(``compare_runs.compare``; wall-clock, throughput and worker-count keys
-skipped). A key named by ``--ignore-missing-keys`` that the local cell lacks is
-dropped from the Picasso side before comparing (the timing run predates the per-query
-mechanism distances). Writes ``CROSSCHECK_SEED0.json`` into ``--picasso``,
-which ``aggregate_full.py`` renders in FULL_SUMMARY.md.
+The local cells are seed-0 runs of a few cheap units, recomputed on the
+workstation with the code the cluster ran (2 cores, under 10 minutes; default
+``<OUT_ROOT>/crosscheck_local``: C3_ndc_classes_C-all, C3_ndc_substances_C-int,
+D_ndc_classes_pendant, A_ndc_classes). Each local cell is compared value by
+value with the Picasso cell of the same unit and seed (``compare_runs.compare``;
+wall-clock, throughput and worker-count keys skipped). A key named by
+``--ignore-missing-keys`` that the local cell lacks is dropped from the Picasso
+side before comparing (for local cells that predate the per-query mechanism
+distances). Writes ``CROSSCHECK_SEED0.json`` into ``--picasso``, which
+``aggregate_full.py`` renders in FULL_SUMMARY.md.
 """
 
 from __future__ import annotations
@@ -25,12 +25,7 @@ from typing import Any
 import compare_runs as CR  # noqa: N812
 
 DEFAULT_LOCAL = (
-    Path(
-        "/tmp/claude-1000/-home-mpascual-research-code-IsalHG/6e1bf485-d6d9-4736-9632-8b3e48bbb69a/scratchpad/timing/smoke2"
-    ),
-    Path(
-        "/tmp/claude-1000/-home-mpascual-research-code-IsalHG/6e1bf485-d6d9-4736-9632-8b3e48bbb69a/scratchpad/timing"
-    ),
+    Path("/media/mpascual/Sandisk2TB/research/ISAL/isalhg/results/KNN_2026-10-15/crosscheck_local"),
 )
 
 
@@ -160,8 +155,18 @@ def main() -> None:
     ap.add_argument("--local", type=Path, nargs="+", default=list(DEFAULT_LOCAL))
     ap.add_argument("--rtol", type=float, default=1e-9)
     ap.add_argument("--ignore-missing-keys", nargs="*", default=["nn_same", "nn_other"])
+    ap.add_argument(
+        "--prior-gap",
+        type=float,
+        default=None,
+        help="largest hypothesis-metric gap seen by an earlier cross-check whose local files "
+        "are gone; the platform-sensitivity flag uses the larger of the two",
+    )
+    ap.add_argument("--prior-note", default="", help="where the prior gap was observed")
     args = ap.parse_args()
     res = run(args.picasso, args.local, args.rtol, set(args.ignore_missing_keys))
+    if args.prior_gap is not None:
+        res["prior"] = {"abs_diff": args.prior_gap, "note": args.prior_note}
     (args.picasso / "CROSSCHECK_SEED0.json").write_text(json.dumps(res, indent=1))
     print(json.dumps({k: v for k, v in res.items() if k != "examples"}, indent=1))
     for e in res["examples"][:20]:

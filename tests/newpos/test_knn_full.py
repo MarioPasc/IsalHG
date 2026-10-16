@@ -86,6 +86,60 @@ def test_wl_h1_is_an_added_row_outside_designs_a_and_b() -> None:
     assert cell["best_arm_overall"]["acc1"]["arm"] == K.OURS
 
 
+def _d_cell(col: str, r: int, word: float, best: float, rng: np.random.Generator) -> dict:
+    s = AF.Series(
+        cell_id=f"D/pendant/{col}/r{r}",
+        design="D",
+        condition="pendant",
+        c=3,
+        collection=col,
+        r=r,
+        hypothesis="H-KNN-D",
+        claim=r in (1, 2),
+        competitors=K.COMPETITORS_FULL,
+    )
+    for i in range(27):
+        arms = {K.OURS: {"acc1": word + rng.normal(0, 0.01)}}
+        for a in K.COMPETITORS_FULL:
+            arms[a] = {"acc1": best + rng.normal(0, 0.01)}
+        s.add(i, arms, ("acc1",))
+    return AF.aggregate_series(s)
+
+
+def test_d_without_the_ndc_cells_is_incomplete() -> None:
+    # Regression: the 2026-10-15 18:34 partial summary read H-KNN-D "survives" on the WD50K
+    # cells alone, although §7 registers all four collections at r = 1 and 2.
+    rng = np.random.default_rng(5)
+    cells = {}
+    for col in ("wd50k66", "wd50k100"):
+        for r in (1, 2, 3):
+            c = _d_cell(col, r, 0.7, 0.5, rng)
+            cells[c["id"]] = c
+    h = AF.hypothesis_verdicts(cells)["H-KNN-D"]
+    assert h["verdict"] == "incomplete"
+    assert h["n_registered_claim_cells"] == 8
+    assert "D/pendant/ndc_classes/r1" in h["missing_or_incomplete"]
+    # With every registered cell present the same rule gives the registered verdict.
+    for col in ("ndc_classes", "ndc_substances"):
+        for r in (1, 2, 3):
+            c = _d_cell(col, r, 0.5 if (col, r) == ("ndc_classes", 1) else 0.7, 0.6, rng)
+            cells[c["id"]] = c
+    h = AF.hypothesis_verdicts(cells)["H-KNN-D"]
+    assert h["verdict"] == "killed"
+    assert [k["cell"] for k in h["kills"]] == ["D/pendant/ndc_classes/r1"]
+
+
+def test_a_cell_short_of_seeds_is_incomplete() -> None:
+    rng = np.random.default_rng(6)
+    cells = {}
+    for col in K.COLLECTIONS:
+        for r in (1, 2, 3):
+            c = _d_cell(col, r, 0.7, 0.5, rng)
+            cells[c["id"]] = c
+    cells["D/pendant/wd50k100/r2"]["complete"] = False
+    assert AF.hypothesis_verdicts(cells)["H-KNN-D"]["verdict"] == "incomplete"
+
+
 def test_infeasible_and_non_claim_cells() -> None:
     rng = np.random.default_rng(2)
     others = {a: _flat(5, 0.5, rng) for a in K.COMPETITORS_FULL}

@@ -201,12 +201,15 @@ def verdict_facts(fb: FactBook) -> None:
     """The verdict counts and the 72 verdict cells."""
     s = fb.summary
     hyp = s["hypotheses"]
-    a_kill = hyp["H-KNN-A"]["n_kills"]
+    incomplete = [h for h, v in hyp.items() if v["verdict"] == "incomplete"]
+    if incomplete:
+        raise FactError(f"hypotheses with missing registered cells: {incomplete}")
+    a = hyp["H-KNN-A"]
     fb.add(
         "A-verdict",
-        "killed" if a_kill else "not killed",
-        'full_summary.json hypotheses["H-KNN-A"].n_kills',
-        a_kill,
+        {"killed": "killed", "survives": "not killed"}[a["verdict"]],
+        'full_summary.json hypotheses["H-KNN-A"].verdict',
+        f"{a['verdict']}; kills {[k['cell'] for k in a['kills']]}",
         "verdict",
     )
     for name, row in (("B", "B"), ("C", "C"), ("Cint", "Cint")):

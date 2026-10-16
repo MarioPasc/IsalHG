@@ -550,43 +550,101 @@ def _mechanism(slot: dict[str, list[Any]]) -> dict[str, Any]:
     }
 
 
+#: The registered cells of every hypothesis (LOG.md §3, §6, §6.1, §7, §7.1, §8), independent of
+#: the result files present: hypothesis -> (cell id pattern, collections, claim r, reported r).
+#: ``None`` as r means a design without r (A).
+ALL_COLL: tuple[str, ...] = K.COLLECTIONS
+WD50K: tuple[str, ...] = ("wd50k66", "wd50k100")
+REGISTERED: dict[str, tuple[str, tuple[str, ...], tuple[int | None, ...], tuple[int, ...]]] = {
+    "H-KNN-A": ("A/lineage/{col}", K.LINEAGE_COLLECTIONS, (None,), ()),
+    "H-KNN-B": ("B/pendant/{col}/r{r}", ALL_COLL, (1, 2, 3), ()),
+    "H-KNN-mix": ("B/mix/{col}/r{r}", WD50K, (1, 2, 3), ()),
+    "H-KNN-C": ("C/C-all/c3/{col}/r{r}", ALL_COLL, (1, 2, 3), ()),
+    "H-KNN-C-int": ("C/C-int/c3/{col}/r{r}", ALL_COLL, (1, 2, 3), ()),
+    "C-pend": ("C/C-pend/c3/{col}/r{r}", ALL_COLL, (), (1, 2, 3)),
+    "H-KNN-C@c6": ("C/C-all/c6/{col}/r{r}", ALL_COLL, (1, 2, 3), ()),
+    "H-KNN-C-int@c6": ("C/C-int/c6/{col}/r{r}", ALL_COLL, (1, 2, 3), ()),
+    "C-pend@c6": ("C/C-pend/c6/{col}/r{r}", ALL_COLL, (), (1, 2, 3)),
+    "H-KNN-D": ("D/pendant/{col}/r{r}", ALL_COLL, (1, 2), (3,)),
+    "H-KNN-D-mix": ("D/empirical/{col}/r{r}", WD50K, (1, 2), (3,)),
+}
+
+
+def registered_cell_status(cells: dict[str, dict[str, Any]], cid: str) -> tuple[str, dict | None]:
+    """``(status, cell)`` of one registered cell id.
+
+    Status is the cell's verdict when it is present with all its seeds;
+    ``"infeasible"`` when its Design-C job declares the stratum infeasible by the
+    design's own rule, including a job whose pools never held two blocks (no
+    per-r cell); ``"incomplete"`` when present with seeds missing; ``"missing"``
+    when absent.
+    """
+    c = cells.get(cid)
+    if c is None and cid.startswith("C/"):
+        marker = cells.get(f"{cid.rsplit('/', 1)[0]}/none")
+        if marker is not None and marker.get("feasible") is False:
+            return "infeasible", marker
+    if c is None:
+        return "missing", None
+    if not c["complete"]:
+        return "incomplete", c
+    return c["verdict"], c
+
+
 def hypothesis_verdicts(cells: dict[str, dict[str, Any]]) -> dict[str, Any]:
-    """Per hypothesis: claim cells, kills (with the killing competitors) and the verdict."""
+    """Per hypothesis, over its *registered* cells: claim cells, kills and the verdict.
+
+    The cell set comes from :data:`REGISTERED`, not from the result files, so a
+    hypothesis with a registered cell absent or short of seeds reads
+    ``"incomplete"`` and never ``"survives"`` or ``"killed"``.
+    """
     out: dict[str, Any] = {}
-    for name, hyp in HYPOTHESES.items():
-        mine = [c for c in cells.values() if c["hypothesis"] == name]
-        claim = [c for c in mine if c["claim"] and c["verdict"] in ("word ahead", "kill")]
+    for name, (pattern, cols, claim_rs, other_rs) in REGISTERED.items():
+        hyp = HYPOTHESES[name]
+        status: dict[str, str] = {}
+        claim_cells: list[dict[str, Any]] = []
+        nonclaim: list[dict[str, str]] = []
+        infeasible: set[str] = set()
+        for col in cols:
+            for r, is_claim in [(r, True) for r in claim_rs] + [(r, False) for r in other_rs]:
+                cid = pattern.format(col=col, r=r)
+                st, c = registered_cell_status(cells, cid)
+                status[cid] = st
+                if st == "infeasible":
+                    infeasible.add(col)
+                if is_claim and st in ("word ahead", "kill"):
+                    claim_cells.append(c)
+                if not is_claim:
+                    nonclaim.append({"cell": cid, "verdict": st})
+        absent = sorted(cid for cid, st in status.items() if st in ("missing", "incomplete"))
         kills = [
             {"cell": c["id"], "killers": {m: k for m, k in c["killers"].items() if k}}
-            for c in claim
+            for c in claim_cells
             if c["verdict"] == "kill"
         ]
-        infeasible = sorted({c["collection"] for c in mine if c["verdict"] == "infeasible"})
-        nonclaim = [{"cell": c["id"], "verdict": c["verdict"]} for c in mine if not c["claim"]]
-        if name in ("C-pend", "C-pend@c6"):
-            fired: bool | None = None
+        if absent:
+            verdict = "incomplete"
+        elif not claim_rs:
+            verdict = "no claim"
+        elif not claim_cells:
+            verdict = "untestable"
         else:
-            fired = bool(kills) if claim else None
+            verdict = "killed" if kills else "survives"
         out[name] = {
             "title": hyp.title,
             "metrics": list(hyp.metrics),
-            "n_cells": len(mine),
-            "n_claim_cells": len(claim),
+            "n_registered_cells": len(status),
+            "n_registered_claim_cells": len(cols) * len(claim_rs),
+            "n_claim_cells": len(claim_cells),
             "n_kills": len(kills),
             "kills": kills,
-            "infeasible_collections": infeasible,
+            "infeasible_collections": sorted(infeasible),
+            "missing_or_incomplete": absent,
+            "cell_status": status,
             "non_claim_cells": nonclaim,
-            "fired": fired,
-            "complete": all(c["complete"] for c in mine),
-            "verdict": (
-                "no claim"
-                if fired is None and name.startswith("C-pend")
-                else "untestable"
-                if fired is None
-                else "killed"
-                if fired
-                else "survives"
-            ),
+            "fired": None if verdict in ("incomplete", "no claim", "untestable") else bool(kills),
+            "complete": not absent,
+            "verdict": verdict,
         }
     return out
 
@@ -659,18 +717,32 @@ def _verdict_table(cells: list[dict[str, Any]]) -> list[str]:
     return lines
 
 
+def _units_line(uc: dict[str, Any] | None) -> list[str]:
+    """One line from ``verify_units.py``: every unit of the run and its seeds."""
+    if not uc:
+        return []
+    short = [f"`{u['unit']}` ({u['seeds']} seeds)" for u in uc["units"] if not u["ok"]]
+    return [
+        f"Units (`verify_units.py`): {uc['n_units']} units of `full_run.units()`, "
+        f"{uc['n_units'] - uc['n_incomplete']} with all 27 seeds (Design A also with its "
+        "Afull evaluation)" + (f"; incomplete: {', '.join(short)}" if short else "") + ".",
+        "",
+    ]
+
+
 def _summary_table(hyps: dict[str, Any]) -> list[str]:
     lines = [
-        "| hypothesis | cells | claim cells | kills | infeasible | verdict | complete (27 seeds) |",
+        "| hypothesis | registered cells (claim) | feasible claim cells | kills | infeasible "
+        "collections | missing or incomplete | verdict |",
         "|---|---|---|---|---|---|---|",
     ]
     for name, h in hyps.items():
-        if not h["n_cells"]:
-            continue
         lines.append(
-            f"| {name} — {h['title']} | {h['n_cells']} | {h['n_claim_cells']} | {h['n_kills']} | "
-            f"{', '.join(h['infeasible_collections']) or '–'} | **{h['verdict']}** | "
-            f"{'yes' if h['complete'] else '**no**'} |"
+            f"| {name} — {h['title']} | {h['n_registered_cells']} "
+            f"({h['n_registered_claim_cells']}) | {h['n_claim_cells']} | {h['n_kills']} | "
+            f"{', '.join(h['infeasible_collections']) or '–'} | "
+            f"{', '.join(f'`{c}`' for c in h['missing_or_incomplete']) or 'none'} | "
+            f"**{h['verdict']}** |"
         )
     return lines
 
@@ -725,6 +797,12 @@ def render(summary: dict[str, Any]) -> str:
         "and is degenerate on copy sets (LOG.md §5.1).",
         "",
         "## Verdicts",
+        "",
+        *_units_line(summary.get("units_check")),
+        "Every hypothesis is evaluated over its registered cells (LOG.md §3, §6, §6.1, §7); a "
+        "registered cell absent from the results, or short of seeds, makes the hypothesis "
+        "**incomplete**. An infeasible Design-C cell is declared by the design's own rule "
+        "(fewer than 10 available blocks at some seed) and is not a pass.",
         "",
         *_summary_table(hyps),
         "",
@@ -896,10 +974,18 @@ def _crosscheck_section(cc: dict[str, Any] | None, cells: dict[str, Any]) -> lis
             f"{gap['local']:.4f} locally (|Δ| = {gap['abs_diff']:.4f}). Every other arm is "
             "bitwise identical across the two machines."
         )
-        sens = platform_sensitive_cells(cells, gap["abs_diff"], arms)
+        bound = gap["abs_diff"]
+        prior = cc.get("prior")
+        if prior:
+            lines.append(
+                f"An earlier cross-check ({prior['note']}) saw a larger gap, |Δ| = "
+                f"{prior['abs_diff']:.4f}; the flag below uses the larger of the two."
+            )
+            bound = max(bound, prior["abs_diff"])
+        sens = platform_sensitive_cells(cells, bound, arms)
         lines.append(
-            "Claim cells where such an arm's mean 1-NN lies within that gap of the word's (so "
-            "the platform could decide the verdict): "
+            f"Claim cells where such an arm's mean 1-NN lies within {bound:.4f} of the word's "
+            "and alone decides the verdict (so the platform could decide it): "
             + (
                 "; ".join(
                     f"`{s['cell']}` ({s['arm']} {s['arm_mean']:.3f} vs word {s['word']:.3f})"
@@ -976,7 +1062,9 @@ def aggregate(root: Path) -> dict[str, Any]:
     repro_path = root / "REPRO_CHECK.json"
     sacct_path = root / "sacct.txt"
     cc_path = root / "CROSSCHECK_SEED0.json"
+    units_path = root / "UNITS_CHECK.json"
     return {
+        "units_check": json.loads(units_path.read_text()) if units_path.exists() else None,
         "crosscheck_seed0": json.loads(cc_path.read_text()) if cc_path.exists() else None,
         "sacct": sacct_path.read_text() if sacct_path.exists() else None,
         "root": str(root),

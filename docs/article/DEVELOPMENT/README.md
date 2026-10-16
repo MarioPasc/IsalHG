@@ -270,6 +270,17 @@ request for comparative experiments that favour the method.
 - **Code branch.** `integration/2026-10-13-newpos-w1`, not merged.
 - **Remaining work.** [`T-KBae`](T-KB/IN-PROGRESS/T-KBae.md).
 
+**KNN (2026-10-15/16): the PI's kNN / k-medoids request.**
+- **Outcome: no positive.** Four pre-registered designs (A lineages, B partial copies, C look-alike
+  blocks, D catalogue linkage) are all killed at full scale (Picasso, 27 seeds).
+  - D: the word leads 7 of 8 claim cells, but is killed at NDC-classes, r = 1, under the
+    symmetric-minimum edit path.
+- **Where it went.** By the author's ruling, it is a standalone supplementary section S5
+  (`supplementary/sections/s5_knn.tex`, not included in `supplement.tex`); Overleaf `main` `f50a735`.
+- **Side effect.** The bipartite edit path is now scored by its symmetric minimum everywhere in the
+  article; H2 still holds on pendant pairs.
+- **Record:** `../D_ART3/experiments/KNN_2026-10-15/LOG.md` (§5–§9.1).
+
 **Article reframe lineage.** D-ART1 (2026-07-17) moved the headline from the
 stability bound to the geometry, keeping HGED-faithfulness as a "capstone"
 pillar. **D-ART2 (2026-07-18, PI-RATIFIED same day — `DECISIONS.md`) retired

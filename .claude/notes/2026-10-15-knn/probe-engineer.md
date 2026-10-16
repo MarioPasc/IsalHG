@@ -708,3 +708,32 @@ identical except NetLSD (960 values; 1-NN up to |Δ| = 0.0196 on B_wd50k66 r1 s0
 across CPUs. The two local smokes agreed exactly with each other (same machine). FULL_SUMMARY flags
 claim cells whose verdict a gap of that size could decide (refined: NetLSD the sole decider);
 partial result: none. full_local/ (partial, cancelled) is not used anywhere.
+
+## 19. Completion (2026-10-16)
+
+**Coordinator, verbatim core (10:05):** "Picasso array 2921149 is finished (sacct: 9/9 COMPLETED),
+but full/ and FULL_SUMMARY.md (generated 18:34 yesterday) are partial, and the partial summary
+contains a verdict defect. [...] 1. Harvest [...] --checksum [...] verify each of the 38 units [...]
+2. Fix the completeness defect [...] 'H-KNN-D … 6 cells, 4 claim cells, 0 kills, survives, complete
+yes', but §7 registers H-KNN-D on all FOUR collections at r = 1 and r = 2 [...] Any hypothesis
+missing a registered cell must read 'incomplete' [...] regression test [...] 3. Regenerate from the
+complete full/ [...] If H-KNN-D at full scale differs from the probe verdict (killed at NDC-classes
+r = 1), report both values side by side. [...] 4. Run the tests [...] Do not push."
+
+- **Defect owned.** The 18:34 build ran on a partial harvest with `--allow-missing`; the
+  aggregator's hypothesis table counted only the cells present, so H-KNN-D read "survives" from the
+  WD50K cells alone. Fixed in 446cab6: `REGISTERED` builds each hypothesis's cell set from the
+  registration; absent or short cells → "incomplete"; C infeasibility from the job's own rule.
+- sacct: 9/9 COMPLETED, 2 h 35 m – 9 h 10 m (B_ndc_substances), MaxRSS 8.2–12.5 GB of 32 G.
+- Harvest: `rsync -a --checksum`, no delete; a second checksum dry run lists 0 files to transfer.
+  `verify_units.py`: 38 units, 27 seeds each (A also Afull); D_ndc_classes_pendant and
+  D_ndc_substances_pendant present.
+- The session scratchpad (smoke / timing seed-0 outputs) was wiped overnight; the seed-0
+  cross-check was recomputed on 2 cores in ≈ 3 min into KNN_2026-10-15/crosscheck_local/ (C3
+  ndc_classes C-all, C3 ndc_substances C-int, D ndc_classes pendant, A ndc_classes): 172,413 values,
+  only NetLSD differs (306 values; largest 1-NN gap 0.0098), the earlier 0.0196 kept as `prior`;
+  no claim cell's verdict within reach of that gap.
+- Verdicts at full scale: A killed (1 of 2), B 12/12, mix 6/6, C 12/12, C-int 6/6 feasible, C@c6
+  6/6 feasible, C-int@c6 untestable (infeasible everywhere), D killed in 1 of 8
+  (D/pendant/ndc_classes/r1: word 0.575 vs sym-min path 0.638 — the probe's cell), D-mix 3 of 4.
+- check_facts: 66 + 72 names, OK. Tests: test_knn 124, test_knn_figs 10, test_knn_full 10.

@@ -61,26 +61,92 @@ def _tsne(D: np.ndarray, perplexity: float, seed: int) -> np.ndarray:
     ).fit_transform(D)
 
 
-def _panel(ax: Any, text: str) -> None:  # noqa: ANN401
+#: Label corners in placement order: (name, x, y, ha, va) in axes fraction.
+CORNERS: tuple[tuple[str, float, float, str, str], ...] = (
+    ("lower left", 0.02, 0.02, "left", "bottom"),
+    ("lower right", 0.98, 0.02, "right", "bottom"),
+    ("upper left", 0.02, 0.98, "left", "top"),
+    ("upper right", 0.98, 0.98, "right", "top"),
+)
+#: Largest marker area drawn in a panel (points^2); a point within its radius of a label counts.
+MAX_MARKER_S = 28.0
+
+
+def _panel(ax: Any, text: str) -> Any:  # noqa: ANN401
+    """Frame the panel and print its label (placed later by :func:`place_labels`)."""
     ax.set_xticks([])
     ax.set_yticks([])
     for side in ax.spines.values():
         side.set_color("#b9b8b2")
         side.set_linewidth(0.5)
-    ax.text(
-        0.02,
-        0.02,
+    name, x, y, ha, va = CORNERS[0]
+    return ax.text(
+        x,
+        y,
         text,
         transform=ax.transAxes,
-        ha="left",
-        va="bottom",
+        ha=ha,
+        va=va,
         fontsize=6,
-        bbox={"facecolor": S.SURFACE, "edgecolor": "none", "alpha": 0.85, "pad": 1.0},
-        zorder=6,
+        bbox={
+            "boxstyle": "round,pad=0.25",
+            "facecolor": S.SURFACE,
+            "edgecolor": "none",
+            "alpha": 0.85,
+        },
+        zorder=10,
     )
 
 
-def row_b(axes: Any, args: argparse.Namespace, summary: dict, printed: S.Printed) -> dict:  # noqa: ANN401
+def _covered(fig: Any, ax: Any, label: Any, points: np.ndarray) -> int:  # noqa: ANN401
+    """Points whose marker reaches the label's box, in display coordinates."""
+    renderer = fig.canvas.get_renderer()
+    # The text extent follows the position at once (the bbox patch only at the next draw);
+    # widen it by the rounded box's pad and the largest marker's radius.
+    box = label.get_window_extent(renderer)
+    pad = (0.25 * label.get_fontsize() + np.sqrt(MAX_MARKER_S) / 2) * fig.dpi / 72
+    xy = ax.transData.transform(points)
+    inside = (
+        (xy[:, 0] >= box.x0 - pad)
+        & (xy[:, 0] <= box.x1 + pad)
+        & (xy[:, 1] >= box.y0 - pad)
+        & (xy[:, 1] <= box.y1 + pad)
+    )
+    return int(inside.sum())
+
+
+def place_labels(fig: Any, labels: list[tuple[str, Any, Any, np.ndarray]]) -> list[dict]:  # noqa: ANN401
+    """Keep each label in the lower-left corner unless a point reaches it there.
+
+    Deterministic: after the layout is final, count the points under the label's
+    box in every corner (:data:`CORNERS` order) and move it to the corner with
+    the fewest, the first in that order on a tie.
+    """
+    fig.canvas.draw()
+    out = []
+    for key, ax, label, points in labels:
+        counts: dict[str, int] = {}
+        for name, x, y, ha, va in CORNERS:
+            label.set_position((x, y))
+            label.set_ha(ha)
+            label.set_va(va)
+            counts[name] = _covered(fig, ax, label, points)
+        chosen = CORNERS[0][0] if counts[CORNERS[0][0]] == 0 else min(counts, key=counts.get)
+        _, x, y, ha, va = next(c for c in CORNERS if c[0] == chosen)
+        label.set_position((x, y))
+        label.set_ha(ha)
+        label.set_va(va)
+        out.append({"panel": key, "corner": chosen, "points_under_label": counts})
+    return out
+
+
+def row_b(
+    axes: Any,  # noqa: ANN401
+    args: argparse.Namespace,
+    summary: dict,
+    printed: S.Printed,
+    labels: list[tuple[str, Any, Any, np.ndarray]],
+) -> dict:
     """Copies of the first sources of the Design-B cell, read from its items file."""
     col = C.load_collection(args.collection)
     name = f"B_{args.collection}_r{args.r_b}_s{args.seed}"
@@ -104,7 +170,7 @@ def row_b(axes: Any, args: argparse.Namespace, summary: dict, printed: S.Printed
         base = ["cells", cid, "per_arm", arm]
         acc = printed.add(summary, [*base, "acc1", "mean"], 3, f"tsne B {arm} acc1")
         ari = printed.add(summary, [*base, "ari", "mean"], 3, f"tsne B {arm} ari")
-        _panel(ax, f"1-NN {acc}, ARI {ari}")
+        labels.append((f"B/{arm}", ax, _panel(ax, f"1-NN {acc}, ARI {ari}"), emb))
         ax.set_title(S.LABELS[arm], pad=2, color=S.WORD if arm == K.OURS else S.INK)
     return {"cell": cid, "items": len(items), "sources": cell["source_ids"][: args.n_sources]}
 
@@ -145,7 +211,13 @@ def _d_setup(args: argparse.Namespace) -> dict[str, Any]:
     return {"col": col, "cat": cat, "shown": shown, "copies": copies, "lookalikes": lookalikes}
 
 
-def row_d(axes: Any, args: argparse.Namespace, summary: dict, printed: S.Printed) -> dict:  # noqa: ANN401
+def row_d(
+    axes: Any,  # noqa: ANN401
+    args: argparse.Namespace,
+    summary: dict,
+    printed: S.Printed,
+    labels: list[tuple[str, Any, Any, np.ndarray]],
+) -> dict:
     """Sources, copies, look-alikes and 1-NN lines against the whole catalogue."""
     ctx = _d_setup(args)
     col, cat = ctx["col"], ctx["cat"]
@@ -201,7 +273,7 @@ def row_d(axes: Any, args: argparse.Namespace, summary: dict, printed: S.Printed
         acc = printed.add(
             summary, ["cells", cid, "per_arm", arm, "acc1", "mean"], 3, f"tsne D {arm}"
         )
-        _panel(ax, f"1-NN {acc}")
+        labels.append((f"D/{arm}", ax, _panel(ax, f"1-NN {acc}"), emb))
     return {"cell": cid, "queries": len(queries), "sources": [s.kb_id for s in ctx["shown"]]}
 
 
@@ -229,10 +301,12 @@ def main() -> None:
     fig, axes = plt.subplots(
         2, len(PANEL_ARMS), figsize=(WIDTH_IN, HEIGHT_IN), layout="constrained"
     )
-    meta_b = row_b(axes[0], args, summary, printed)
-    meta_d = row_d(axes[1], args, summary, printed)
+    labels: list[tuple[str, Any, Any, np.ndarray]] = []
+    meta_b = row_b(axes[0], args, summary, printed, labels)
+    meta_d = row_d(axes[1], args, summary, printed, labels)
     axes[0, 0].set_ylabel(f"B, r = {args.r_b}")
     axes[1, 0].set_ylabel(f"D, r = {args.r_d}")
+    label_positions = place_labels(fig, labels)
     paths = S.save(
         fig,
         args.out or args.root / "section",
@@ -245,6 +319,7 @@ def main() -> None:
             "perplexity": args.perplexity,
             "tsne_seed": args.tsne_seed,
             "panel_arms": list(PANEL_ARMS),
+            "label_positions": label_positions,
         },
     )
     print("\n".join(map(str, paths)))

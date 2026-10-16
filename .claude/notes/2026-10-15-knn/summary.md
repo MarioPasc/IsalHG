@@ -84,3 +84,11 @@ their registered rules. The record is `docs/article/D_ART3/experiments/KNN_2026-
 - **T-KBae** (the C8 matrix mirror) is still open in the ledger.
 - **Whether S5 enters `supplement.tex`** is the author's call.
 - **Worktree cleanup** waits for the user's confirmation.
+
+## Cleanup (2026-10-16, after the author's confirmation)
+
+Each target was checked first: no uncommitted changes, branch an ancestor of `main`.
+
+- **Code repo:** removed the worktree `.claude/worktrees/agent-a7cd2b6fdd3a1dd31` and deleted the branches `worktree-agent-a7cd2b6fdd3a1dd31`, `feature/knn-mech2` and `feature/knn-tsne-labels`.
+- **Overleaf clone:** removed the worktrees `-evidence`, `-frontmatter`, `-lighten`, `-maintext`, `-method` and `-supplement`, and deleted their six `agent/…` branches.
+- **Not deleted by the agent:** the cancelled replica `results/KNN_2026-10-15/full_local/` (319 MB, used nowhere; LOG §9). The permission rules blocked the agent's delete, so the command was handed to the author.

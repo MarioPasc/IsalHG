@@ -466,3 +466,63 @@ asymmetric and that we symmetrize it by the minimum.
 
 **Effect on the Design-D verdict.** None. On Design D, both the flipped orientation and the minimum
 favoured the competitor in every probe cell, so the kill stands.
+
+## 9. Full-run results (Picasso array 2921149; recorded 2026-10-16)
+
+**Execution.** All 9 array tasks completed (2 h 35 m to 9 h 10 m per task; MaxRSS 8.2–12.5 GB). All 38
+units have 27 seeds; the two A units also have their deterministic Afull evaluation. The local replica
+(`full_local/`) was cancelled by the author on 2026-10-15 and is used nowhere.
+Sources: `D/results/KNN_2026-10-15/full/{FULL_SUMMARY.md, FULL_DETAIL.md, full_summary.json}`.
+
+**A defect caught before use.** The first summary (2026-10-15 18:34) was built on a partial harvest. It
+read H-KNN-D as "survives, complete" from the four WD50K claim cells alone. The NDC D units had run
+but had not been copied back, and NDC-classes r = 1 is exactly where the probe killed D.
+- **Fix:** `aggregate_full.py` now builds every hypothesis's cells from the registration. A hypothesis
+  with any absent or seed-short registered cell reads "incomplete". The regression test is in
+  `tests/newpos/test_knn_full.py`.
+- **Use:** no verdict from the partial build was used anywhere.
+- **Independent check:** the leader recomputed the 12 D / D-mix claim-cell means from the raw JSONs, and
+  they match the regenerated summary.
+
+**Verdicts, as registered:**
+
+| hypothesis | claim cells (feasible) | kills | verdict |
+|---|---|---|---|
+| H-KNN-A (lineages) | 2 | 1 | killed (NDC-substances: edit path on acc1; HPD, NetLSD on ARI) |
+| H-KNN-B (pendant copies) | 12 | 12 | killed |
+| H-KNN-mix (edit mix) | 6 | 6 | killed |
+| H-KNN-C (C-all, c = 3) | 12 | 12 | killed |
+| H-KNN-C-int (c = 3) | 6 (NDC-classes and WD50K(66) infeasible) | 6 | killed |
+| H-KNN-C@c6 (secondary) | 6 | 6 | killed |
+| H-KNN-C-int@c6 (secondary) | 0 | – | untestable |
+| H-KNN-D (catalogue, pendant) | 8 | 1 | **killed** |
+| H-KNN-D-mix | 4 | 3 | killed |
+
+**H-KNN-D at full scale reproduces the probe.** It is killed at NDC-classes, r = 1: the word scores
+0.575 [0.568, 0.581] and the symmetric edit path 0.638 [0.632, 0.645] (probe: 0.546 vs about 0.63).
+- In the other 7 claim cells the word has the highest 1-NN accuracy, with Holm p ≤ 1.1e-5.
+- The word also leads all four r = 3 cells, which carry no claim.
+- Under the §7 admission rule one kill suffices. **There is no kNN positive; the ruling of §8 stands
+  unchanged.**
+
+**H-KNN-D-mix** is killed in 3 of 4 claim cells:
+- WD50K(100), r = 1 and r = 2: the edit path leads by 0.168 and 0.116.
+- WD50K(66), r = 1: one-round WL reaches the word (0.626 vs 0.619). The difference is not significant in
+  either direction (Holm p 0.933 / 0.778); under the registered "≥" rule this cell is still a kill.
+
+**Added rows (outside every verdict):**
+- One-round WL reaches the word in 6 of 12 B cells (both WD50K collections), 6 of 6 mix cells and 1 of
+  2 A cells.
+- The as-run edit path reaches the word in 12 of 12 B cells.
+
+**Mechanism cell (B, WD50K(66), r = 2).** The share of queries whose nearest sibling is strictly nearer
+than the nearest other source is 79 % for the word and 78 % for the edit path. The cell does not show
+the edit path separating siblings better. Any S5 sentence implying that must be rewritten from the
+measured shares.
+
+**Cross-machine check.** Seed-0 cells were recomputed locally on 2 cores: C3 NDC-classes C-all,
+C3 NDC-substances C-int, D NDC-classes pendant and A NDC-classes. Of 172,413 values, every arm except
+NetLSD is bitwise identical.
+- NetLSD differs in 306 values, through float near-ties in its distance; the largest 1-NN gap is 0.0098.
+- An earlier partial check measured 0.0196, on B WD50K(66) r = 1. No claim-cell verdict lies within
+  that gap.

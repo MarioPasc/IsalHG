@@ -554,30 +554,62 @@ def certified_facts(fb: FactBook) -> None:
     )
 
 
+def _share_fact(fb: FactBook, name: str, cid: str, arm: str, key: str) -> None:
+    v = fb.summary["cells"][cid]["mechanism"][arm][key]["mean"]
+    fb.add(
+        name,
+        rf"${rnd(100 * v, 0)}$\,\%",
+        f'full_summary.json cells["{cid}"].mechanism.{arm}.{key}.mean',
+        repr(v),
+        "percent, ordinary",
+    )
+
+
 def mechanism_facts(fb: FactBook, section: Path) -> None:
+    """Both rows of the mechanism figure, and the shares over the B pendant claim cells."""
     meta_path = section / "fig_s5_mechanism.numbers.json"
     meta = json.loads(meta_path.read_text())
-    cid = meta["cell"]
-    _, _, col, r = cid.split("/")
-    fb.add(
-        "mech-cell",
-        f"{COLL_TEX[col]} (Design B, $r={r.removeprefix('r')}$)",
-        f"{meta_path.name} cell",
-        cid,
-        "text",
-    )
-    for name, arm in (
-        ("mech-sibling-closer-word", K.OURS),
-        ("mech-sibling-closer-edit", K.PATH_SYM),
-    ):
-        v = fb.summary["cells"][cid]["mechanism"][arm]["own_strictly_nearer"]["mean"]
+    for prefix, key in (("mech", "cell"), ("mech2", "cell2")):
+        cid = meta[key]
+        _, _, col, r = cid.split("/")
         fb.add(
-            name,
-            rf"${rnd(100 * v, 0)}$\,\%",
-            f'full_summary.json cells["{cid}"].mechanism.{arm}.own_strictly_nearer.mean',
-            repr(v),
-            "percent, ordinary",
+            f"{prefix}-cell",
+            f"{COLL_TEX[col]} (Design B, $r={r.removeprefix('r')}$)",
+            f"{meta_path.name} {key}" + (f" (rule: {meta['rule2']})" if key == "cell2" else ""),
+            cid,
+            "text" if key == "cell" else "selection",
         )
+        for side, arm in (("word", K.OURS), ("edit", K.PATH_SYM)):
+            _share_fact(fb, f"{prefix}-sibling-closer-{side}", cid, arm, "own_strictly_nearer")
+            _share_fact(fb, f"{prefix}-tie-{side}", cid, arm, "tie")
+    pat, rs, cols = _all("B")
+    cells = [c for c in fb.cells(pat, cols, rs) if c["claim"]]
+    if len(cells) != 12:
+        raise FactError(f"mechB: {len(cells)} B pendant claim cells, expected 12")
+    p = f'cells["{pat}"].mechanism'
+    for side, arm in (("word", K.OURS), ("edit", K.PATH_SYM)):
+        for key, label in (("own_strictly_nearer", "own"), ("tie", "tie")):
+            vals = [(c["mechanism"][arm][key]["mean"], c["id"]) for c in cells]
+            lo, hi = min(vals), max(vals)
+            fb.add(
+                f"mechB-{label}-{side}-range",
+                rf"${down(100 * lo[0], 0)}$ to ${up(100 * hi[0], 0)}$\,\%",
+                f"full_summary.json {p}.{arm}.{key}.mean over the 12 B pendant claim cells",
+                f"min {lo[0]!r} at {lo[1]}; max {hi[0]!r} at {hi[1]}",
+                "range in percent: lower end down, upper end up",
+            )
+    higher = [
+        c["id"]
+        for c in cells
+        if c["mechanism"][K.PATH_SYM]["own_strictly_nearer"]["mean"]
+        > c["mechanism"][K.OURS]["own_strictly_nearer"]["mean"]
+    ]
+    fb.count_fact(
+        "mechB-edit-higher-cells",
+        len(higher),
+        f"full_summary.json {p}.{{bipartite_ged_path_sym,isal_ow_struct}}.own_strictly_nearer.mean",
+        f"{len(higher)} of 12: {higher}",
+    )
 
 
 def added_row_facts(fb: FactBook) -> None:
